@@ -96,9 +96,6 @@ html {
     white-space: pre-wrap;
     overflow-wrap: break-word;
     outline: none;
-    /* touch-action: pan-y; */
-    /* 禁止滚动回弹 */
-    /* overscroll-behavior: none;  */
 }
 
 /* 阅读进度 */
@@ -230,10 +227,8 @@ html {
 
 /* 可调整大小的元素 */
 .resizable {
-
     /* 仅水平方向可调整 */
     resize: horizontal;
-
 }
 
 /* 加载中遮罩层 */

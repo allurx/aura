@@ -61,7 +61,6 @@ export default class Aura {
             theme: "day",
             fontSize: 18,
             fontColor: "#000000",
-            //pageWidth: Math.min(window.screen.width * 0.8, 800),
             pageWidth: Math.min(window.screen.width * 0.8, 800),
             pagePadding: 30,
             lineHeight: 2,

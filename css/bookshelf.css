@@ -113,7 +113,6 @@ nav button.active {
 /* 右侧书籍列表区 */
 #books {
     flex: 1;
-    /* background-color: rgb(190, 150, 110); */
     background-color:#f2e8c8;
     padding: 20px;
     display: flex;
