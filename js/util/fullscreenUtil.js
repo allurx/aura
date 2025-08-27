@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-export default class Fullscreen {
+/**
+ * 全屏工具类
+ */
+export default class FullscreenUtil {
 
     /**
      * 检查浏览器是否支持全屏api
@@ -30,7 +33,7 @@ export default class Fullscreen {
      * 是否有元素处于全屏状态
      */
     static isActive() {
-        return Fullscreen.getElement() !== null;
+        return FullscreenUtil.getElement() !== null;
     }
 
     /**
@@ -82,9 +85,9 @@ export default class Fullscreen {
      * 切换全屏状态
      */
     static toggle(element) {
-        return Fullscreen.isActive() ?
-            Fullscreen.exit() :
-            Fullscreen.enter(element);
+        return FullscreenUtil.isActive() ?
+            FullscreenUtil.exit() :
+            FullscreenUtil.enter(element);
     }
 
     /**

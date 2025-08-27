@@ -14,25 +14,26 @@
  * limitations under the License.
  */
 
-export default class ReadingProgress {
+/**
+ * 章节目录
+ */
+export default class TableOfContents {
 
-    // 书籍id
     bookId;
+    contents;
 
-    // 当前章节id
-    chapterId;
-
-    // 行索引
-    lineIndex;
-
-    // 滚动位置
-    scrollTop;
-
-    constructor(bookId, chapterId, lineIndex, scrollTop) {
+    constructor(bookId, contents) {
         this.bookId = bookId;
-        this.chapterId = chapterId;
-        this.lineIndex = lineIndex;
-        this.scrollTop = scrollTop;
+        this.contents = contents;
+    }
+
+    static content = class {
+        id;
+        title;
+        constructor(id, title) {
+            this.id = id;
+            this.title = title;
+        }
     }
 
 }

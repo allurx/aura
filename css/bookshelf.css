@@ -16,205 +16,278 @@
 
 @charset "UTF-8";
 
+/* 全局变量定义 */
+:root {
+  --font-size: 16px;
+  --background-color: #1f2937;
+}
+
 *,
 *::before,
 *::after {
-    /* 统一盒模型 */
-    box-sizing: border-box;
-    /* 去除默认 margin 和 padding */
-    margin: 0;
-    padding: 0;
+  /* 统一盒模型 */
+  box-sizing: border-box;
+  /* 去除默认 margin 和 padding */
+  margin: 0;
+  padding: 0;
 }
 
 body,
 html {
-    height: 100%;
-    width: 100%;
-    font-family: "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
-    overflow: hidden;
-    background-color: #1f2937;
+  height: 100%;
+  width: 100%;
+  font-size: var(--font-size);
+  font-family: "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+  overflow: hidden;
+  background-color: var(--background-color);
 }
 
 /* 书架整体容器 */
 #bookshelf {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
 }
 
-/* 头部 */
+/* 书架头部 */
 header {
-    height: 8%;
-    min-height: 50px;
-    max-height: 80px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 20px;
-    user-select: none;
+  height: 60px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+  user-select: none;
 }
 
-.title {
-    font-size: 36px;
-    color: #409eff;
+#header-title {
+  font-size: 2rem;
+  color: #409eff;
+  cursor: pointer;
 }
 
 /* 清空书籍 */
 #clear-bookshelf {
-    cursor: pointer;
-    font-size: 20px;
-    color: white;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: white;
 }
 
-/* 内容主体 */
+/* 书架主体 */
 main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
+  display: flex;
+  flex: 1;
+  overflow: hidden;
 }
 
-/* 侧边菜单 */
+/* 书架侧边菜单 */
 nav {
-    width: 10%;
-    min-width: 80px;
-    max-width: 120px;
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    overflow-x: hidden;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: #666 transparent;
+  width: 90px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  align-items: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #666 transparent;
+  background-color: var(--background-color);
+}
+
+nav {
+  position: fixed;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+nav.device-flag {
+  position: static;
+  transform: translateX(0);
 }
 
 nav button {
-    width: 70%;
-    height: 30px;
-    background: none;
-    border: none;
-    border-radius: 6px;
-    color: #ffffff;
-    padding: 6px 12px;
-    text-align: center;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background-color 0.3s, border-color 0.3s;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 1);
-    margin: 12px 0;
+  width: 75%;
+  height: 30px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #ffffff;
+  padding: 6px 12px;
+  text-align: center;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.3s, border-color 0.3s;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 1);
+  margin: 12px 0;
+  word-break: keep-all;
 }
 
 nav button:hover,
 nav button.active {
-    background-color: #374151;
-    color: #ffd04b;
+  background-color: #374151;
+  color: #ffd04b;
 }
 
 /* 右侧书籍列表区 */
 #books {
-    flex: 1;
-    background-color:#f2e8c8;
-    padding: 20px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    align-content: flex-start;
-    overflow-x: hidden;
-    overflow-y: auto;
-    scrollbar-width: auto;
-    scrollbar-color: #666666 transparent;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 1) inset;
+  flex: 1;
+  background-color: #f2e8c8;
+  padding: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-content: flex-start;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: auto;
+  scrollbar-color: #666666 transparent;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 1) inset;
 }
 
 /* 添加书籍按钮样式 */
 #book-input-label {
-    /* 宽高比*/
-    aspect-ratio: 5/6;
-    width: 40%;
-    max-width: 150px;
-    border: 2px dashed #ccc;
-    border-radius: 6px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: #cccccc;
-    font-size: 48px;
-    cursor: pointer;
-    user-select: none;
-    transition: border-color 0.3s, color 0.3s;
+  /* 宽高比*/
+  aspect-ratio: 5/6;
+  width: 100px;
+  border: 2px dashed #ccc;
+  border-radius: 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #cccccc;
+  font-size: 3rem;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.3s, color 0.3s;
 }
 
 #book-input-label:hover {
-    border-color: #409eff;
-    color: #409eff;
+  border-color: #409eff;
+  color: #409eff;
 }
 
 input[type="file"] {
-    display: none;
+  display: none;
 }
 
 /* 书籍 */
 .book {
-    /* 宽高比*/
-    aspect-ratio: 5/6;
-    width: 40%;
-    max-width: 150px;
-    background-color: #144b82;
-    border-radius: 8px;
-    color: #eeeeee;
-    padding: 10px;
-    overflow: hidden;
-    word-break: break-word;
-    font-size: 14px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    text-align: center;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6);
-    transition: transform 0.2s;
+  display: flex;
+  /* 宽高比*/
+  aspect-ratio: 5/6;
+  width: 100px;
+  background-color: #144b82;
+  border-radius: 6px;
+  color: #eeeeee;
+  padding: 8px;
+  overflow: hidden;
+  font-size: 0.9rem;
+  flex-direction: column;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6);
+  transition: transform 0.2s;
+}
+
+/* 书籍头部 */
+.book-header {
+  display: flex;
+  width: 100%;
+  height: 10%;
+  /* 主轴末尾对齐 */
+  justify-content: flex-end;
+}
+
+/* 书籍主体 */
+.book-body {
+  display: flex;
+  width: 100%;
+  height: 90%;
+  cursor: pointer;
+  justify-content: center;
+  /* 从顶部开始 */
+  align-items: flex-start;
+  text-align: center;
+  word-break: break-word;
+}
+
+/* 书籍标题 */
+.book-title {
+  margin-top: 30%;
+}
+
+.delete-book {
+  /* 默认透明 */
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+/* 悬停时显示 */
+.book:hover .delete-book {
+  opacity: 1;
 }
 
 .book:hover {
-    background-color: #397fc4;
-    transform: translateY(-5px);
+  background-color: #397fc4;
+  transform: translateY(-5px);
 }
 
 /* 加载中遮罩层 */
 #loading-overlay {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
-    color: #f2e8c8;
-    font-size: 18px;
-    user-select: none;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  color: #f2e8c8;
+  font-size: 1.2rem;
+  user-select: none;
 }
 
 /* 隐藏加载层 */
 #loading-overlay[hidden] {
-    display: none;
+  display: none;
 }
 
 /* loading动画小圆圈 */
 #spinner {
-    width: 50px;
-    height: 50px;
-    border: 6px solid #397fc4;
-    border-top-color: transparent;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 10px;
+  width: 50px;
+  height: 50px;
+  border: 6px solid #397fc4;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
 }
 
 @keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 平板及以上 */
+@media (min-width: 768px) {
+  nav {
+    width: 100px;
+    position: static;
+    transform: translateX(0);
+    transition: transform 0.3s ease;
+  }
+
+  nav.device-flag {
+    position: fixed;
+    transform: translateX(-100%);
+  }
+
+  #book-input-label {
+    width: 120px;
+  }
+  .book {
+    width: 120px;
+  }
 }

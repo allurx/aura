@@ -15,43 +15,55 @@
  */
 
 import Aura from "./aura.js";
-import Fullscreen from "./fullscreen.js";
+import FullscreenUtil from "./util/fullscreenUtil.js";
 import ReadingProgress from "./model/readingProgress.js";
 
 class Reader {
 
     // 当前书籍信息
-    book = null;
+    book;
+
+    // 目录
+    toc;
 
     // 当前阅读进度
-    readingProgress = null;
+    readingProgress;
 
     // 当前阅读设置
-    setting = null;
+    setting;
 
     // 初始化阅读器
     async init(bookId) {
         if (bookId) {
             console.log("已从sessionStorage读取到bookId:", bookId);
-            bookId = Number(bookId);
-            await Aura.database.getByKey(Aura.databaseProperties.stores.book.name, bookId).then(book => this.book = book);
-            await Aura.database.getByKey(Aura.databaseProperties.stores.readingProgress.name, bookId).then(readingProgress => this.readingProgress = readingProgress);
-            await Aura.database.getByKey(Aura.databaseProperties.stores.setting.name, "reader-setting").then(setting => this.readerSetting = setting || Aura.reader.setting);
-            this.renderChapter();
-            this.applyTheme(this.readerSetting.theme);
-            this.applyFontSize(this.readerSetting.fontSize);
-            this.applyPageWidth(this.readerSetting.pageWidth);
-            this.applyPagePadding(this.readerSetting.pagePadding);
-            this.applyLineHeight(this.readerSetting.lineHeight);
-            this.applyFontColor(this.readerSetting.fontColor);
-            this.applyContentBackgroundColor(this.readerSetting.contentBackgroundColor);
-            this.applyBackgroundColor(this.readerSetting.backgroundColor);
-            this.bindEvent();
-            this.loadChapter(this.readingProgress);
+            await Promise.all([
+                Aura.database.getByKey(Aura.databaseProperties.stores.book.name, bookId).then(book => this.book = book),
+                Aura.database.getByKey(Aura.databaseProperties.stores.tableOfContents.name, bookId).then(toc => this.toc = toc.contents),
+                Aura.database.getByKey(Aura.databaseProperties.stores.readingProgress.name, bookId).then(readingProgress => this.readingProgress = readingProgress),
+                Aura.database.getByKey(Aura.databaseProperties.stores.setting.name, "reader-setting").then(setting => this.readerSetting = setting || Aura.reader.setting)
+            ]).then(() => {
+                this.renderChapter();
+                this.applyTheme(this.readerSetting.theme);
+                this.applyFontSize(this.readerSetting.fontSize);
+                this.applyPageWidth(this.readerSetting.pageWidth);
+                this.applyPagePadding(this.readerSetting.pagePadding);
+                this.applyLineHeight(this.readerSetting.lineHeight);
+                this.applyFontColor(this.readerSetting.fontColor);
+                this.applyContentBackgroundColor(this.readerSetting.contentBackgroundColor);
+                this.applyBackgroundColor(this.readerSetting.backgroundColor);
+                this.bindEvent();
+                this.loadChapter(this.readingProgress);
+                this.showReader();
+            });
         } else {
             console.log("未从sessionStorage读取到bookId");
             window.location.href = "/";
         }
+    }
+
+    // 通过css动画，防止页面频繁加载时元素闪烁
+    showReader() {
+        document.getElementById("reader").classList.add("visible");
     }
 
     // 渲染章节列表
@@ -62,9 +74,9 @@ class Reader {
         // 创建文档片段，避免多次dom操作
         const fragment = document.createDocumentFragment();
 
-        this.book.chapters.forEach(chapter => {
+        this.toc.forEach(chapter => {
             const p = document.createElement("p");
-            p.textContent = chapter.name;
+            p.textContent = chapter.title;
             p.dataset.index = chapter.id;
             fragment.appendChild(p);
         });
@@ -78,7 +90,7 @@ class Reader {
             // 判断点击的是否是 <p> 元素
             const p = event.target.closest("p");
 
-            if (p && container.contains(p)) this.loadChapter(new ReadingProgress({ ...this.readingProgress, chapterId: Number(p.dataset.index), lineIndex: 0, scrollTop: 0 }));
+            if (p && container.contains(p)) this.loadChapter(new ReadingProgress(this.readingProgress.bookId, Number(p.dataset.index), 0, 0));
 
         });
     }
@@ -116,7 +128,7 @@ class Reader {
 
                 // 更新章节名称
                 const chapterElement = document.getElementById("chapter-name");
-                chapterElement.textContent = chapter.name;
+                chapterElement.textContent = chapter.title;
 
                 // 更新阅读进度
                 this.readingProgress = readingProgress
@@ -130,7 +142,7 @@ class Reader {
 
     // 渲染章节阅读进度
     renderProgress() {
-        const rate = (((this.readingProgress.chapterId + 1) / this.book.chapters.length) * 100).toFixed(2);
+        const rate = (((this.readingProgress.chapterId + 1) / this.toc.length) * 100).toFixed(2);
         document.getElementById("progress-rate").textContent = `${rate}%`;
     }
 
@@ -166,7 +178,7 @@ class Reader {
 
         // 切换全屏
         document.getElementById("toggle-fullscreen").addEventListener("click", async () => {
-            await Fullscreen.toggle(document.documentElement).catch(error => alert(error.message));
+            await FullscreenUtil.toggle(document.documentElement).catch(error => alert(error.message));
         });
 
         // 展开/关闭设置面板
@@ -275,7 +287,7 @@ class Reader {
                     console.log("当前章节最上方可见的行：", line);
 
                     if (line) {
-                        const lineData = new ReadingProgress({ bookId: this.book.id, chapterId: this.readingProgress.chapterId, lineIndex: Number(line.dataset.index), scrollTop: event.target.scrollTop });
+                        const lineData = new ReadingProgress(this.book.id, this.readingProgress.chapterId, Number(line.dataset.index), event.target.scrollTop);
                         await Aura.database.put(Aura.databaseProperties.stores.readingProgress.name, lineData);
                     }
 
@@ -496,13 +508,13 @@ class Reader {
                     if (reader.readingProgress.chapterId === 0) {
                         alert("已经是第一章了");
                     } else {
-                        reader.loadChapter(new ReadingProgress({ ...reader.readingProgress, chapterId: reader.readingProgress.chapterId - 1, lineIndex: 0, scrollTop: 0 }));
+                        reader.loadChapter(new ReadingProgress(reader.readingProgress.bookId, reader.readingProgress.chapterId - 1, 0, 0));
                     }
                 } else {
-                    if (reader.readingProgress.chapterId + 1 === reader.book.chapters.length) {
+                    if (reader.readingProgress.chapterId + 1 === reader.toc.length) {
                         alert("已经是最后一章了");
                     } else {
-                        reader.loadChapter(new ReadingProgress({ ...reader.readingProgress, chapterId: reader.readingProgress.chapterId + 1, lineIndex: 0, scrollTop: 0 }));
+                        reader.loadChapter(new ReadingProgress(reader.readingProgress.bookId, reader.readingProgress.chapterId + 1, 0, 0));
                     }
                 }
             }

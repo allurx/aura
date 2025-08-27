@@ -26,17 +26,23 @@ export default class Aura {
             book: {
                 name: "book",
                 keyPath: "id",
-                autoIncrement: true,
+                autoIncrement: false,
                 indexes: {
-                    bookGenreIndex: { name: "book_genre_index", path: "genre", unique: false }
+                    genreId: { name: "genre_id", path: "genreId", unique: false }
                 }
+            },
+            tableOfContents: {
+                name: "table_of_contents",
+                keyPath: "bookId",
+                autoIncrement: false,
+                indexes: {}
             },
             chapter: {
                 name: "chapter",
                 keyPath: ["bookId", "id"],
                 autoIncrement: false,
                 indexes: {
-                    bookIdIndex: { name: "book_id_index", path: "bookId", unique: false },
+                    bookId: { name: "book_id", path: "bookId", unique: false },
                 }
             },
             readingProgress: {
@@ -61,7 +67,7 @@ export default class Aura {
             theme: "day",
             fontSize: 18,
             fontColor: "#000000",
-            pageWidth: Math.min(window.screen.width * 0.8, 800),
+            pageWidth: window.screen.width > 768 ? 800 : window.screen.width,
             pagePadding: 30,
             lineHeight: 2,
             backgroundColor: "#be966e",
@@ -88,31 +94,5 @@ export default class Aura {
 
     // 数据库实例
     static database = new Database(Aura.databaseProperties.name, Aura.databaseProperties.version, Aura.databaseProperties.stores);
-
-    /**
-     * 给元素添加事件监听器
-     * @param {Element} element - 要绑定事件的元素
-     * @param {string} eventType - 事件类型，如 'click'
-     * @param {Function} handler - 事件处理函数
-     * @param {string} selector - 事件委托的目标选择器，没传则直接绑定element
-     */
-    static addEventListenerTo(element, eventType, handler, selector) {
-        if (!selector) {
-            // 普通事件绑定
-            element.addEventListener(eventType, event => handler.call(element, event));
-        } else {
-            // 事件委托
-            element.addEventListener(eventType, event => {
-                const targetElement = event.target.closest(selector);
-                if (targetElement && element.contains(targetElement)) {
-                    handler.call(targetElement, event);
-                }
-            });
-        }
-    }
-
-    static addEventListenerToAll(elements, eventType, handler, selector) {
-        (elements ?? []).forEach(element => Aura.addEventListenerTo(element, eventType, handler, selector));
-    }
 
 }
