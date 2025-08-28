@@ -109,7 +109,7 @@ export default class Aura {
             },
             blue: {
                 name: "蓝色",
-                fontColor: "#e3e3e3",
+                fontColor: "#000000",
                 contentBackgroundColor: "#d2e3fc",
                 backgroundColor: "#d2e3fc",
             },
