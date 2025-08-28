@@ -33,13 +33,15 @@ export default class Aura {
                 autoIncrement: false,
                 indexes: {
                     genreId: { name: "genre_id", path: "genreId", unique: false }
-                }
+                },
+                description: "书籍"
             },
             tableOfContents: {
                 name: "table_of_contents",
                 keyPath: "bookId",
                 autoIncrement: false,
-                indexes: {}
+                indexes: {},
+                description: "书籍目录"
             },
             chapter: {
                 name: "chapter",
@@ -47,24 +49,27 @@ export default class Aura {
                 autoIncrement: false,
                 indexes: {
                     bookId: { name: "book_id", path: "bookId", unique: false },
-                }
+                },
+                description: "章节"
             },
             readingProgress: {
                 name: "reading_progress",
                 keyPath: "bookId",
                 autoIncrement: false,
-                indexes: {}
+                indexes: {},
+                description: "阅读进度"
             },
             setting: {
                 name: "setting",
                 keyPath: "id",
                 autoIncrement: false,
-                indexes: {}
+                indexes: {},
+                description: "设置"
             },
         }
     };
 
-    // 阅读设置
+    // 阅读器配置
     static reader = {
         setting: {
             id: "reader-setting",
