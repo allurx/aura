@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-export default class Fullscreen {
+/**
+ * 全屏工具类
+ */
+export default class FullscreenUtil {
 
     /**
      * 检查浏览器是否支持全屏api
@@ -30,7 +33,7 @@ export default class Fullscreen {
      * 是否有元素处于全屏状态
      */
     static isActive() {
-        return Fullscreen.getElement() !== null;
+        return FullscreenUtil.getElement() !== null;
     }
 
     /**
@@ -49,13 +52,13 @@ export default class Fullscreen {
      */
     static enter(element) {
         if (element.requestFullscreen) {
-            element.requestFullscreen();
+            return element.requestFullscreen();
         } else if (element.webkitRequestFullscreen) {
-            element.webkitRequestFullscreen();
+            return element.webkitRequestFullscreen();
         } else if (element.mozRequestFullScreen) {
-            element.mozRequestFullScreen();
+            return element.mozRequestFullScreen();
         } else if (element.msRequestFullscreen) {
-            element.msRequestFullscreen();
+            return element.msRequestFullscreen();
         } else {
             return Promise.reject(new Error("当前设备不支持全屏操作"));
         }
@@ -82,9 +85,9 @@ export default class Fullscreen {
      * 切换全屏状态
      */
     static toggle(element) {
-        return Fullscreen.isActive() ?
-            Fullscreen.exit() :
-            Fullscreen.enter(element);
+        return FullscreenUtil.isActive() ?
+            FullscreenUtil.exit() :
+            FullscreenUtil.enter(element);
     }
 
     /**

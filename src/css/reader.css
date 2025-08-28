@@ -1,0 +1,232 @@
+/*
+ * Copyright 2025 allurx
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@charset "UTF-8";
+@import "base.css";
+@import "overlay.css";
+
+/* 阅读器整体容器 */
+#reader {
+  width: 100%;
+  height: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  background-color: #f2e8c8;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
+  position: relative;
+  outline: none;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* 防止页面频繁加载时元素闪烁 */
+#reader.visible {
+  opacity: 1;
+}
+
+/* 顶部和底部栏样式 */
+#header,
+#footer {
+  height: 60px;
+  /* 水平居中 */
+  justify-content: center;
+  /* 垂直居中 */
+  align-items: center;
+  /* padding: 0 30px; */
+  display: flex;
+  user-select: none;
+}
+
+/* 顶部操作icon */
+.header-action {
+  font-size: 1.6rem;
+  user-select: none;
+  align-items: center;
+  flex: 1;
+}
+
+.header-action span {
+  cursor: pointer;
+}
+
+/* 顶部左侧操作区域 */
+#header-action-left {
+  justify-content: left;
+}
+
+/* 顶部右侧操作区域 */
+#header-action-right {
+  display: flex;
+  gap: 20px;
+  justify-content: right;
+}
+
+/* 正文内容区域 */
+#content {
+  height: calc(100% - 120px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: auto;
+  scrollbar-color: #666666 transparent;
+  word-break: break-word;
+  outline: none;
+}
+
+/* 阅读进度 */
+#progress-rate {
+  font-weight: bold;
+  text-align: right;
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+/* 章节名称 */
+#chapter-name {
+  font-weight: bold;
+  text-align: left;
+  font-size: 0.9rem;
+  flex: 1;
+  /* 不换行 */
+  white-space: nowrap;
+  /* 超出隐藏 */
+  overflow: hidden;
+  /* 超出用省略号替代 */
+  text-overflow: ellipsis;
+}
+
+/* 弹出面板（目录、设置） */
+.panel {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 100%;
+  /* 从reader继承背景色 */
+  background-color: inherit;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  user-select: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* 面板头部 */
+.panel-header {
+  padding: 0 30px 0;
+  width: 100%;
+  height: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-header h2 {
+  font-weight: bold;
+  font-size: 22px;
+}
+
+.panel-header-action {
+  display: flex;
+  font-size: 1.4rem;
+  cursor: pointer;
+  gap: 20px;
+}
+
+.panel-body {
+  width: 100%;
+  height: calc(100% - 120px);
+  padding: 0 30px;
+  overflow-x: auto;
+  overflow-y: auto;
+  scrollbar-width: auto;
+  scrollbar-color: #666666 transparent;
+}
+
+.panel-footer {
+  height: 60px;
+}
+
+/* 目录样式 */
+#toc p {
+  padding: 12px 0;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom: 0.1px solid #666666;
+}
+
+/* 章节 hover 或当前章节 */
+#toc p:hover,
+#toc p.active {
+  color: #337ab7;
+}
+
+/* 设置面板整体布局 */
+#setting-body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 设置项布局 */
+.setting-item {
+  padding: 18px 0;
+  display: flex;
+  font-size: 1rem;
+  line-height: 2;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  border-bottom: 0.1px solid #666666;
+}
+
+.setting-item-name {
+  flex: 1;
+}
+
+.setting-item-control {
+  flex: 4;
+}
+
+.setting-item-value {
+  flex: 2;
+  text-align: center;
+  user-select: text;
+}
+
+#theme {
+  height: 100%;
+}
+
+/* 可调整大小的元素 */
+.resizable {
+  /* 仅水平方向可调整 */
+  resize: horizontal;
+}
+
+/* 平板及以上 */
+@media (min-width: 768px) {
+  #reader {
+    width: 800px;
+    min-width: 768px;
+  }
+  .panel {
+    min-width: 768px;
+    max-width: 80%;
+  }
+}

@@ -1,0 +1,117 @@
+<!-- 
+    Copyright 2025 allurx
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aura</title>
+    <link rel="stylesheet" href="../css/reader.css" />
+    <script src="../js/reader.js" type="module"></script>
+  </head>
+
+  <body>
+    <div id="reader" class="resizable">
+      <!-- 顶部头部 -->
+      <header id="header">
+        <div id="header-action-left" class="header-action">
+          <span id="toggle-toc-panel" title="目录">☰</span>
+        </div>
+        <div id="header-action-right" class="header-action">
+          <span id="toggle-fullscreen" title="全屏">⛶</span>
+          <!-- ⚙ -->
+          <span id="toggle-setting-panel" title="设置">⛄</span>
+        </div>
+      </header>
+
+      <!-- 内容区 -->
+      <main id="content"></main>
+
+      <!-- 底部页脚 -->
+      <footer id="footer">
+        <div id="chapter-name"></div>
+        <div id="progress-rate"></div>
+      </footer>
+
+      <!-- 目录面板 -->
+      <section id="toc-panel" class="panel resizable" hidden>
+        <header class="panel-header">
+          <h2>目录</h2>
+          <div class="panel-header-action">
+            <span id="close-toc-panel" title="关闭">✖</span>
+          </div>
+        </header>
+        <div id="toc" class="panel-body"></div>
+        <div class="panel-footer"></div>
+      </section>
+
+      <!-- 设置面板 -->
+      <section id="setting-panel" class="panel resizable" hidden>
+        <header class="panel-header">
+          <h2>设置</h2>
+          <div class="panel-header-action">
+            <span id="reset-setting-panel" title="重置">↺</span>
+            <span id="close-setting-panel" title="关闭">✖</span>
+          </div>
+        </header>
+        <div id="setting-body" class="panel-body">
+          <div class="setting-item">
+            <span class="setting-item-name">主题</span>
+            <select id="theme" class="setting-item-control"></select>
+            <span id="theme-value" class="setting-item-value"></span>
+          </div>
+          <div class="setting-item">
+            <span class="setting-item-name">字号</span>
+            <input type="range" id="font-size" min="12" max="100" step="1" class="setting-item-control" />
+            <span id="font-size-value" class="setting-item-value"></span>
+          </div>
+          <div class="setting-item">
+            <span class="setting-item-name">页宽</span>
+            <input type="range" id="width" step="1" class="setting-item-control" />
+            <span id="width-value" class="setting-item-value"></span>
+          </div>
+          <div class="setting-item">
+            <span class="setting-item-name">边距</span>
+            <input type="range" id="padding" min="0" max="100" step="1" class="setting-item-control" />
+            <span id="padding-value" class="setting-item-value"></span>
+          </div>
+          <div class="setting-item">
+            <span class="setting-item-name">行高</span>
+            <input type="range" id="line-height" min="1" max="3" step="0.1" class="setting-item-control" />
+            <span id="line-height-value" class="setting-item-value"></span>
+          </div>
+          <div class="setting-item">
+            <span class="setting-item-name">字色</span>
+            <input type="color" id="font-color" class="setting-item-control" />
+            <span id="font-color-value" class="setting-item-value"></span>
+          </div>
+          <div class="setting-item">
+            <span class="setting-item-name">正文背景</span>
+            <input type="color" id="content-background-color" class="setting-item-control" />
+            <span id="content-background-color-value" class="setting-item-value"></span>
+          </div>
+          <div class="setting-item">
+            <span class="setting-item-name">网页背景</span>
+            <input type="color" id="background-color" class="setting-item-control" />
+            <span id="background-color-value" class="setting-item-value"></span>
+          </div>
+        </div>
+        <div class="panel-footer"></div>
+      </section>
+    </div>
+  </body>
+</html>

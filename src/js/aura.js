@@ -26,17 +26,23 @@ export default class Aura {
             book: {
                 name: "book",
                 keyPath: "id",
-                autoIncrement: true,
+                autoIncrement: false,
                 indexes: {
-                    bookGenreIndex: { name: "book_genre_index", path: "genre", unique: false }
+                    genreId: { name: "genre_id", path: "genreId", unique: false }
                 }
+            },
+            tableOfContents: {
+                name: "table_of_contents",
+                keyPath: "bookId",
+                autoIncrement: false,
+                indexes: {}
             },
             chapter: {
                 name: "chapter",
                 keyPath: ["bookId", "id"],
                 autoIncrement: false,
                 indexes: {
-                    bookIdIndex: { name: "book_id_index", path: "bookId", unique: false },
+                    bookId: { name: "book_id", path: "bookId", unique: false },
                 }
             },
             readingProgress: {
@@ -58,62 +64,56 @@ export default class Aura {
     static reader = {
         setting: {
             id: "reader-setting",
-            theme: "day",
+            theme: "yellow",
             fontSize: 18,
             fontColor: "#000000",
-            //pageWidth: Math.min(window.screen.width * 0.8, 800),
-            pageWidth: Math.min(window.screen.width * 0.8, 800),
+            pageWidth: window.innerWidth > 768 ? 800 : window.innerWidth,
             pagePadding: 30,
             lineHeight: 2,
             backgroundColor: "#be966e",
             contentBackgroundColor: "#f2e8c8"
         },
         theme: {
-            day: {
+            light: {
+                name: "浅色",
+                fontColor: "#000000",
+                contentBackgroundColor: "#ffffff",
+                backgroundColor: "#ffffff"
+            },
+            dim: {
+                name: "昏暗",
+                fontColor: "#e3e3e3",
+                contentBackgroundColor: "#111a2e",
+                backgroundColor: "#111a2e"
+            },
+            dark: {
+                name: "深色",
+                fontColor: "#e3e3e3",
+                contentBackgroundColor: "#202124",
+                backgroundColor: "#202124",
+            },
+            yellow: {
+                name: "黄色",
                 fontColor: "#000000",
                 backgroundColor: "#be966e",
                 contentBackgroundColor: "#f2e8c8"
             },
-            dim: {
-                fontColor: "#999999",
-                contentBackgroundColor: "#111a2e",
-                backgroundColor: "#111a2e"
+            blue: {
+                name: "蓝色",
+                fontColor: "#e3e3e3",
+                contentBackgroundColor: "#d2e3fc",
+                backgroundColor: "#d2e3fc",
             },
-            night: {
-                fontColor: "#999999",
-                contentBackgroundColor: "#111111",
-                backgroundColor: "#111111",
+            grey: {
+                name: "灰色",
+                fontColor: "#e3e3e3",
+                contentBackgroundColor: "#3c3c3c",
+                backgroundColor: "#3c3c3c",
             }
         }
     }
 
     // 数据库实例
     static database = new Database(Aura.databaseProperties.name, Aura.databaseProperties.version, Aura.databaseProperties.stores);
-
-    /**
-     * 给元素添加事件监听器
-     * @param {Element} element - 要绑定事件的元素
-     * @param {string} eventType - 事件类型，如 'click'
-     * @param {Function} handler - 事件处理函数
-     * @param {string} selector - 事件委托的目标选择器，没传则直接绑定element
-     */
-    static addEventListenerTo(element, eventType, handler, selector) {
-        if (!selector) {
-            // 普通事件绑定
-            element.addEventListener(eventType, event => handler.call(element, event));
-        } else {
-            // 事件委托
-            element.addEventListener(eventType, event => {
-                const targetElement = event.target.closest(selector);
-                if (targetElement && element.contains(targetElement)) {
-                    handler.call(targetElement, event);
-                }
-            });
-        }
-    }
-
-    static addEventListenerToAll(elements, eventType, handler, selector) {
-        (elements ?? []).forEach(element => Aura.addEventListenerTo(element, eventType, handler, selector));
-    }
 
 }
