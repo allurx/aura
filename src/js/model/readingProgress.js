@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+/**
+ * 阅读进度
+ * @author allurx
+ */
 export default class ReadingProgress {
 
     // 书籍id

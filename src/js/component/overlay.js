@@ -16,6 +16,7 @@
 
 /**
  * 遮罩
+ * @author allurx
  */
 export default class Overlay {
 

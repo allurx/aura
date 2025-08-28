@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+/**
+ * 书籍
+ * @author allurx
+ */
 export default class Book {
 
     id;

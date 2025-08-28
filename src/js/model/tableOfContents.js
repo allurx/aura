@@ -16,6 +16,7 @@
 
 /**
  * 章节目录
+ * @author allurx
  */
 export default class TableOfContents {
 

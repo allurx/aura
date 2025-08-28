@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+/**
+ * 章节
+ * @author allurx
+ */
 export default class Chapter {
 
     id;

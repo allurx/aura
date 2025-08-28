@@ -16,6 +16,7 @@
 
 /**
  * 数据库操作接口 - 定义常用的数据库操作
+ * @author allurx
  */
 export default class DatabaseOperation {
 
@@ -63,7 +64,7 @@ export default class DatabaseOperation {
     }
 
     async deleteAllByIndex(storeName, indexName, indexValue) {
-        
+
         const store = this.#transaction.objectStore(storeName);
         const index = store.index(indexName);
 

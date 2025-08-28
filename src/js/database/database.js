@@ -16,6 +16,10 @@
 
 import TransactionManager from "./transactionManager.js";
 
+/**
+ * 数据库
+ * @author allurx
+ */
 export default class Database {
 
     static READ_WRITE = "readwrite";
