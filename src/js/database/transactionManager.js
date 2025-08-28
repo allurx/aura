@@ -18,6 +18,7 @@ import DatabaseOperation from './databaseOperation.js';
 
 /**
  * 事务管理器 - 负责事务的创建和管理
+ * @author allurx
  */
 export default class TransactionManager {
 
@@ -44,8 +45,8 @@ export default class TransactionManager {
             const databaseOperations = new DatabaseOperation(transaction);
 
             Promise.resolve(operation(databaseOperations))
-                .then(res => { 
-                    result = res; 
+                .then(res => {
+                    result = res;
                 })
                 .catch(error => {
                     transaction.abort();

@@ -19,6 +19,10 @@ import Overlay from "./component/overlay.js";
 import FullscreenUtil from "./util/fullscreenUtil.js";
 import ReadingProgress from "./model/readingProgress.js";
 
+/**
+ * 阅读器
+ * @author allurx
+ */
 class Reader {
 
     // 当前书籍信息

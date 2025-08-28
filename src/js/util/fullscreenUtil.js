@@ -16,6 +16,7 @@
 
 /**
  * 全屏工具类
+ * @author allurx
  */
 export default class FullscreenUtil {
 

@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+/**
+ * 阅读器设置
+ * @author allurx
+ */
 export default class ReaderSetting {
 
     // id

@@ -16,6 +16,10 @@
 
 import Database from "./database/database.js"
 
+/**
+ * Aura
+ * @author allurx
+ */
 export default class Aura {
 
     // 数据库属性

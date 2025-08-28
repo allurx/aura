@@ -23,6 +23,10 @@ import EventBinderUtil from "./util/eventBinderUtil.js";
 import ReadingProgress from "./model/readingProgress.js";
 import TableOfContents from "./model/tableOfContents.js";
 
+/**
+ * 书架
+ * @author allurx
+ */
 export default class Bookshelf {
 
     bookGenres = [

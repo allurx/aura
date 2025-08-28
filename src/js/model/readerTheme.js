@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+/**
+ * 阅读器主题
+ * @author allurx
+ */
 export default class ReaderTheme extends ReaderSetting {
 
     // 主题名称
