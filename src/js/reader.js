@@ -15,6 +15,7 @@
  */
 
 import Aura from "./aura.js";
+import Overlay from "./component/overlay.js";
 import FullscreenUtil from "./util/fullscreenUtil.js";
 import ReadingProgress from "./model/readingProgress.js";
 
@@ -32,6 +33,9 @@ class Reader {
     // 当前阅读设置
     setting;
 
+    // 遮罩层
+    overlay = new Overlay();
+
     // 初始化阅读器
     async init(bookId) {
         if (bookId) {
@@ -42,7 +46,8 @@ class Reader {
                 Aura.database.getByKey(Aura.databaseProperties.stores.readingProgress.name, bookId).then(readingProgress => this.readingProgress = readingProgress),
                 Aura.database.getByKey(Aura.databaseProperties.stores.setting.name, "reader-setting").then(setting => this.readerSetting = setting || Aura.reader.setting)
             ]).then(() => {
-                this.renderChapter();
+                this.renderToc();
+                this.renderTheme();
                 this.applyTheme(this.readerSetting.theme);
                 this.applyFontSize(this.readerSetting.fontSize);
                 this.applyPageWidth(this.readerSetting.pageWidth);
@@ -66,18 +71,17 @@ class Reader {
         document.getElementById("reader").classList.add("visible");
     }
 
-    // 渲染章节列表
-    renderChapter() {
-        const container = document.getElementById("chapter-list");
-        container.innerHTML = "";
+    // 渲染目录
+    renderToc() {
+        const container = document.getElementById("toc");
 
         // 创建文档片段，避免多次dom操作
         const fragment = document.createDocumentFragment();
 
-        this.toc.forEach(chapter => {
+        this.toc.forEach(content => {
             const p = document.createElement("p");
-            p.textContent = chapter.title;
-            p.dataset.index = chapter.id;
+            p.textContent = content.title;
+            p.dataset.index = content.id;
             fragment.appendChild(p);
         });
 
@@ -95,14 +99,17 @@ class Reader {
         });
     }
 
-    // 显示或隐藏加载动画
-    showLoading(show) {
-        return document.getElementById("loading-overlay").hidden = !show;
+    // 渲染主题
+    renderTheme() {
+        const select = document.querySelector("#theme");
+        for (const [key, value] of Object.entries(Aura.reader.theme)) {
+            select.add(new Option(value.name, key));
+        }
     }
 
     // 加载章节内容
     async loadChapter(readingProgress) {
-        this.showLoading(true);
+        this.overlay.show();
         await Aura.database.getByKey(Aura.databaseProperties.stores.chapter.name, [readingProgress.bookId, readingProgress.chapterId])
             .then(async chapter => {
 
@@ -122,6 +129,7 @@ class Reader {
 
                 // 先滚动到之前阅读的行
                 contentElement.querySelector(`p[data-index="${readingProgress.lineIndex}"]`)?.scrollIntoView({ block: "start", behavior: "auto" });
+
                 // 微调scrollTop，兼顾移动端弹性滚动
                 const scrollAdjustment = readingProgress.scrollTop ? readingProgress.scrollTop - contentElement.scrollTop : 0;
                 contentElement.scrollTop += scrollAdjustment;
@@ -134,9 +142,9 @@ class Reader {
                 this.readingProgress = readingProgress
                 await Aura.database.put(Aura.databaseProperties.stores.readingProgress.name, this.readingProgress);
             })
-            .then(() => this.highlightChapter())
+            .then(() => this.highlightToc())
             .then(() => this.renderProgress())
-            .finally(() => this.showLoading(false));
+            .finally(() => this.overlay.hide());
 
     }
 
@@ -146,34 +154,34 @@ class Reader {
         document.getElementById("progress-rate").textContent = `${rate}%`;
     }
 
-    // 高亮当前章节
-    highlightChapter() {
+    // 高亮目录
+    highlightToc() {
 
         // 移除之前的章节高亮
-        document.querySelector("#chapter-list p.active")?.classList.remove("active");
+        document.querySelector("#toc p.active")?.classList.remove("active");
 
         // 高亮当前章节
-        const currentChapterElement = document.querySelector(`#chapter-list p[data-index="${this.readingProgress.chapterId}"]`);
-        currentChapterElement.classList.add("active");
+        const currentTocElement = document.querySelector(`#toc p[data-index="${this.readingProgress.chapterId}"]`);
+        currentTocElement.classList.add("active");
 
         // 滚动到当前章节
-        currentChapterElement.scrollIntoView({ behavior: "smooth", block: "start" });
+        currentTocElement.scrollIntoView({ behavior: "smooth", block: "start" });
 
     }
 
     // 绑定事件
     bindEvent() {
 
-        // 展开/关闭章节面板
-        document.getElementById("toggle-chapter-panel").onclick = () => {
-            const chapterPanel = document.getElementById("chapter-panel");
-            chapterPanel.hidden = !chapterPanel.hidden;
-            this.highlightChapter();
+        // 展开/关闭目录面板
+        document.getElementById("toggle-toc-panel").onclick = () => {
+            const tocPanel = document.getElementById("toc-panel");
+            tocPanel.hidden = !tocPanel.hidden;
+            this.highlightToc();
         }
 
-        // 关闭章节面板
-        document.getElementById("close-chapter-panel-btn").addEventListener("click", () => {
-            document.getElementById("chapter-panel").hidden = true;
+        // 关闭目录面板
+        document.getElementById("close-toc-panel").addEventListener("click", () => {
+            document.getElementById("toc-panel").hidden = true;
         });
 
         // 切换全屏
@@ -188,11 +196,11 @@ class Reader {
         });
 
         // 关闭设置面板
-        document.getElementById("close-setting-panel-btn").addEventListener("click", () =>
+        document.getElementById("close-setting-panel").addEventListener("click", () =>
             document.getElementById("setting-panel").hidden = true);
 
         // 重置设置面板
-        document.getElementById("reset-setting-panel-btn").onclick = () => {
+        document.getElementById("reset-setting-panel").onclick = () => {
             this.applyTheme(Aura.reader.setting.theme);
             this.applyFontSize(Aura.reader.setting.fontSize);
             this.applyPageWidth(Aura.reader.setting.pageWidth);
@@ -311,16 +319,13 @@ class Reader {
                         // 当前reader的宽度
                         const newWidth = entries[0].contentRect.width;
 
-                        // 计算应用的新宽度，取屏幕宽度和新宽度的最小值
-                        const appliedWidth = Math.min(Math.round(newWidth), window.screen.width);
-
                         console.log("检测到页面宽度变化：", newWidth);
 
                         // 应用新宽度
-                        this.applyPageWidth(appliedWidth);
+                        this.applyPageWidth(newWidth);
 
                         // 保存页面宽度
-                        this.saveReaderSetting({ ...this.readerSetting, pageWidth: appliedWidth });
+                        this.saveReaderSetting({ ...this.readerSetting, pageWidth: newWidth });
                     }
 
                         //防抖延迟时间（毫秒）
@@ -551,11 +556,14 @@ class Reader {
 
     // 应用页面宽度设置
     applyPageWidth(width) {
+        // 计算应用的新宽度，取屏幕可见宽度和新宽度的较小值
+        const appliedWidth = Math.min(Math.round(width), window.innerWidth);
         const pageWidth = document.getElementById("width");
-        pageWidth.max = window.screen.width;
-        pageWidth.value = width;
-        document.getElementById("width-value").textContent = width + "px";
-        document.getElementById("reader").style.width = width + "px";
+        pageWidth.min = window.innerWidth > 768 ? 768 : 320;
+        pageWidth.max = window.innerWidth;
+        pageWidth.value = appliedWidth;
+        document.getElementById("width-value").textContent = appliedWidth + "px";
+        document.getElementById("reader").style.width = appliedWidth + "px";
     }
 
     // 应用页面内边距设置

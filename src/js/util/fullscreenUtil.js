@@ -52,13 +52,13 @@ export default class FullscreenUtil {
      */
     static enter(element) {
         if (element.requestFullscreen) {
-            element.requestFullscreen();
+            return element.requestFullscreen();
         } else if (element.webkitRequestFullscreen) {
-            element.webkitRequestFullscreen();
+            return element.webkitRequestFullscreen();
         } else if (element.mozRequestFullScreen) {
-            element.mozRequestFullScreen();
+            return element.mozRequestFullScreen();
         } else if (element.msRequestFullscreen) {
-            element.msRequestFullscreen();
+            return element.msRequestFullscreen();
         } else {
             return Promise.reject(new Error("当前设备不支持全屏操作"));
         }

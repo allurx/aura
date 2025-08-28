@@ -15,30 +15,16 @@
  */
 
 @charset "UTF-8";
+@import "base.css";
+@import "overlay.css";
 
 /* 全局变量定义 */
 :root {
-  --font-size: 16px;
   --background-color: #1f2937;
-}
-
-*,
-*::before,
-*::after {
-  /* 统一盒模型 */
-  box-sizing: border-box;
-  /* 去除默认 margin 和 padding */
-  margin: 0;
-  padding: 0;
 }
 
 body,
 html {
-  height: 100%;
-  width: 100%;
-  font-size: var(--font-size);
-  font-family: "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
-  overflow: hidden;
   background-color: var(--background-color);
 }
 
@@ -102,7 +88,7 @@ nav {
   transition: transform 0.3s ease;
 }
 
-nav.device-flag {
+nav.flag {
   position: static;
   transform: translateX(0);
 }
@@ -217,6 +203,7 @@ input[type="file"] {
 }
 
 .delete-book {
+  cursor: pointer;
   /* 默认透明 */
   opacity: 0;
   transition: opacity 0.3s;
@@ -279,7 +266,7 @@ input[type="file"] {
     transition: transform 0.3s ease;
   }
 
-  nav.device-flag {
+  nav.flag {
     position: fixed;
     transform: translateX(-100%);
   }

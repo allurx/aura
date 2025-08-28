@@ -64,30 +64,51 @@ export default class Aura {
     static reader = {
         setting: {
             id: "reader-setting",
-            theme: "day",
+            theme: "yellow",
             fontSize: 18,
             fontColor: "#000000",
-            pageWidth: window.screen.width > 768 ? 800 : window.screen.width,
+            pageWidth: window.innerWidth > 768 ? 800 : window.innerWidth,
             pagePadding: 30,
             lineHeight: 2,
             backgroundColor: "#be966e",
             contentBackgroundColor: "#f2e8c8"
         },
         theme: {
-            day: {
+            light: {
+                name: "浅色",
+                fontColor: "#000000",
+                contentBackgroundColor: "#ffffff",
+                backgroundColor: "#ffffff"
+            },
+            dim: {
+                name: "昏暗",
+                fontColor: "#e3e3e3",
+                contentBackgroundColor: "#111a2e",
+                backgroundColor: "#111a2e"
+            },
+            dark: {
+                name: "深色",
+                fontColor: "#e3e3e3",
+                contentBackgroundColor: "#202124",
+                backgroundColor: "#202124",
+            },
+            yellow: {
+                name: "黄色",
                 fontColor: "#000000",
                 backgroundColor: "#be966e",
                 contentBackgroundColor: "#f2e8c8"
             },
-            dim: {
-                fontColor: "#999999",
-                contentBackgroundColor: "#111a2e",
-                backgroundColor: "#111a2e"
+            blue: {
+                name: "蓝色",
+                fontColor: "#e3e3e3",
+                contentBackgroundColor: "#d2e3fc",
+                backgroundColor: "#d2e3fc",
             },
-            night: {
-                fontColor: "#999999",
-                contentBackgroundColor: "#111111",
-                backgroundColor: "#111111",
+            grey: {
+                name: "灰色",
+                fontColor: "#e3e3e3",
+                contentBackgroundColor: "#3c3c3c",
+                backgroundColor: "#3c3c3c",
             }
         }
     }

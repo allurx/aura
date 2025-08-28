@@ -18,6 +18,7 @@ import Aura from "./aura.js";
 import Book from "./model/book.js";
 import Chapter from "./model/chapter.js";
 import Database from "./database/database.js";
+import Overlay from "./component/overlay.js";
 import EventBinderUtil from "./util/eventBinderUtil.js";
 import ReadingProgress from "./model/readingProgress.js";
 import TableOfContents from "./model/tableOfContents.js";
@@ -46,10 +47,13 @@ export default class Bookshelf {
     // 当前书籍分类
     currentBookGenreId = 1;
 
+    // 遮罩层
+    overlay = new Overlay();
+
     init() {
         this.initNav();
         this.bindEvent();
-        document.querySelector("nav button").click()
+        this.switchCurrentGenre();
     }
 
     // 初始化左侧导航栏
@@ -57,7 +61,7 @@ export default class Bookshelf {
         const navElement = document.querySelector("nav");
         this.bookGenres.forEach(bookGenre => {
             const button = document.createElement("button");
-            button.id = bookGenre.id;
+            button.dataset.id = bookGenre.id;
             button.textContent = bookGenre.name;
             navElement.appendChild(button);
         })
@@ -67,7 +71,7 @@ export default class Bookshelf {
     switchGenre(button) {
         document.querySelector("nav button.active")?.classList.remove("active");
         button.classList.add("active");
-        this.currentBookGenreId = Number(button.id);
+        this.currentBookGenreId = Number(button.dataset.id);
 
         // 删除原先书籍分类下的页面元素
         document.querySelectorAll(".book").forEach(element => element.remove());
@@ -77,60 +81,64 @@ export default class Bookshelf {
             .then(books => books.forEach(book => this.createBookElement(new Book(book.id, book.genreId, book.hash, book.fileName, book.title))));
     }
 
+    // 切换到当前书籍分类
+    switchCurrentGenre() {
+        document.querySelector(`nav button[data-id="${this.currentBookGenreId}"]`).click();
+    }
+
     // 添加书籍
-    addBook(bookInput) {
-        Array.from(bookInput.files)
-            .map(async file => {
+    async addBook(bookInput) {
+        try {
+            this.overlay.show();
+            // 每本书在自己的独立事务中，允许部分事务成功
+            await Promise.all(Array.from(bookInput.files)
+                .map(async file => {
 
-                // 获取数据库表名
-                const bookStoreName = Aura.databaseProperties.stores.book.name;
-                const chapterStoreName = Aura.databaseProperties.stores.chapter.name;
-                const tableOfContentsStoreName = Aura.databaseProperties.stores.tableOfContents.name;
-                const readingProgressStoreName = Aura.databaseProperties.stores.readingProgress.name;
+                    // 获取数据库表名
+                    const bookStoreName = Aura.databaseProperties.stores.book.name;
+                    const chapterStoreName = Aura.databaseProperties.stores.chapter.name;
+                    const tableOfContentsStoreName = Aura.databaseProperties.stores.tableOfContents.name;
+                    const readingProgressStoreName = Aura.databaseProperties.stores.readingProgress.name;
 
-                // 创建书籍
-                const book = await Book.create(file, this.currentBookGenreId);
+                    // 创建书籍
+                    const book = await Book.create(file, this.currentBookGenreId);
 
-                // 解析章节
-                const chapters = await Chapter.parse(file, book.id);
+                    // 解析章节
+                    const chapters = await Chapter.parse(file, book.id);
 
-                // 生成目录
-                const tableOfContents = new TableOfContents(book.id, chapters.map(chapter => new TableOfContents.content(chapter.id, chapter.title)));
+                    // 生成目录
+                    const tableOfContents = new TableOfContents(book.id, chapters.map(chapter => new TableOfContents.content(chapter.id, chapter.title)));
 
-                // 创建阅读进度
-                const readingProgress = new ReadingProgress(book.id, 0, 0, 0);
+                    // 创建阅读进度
+                    const readingProgress = new ReadingProgress(book.id, 0, 0, 0);
 
-                // 检查书籍是否已存在
-                // const existingBook = await Aura.database.getByKey(bookStoreName, book.hash);
-                // if (existingBook) {
-                //     alert(`${this.bookGenres.find(genre => genre.id === existingBook.genreId).name}分类中已存在 - ${file.name}`);
-                //     return;
-                // }
+                    // 将书籍和章节存入数据库
+                    await Aura.database.transaction(
+                        [bookStoreName, chapterStoreName, tableOfContentsStoreName, readingProgressStoreName],
+                        Database.READ_WRITE,
+                        async (dbop) => {
 
-                // 将书籍和章节存入数据库
-                Aura.database.transaction(
-                    [bookStoreName, chapterStoreName, tableOfContentsStoreName, readingProgressStoreName],
-                    Database.READ_WRITE,
-                    async (dbop) => {
+                            // 保存书籍
+                            await dbop.add(bookStoreName, book);
 
-                        // 保存书籍
-                        await dbop.add(bookStoreName, book);
+                            // 批量保存章节
+                            await dbop.putAll(chapterStoreName, chapters);
 
-                        // 批量保存章节
-                        await dbop.putAll(chapterStoreName, chapters);
+                            // 保存目录
+                            await dbop.add(tableOfContentsStoreName, tableOfContents);
 
-                        // 保存目录
-                        await dbop.add(tableOfContentsStoreName, tableOfContents);
+                            // 保存阅读进度
+                            await dbop.put(readingProgressStoreName, readingProgress);
 
-                        // 保存阅读进度
-                        await dbop.put(readingProgressStoreName, readingProgress);
-
-                        // 创建书籍元素
-                        this.createBookElement(book);
-                    });
-            });
-        // 重置，支持重复上传同一文件
-        bookInput.value = "";
+                            // 创建书籍元素
+                            this.createBookElement(book);
+                        });
+                }));
+        } finally {
+            // 重置，支持重复上传同一文件
+            bookInput.value = "";
+            this.overlay.hide();
+        }
     }
 
     // 创建书籍元素
@@ -161,7 +169,7 @@ export default class Bookshelf {
                 Database.READ_WRITE,
                 async (dbop) => {
 
-                    this.showLoading(true);
+                    this.overlay.show();
 
                     await dbop.deleteByKey(bookStoreName, bookId);
                     await dbop.deleteAllByIndex(chapterStoreName, chapterIndexName, bookId);
@@ -171,7 +179,7 @@ export default class Bookshelf {
             ).then(() => {
                 bookElement.remove();
             }).finally(() => {
-                this.showLoading(false);
+                this.overlay.hide();
             });
         }
     }
@@ -190,13 +198,13 @@ export default class Bookshelf {
             const books = await Aura.database.getAll(bookStoreName);
             if (books.length === 0) return;
 
-            // 将所有书的所有操作合并到一个事务中
+            // 将所有书的所有操作合并到一个事务中，要么都成功，要么都失败
             await Aura.database.transaction(
                 [bookStoreName, chapterStoreName, tableOfContentsStoreName, readingProgressStoreName],
                 Database.READ_WRITE,
                 async (dbop) => {
 
-                    this.showLoading(true);
+                    this.overlay.show();
 
                     // 每本书有三个数据库操作，合并所有操作
                     const deletePromises = books.flatMap(book => [
@@ -211,17 +219,12 @@ export default class Bookshelf {
 
                 }).then(() => {
                     console.log("书架已清空！");
-                    document.querySelector("nav button").click();
+                    this.switchCurrentGenre();
                 }).finally(() => {
-                    this.showLoading(false);
+                    this.overlay.hide();
                 });
 
         }
-    }
-
-    // 显示或隐藏加载动画
-    showLoading(show) {
-        return document.getElementById("loading-overlay").hidden = !show;
     }
 
     // 绑定事件
@@ -229,9 +232,7 @@ export default class Bookshelf {
         EventBinderUtil.bind("nav button", "click", this.switchGenre.bind(this));
         EventBinderUtil.bind("#book-input", "change", this.addBook.bind(this));
         EventBinderUtil.bind("#clear-bookshelf", "click", this.clearBookshelf.bind(this));
-        EventBinderUtil.bind("#header-title", "click", () => {
-            document.querySelector("nav").classList.toggle("device-flag");
-        });
+        EventBinderUtil.bind("#header-title", "click", () => document.querySelector("nav").classList.toggle("flag"));
 
         // book元素是动态生成的，需要通过事件冒泡判断来绑定的事件
         EventBinderUtil.delegate("#books", ".book-body", "click", this.readBook.bind(this));
