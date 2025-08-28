@@ -22,8 +22,8 @@ export default class Overlay {
 
     element;
 
-    constructor() {
-        this.element = document.body.appendChild(this.#appendToBody());
+    constructor({ containerSelector = "body" } = {}) {
+        this.element = document.querySelector(containerSelector).appendChild(this.#appendToContainer());
     }
 
     show() {
@@ -34,7 +34,7 @@ export default class Overlay {
         this.element.hidden = true;
     }
 
-    #appendToBody() {
+    #appendToContainer() {
         const template = document.createElement("template");
         template.innerHTML = this.#template().trim();
         return document.body.appendChild(template.content.firstElementChild);
