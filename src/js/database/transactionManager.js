@@ -28,30 +28,49 @@ export default class TransactionManager {
         this.#database = database;
     }
 
-    async execute(storeNames, mode, operation) {
+    /**
+     * 执行数据库操作，支持 async/await
+     * @param {string|string[]} storeNames - 目标 object store 名称
+     * @param {"readonly"|"readwrite"} mode - 事务模式
+     * @param {(DatabaseOperation) => any} databaseOperation - 数据库操作函数
+     */
+    async execute(storeNames, mode, databaseOperation) {
 
-        const db = await this.#database.connect();
+        const database = await this.#database.connect();
+        const transaction = database.transaction(storeNames, mode);
+        const transactionPromise = this.#transactionPromise(transaction);
+        const stores = this.#stores(storeNames, transaction);
+        const dpop = new DatabaseOperation(stores);
 
+        try {
+            // 等待用户操作完成
+            return await databaseOperation(dpop);
+        } finally {
+            // 等待事务完成或失败
+            await transactionPromise;
+        }
+
+    }
+
+    // 获取stores
+    #stores(storeNames, transaction) {
+        const storeNameArray = Array.isArray(storeNames) ? storeNames : [storeNames];
+        return storeNameArray.reduce((accumulator, storeName) => {
+            accumulator[storeName] = transaction.objectStore(storeName);
+            return accumulator;
+        }, {});
+    }
+
+    /**
+     * 将 IDBTransaction 包装为 Promise
+     * @param {IDBTransaction} transaction 
+     * @returns {Promise<void>}
+     */
+    #transactionPromise(transaction) {
         return new Promise((resolve, reject) => {
-
-            let result;
-            const transaction = db.transaction(storeNames, mode);
-
-            transaction.oncomplete = (event) => resolve(result);
-            transaction.onerror = (event) => reject(event.target.error);
-            transaction.onabort = (event) => reject(event.target.error);
-
-            // 创建数据库操作
-            const databaseOperations = new DatabaseOperation(transaction);
-
-            Promise.resolve(operation(databaseOperations))
-                .then(res => {
-                    result = res;
-                })
-                .catch(error => {
-                    transaction.abort();
-                    reject(error);
-                });
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error);
         });
     }
 

@@ -25,7 +25,7 @@ export default class Chapter {
     title;
     content;
 
-    constructor(id, bookId, title, content) {
+    constructor({ id, bookId, title, content }) {
         this.id = id;
         this.bookId = bookId;
         this.title = title;
@@ -47,14 +47,14 @@ export default class Chapter {
 
                 // 没有匹配到章节，则全文件作为一个章节
                 if (matches.length === 0) {
-                    chapters.push(new Chapter(0, bookId, "全文", text.trim()));
+                    chapters.push(new Chapter({ id: 0, bookId, title: "全文", content: text.trim() }));
                     resolve(chapters);
                     return;
                 }
 
                 // 如果开头有介绍文字（第一个章节前有内容）
                 if (matches[0].index > 0) {
-                    chapters.push(new Chapter(chapters.length, bookId, "前言", text.slice(0, matches[0].index).trimStart()));
+                    chapters.push(new Chapter({ id: chapters.length, bookId, title: "前言", content: text.slice(0, matches[0].index).trimStart() }));
                 }
 
                 // 遍历每个章节匹配
@@ -63,7 +63,7 @@ export default class Chapter {
                     const start = match.index + chapterTitle.length;
                     const end = i < matches.length - 1 ? matches[i + 1].index : text.length;
                     const content = text.slice(start, end).trimStart();
-                    chapters.push(new Chapter(chapters.length, bookId, chapterTitle, content));
+                    chapters.push(new Chapter({ id: chapters.length, bookId, title: chapterTitle, content }));
                 });
 
                 resolve(chapters);

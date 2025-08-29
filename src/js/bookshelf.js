@@ -48,6 +48,14 @@ export default class Bookshelf {
         { id: 16, name: "魔幻" }
     ];
 
+    // 数据库属性
+    bookStoreName = Aura.databaseProperties.stores.book.name;
+    chapterStoreName = Aura.databaseProperties.stores.chapter.name;
+    chapterIndexName = Aura.databaseProperties.stores.chapter.indexes.bookId.name;
+    tableOfContentsStoreName = Aura.databaseProperties.stores.tableOfContents.name;
+    readingProgressStoreName = Aura.databaseProperties.stores.readingProgress.name;
+    genreIdIndexName = Aura.databaseProperties.stores.book.indexes.genreId.name;
+
     // 当前书籍分类
     currentBookGenreId = 1;
 
@@ -81,13 +89,13 @@ export default class Bookshelf {
         document.querySelectorAll(".book").forEach(element => element.remove());
 
         // 找到当前书籍类型下的文件，并将其添加的页面元素中
-        Aura.database.getAllByIndex(Aura.databaseProperties.stores.book.name, Aura.databaseProperties.stores.book.indexes.genreId.name, this.currentBookGenreId)
-            .then(books => books.forEach(book => this.createBookElement(new Book(book.id, book.genreId, book.hash, book.fileName, book.title))));
+        Aura.database.getAllByIndex(this.bookStoreName, this.genreIdIndexName, this.currentBookGenreId)
+            .then(books => books.forEach(book => this.createBookElement(new Book({ ...book }))));
     }
 
     // 切换到当前书籍分类
     switchCurrentGenre() {
-        document.querySelector(`nav button[data-id="${this.currentBookGenreId}"]`).click();
+        this.switchGenre(document.querySelector(`nav button[data-id="${this.currentBookGenreId}"]`));
     }
 
     // 添加书籍
@@ -103,12 +111,6 @@ export default class Bookshelf {
                         return;
                     }
 
-                    // 获取数据库表名
-                    const bookStoreName = Aura.databaseProperties.stores.book.name;
-                    const chapterStoreName = Aura.databaseProperties.stores.chapter.name;
-                    const tableOfContentsStoreName = Aura.databaseProperties.stores.tableOfContents.name;
-                    const readingProgressStoreName = Aura.databaseProperties.stores.readingProgress.name;
-
                     // 创建书籍
                     const book = await Book.create(file, this.currentBookGenreId);
 
@@ -116,28 +118,28 @@ export default class Bookshelf {
                     const chapters = await Chapter.parse(file, book.id);
 
                     // 生成目录
-                    const tableOfContents = new TableOfContents(book.id, chapters.map(chapter => new TableOfContents.content(chapter.id, chapter.title)));
+                    const tableOfContents = new TableOfContents({ bookId: book.id, contents: chapters });
 
                     // 创建阅读进度
-                    const readingProgress = new ReadingProgress(book.id, 0, 0, 0);
+                    const readingProgress = new ReadingProgress({ bookId: book.id, chapterId: 0, lineIndex: 0, scrollTop: 0 });
 
                     // 将书籍和章节存入数据库
                     await Aura.database.transaction(
-                        [bookStoreName, chapterStoreName, tableOfContentsStoreName, readingProgressStoreName],
+                        [this.bookStoreName, this.chapterStoreName, this.tableOfContentsStoreName, this.readingProgressStoreName],
                         Database.READ_WRITE,
                         async (dbop) => {
 
                             // 保存书籍
-                            await dbop.add(bookStoreName, book);
+                            await dbop.add(this.bookStoreName, book);
 
                             // 批量保存章节
-                            await dbop.putAll(chapterStoreName, chapters);
+                            await dbop.putAll(this.chapterStoreName, chapters);
 
                             // 保存目录
-                            await dbop.add(tableOfContentsStoreName, tableOfContents);
+                            await dbop.add(this.tableOfContentsStoreName, tableOfContents);
 
                             // 保存阅读进度
-                            await dbop.put(readingProgressStoreName, readingProgress);
+                            await dbop.put(this.readingProgressStoreName, readingProgress);
 
                             // 创建书籍元素
                             this.createBookElement(book);
@@ -168,22 +170,17 @@ export default class Bookshelf {
         if (confirm("确定要删除这本书吗？")) {
             const bookElement = deleteBookElement.closest(".book");
             const bookId = bookElement.id;
-            const bookStoreName = Aura.databaseProperties.stores.book.name;
-            const chapterStoreName = Aura.databaseProperties.stores.chapter.name;
-            const chapterIndexName = Aura.databaseProperties.stores.chapter.indexes.bookId.name;
-            const tableOfContentsStoreName = Aura.databaseProperties.stores.tableOfContents.name;
-            const readingProgressStoreName = Aura.databaseProperties.stores.readingProgress.name;
             await Aura.database.transaction(
-                [bookStoreName, chapterStoreName, tableOfContentsStoreName, readingProgressStoreName],
+                [this.bookStoreName, this.chapterStoreName, this.tableOfContentsStoreName, this.readingProgressStoreName],
                 Database.READ_WRITE,
                 async (dbop) => {
 
                     this.overlay.show();
 
-                    await dbop.deleteByKey(bookStoreName, bookId);
-                    await dbop.deleteAllByIndex(chapterStoreName, chapterIndexName, bookId);
-                    await dbop.deleteByKey(tableOfContentsStoreName, bookId);
-                    await dbop.deleteByKey(readingProgressStoreName, bookId);
+                    await dbop.deleteByKey(this.bookStoreName, bookId);
+                    await dbop.deleteAllByIndex(this.chapterStoreName, this.chapterIndexName, bookId);
+                    await dbop.deleteByKey(this.tableOfContentsStoreName, bookId);
+                    await dbop.deleteByKey(this.readingProgressStoreName, bookId);
                 }
             ).then(() => {
                 bookElement.remove();
@@ -197,19 +194,13 @@ export default class Bookshelf {
     async clearBookshelf() {
         if (confirm("确定要清空书架中的所有书籍吗？")) {
 
-            const bookStoreName = Aura.databaseProperties.stores.book.name;
-            const chapterStoreName = Aura.databaseProperties.stores.chapter.name;
-            const chapterIndexName = Aura.databaseProperties.stores.chapter.indexes.bookId.name;
-            const tableOfContentsStoreName = Aura.databaseProperties.stores.tableOfContents.name;
-            const readingProgressStoreName = Aura.databaseProperties.stores.readingProgress.name;
-
             // 在事务外部获取所有书籍的列表
-            const books = await Aura.database.getAll(bookStoreName);
+            const books = await Aura.database.getAll(this.bookStoreName);
             if (books.length === 0) return;
 
             // 将所有书的所有操作合并到一个事务中，要么都成功，要么都失败
             await Aura.database.transaction(
-                [bookStoreName, chapterStoreName, tableOfContentsStoreName, readingProgressStoreName],
+                [this.bookStoreName, this.chapterStoreName, this.tableOfContentsStoreName, this.readingProgressStoreName],
                 Database.READ_WRITE,
                 async (dbop) => {
 
@@ -217,10 +208,10 @@ export default class Bookshelf {
 
                     // 每本书有三个数据库操作，合并所有操作
                     const deletePromises = books.flatMap(book => [
-                        dbop.deleteByKey(bookStoreName, book.id),
-                        dbop.deleteByKey(tableOfContentsStoreName, book.id),
-                        dbop.deleteByKey(readingProgressStoreName, book.id),
-                        dbop.deleteAllByIndex(chapterStoreName, chapterIndexName, book.id)
+                        dbop.deleteByKey(this.bookStoreName, book.id),
+                        dbop.deleteByKey(this.tableOfContentsStoreName, book.id),
+                        dbop.deleteByKey(this.readingProgressStoreName, book.id),
+                        dbop.deleteAllByIndex(this.chapterStoreName, this.chapterIndexName, book.id)
                     ]);
 
                     // 等待所有删除操作完成

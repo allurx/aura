@@ -20,52 +20,62 @@
  */
 export default class DatabaseOperation {
 
-    #transaction;
+    #stores;
 
-    constructor(transaction) {
-        this.#transaction = transaction;
+    constructor(stores) {
+        this.#stores = stores;
     }
 
     add(storeName, data) {
-        return this.#promisifyRequest(this.#transaction.objectStore(storeName).add(data));
+        return this.#requestPromise(this.store(storeName).add(data));
     }
 
     put(storeName, data) {
-        return this.#promisifyRequest(this.#transaction.objectStore(storeName).put(data));
+        return this.#requestPromise(this.store(storeName).put(data));
     }
 
     async putAll(storeName, dataArray) {
-        const store = this.#transaction.objectStore(storeName);
-        return Promise.all(dataArray.map(data => this.#promisifyRequest(store.put(data))));
+        const store = this.store(storeName);
+        return Promise.all(dataArray.map(data => this.#requestPromise(store.put(data))));
     }
 
     getByKey(storeName, key) {
-        return this.#promisifyRequest(this.#transaction.objectStore(storeName).get(key));
+        return this.#requestPromise(this.store(storeName).get(key));
     }
 
     getByIndex(storeName, indexName, indexValue) {
-        return this.#promisifyRequest(
-            this.#transaction.objectStore(storeName).index(indexName).get(indexValue)
+        return this.#requestPromise(
+            this.store(storeName).index(indexName).get(indexValue)
         );
     }
 
     getAll(storeName) {
-        return this.#promisifyRequest(this.#transaction.objectStore(storeName).getAll());
+        return this.#requestPromise(this.store(storeName).getAll());
     }
 
     getAllByIndex(storeName, indexName, indexValue) {
-        return this.#promisifyRequest(
-            this.#transaction.objectStore(storeName).index(indexName).getAll(indexValue)
+        return this.#requestPromise(
+            this.store(storeName).index(indexName).getAll(indexValue)
         );
     }
 
     deleteByKey(storeName, key) {
-        return this.#promisifyRequest(this.#transaction.objectStore(storeName).delete(key));
+        return this.#requestPromise(this.store(storeName).delete(key));
+    }
+
+    deleteByIndex(storeName, indexName, indexValue) {
+        return this.#requestPromise(
+            this.store(storeName).index(indexName).delete(indexValue)
+        );
+    }
+
+    deleteAll(storeName) {
+        return this.#requestPromise(this.store(storeName).clear());
     }
 
     async deleteAllByIndex(storeName, indexName, indexValue) {
 
-        const store = this.#transaction.objectStore(storeName);
+        const store = this.store(storeName);
         const index = store.index(indexName);
 
         return new Promise((resolve, reject) => {
@@ -73,10 +83,10 @@ export default class DatabaseOperation {
             request.onsuccess = async (event) => {
                 const cursor = event.target.result;
                 if (cursor) {
-                    await this.#promisifyRequest(cursor.delete());
+                    await this.#requestPromise(cursor.delete());
                     cursor.continue();
                 } else {
-                    // 没有更多记录，完成删除
+                    // 没有更多记录,完成删除
                     resolve();
                 }
             };
@@ -85,11 +95,11 @@ export default class DatabaseOperation {
     }
 
     count(storeName) {
-        return this.#promisifyRequest(this.#transaction.objectStore(storeName).count());
+        return this.#requestPromise(this.store(storeName).count());
     }
 
     clear(storeName) {
-        return this.#promisifyRequest(this.#transaction.objectStore(storeName).clear());
+        return this.#requestPromise(this.store(storeName).clear());
     }
 
     /**
@@ -97,10 +107,18 @@ export default class DatabaseOperation {
      * @param {IDBRequest} request - 要转换的请求。
      * @returns {Promise<any>}
      */
-    #promisifyRequest(request) {
+    #requestPromise(request) {
         return new Promise((resolve, reject) => {
             request.onsuccess = () => resolve(request.result);
             request.onerror = () => reject(request.error);
         });
+    }
+
+    /**
+     * 获取指定 store
+     * @param {string} storeName 
+     */
+    store(storeName) {
+        return this.#stores[storeName];
     }
 }
