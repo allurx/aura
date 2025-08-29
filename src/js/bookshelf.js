@@ -98,6 +98,11 @@ export default class Bookshelf {
             await Promise.all(Array.from(bookInput.files)
                 .map(async file => {
 
+                    if (file.type !== "text/plain") {
+                        alert(`文件${file.name}不是文本文件`);
+                        return;
+                    }
+
                     // 获取数据库表名
                     const bookStoreName = Aura.databaseProperties.stores.book.name;
                     const chapterStoreName = Aura.databaseProperties.stores.chapter.name;
