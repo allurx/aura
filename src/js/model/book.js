@@ -26,7 +26,7 @@ export default class Book {
     fileName;
     title;
 
-    constructor(id, genreId, hash, fileName, title) {
+    constructor({ id, genreId, hash, fileName, title }) {
         this.id = id;
         this.genreId = genreId;
         this.hash = hash;
@@ -36,10 +36,10 @@ export default class Book {
 
     // 静态工厂方法
     static async create(file, genreId) {
-        const bookId = crypto.randomUUID();
+        const id = crypto.randomUUID();
         const hash = await Book.hash(file);
         const title = file.name.substring(0, file.name.lastIndexOf("."));
-        return new Book(bookId, genreId, hash, file.name, title)
+        return new Book({ id, genreId, hash, fileName: file.name, title })
     }
 
     // 计算文件的SHA-256哈希值

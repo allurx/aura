@@ -32,7 +32,7 @@ export default class ReadingProgress {
     // 滚动位置
     scrollTop;
 
-    constructor(bookId, chapterId, lineIndex, scrollTop) {
+    constructor({ bookId, chapterId, lineIndex, scrollTop }) {
         this.bookId = bookId;
         this.chapterId = chapterId;
         this.lineIndex = lineIndex;

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import ReaderSetting from "./model/readerSetting.js"
+import ReaderTheme from "./model/readerTheme.js"
 import Database from "./database/database.js"
 
 /**
@@ -33,13 +35,15 @@ export default class Aura {
                 autoIncrement: false,
                 indexes: {
                     genreId: { name: "genre_id", path: "genreId", unique: false }
-                }
+                },
+                description: "书籍"
             },
             tableOfContents: {
                 name: "table_of_contents",
                 keyPath: "bookId",
                 autoIncrement: false,
-                indexes: {}
+                indexes: {},
+                description: "书籍目录"
             },
             chapter: {
                 name: "chapter",
@@ -47,74 +51,46 @@ export default class Aura {
                 autoIncrement: false,
                 indexes: {
                     bookId: { name: "book_id", path: "bookId", unique: false },
-                }
+                },
+                description: "书籍章节"
             },
             readingProgress: {
                 name: "reading_progress",
                 keyPath: "bookId",
                 autoIncrement: false,
-                indexes: {}
+                indexes: {},
+                description: "书籍阅读进度"
             },
             setting: {
                 name: "setting",
                 keyPath: "id",
                 autoIncrement: false,
-                indexes: {}
+                indexes: {},
+                description: "设置"
             },
         }
     };
 
-    // 阅读设置
+    // 阅读器配置
     static reader = {
-        setting: {
-            id: "reader-setting",
+        setting: new ReaderSetting({
             theme: "yellow",
             fontSize: 18,
             fontColor: "#000000",
             pageWidth: window.innerWidth > 768 ? 800 : window.innerWidth,
             pagePadding: 30,
             lineHeight: 2,
-            backgroundColor: "#be966e",
-            contentBackgroundColor: "#f2e8c8"
-        },
-        theme: {
-            light: {
-                name: "浅色",
-                fontColor: "#000000",
-                contentBackgroundColor: "#ffffff",
-                backgroundColor: "#ffffff"
-            },
-            dim: {
-                name: "昏暗",
-                fontColor: "#e3e3e3",
-                contentBackgroundColor: "#111a2e",
-                backgroundColor: "#111a2e"
-            },
-            dark: {
-                name: "深色",
-                fontColor: "#e3e3e3",
-                contentBackgroundColor: "#202124",
-                backgroundColor: "#202124",
-            },
-            yellow: {
-                name: "黄色",
-                fontColor: "#000000",
-                backgroundColor: "#be966e",
-                contentBackgroundColor: "#f2e8c8"
-            },
-            blue: {
-                name: "蓝色",
-                fontColor: "#e3e3e3",
-                contentBackgroundColor: "#d2e3fc",
-                backgroundColor: "#d2e3fc",
-            },
-            grey: {
-                name: "灰色",
-                fontColor: "#e3e3e3",
-                contentBackgroundColor: "#3c3c3c",
-                backgroundColor: "#3c3c3c",
-            }
-        }
+            contentBackgroundColor: "#f2e8c8",
+            backgroundColor: "#be966e"
+        }),
+        themes: [
+            new ReaderTheme(1, "浅色", "light", "#000000", "#ffffff", "#ffffff"),
+            new ReaderTheme(2, "昏暗", "dim", "#e3e3e3", "#111a2e", "#111a2e"),
+            new ReaderTheme(3, "深色", "dark", "#e3e3e3", "#202124", "#202124"),
+            new ReaderTheme(4, "黄色", "yellow", "#000000", "#f2e8c8", "#be966e"),
+            new ReaderTheme(5, "蓝色", "blue", "#000000", "#d2e3fc", "#d2e3fc"),
+            new ReaderTheme(6, "灰色", "grey", "#e3e3e3", "#3c3c3c", "#3c3c3c")
+        ]
     }
 
     // 数据库实例

@@ -24,7 +24,6 @@ export default class Database {
 
     static READ_WRITE = "readwrite";
     static READ_ONLY = "readonly";
-    static VERSION = 1;
 
     #name;
     #version;
@@ -95,7 +94,7 @@ export default class Database {
     /**
     * 关闭数据库连接。
     */
-    close = () => {
+    close() {
         if (this.#instance) {
             this.#instance.close();
             this.#instance = null;
@@ -105,6 +104,9 @@ export default class Database {
 
     /**
      * 高级事务API - 在一个事务中执行多个操作
+     * 
+     * 注意: 事务内部不要 await 普通异步操作(文件解析、网络请求、计算等),会让 JS 线程空闲,导致事务提前结束。
+
      * @param {string | string[]} storeNames - 存储名称
      * @param {string} mode - 事务模式
      * @param {DatabaseOperation} databaseOperation - 要执行的操作
@@ -142,12 +144,23 @@ export default class Database {
 
     async getAllByIndex(storeName, indexName, indexValue) {
         return this.transaction(storeName, Database.READ_ONLY, databaseOperation =>
-            databaseOperation.getAllByIndex(storeName, indexName, indexValue)
-        );
+            databaseOperation.getAllByIndex(storeName, indexName, indexValue));
     }
 
     async deleteByKey(storeName, key) {
         return this.transaction(storeName, Database.READ_WRITE, databaseOperation => databaseOperation.deleteByKey(storeName, key));
+    }
+
+    async deleteByIndex(storeName, indexName, indexValue) {
+        return this.transaction(storeName, Database.READ_WRITE, databaseOperation =>
+            databaseOperation.deleteByIndex(storeName, indexName, indexValue)
+        );
+    }
+
+    async deleteAll(storeName) {
+        return this.transaction(storeName, Database.READ_WRITE, databaseOperation =>
+            databaseOperation.deleteAll(storeName)
+        );
     }
 
     async deleteAllByIndex(storeName, indexName, indexValue) {

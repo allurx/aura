@@ -50,20 +50,21 @@ export default class ReaderSetting {
     constructor({
         theme,
         fontSize,
+        fontColor,
         pageWidth,
         pagePadding,
         lineHeight,
-        fontColor,
         contentBackgroundColor,
         backgroundColor
     }) {
         this.theme = theme;
         this.fontSize = fontSize;
+        this.fontColor = fontColor;
         this.pageWidth = pageWidth;
         this.pagePadding = pagePadding;
         this.lineHeight = lineHeight;
-        this.fontColor = fontColor;
         this.contentBackgroundColor = contentBackgroundColor;
         this.backgroundColor = backgroundColor;
     }
+
 }

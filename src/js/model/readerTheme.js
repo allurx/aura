@@ -18,18 +18,22 @@
  * 阅读器主题
  * @author allurx
  */
-export default class ReaderTheme extends ReaderSetting {
+export default class ReaderTheme {
 
-    // 主题名称
+    id;
     name;
-
-    // 主题值
     value;
+    fontColor;
+    contentBackgroundColor;
+    backgroundColor;
 
-    constructor({ name, value, ...readerSetting }) {
-        super(value, readerSetting);
+    constructor(id, name, value, fontColor, contentBackgroundColor, backgroundColor) {
+        this.id = id;
         this.name = name;
         this.value = value;
+        this.fontColor = fontColor;
+        this.contentBackgroundColor = contentBackgroundColor;
+        this.backgroundColor = backgroundColor;
     }
 
 }

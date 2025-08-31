@@ -15,9 +15,13 @@
  */
 
 import Aura from "./aura.js";
+import Book from "./model/book.js";
+import Chapter from "./model/chapter.js";
+import TableOfContents from "./model/tableOfContents.js";
+import ReadingProgress from "./model/readingProgress.js";
+import ReaderSetting from "./model/readerSetting.js";
 import Overlay from "./component/overlay.js";
 import FullscreenUtil from "./util/fullscreenUtil.js";
-import ReadingProgress from "./model/readingProgress.js";
 
 /**
  * 阅读器
@@ -25,43 +29,43 @@ import ReadingProgress from "./model/readingProgress.js";
  */
 class Reader {
 
-    // 当前书籍信息
+    // 书籍信息
     book;
 
     // 目录
     toc;
 
-    // 当前阅读进度
+    // 阅读进度
     readingProgress;
 
-    // 当前阅读设置
+    // 设置
     setting;
 
     // 遮罩层
     overlay = new Overlay();
+
+    // 数据库属性
+    bookStoreName = Aura.databaseProperties.stores.book.name;
+    chapterStoreName = Aura.databaseProperties.stores.chapter.name;
+    tableOfContentsStoreName = Aura.databaseProperties.stores.tableOfContents.name;
+    readingProgressStoreName = Aura.databaseProperties.stores.readingProgress.name;
+    settingStoreName = Aura.databaseProperties.stores.setting.name;
 
     // 初始化阅读器
     async init(bookId) {
         if (bookId) {
             console.log("已从sessionStorage读取到bookId:", bookId);
             await Promise.all([
-                Aura.database.getByKey(Aura.databaseProperties.stores.book.name, bookId).then(book => this.book = book),
-                Aura.database.getByKey(Aura.databaseProperties.stores.tableOfContents.name, bookId).then(toc => this.toc = toc.contents),
-                Aura.database.getByKey(Aura.databaseProperties.stores.readingProgress.name, bookId).then(readingProgress => this.readingProgress = readingProgress),
-                Aura.database.getByKey(Aura.databaseProperties.stores.setting.name, "reader-setting").then(setting => this.readerSetting = setting || Aura.reader.setting)
+                Aura.database.getByKey(this.bookStoreName, bookId).then(book => this.book = new Book({ ...book })),
+                Aura.database.getByKey(this.tableOfContentsStoreName, bookId).then(toc => this.toc = new TableOfContents({ ...toc })),
+                Aura.database.getByKey(this.readingProgressStoreName, bookId).then(readingProgress => this.readingProgress = new ReadingProgress({ ...readingProgress })),
+                Aura.database.getByKey(this.settingStoreName, "reader-setting").then(setting => this.setting = setting ? new ReaderSetting({ ...setting }) : Aura.reader.setting)
             ]).then(() => {
                 this.renderToc();
                 this.renderTheme();
-                this.applyTheme(this.readerSetting.theme);
-                this.applyFontSize(this.readerSetting.fontSize);
-                this.applyPageWidth(this.readerSetting.pageWidth);
-                this.applyPagePadding(this.readerSetting.pagePadding);
-                this.applyLineHeight(this.readerSetting.lineHeight);
-                this.applyFontColor(this.readerSetting.fontColor);
-                this.applyContentBackgroundColor(this.readerSetting.contentBackgroundColor);
-                this.applyBackgroundColor(this.readerSetting.backgroundColor);
+                this.applySetting();
                 this.bindEvent();
-                this.loadChapter(this.readingProgress);
+                this.loadChapter();
                 this.showReader();
             });
         } else {
@@ -82,7 +86,7 @@ class Reader {
         // 创建文档片段，避免多次dom操作
         const fragment = document.createDocumentFragment();
 
-        this.toc.forEach(content => {
+        this.toc.contents.forEach(content => {
             const p = document.createElement("p");
             p.textContent = content.title;
             p.dataset.index = content.id;
@@ -98,7 +102,12 @@ class Reader {
             // 判断点击的是否是 <p> 元素
             const p = event.target.closest("p");
 
-            if (p && container.contains(p)) this.loadChapter(new ReadingProgress(this.readingProgress.bookId, Number(p.dataset.index), 0, 0));
+            if (p && container.contains(p)) {
+                this.readingProgress.chapterId = Number(p.dataset.index);
+                this.readingProgress.lineIndex = 0;
+                this.readingProgress.scrollTop = 0;
+                this.loadChapter();
+            }
 
         });
     }
@@ -106,18 +115,17 @@ class Reader {
     // 渲染主题
     renderTheme() {
         const select = document.querySelector("#theme");
-        for (const [key, value] of Object.entries(Aura.reader.theme)) {
-            select.add(new Option(value.name, key));
-        }
+        Aura.reader.themes.forEach(theme => select.add(new Option(theme.name, theme.value)));
     }
 
     // 加载章节内容
-    async loadChapter(readingProgress) {
+    async loadChapter() {
         this.overlay.show();
-        await Aura.database.getByKey(Aura.databaseProperties.stores.chapter.name, [readingProgress.bookId, readingProgress.chapterId])
+        await Aura.database.getByKey(this.chapterStoreName, [this.readingProgress.bookId, this.readingProgress.chapterId])
+            .then(chapter => new Chapter({ ...chapter }))
             .then(async chapter => {
 
-                console.log("当前阅读进度: ", readingProgress);
+                console.log("当前阅读进度: ", this.readingProgress);
 
                 // 创建内容行元素
                 const contentElement = document.getElementById("content");
@@ -132,10 +140,10 @@ class Reader {
                 contentElement.appendChild(fragment);
 
                 // 先滚动到之前阅读的行
-                contentElement.querySelector(`p[data-index="${readingProgress.lineIndex}"]`)?.scrollIntoView({ block: "start", behavior: "auto" });
+                contentElement.querySelector(`p[data-index="${this.readingProgress.lineIndex}"]`)?.scrollIntoView({ block: "start", behavior: "auto" });
 
                 // 微调scrollTop，兼顾移动端弹性滚动
-                const scrollAdjustment = readingProgress.scrollTop ? readingProgress.scrollTop - contentElement.scrollTop : 0;
+                const scrollAdjustment = this.readingProgress.scrollTop ? this.readingProgress.scrollTop - contentElement.scrollTop : 0;
                 contentElement.scrollTop += scrollAdjustment;
 
                 // 更新章节名称
@@ -143,8 +151,7 @@ class Reader {
                 chapterElement.textContent = chapter.title;
 
                 // 更新阅读进度
-                this.readingProgress = readingProgress
-                await Aura.database.put(Aura.databaseProperties.stores.readingProgress.name, this.readingProgress);
+                await Aura.database.put(this.readingProgressStoreName, this.readingProgress);
             })
             .then(() => this.highlightToc())
             .then(() => this.renderProgress())
@@ -154,7 +161,7 @@ class Reader {
 
     // 渲染章节阅读进度
     renderProgress() {
-        const rate = (((this.readingProgress.chapterId + 1) / this.toc.length) * 100).toFixed(2);
+        const rate = (((this.readingProgress.chapterId + 1) / this.toc.contents.length) * 100).toFixed(2);
         document.getElementById("progress-rate").textContent = `${rate}%`;
     }
 
@@ -205,63 +212,69 @@ class Reader {
 
         // 重置设置面板
         document.getElementById("reset-setting-panel").onclick = () => {
-            this.applyTheme(Aura.reader.setting.theme);
-            this.applyFontSize(Aura.reader.setting.fontSize);
-            this.applyPageWidth(Aura.reader.setting.pageWidth);
-            this.applyPagePadding(Aura.reader.setting.pagePadding);
-            this.applyLineHeight(Aura.reader.setting.lineHeight);
-            this.applyFontColor(Aura.reader.setting.fontColor);
-            this.applyContentBackgroundColor(Aura.reader.setting.contentBackgroundColor);
-            this.applyBackgroundColor(Aura.reader.setting.backgroundColor);
-            this.saveReaderSetting(Aura.reader.setting);
+            this.setting = Aura.reader.setting;
+            this.applySetting();
+            this.saveSetting();
         }
 
         // 主题切换
-        document.getElementById("theme").addEventListener("change", (event) => {
-            this.applyTheme(event.target.value);
-            this.saveReaderSetting({ ...this.readerSetting, theme: event.target.value, ...Aura.reader.theme[event.target.value] });
+        document.getElementById("theme").addEventListener("input", (event) => {
+            const selectedTheme = Aura.reader.themes.find(theme => theme.value === event.target.value);
+            this.setting.theme = event.target.value;
+            this.setting.fontColor = selectedTheme.fontColor;
+            this.setting.backgroundColor = selectedTheme.backgroundColor;
+            this.setting.contentBackgroundColor = selectedTheme.contentBackgroundColor;
+            this.applyTheme();
+            this.saveSetting();
         });
 
         // 正文字体调整
         document.getElementById("font-size").addEventListener("input", (event) => {
-            this.applyFontSize(event.target.value);
-            this.saveReaderSetting({ ...this.readerSetting, fontSize: event.target.value });
+            this.setting.fontSize = event.target.value;
+            this.applyFontSize();
+            this.saveSetting();
         });
 
         // 正文页面宽度调整
         document.getElementById("width").addEventListener("input", (event) => {
-            this.applyPageWidth(event.target.value);
-            this.saveReaderSetting({ ...this.readerSetting, pageWidth: event.target.value });
+            this.setting.pageWidth = event.target.value;
+            this.applyPageWidth();
+            this.saveSetting();
         });
 
         // 正文页面内边距调整
         document.getElementById("padding").addEventListener("input", (event) => {
-            this.applyPagePadding(event.target.value);
-            this.saveReaderSetting({ ...this.readerSetting, pagePadding: event.target.value });
+            this.setting.pagePadding = event.target.value;
+            this.applyPagePadding();
+            this.saveSetting();
         });
 
         // 正文行高调整
         document.getElementById("line-height").addEventListener("input", (event) => {
-            this.applyLineHeight(event.target.value);
-            this.saveReaderSetting({ ...this.readerSetting, lineHeight: event.target.value });
+            this.setting.lineHeight = event.target.value;
+            this.applyLineHeight();
+            this.saveSetting();
         });
 
         // 字体颜色调整
         document.getElementById("font-color").addEventListener("input", (event) => {
-            this.applyFontColor(event.target.value);
-            this.saveReaderSetting({ ...this.readerSetting, fontColor: event.target.value });
+            this.setting.fontColor = event.target.value;
+            this.applyFontColor();
+            this.saveSetting();
         });
 
         // 正文背景色设置
         document.getElementById("content-background-color").addEventListener("input", (event) => {
-            this.applyContentBackgroundColor(event.target.value);
-            this.saveReaderSetting({ ...this.readerSetting, contentBackgroundColor: event.target.value });
+            this.setting.contentBackgroundColor = event.target.value;
+            this.applyContentBackgroundColor();
+            this.saveSetting();
         });
 
         // 网页背景色设置
         document.getElementById("background-color").addEventListener("input", (event) => {
-            this.applyBackgroundColor(event.target.value);
-            this.saveReaderSetting({ ...this.readerSetting, backgroundColor: event.target.value });
+            this.setting.backgroundColor = event.target.value;
+            this.applyBackgroundColor();
+            this.saveSetting();
         });
 
         // 实时计算当前章节最上方可见的<p>元素（可见比例超过一半才算，带防抖）
@@ -299,8 +312,9 @@ class Reader {
                     console.log("当前章节最上方可见的行：", line);
 
                     if (line) {
-                        const lineData = new ReadingProgress(this.book.id, this.readingProgress.chapterId, Number(line.dataset.index), event.target.scrollTop);
-                        await Aura.database.put(Aura.databaseProperties.stores.readingProgress.name, lineData);
+                        this.readingProgress.lineIndex = Number(line.dataset.index);
+                        this.readingProgress.scrollTop = event.target.scrollTop;
+                        await Aura.database.put(this.readingProgressStoreName, this.readingProgress);
                     }
 
                     //防抖延迟时间（毫秒）
@@ -325,11 +339,13 @@ class Reader {
 
                         console.log("检测到页面宽度变化：", newWidth);
 
+                        this.setting.pageWidth = newWidth;
+
                         // 应用新宽度
-                        this.applyPageWidth(newWidth);
+                        this.applyPageWidth();
 
                         // 保存页面宽度
-                        this.saveReaderSetting({ ...this.readerSetting, pageWidth: newWidth });
+                        this.saveSetting();
                     }
 
                         //防抖延迟时间（毫秒）
@@ -517,13 +533,19 @@ class Reader {
                     if (reader.readingProgress.chapterId === 0) {
                         alert("已经是第一章了");
                     } else {
-                        reader.loadChapter(new ReadingProgress(reader.readingProgress.bookId, reader.readingProgress.chapterId - 1, 0, 0));
+                        reader.readingProgress.chapterId -= 1;
+                        reader.readingProgress.lineIndex = 0;
+                        reader.readingProgress.scrollTop = 0;
+                        reader.loadChapter();
                     }
                 } else {
-                    if (reader.readingProgress.chapterId + 1 === reader.toc.length) {
+                    if (reader.readingProgress.chapterId + 1 === reader.toc.contents.length) {
                         alert("已经是最后一章了");
                     } else {
-                        reader.loadChapter(new ReadingProgress(reader.readingProgress.bookId, reader.readingProgress.chapterId + 1, 0, 0));
+                        reader.readingProgress.chapterId += 1;
+                        reader.readingProgress.lineIndex = 0;
+                        reader.readingProgress.scrollTop = 0;
+                        reader.loadChapter();
                     }
                 }
             }
@@ -533,35 +555,44 @@ class Reader {
     }
 
     // 保存设置
-    async saveReaderSetting(setting) {
+    async saveSetting() {
 
         // 保存设置
-        await Aura.database.put(Aura.databaseProperties.stores.setting.name, setting);
+        await Aura.database.put(this.settingStoreName, this.setting);
+    }
 
-        // 更新当前设置
-        this.readerSetting = setting;
+    // 应用阅读器设置
+    applySetting() {
+        this.applyTheme(this.setting.theme);
+        this.applyFontSize(this.setting.fontSize);
+        this.applyPageWidth(this.setting.pageWidth);
+        this.applyPagePadding(this.setting.pagePadding);
+        this.applyLineHeight(this.setting.lineHeight);
+        this.applyFontColor(this.setting.fontColor);
+        this.applyContentBackgroundColor(this.setting.contentBackgroundColor);
+        this.applyBackgroundColor(this.setting.backgroundColor);
     }
 
     // 应用主题设置
-    applyTheme(theme) {
-        document.getElementById("theme").value = theme;
-        document.getElementById("theme-value").textContent = theme;
-        this.applyFontColor(Aura.reader.theme[theme].fontColor);
-        this.applyBackgroundColor(Aura.reader.theme[theme].backgroundColor);
-        this.applyContentBackgroundColor(Aura.reader.theme[theme].contentBackgroundColor);
+    applyTheme() {
+        document.getElementById("theme").value = this.setting.theme;
+        document.getElementById("theme-value").textContent = this.setting.theme;
+        this.applyFontColor(this.setting.fontColor);
+        this.applyBackgroundColor(this.setting.backgroundColor);
+        this.applyContentBackgroundColor(this.setting.contentBackgroundColor);
     }
 
     // 应用字体大小设置
-    applyFontSize(fontSize) {
-        document.getElementById("font-size").value = fontSize;
-        document.getElementById("font-size-value").textContent = fontSize + "px";
-        document.getElementById("content").style.fontSize = fontSize + "px";
+    applyFontSize() {
+        document.getElementById("font-size").value = this.setting.fontSize;
+        document.getElementById("font-size-value").textContent = this.setting.fontSize + "px";
+        document.getElementById("content").style.fontSize = this.setting.fontSize + "px";
     }
 
     // 应用页面宽度设置
-    applyPageWidth(width) {
+    applyPageWidth() {
         // 计算应用的新宽度，取屏幕可见宽度和新宽度的较小值
-        const appliedWidth = Math.min(Math.round(width), window.innerWidth);
+        const appliedWidth = Math.min(Math.round(this.setting.pageWidth), window.innerWidth);
         const pageWidth = document.getElementById("width");
         pageWidth.min = window.innerWidth > 768 ? 768 : 320;
         pageWidth.max = window.innerWidth;
@@ -571,40 +602,40 @@ class Reader {
     }
 
     // 应用页面内边距设置
-    applyPagePadding(padding) {
-        document.getElementById("padding").value = padding;
-        document.getElementById("padding-value").textContent = padding + "px";
-        document.getElementById("header").style.padding = `0 ${padding}px`;
-        document.getElementById("footer").style.padding = `0 ${padding}px`;
-        document.getElementById("content").style.padding = `0 ${padding}px`;
+    applyPagePadding() {
+        document.getElementById("padding").value = this.setting.pagePadding;
+        document.getElementById("padding-value").textContent = this.setting.pagePadding + "px";
+        document.getElementById("header").style.padding = `0 ${this.setting.pagePadding}px`;
+        document.getElementById("footer").style.padding = `0 ${this.setting.pagePadding}px`;
+        document.getElementById("content").style.padding = `0 ${this.setting.pagePadding}px`;
     }
 
     // 应用行高设置
-    applyLineHeight(lineHeight) {
-        document.getElementById("line-height").value = lineHeight;
-        document.getElementById("line-height-value").textContent = lineHeight;
-        document.getElementById("content").style.lineHeight = lineHeight;
+    applyLineHeight() {
+        document.getElementById("line-height").value = this.setting.lineHeight;
+        document.getElementById("line-height-value").textContent = this.setting.lineHeight;
+        document.getElementById("content").style.lineHeight = this.setting.lineHeight;
     }
 
     // 应用字体颜色设置
-    applyFontColor(fontColor) {
-        document.getElementById("font-color").value = fontColor;
-        document.getElementById("font-color-value").textContent = fontColor;
-        document.getElementById("reader").style.color = fontColor;
+    applyFontColor() {
+        document.getElementById("font-color").value = this.setting.fontColor;
+        document.getElementById("font-color-value").textContent = this.setting.fontColor;
+        document.getElementById("reader").style.color = this.setting.fontColor;
     }
 
     // 应用正文背景色设置
-    applyContentBackgroundColor(contentBackgroundColor) {
-        document.getElementById("content-background-color").value = contentBackgroundColor;
-        document.getElementById("content-background-color-value").textContent = contentBackgroundColor;
-        document.getElementById("reader").style.backgroundColor = contentBackgroundColor;
+    applyContentBackgroundColor() {
+        document.getElementById("content-background-color").value = this.setting.contentBackgroundColor;
+        document.getElementById("content-background-color-value").textContent = this.setting.contentBackgroundColor;
+        document.getElementById("reader").style.backgroundColor = this.setting.contentBackgroundColor;
     }
 
     // 应用网页背景色设置
-    applyBackgroundColor(backgroundColor) {
-        document.getElementById("background-color").value = backgroundColor;
-        document.getElementById("background-color-value").textContent = backgroundColor;
-        document.body.style.backgroundColor = backgroundColor;
+    applyBackgroundColor() {
+        document.getElementById("background-color").value = this.setting.backgroundColor;
+        document.getElementById("background-color-value").textContent = this.setting.backgroundColor;
+        document.body.style.backgroundColor = this.setting.backgroundColor;
     }
 
 }

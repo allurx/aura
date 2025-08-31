@@ -23,15 +23,15 @@ export default class TableOfContents {
     bookId;
     contents;
 
-    constructor(bookId, contents) {
+    constructor({ bookId, contents }) {
         this.bookId = bookId;
-        this.contents = contents;
+        this.contents = contents.map(content => new TableOfContents.Content({ ...content }));
     }
 
-    static content = class {
+    static Content = class {
         id;
         title;
-        constructor(id, title) {
+        constructor({ id, title }) {
             this.id = id;
             this.title = title;
         }

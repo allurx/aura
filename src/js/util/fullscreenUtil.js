@@ -51,7 +51,7 @@ export default class FullscreenUtil {
     /**
      * 进入全屏
      */
-    static enter(element) {
+    static async enter(element) {
         if (element.requestFullscreen) {
             return element.requestFullscreen();
         } else if (element.webkitRequestFullscreen) {
@@ -68,7 +68,7 @@ export default class FullscreenUtil {
     /**
      * 退出全屏
      */
-    static exit() {
+    static async exit() {
         if (document.exitFullscreen) {
             return document.exitFullscreen();
         } else if (document.webkitExitFullscreen) {
@@ -85,7 +85,7 @@ export default class FullscreenUtil {
     /**
      * 切换全屏状态
      */
-    static toggle(element) {
+    static async toggle(element) {
         return FullscreenUtil.isActive() ?
             FullscreenUtil.exit() :
             FullscreenUtil.enter(element);
