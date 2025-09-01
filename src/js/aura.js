@@ -27,7 +27,7 @@ export default class Aura {
     // 数据库属性
     static databaseProperties = {
         name: "Aura",
-        version: 1,
+        version: 2,
         stores: {
             book: {
                 name: "book",
