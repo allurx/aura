@@ -20,12 +20,29 @@
  */
 export default class Book {
 
+    /** @type {number} */
     id;
+
+    /** @type {number} */
     genreId;
+
+    /** @type {string} */
     hash;
+
+    /** @type {string} */
     fileName;
+
+    /**@type {string} */
     title;
 
+    /**
+     * @param {Object} data - 书籍数据
+     * @property {number} id - 书籍id
+     * @property {number} genreId - 书籍类型id
+     * @property {string} hash - 文件哈希值
+     * @property {string} fileName - 文件名
+     * @property {string} title - 书名
+     */
     constructor({ id, genreId, hash, fileName, title }) {
         this.id = id;
         this.genreId = genreId;
@@ -34,16 +51,24 @@ export default class Book {
         this.title = title;
     }
 
-    // 静态工厂方法
+    /**
+     * 创建书籍实例
+     * @param {File} file - 上传的文件
+     * @param {number} genreId - 书籍类型id
+     * @returns {Promise<Book>} 书籍实例
+     */
     static async create(file, genreId) {
-        const id = crypto.randomUUID();
         const hash = await Book.hash(file);
         const title = file.name.substring(0, file.name.lastIndexOf("."));
-        return new Book({ id, genreId, hash, fileName: file.name, title })
+        return new Book({ genreId, hash, fileName: file.name, title })
     }
 
-    // 计算文件的SHA-256哈希值
-    // crypto.subtle需要确保页面是https协议或者本地通过http://localhost调试才可用
+    /**
+     * 计算文件的SHA-256哈希值
+     * 注意: crypto.subtle需要HTTPS协议或localhost环境
+     * @param {File} file - 上传的文件
+     * @returns {Promise<string>} 文件的SHA-256哈希值
+     */
     static async hash(file) {
         const arrayBuffer = await file.arrayBuffer();
         const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
@@ -51,10 +76,13 @@ export default class Book {
         return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
     }
 
-    // 生成书籍元素的html模板
+    /**
+     * 生成书籍元素的html模板
+     * @returns {string} 书籍元素的html模板
+     */
     template() {
         return `
-            <div id="${this.id}" class="book">
+            <div data-id="${this.id}" class="book">
                 <div class="book-header">
                     <span class="delete-book">✖</span>
                 </div>

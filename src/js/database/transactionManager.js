@@ -17,11 +17,12 @@
 import DatabaseOperation from './databaseOperation.js';
 
 /**
- * 事务管理器 - 负责事务的创建和管理
+ * 事务管理器, 负责事务的创建和管理
  * @author allurx
  */
 export default class TransactionManager {
 
+    /** @type {Database} */
     #database;
 
     constructor(database) {
@@ -29,8 +30,8 @@ export default class TransactionManager {
     }
 
     /**
-     * 执行数据库操作，支持 async/await
-     * @param {string|string[]} storeNames - 目标 object store 名称
+     * 执行数据库操作,支持async/await.
+     * @param {string|string[]} storeNames - 目标object store名称
      * @param {"readonly"|"readwrite"} mode - 事务模式
      * @param {(DatabaseOperation) => any} databaseOperation - 数据库操作函数
      */
@@ -45,14 +46,26 @@ export default class TransactionManager {
         try {
             // 等待用户操作完成
             return await databaseOperation(dpop);
+        } catch (error) {
+            transaction.dbopError = new Error("DatabaseOperation failed");
+            transaction.abort();
+            throw error;
         } finally {
             // 等待事务完成或失败
-            await transactionPromise;
+            // 注意捕获异常否则会导致try/catch中的error被覆盖
+            await transactionPromise.catch(error => {
+                console.error("Transaction failed:", error);
+            });
         }
 
     }
 
-    // 获取stores
+    /**
+     * 获取事务中的所有stores
+     * @param {string|string[]} storeNames
+     * @param {IDBTransaction} transaction
+     * @returns {Object<IDBObjectStore>} 事务中的所有stores
+     */
     #stores(storeNames, transaction) {
         const storeNameArray = Array.isArray(storeNames) ? storeNames : [storeNames];
         return storeNameArray.reduce((accumulator, storeName) => {
@@ -62,16 +75,25 @@ export default class TransactionManager {
     }
 
     /**
-     * 将 IDBTransaction 包装为 Promise
+     * 将IDBTransaction包装为Promise
      * @param {IDBTransaction} transaction 
-     * @returns {Promise<void>}
+     * @returns {Promise<void>} 包装为Promise的IDBTransaction
      */
     #transactionPromise(transaction) {
         return new Promise((resolve, reject) => {
             transaction.oncomplete = () => resolve();
-            transaction.onerror = () => reject(transaction.error);
-            transaction.onabort = () => reject(transaction.error);
+            transaction.onerror = () => reject(transaction.error ?? new Error("Transaction error"));
+            transaction.onabort = () => reject(transaction.dbopError ?? transaction.error ?? new Error("Transaction aborted"));
         });
+    }
+
+    #enhanceResult(result) {
+        result && typeof result === "object" && (result.as = (ClassConstructor) => {
+            if (typeof ClassConstructor === "function") {
+                return new ClassConstructor(result);
+            }
+        });
+        return result;
     }
 
 }

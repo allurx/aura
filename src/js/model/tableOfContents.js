@@ -15,24 +15,49 @@
  */
 
 /**
- * 章节目录
+ * 目录
  * @author allurx
  */
 export default class TableOfContents {
 
+    /** @type {number} */
+    id;
+
+    /** @type {number} */
     bookId;
+
+    /** @type {Array<TableOfContents.Content>} */
     contents;
 
-    constructor({ bookId, contents }) {
+    /**
+     * @param {Object} data - 目录数据
+     * @property {number} bookId - 书籍id
+     * @property {Array<Object>} contents - 目录内容
+     */
+    constructor({ id, bookId, contents }) {
+        this.id = id;
         this.bookId = bookId;
         this.contents = contents.map(content => new TableOfContents.Content({ ...content }));
     }
 
+    /**
+     * 目录内容
+     */
     static Content = class {
-        id;
+
+        /** @type {number} */
+        index;
+
+        /** @type {string} */
         title;
-        constructor({ id, title }) {
-            this.id = id;
+
+        /** 
+         * @param {Object} data - 目录内容数据
+         * @property {number} index - 目录索引
+         * @property {string} title - 目录标题
+         */
+        constructor({ index, title }) {
+            this.index = index;
             this.title = title;
         }
     }

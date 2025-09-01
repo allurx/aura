@@ -29,37 +29,37 @@ import FullscreenUtil from "./util/fullscreenUtil.js";
  */
 class Reader {
 
-    // 书籍信息
+    /** @type {Book} */
     book;
 
-    // 目录
+    /** @type {TableOfContents} */
     toc;
 
-    // 阅读进度
+    /** @type {ReadingProgress} */
     readingProgress;
 
-    // 设置
+    /** @type {ReaderSetting} */
     setting;
 
-    // 遮罩层
+    /** @type {Overlay} */
     overlay = new Overlay();
 
     // 数据库属性
-    bookStoreName = Aura.databaseProperties.stores.book.name;
-    chapterStoreName = Aura.databaseProperties.stores.chapter.name;
-    tableOfContentsStoreName = Aura.databaseProperties.stores.tableOfContents.name;
-    readingProgressStoreName = Aura.databaseProperties.stores.readingProgress.name;
-    settingStoreName = Aura.databaseProperties.stores.setting.name;
+    bookStore = Aura.databaseProperties.stores.book;
+    chapterStore = Aura.databaseProperties.stores.chapter;
+    tableOfContentsStore = Aura.databaseProperties.stores.tableOfContents;
+    readingProgressStore = Aura.databaseProperties.stores.readingProgress;
+    settingStore = Aura.databaseProperties.stores.setting;
 
     // 初始化阅读器
     async init(bookId) {
         if (bookId) {
             console.log("已从sessionStorage读取到bookId:", bookId);
             await Promise.all([
-                Aura.database.getByKey(this.bookStoreName, bookId).then(book => this.book = new Book({ ...book })),
-                Aura.database.getByKey(this.tableOfContentsStoreName, bookId).then(toc => this.toc = new TableOfContents({ ...toc })),
-                Aura.database.getByKey(this.readingProgressStoreName, bookId).then(readingProgress => this.readingProgress = new ReadingProgress({ ...readingProgress })),
-                Aura.database.getByKey(this.settingStoreName, "reader-setting").then(setting => this.setting = setting ? new ReaderSetting({ ...setting }) : Aura.reader.setting)
+                Aura.database.getByKey(this.bookStore.name, bookId).then(book => this.book = new Book({ ...book })),
+                Aura.database.getByKey(this.tableOfContentsStore.name, bookId).then(toc => this.toc = new TableOfContents({ ...toc })),
+                Aura.database.getByKey(this.readingProgressStore.name, bookId).then(readingProgress => this.readingProgress = new ReadingProgress({ ...readingProgress })),
+                Aura.database.getByIndex(this.settingStore.name, this.settingStore.indexes.name.name, "reader-setting").then(setting => this.setting = setting ? new ReaderSetting({ ...setting }) : Aura.reader.setting)
             ]).then(() => {
                 this.renderToc();
                 this.renderTheme();
@@ -89,7 +89,7 @@ class Reader {
         this.toc.contents.forEach(content => {
             const p = document.createElement("p");
             p.textContent = content.title;
-            p.dataset.index = content.id;
+            p.dataset.index = content.index;
             fragment.appendChild(p);
         });
 
@@ -103,7 +103,7 @@ class Reader {
             const p = event.target.closest("p");
 
             if (p && container.contains(p)) {
-                this.readingProgress.chapterId = Number(p.dataset.index);
+                this.readingProgress.chapterIndex = Number(p.dataset.index);
                 this.readingProgress.lineIndex = 0;
                 this.readingProgress.scrollTop = 0;
                 this.loadChapter();
@@ -121,7 +121,8 @@ class Reader {
     // 加载章节内容
     async loadChapter() {
         this.overlay.show();
-        await Aura.database.getByKey(this.chapterStoreName, [this.readingProgress.bookId, this.readingProgress.chapterId])
+        await Aura.database.getByIndex(this.chapterStore.name, this.chapterStore.indexes.chapterId.name,
+            [this.readingProgress.bookId, this.readingProgress.chapterIndex])
             .then(chapter => new Chapter({ ...chapter }))
             .then(async chapter => {
 
@@ -151,7 +152,7 @@ class Reader {
                 chapterElement.textContent = chapter.title;
 
                 // 更新阅读进度
-                await Aura.database.put(this.readingProgressStoreName, this.readingProgress);
+                await Aura.database.put(this.readingProgressStore.name, this.readingProgress);
             })
             .then(() => this.highlightToc())
             .then(() => this.renderProgress())
@@ -161,7 +162,7 @@ class Reader {
 
     // 渲染章节阅读进度
     renderProgress() {
-        const rate = (((this.readingProgress.chapterId + 1) / this.toc.contents.length) * 100).toFixed(2);
+        const rate = (((this.readingProgress.chapterIndex + 1) / this.toc.contents.length) * 100).toFixed(2);
         document.getElementById("progress-rate").textContent = `${rate}%`;
     }
 
@@ -172,7 +173,7 @@ class Reader {
         document.querySelector("#toc p.active")?.classList.remove("active");
 
         // 高亮当前章节
-        const currentTocElement = document.querySelector(`#toc p[data-index="${this.readingProgress.chapterId}"]`);
+        const currentTocElement = document.querySelector(`#toc p[data-index="${this.readingProgress.chapterIndex}"]`);
         currentTocElement.classList.add("active");
 
         // 滚动到当前章节
@@ -314,7 +315,7 @@ class Reader {
                     if (line) {
                         this.readingProgress.lineIndex = Number(line.dataset.index);
                         this.readingProgress.scrollTop = event.target.scrollTop;
-                        await Aura.database.put(this.readingProgressStoreName, this.readingProgress);
+                        await Aura.database.put(this.readingProgressStore.name, this.readingProgress);
                     }
 
                     //防抖延迟时间（毫秒）
@@ -530,19 +531,19 @@ class Reader {
             function switchChapter(action) {
 
                 if (action === "prev") {
-                    if (reader.readingProgress.chapterId === 0) {
+                    if (reader.readingProgress.chapterIndex === 0) {
                         alert("已经是第一章了");
                     } else {
-                        reader.readingProgress.chapterId -= 1;
+                        reader.readingProgress.chapterIndex -= 1;
                         reader.readingProgress.lineIndex = 0;
                         reader.readingProgress.scrollTop = 0;
                         reader.loadChapter();
                     }
                 } else {
-                    if (reader.readingProgress.chapterId + 1 === reader.toc.contents.length) {
+                    if (reader.readingProgress.chapterIndex + 1 === reader.toc.contents.length) {
                         alert("已经是最后一章了");
                     } else {
-                        reader.readingProgress.chapterId += 1;
+                        reader.readingProgress.chapterIndex += 1;
                         reader.readingProgress.lineIndex = 0;
                         reader.readingProgress.scrollTop = 0;
                         reader.loadChapter();
@@ -558,7 +559,7 @@ class Reader {
     async saveSetting() {
 
         // 保存设置
-        await Aura.database.put(this.settingStoreName, this.setting);
+        await Aura.database.put(this.settingStore.name, this.setting);
     }
 
     // 应用阅读器设置
@@ -641,5 +642,5 @@ class Reader {
 }
 
 // 从sessionStorage读取bookId，注意读取到的值是字符串类型
-new Reader().init(sessionStorage.getItem("bookId"));
+new Reader().init(Number(sessionStorage.getItem("bookId")));
 
