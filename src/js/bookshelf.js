@@ -30,22 +30,22 @@ import TableOfContents from "./model/tableOfContents.js";
 class Bookshelf {
 
     bookGenres = [
-        { id: 0, name: "玄幻" },
-        { id: 1, name: "奇幻" },
-        { id: 2, name: "武侠" },
-        { id: 3, name: "仙侠" },
-        { id: 4, name: "科幻" },
-        { id: 5, name: "末日" },
-        { id: 6, name: "都市" },
-        { id: 7, name: "职场" },
-        { id: 8, name: "言情" },
-        { id: 9, name: "军事" },
-        { id: 10, name: "历史" },
-        { id: 11, name: "游戏" },
-        { id: 12, name: "体育" },
-        { id: 13, name: "灵异" },
-        { id: 14, name: "恐怖" },
-        { id: 15, name: "魔幻" }
+        { id: 1, name: "玄幻" },
+        { id: 2, name: "奇幻" },
+        { id: 3, name: "武侠" },
+        { id: 4, name: "仙侠" },
+        { id: 5, name: "科幻" },
+        { id: 6, name: "末日" },
+        { id: 7, name: "都市" },
+        { id: 8, name: "职场" },
+        { id: 9, name: "言情" },
+        { id: 10, name: "军事" },
+        { id: 11, name: "历史" },
+        { id: 12, name: "游戏" },
+        { id: 13, name: "体育" },
+        { id: 14, name: "灵异" },
+        { id: 15, name: "恐怖" },
+        { id: 16, name: "魔幻" }
     ];
 
     // 数据库属性
@@ -56,7 +56,7 @@ class Bookshelf {
 
 
     // 当前书籍分类
-    currentBookGenreId = 0;
+    currentBookGenreId = 1;
 
     // 遮罩层
     overlay = new Overlay();
@@ -121,7 +121,7 @@ class Bookshelf {
                     const tableOfContents = new TableOfContents({ contents: chapters });
 
                     // 创建阅读进度
-                    const readingProgress = new ReadingProgress({ chapterIndex: 0, lineIndex: 0, scrollTop: 0 });
+                    const readingProgress = new ReadingProgress({ chapterIndex: 1, lineIndex: 1, scrollTop: 0 });
 
                     // 将书籍和章节存入数据库
                     await Aura.database.transaction(

@@ -27,7 +27,7 @@ export default class Aura {
     // 数据库属性
     static databaseProperties = {
         name: "Aura",
-        version: 2,
+        version: 3,
         stores: {
             book: {
                 name: "book",
@@ -81,6 +81,7 @@ export default class Aura {
     // 阅读器配置
     static reader = {
         setting: new ReaderSetting({
+            id: 1,
             name: "reader-setting",
             theme: "yellow",
             fontSize: 18,

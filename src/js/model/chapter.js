@@ -67,19 +67,19 @@ export default class Chapter {
                 const chapters = [];
                 const text = reader.result;
 
-                // 匹配常见章节格式，支持多种标题形式
+                // 匹配常见章节格式,支持多种标题形式
                 const matches = [...text.matchAll(Chapter.CHAPTER_REGEX)];
 
-                // 没有匹配到章节，则全文件作为一个章节
+                // 没有匹配到章节,则全文件作为一个章节
                 if (matches.length === 0) {
-                    chapters.push(new Chapter({ index: 0, title: "全文", content: text.trim() }));
+                    chapters.push(new Chapter({ index: 1, title: "全文", content: text.trim() }));
                     resolve(chapters);
                     return;
                 }
 
-                // 如果开头有介绍文字（第一个章节前有内容）
+                // 如果开头有介绍文字(第一个章节前有内容)
                 if (matches[0].index > 0) {
-                    chapters.push(new Chapter({ index: chapters.length, title: "前言", content: text.slice(0, matches[0].index).trimStart() }));
+                    chapters.push(new Chapter({ index: 1, title: "前言", content: text.slice(0, matches[0].index).trimStart() }));
                 }
 
                 // 遍历每个章节匹配
@@ -88,7 +88,7 @@ export default class Chapter {
                     const start = match.index + chapterTitle.length;
                     const end = i < matches.length - 1 ? matches[i + 1].index : text.length;
                     const content = text.slice(start, end).trimStart();
-                    chapters.push(new Chapter({ index: chapters.length, title: chapterTitle, content }));
+                    chapters.push(new Chapter({ index: chapters.length + 1, title: chapterTitle, content }));
                 });
 
                 resolve(chapters);
@@ -98,5 +98,6 @@ export default class Chapter {
             reader.readAsText(file, "UTF-8");
         });
     }
+
 
 }

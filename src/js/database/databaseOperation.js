@@ -169,8 +169,8 @@ export default class DatabaseOperation {
         const keyPath = store.keyPath;
         const autoIncrement = store.autoIncrement;
         if (autoIncrement && keyPath in data && (data[keyPath] === undefined || data[keyPath] === null)) {
-            processedData.oldValueOfKey = delete processedData.data[keyPath];
-            processedData.isKeyDeleted = true;
+            processedData.oldValueOfKey = processedData.data[keyPath];
+            processedData.isKeyDeleted = delete processedData.data[keyPath];
         }
         return processedData;
     }

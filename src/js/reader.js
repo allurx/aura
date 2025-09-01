@@ -104,7 +104,7 @@ class Reader {
 
             if (p && container.contains(p)) {
                 this.readingProgress.chapterIndex = Number(p.dataset.index);
-                this.readingProgress.lineIndex = 0;
+                this.readingProgress.lineIndex = 1;
                 this.readingProgress.scrollTop = 0;
                 this.loadChapter();
             }
@@ -134,7 +134,7 @@ class Reader {
                 const fragment = document.createDocumentFragment();
                 chapter.content.split(/\r?\n/).forEach((line, index) => {
                     const p = document.createElement("p");
-                    p.dataset.index = index;
+                    p.dataset.index = index + 1;
                     p.textContent = line;
                     fragment.appendChild(p);
                 });
@@ -162,7 +162,7 @@ class Reader {
 
     // 渲染章节阅读进度
     renderProgress() {
-        const rate = (((this.readingProgress.chapterIndex + 1) / this.toc.contents.length) * 100).toFixed(2);
+        const rate = (((this.readingProgress.chapterIndex) / this.toc.contents.length) * 100).toFixed(2);
         document.getElementById("progress-rate").textContent = `${rate}%`;
     }
 
@@ -531,20 +531,20 @@ class Reader {
             function switchChapter(action) {
 
                 if (action === "prev") {
-                    if (reader.readingProgress.chapterIndex === 0) {
+                    if (reader.readingProgress.chapterIndex === 1) {
                         alert("已经是第一章了");
                     } else {
                         reader.readingProgress.chapterIndex -= 1;
-                        reader.readingProgress.lineIndex = 0;
+                        reader.readingProgress.lineIndex = 1;
                         reader.readingProgress.scrollTop = 0;
                         reader.loadChapter();
                     }
                 } else {
-                    if (reader.readingProgress.chapterIndex + 1 === reader.toc.contents.length) {
+                    if (reader.readingProgress.chapterIndex === reader.toc.contents.length) {
                         alert("已经是最后一章了");
                     } else {
                         reader.readingProgress.chapterIndex += 1;
-                        reader.readingProgress.lineIndex = 0;
+                        reader.readingProgress.lineIndex = 1;
                         reader.readingProgress.scrollTop = 0;
                         reader.loadChapter();
                     }
