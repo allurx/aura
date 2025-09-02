@@ -20,13 +20,32 @@
  */
 export default class ReaderTheme {
 
+    /** @type {number} */
     id;
+
+    /** @type {string} */
     name;
+
+    /** @type {string} */
     value;
+
+    /** @type {string} */
     fontColor;
+
+    /** @type {string} */
     contentBackgroundColor;
+
+    /** @type {string} */
     backgroundColor;
 
+    /**
+     * @param {number} id - 主题id
+     * @param {string} name - 主题名称
+     * @param {string} value - 主题值
+     * @param {string} fontColor - 字体颜色
+     * @param {string} contentBackgroundColor - 内容背景色
+     * @param {string} backgroundColor - 背景色
+     */
     constructor(id, name, value, fontColor, contentBackgroundColor, backgroundColor) {
         this.id = id;
         this.name = name;

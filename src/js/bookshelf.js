@@ -27,7 +27,7 @@ import TableOfContents from "./model/tableOfContents.js";
  * 书架
  * @author allurx
  */
-export default class Bookshelf {
+class Bookshelf {
 
     bookGenres = [
         { id: 1, name: "玄幻" },
@@ -49,12 +49,11 @@ export default class Bookshelf {
     ];
 
     // 数据库属性
-    bookStoreName = Aura.databaseProperties.stores.book.name;
-    chapterStoreName = Aura.databaseProperties.stores.chapter.name;
-    chapterIndexName = Aura.databaseProperties.stores.chapter.indexes.bookId.name;
-    tableOfContentsStoreName = Aura.databaseProperties.stores.tableOfContents.name;
-    readingProgressStoreName = Aura.databaseProperties.stores.readingProgress.name;
-    genreIdIndexName = Aura.databaseProperties.stores.book.indexes.genreId.name;
+    bookStore = Aura.databaseProperties.stores.book;
+    chapterStore = Aura.databaseProperties.stores.chapter;
+    tableOfContentsStore = Aura.databaseProperties.stores.tableOfContents;
+    readingProgressStore = Aura.databaseProperties.stores.readingProgress;
+
 
     // 当前书籍分类
     currentBookGenreId = 1;
@@ -62,6 +61,7 @@ export default class Bookshelf {
     // 遮罩层
     overlay = new Overlay();
 
+    // 初始化
     init() {
         this.initNav();
         this.bindEvent();
@@ -88,8 +88,8 @@ export default class Bookshelf {
         // 删除原先书籍分类下的页面元素
         document.querySelectorAll(".book").forEach(element => element.remove());
 
-        // 找到当前书籍类型下的文件，并将其添加的页面元素中
-        Aura.database.getAllByIndex(this.bookStoreName, this.genreIdIndexName, this.currentBookGenreId)
+        // 找到当前书籍类型下的文件,并将其添加的页面元素中
+        Aura.database.getAllByIndex(this.bookStore.name, this.bookStore.indexes.genreId.name, this.currentBookGenreId)
             .then(books => books.forEach(book => this.createBookElement(new Book({ ...book }))));
     }
 
@@ -102,7 +102,7 @@ export default class Bookshelf {
     async addBook(bookInput) {
         try {
             this.overlay.show();
-            // 每本书在自己的独立事务中，允许部分事务成功
+            // 每本书在自己的独立事务中,允许部分事务成功
             await Promise.all(Array.from(bookInput.files)
                 .map(async file => {
 
@@ -115,38 +115,41 @@ export default class Bookshelf {
                     const book = await Book.create(file, this.currentBookGenreId);
 
                     // 解析章节
-                    const chapters = await Chapter.parse(file, book.id);
+                    const chapters = await Chapter.parse(file);
 
                     // 生成目录
-                    const tableOfContents = new TableOfContents({ bookId: book.id, contents: chapters });
+                    const tableOfContents = new TableOfContents({ contents: chapters });
 
                     // 创建阅读进度
-                    const readingProgress = new ReadingProgress({ bookId: book.id, chapterId: 0, lineIndex: 0, scrollTop: 0 });
+                    const readingProgress = new ReadingProgress({ chapterIndex: 1, lineIndex: 1, scrollTop: 0 });
 
                     // 将书籍和章节存入数据库
                     await Aura.database.transaction(
-                        [this.bookStoreName, this.chapterStoreName, this.tableOfContentsStoreName, this.readingProgressStoreName],
+                        [this.bookStore.name, this.chapterStore.name, this.tableOfContentsStore.name, this.readingProgressStore.name],
                         Database.READ_WRITE,
                         async (dbop) => {
 
                             // 保存书籍
-                            await dbop.add(this.bookStoreName, book);
+                            const bookId = await dbop.add(this.bookStore.name, book);
 
                             // 批量保存章节
-                            await dbop.putAll(this.chapterStoreName, chapters);
+                            chapters.forEach(chapter => chapter.bookId = bookId);
+                            await dbop.putAll(this.chapterStore.name, chapters);
 
                             // 保存目录
-                            await dbop.add(this.tableOfContentsStoreName, tableOfContents);
+                            tableOfContents.bookId = bookId;
+                            await dbop.add(this.tableOfContentsStore.name, tableOfContents);
 
                             // 保存阅读进度
-                            await dbop.put(this.readingProgressStoreName, readingProgress);
+                            readingProgress.bookId = bookId;
+                            await dbop.put(this.readingProgressStore.name, readingProgress);
 
                             // 创建书籍元素
                             this.createBookElement(book);
                         });
                 }));
         } finally {
-            // 重置，支持重复上传同一文件
+            // 重置,支持重复上传同一文件
             bookInput.value = "";
             this.overlay.hide();
         }
@@ -159,9 +162,8 @@ export default class Bookshelf {
 
     // 阅读书籍
     readBook(bookElement) {
-        const bookId = bookElement.parentElement.id;
+        const bookId = Number(bookElement.parentElement.dataset.id);
         window.location.href = "./page/reader.html";
-        //const win = window.open("./page/reader.html");
         window.sessionStorage.setItem("bookId", bookId);
     }
 
@@ -169,18 +171,16 @@ export default class Bookshelf {
     async deleteBook(deleteBookElement) {
         if (confirm("确定要删除这本书吗？")) {
             const bookElement = deleteBookElement.closest(".book");
-            const bookId = bookElement.id;
+            const bookId = Number(bookElement.dataset.id);
             await Aura.database.transaction(
-                [this.bookStoreName, this.chapterStoreName, this.tableOfContentsStoreName, this.readingProgressStoreName],
+                [this.bookStore.name, this.chapterStore.name, this.tableOfContentsStore.name, this.readingProgressStore.name],
                 Database.READ_WRITE,
                 async (dbop) => {
-
                     this.overlay.show();
-
-                    await dbop.deleteByKey(this.bookStoreName, bookId);
-                    await dbop.deleteAllByIndex(this.chapterStoreName, this.chapterIndexName, bookId);
-                    await dbop.deleteByKey(this.tableOfContentsStoreName, bookId);
-                    await dbop.deleteByKey(this.readingProgressStoreName, bookId);
+                    await dbop.deleteByKey(this.bookStore.name, bookId);
+                    await dbop.deleteAllByIndex(this.chapterStore.name, this.chapterStore.indexes.bookId.name, bookId);
+                    await dbop.deleteByKey(this.tableOfContentsStore.name, bookId);
+                    await dbop.deleteByKey(this.readingProgressStore.name, bookId);
                 }
             ).then(() => {
                 bookElement.remove();
@@ -192,33 +192,33 @@ export default class Bookshelf {
 
     // 清空书架
     async clearBookshelf() {
-        if (confirm("确定要清空书架中的所有书籍吗？")) {
+        if (confirm("确定要清空书架中的所有书籍吗?")) {
 
             // 在事务外部获取所有书籍的列表
-            const books = await Aura.database.getAll(this.bookStoreName);
+            const books = await Aura.database.getAll(this.bookStore.name);
             if (books.length === 0) return;
 
-            // 将所有书的所有操作合并到一个事务中，要么都成功，要么都失败
+            // 将所有书的所有操作合并到一个事务中,要么都成功,要么都失败
             await Aura.database.transaction(
-                [this.bookStoreName, this.chapterStoreName, this.tableOfContentsStoreName, this.readingProgressStoreName],
+                [this.bookStore.name, this.chapterStore.name, this.tableOfContentsStore.name, this.readingProgressStore.name],
                 Database.READ_WRITE,
                 async (dbop) => {
 
                     this.overlay.show();
 
-                    // 每本书有三个数据库操作，合并所有操作
+                    // 每本书有三个数据库操作,合并所有操作
                     const deletePromises = books.flatMap(book => [
-                        dbop.deleteByKey(this.bookStoreName, book.id),
-                        dbop.deleteByKey(this.tableOfContentsStoreName, book.id),
-                        dbop.deleteByKey(this.readingProgressStoreName, book.id),
-                        dbop.deleteAllByIndex(this.chapterStoreName, this.chapterIndexName, book.id)
+                        dbop.deleteByKey(this.bookStore.name, book.id),
+                        dbop.deleteByKey(this.tableOfContentsStore.name, book.id),
+                        dbop.deleteByKey(this.readingProgressStore.name, book.id),
+                        dbop.deleteAllByIndex(this.chapterStore.name, this.chapterStore.indexes.bookId.name, book.id)
                     ]);
 
                     // 等待所有删除操作完成
                     await Promise.all(deletePromises);
 
                 }).then(() => {
-                    console.log("书架已清空！");
+                    console.log("书架已清空!");
                     this.switchCurrentGenre();
                 }).finally(() => {
                     this.overlay.hide();
@@ -234,7 +234,7 @@ export default class Bookshelf {
         EventBinderUtil.bind("#clear-bookshelf", "click", this.clearBookshelf.bind(this));
         EventBinderUtil.bind("#header-title", "click", () => document.querySelector("nav").classList.toggle("flag"));
 
-        // book元素是动态生成的，需要通过事件冒泡判断来绑定的事件
+        // book元素是动态生成的,需要通过事件冒泡判断来绑定的事件
         EventBinderUtil.delegate("#books", ".book-body", "click", this.readBook.bind(this));
         EventBinderUtil.delegate("#books", ".delete-book", "click", this.deleteBook.bind(this));
     }

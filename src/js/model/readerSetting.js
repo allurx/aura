@@ -20,34 +20,52 @@
  */
 export default class ReaderSetting {
 
-    // id
-    id = "reader-setting";
+    /** @type {number} */
+    id;
 
-    // 主题
+    /** @type {string} */
+    name;
+
+    /** @type {string} */
     theme;
 
-    // 字体大小
+    /** @type {number} */
     fontSize;
 
-    // 页面宽度
+    /** @type {number} */
     pageWidth;
 
-    // 页面内边距
+    /** @type {number} */
     pagePadding;
 
-    // 行高
+    /** @type {number} */
     lineHeight;
 
-    // 字体颜色
+    /** @type {string} */
     fontColor;
 
-    // 内容背景色
+    /** @type {string} */
     contentBackgroundColor;
 
-    // 背景色
+    /** @type {string} */
     backgroundColor;
 
+    /**
+     * @param {Object} data - 设置数据
+     * @property {number} id - 设置id
+     * @property {string} name - 设置名称
+     * @property {string} theme - 主题
+     * @property {number} fontSize - 字体大小
+     * @property {string} fontColor - 字体颜色
+     * @property {number} pageWidth - 页面宽度
+     * @property {number} pagePadding - 页面内边距
+     * @property {number} lineHeight - 行高
+     * @property {string} contentBackgroundColor - 内容背景色
+     * @property {string} backgroundColor - 背景色
+     */
     constructor({
+        id,
+        name,
         theme,
         fontSize,
         fontColor,
@@ -57,6 +75,8 @@ export default class ReaderSetting {
         contentBackgroundColor,
         backgroundColor
     }) {
+        this.id = id;
+        this.name = name;
         this.theme = theme;
         this.fontSize = fontSize;
         this.fontColor = fontColor;

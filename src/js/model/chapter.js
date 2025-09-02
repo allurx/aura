@@ -20,20 +20,46 @@
  */
 export default class Chapter {
 
+    /** @type {RegExp} */
+    static CHAPTER_REGEX = /(第[0-9一二三四五六七八九十百千]+[章卷][\-–—\s]*[^\n]*)|(卷[0-9一二三四五六七八九十百千]+[\-–—\s]*[^\n]*)/g;
+
+    /** @type {number} */
     id;
+
+    /** @type {number} */
     bookId;
+
+    /** @type {number} */
+    index;
+
+    /** @type {string} */
     title;
+
+    /** @type {string} */
     content;
 
-    constructor({ id, bookId, title, content }) {
+    /**
+     * @param {Object} data - 章节数据
+     * @property {number} id - 章节id
+     * @property {number} index - 章节索引
+     * @property {number} bookId - 书籍id
+     * @property {string} title - 章节标题
+     * @property {string} content - 章节内容
+     */
+    constructor({ id, bookId, index, title, content }) {
         this.id = id;
         this.bookId = bookId;
+        this.index = index;
         this.title = title;
         this.content = content;
     }
 
-    // 解析章节
-    static async parse(file, bookId) {
+    /**
+     * 解析章节
+     * @param {File} file - 上传的文件
+     * @returns {Promise<Chapter[]>} 章节列表
+     */
+    static async parse(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => {
@@ -41,20 +67,19 @@ export default class Chapter {
                 const chapters = [];
                 const text = reader.result;
 
-                // 匹配常见章节格式，支持多种标题形式
-                const chapterRegex = /(第[0-9一二三四五六七八九十百千]+[章卷][\-–—\s]*[^\n]*)|(卷[0-9一二三四五六七八九十百千]+[\-–—\s]*[^\n]*)/g;
-                const matches = [...text.matchAll(chapterRegex)];
+                // 匹配常见章节格式,支持多种标题形式
+                const matches = [...text.matchAll(Chapter.CHAPTER_REGEX)];
 
-                // 没有匹配到章节，则全文件作为一个章节
+                // 没有匹配到章节,则全文件作为一个章节
                 if (matches.length === 0) {
-                    chapters.push(new Chapter({ id: 0, bookId, title: "全文", content: text.trim() }));
+                    chapters.push(new Chapter({ index: 1, title: "全文", content: text.trim() }));
                     resolve(chapters);
                     return;
                 }
 
-                // 如果开头有介绍文字（第一个章节前有内容）
+                // 如果开头有介绍文字(第一个章节前有内容)
                 if (matches[0].index > 0) {
-                    chapters.push(new Chapter({ id: chapters.length, bookId, title: "前言", content: text.slice(0, matches[0].index).trimStart() }));
+                    chapters.push(new Chapter({ index: 1, title: "前言", content: text.slice(0, matches[0].index).trimStart() }));
                 }
 
                 // 遍历每个章节匹配
@@ -63,7 +88,7 @@ export default class Chapter {
                     const start = match.index + chapterTitle.length;
                     const end = i < matches.length - 1 ? matches[i + 1].index : text.length;
                     const content = text.slice(start, end).trimStart();
-                    chapters.push(new Chapter({ id: chapters.length, bookId, title: chapterTitle, content }));
+                    chapters.push(new Chapter({ index: chapters.length + 1, title: chapterTitle, content }));
                 });
 
                 resolve(chapters);
@@ -73,5 +98,6 @@ export default class Chapter {
             reader.readAsText(file, "UTF-8");
         });
     }
+
 
 }

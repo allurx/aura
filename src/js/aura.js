@@ -27,12 +27,12 @@ export default class Aura {
     // 数据库属性
     static databaseProperties = {
         name: "Aura",
-        version: 1,
+        version: 3,
         stores: {
             book: {
                 name: "book",
                 keyPath: "id",
-                autoIncrement: false,
+                autoIncrement: true,
                 indexes: {
                     genreId: { name: "genre_id", path: "genreId", unique: false }
                 },
@@ -40,40 +40,49 @@ export default class Aura {
             },
             tableOfContents: {
                 name: "table_of_contents",
-                keyPath: "bookId",
-                autoIncrement: false,
-                indexes: {},
+                keyPath: "id",
+                autoIncrement: true,
+                indexes: {
+                    bookId: { name: "book_id", path: "bookId", unique: true }
+                },
                 description: "书籍目录"
             },
             chapter: {
                 name: "chapter",
-                keyPath: ["bookId", "id"],
-                autoIncrement: false,
+                keyPath: "id",
+                autoIncrement: true,
                 indexes: {
                     bookId: { name: "book_id", path: "bookId", unique: false },
+                    chapterId: { name: "chapter_id", path: ["bookId", "index"], unique: true },
                 },
                 description: "书籍章节"
             },
             readingProgress: {
                 name: "reading_progress",
-                keyPath: "bookId",
-                autoIncrement: false,
-                indexes: {},
+                keyPath: "id",
+                autoIncrement: true,
+                indexes: {
+                    bookId: { name: "book_id", path: "bookId", unique: true }
+                },
                 description: "书籍阅读进度"
             },
             setting: {
                 name: "setting",
                 keyPath: "id",
-                autoIncrement: false,
-                indexes: {},
+                autoIncrement: true,
+                indexes: {
+                    name: { name: "name", path: "name", unique: true }
+                },
                 description: "设置"
-            },
+            }
         }
     };
 
     // 阅读器配置
     static reader = {
         setting: new ReaderSetting({
+            id: 1,
+            name: "reader-setting",
             theme: "yellow",
             fontSize: 18,
             fontColor: "#000000",

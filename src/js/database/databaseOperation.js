@@ -15,11 +15,12 @@
  */
 
 /**
- * 数据库操作接口 - 定义常用的数据库操作
+ * 数据库操作接口, 定义常用的数据库操作.
  * @author allurx
  */
 export default class DatabaseOperation {
 
+    /** @type {Array<IDBObjectStore>} */
     #stores;
 
     constructor(stores) {
@@ -27,55 +28,60 @@ export default class DatabaseOperation {
     }
 
     add(storeName, data) {
-        return this.#requestPromise(this.store(storeName).add(data));
+        const store = this.#store(storeName);
+        const processedData = this.#deleteKeyForAutoIncrement(data, store);
+        const requset = store.add(processedData.data);
+        return this.#addOrUpdateRequestPromise(requset, store, processedData);
     }
 
     put(storeName, data) {
-        return this.#requestPromise(this.store(storeName).put(data));
+        const store = this.#store(storeName);
+        const processedData = this.#deleteKeyForAutoIncrement(data, store);
+        const requset = store.put(processedData.data);
+        return this.#addOrUpdateRequestPromise(requset, store, processedData);
     }
 
     async putAll(storeName, dataArray) {
-        const store = this.store(storeName);
-        return Promise.all(dataArray.map(data => this.#requestPromise(store.put(data))));
+        return Promise.all(dataArray.map(data => this.put(storeName, data)));
     }
 
     getByKey(storeName, key) {
-        return this.#requestPromise(this.store(storeName).get(key));
+        return this.#requestPromise(this.#store(storeName).get(key));
     }
 
     getByIndex(storeName, indexName, indexValue) {
         return this.#requestPromise(
-            this.store(storeName).index(indexName).get(indexValue)
+            this.#store(storeName).index(indexName).get(indexValue)
         );
     }
 
     getAll(storeName) {
-        return this.#requestPromise(this.store(storeName).getAll());
+        return this.#requestPromise(this.#store(storeName).getAll());
     }
 
     getAllByIndex(storeName, indexName, indexValue) {
         return this.#requestPromise(
-            this.store(storeName).index(indexName).getAll(indexValue)
+            this.#store(storeName).index(indexName).getAll(indexValue)
         );
     }
 
     deleteByKey(storeName, key) {
-        return this.#requestPromise(this.store(storeName).delete(key));
+        return this.#requestPromise(this.#store(storeName).delete(key));
     }
 
     deleteByIndex(storeName, indexName, indexValue) {
         return this.#requestPromise(
-            this.store(storeName).index(indexName).delete(indexValue)
+            this.#store(storeName).index(indexName).delete(indexValue)
         );
     }
 
     deleteAll(storeName) {
-        return this.#requestPromise(this.store(storeName).clear());
+        return this.#requestPromise(this.#store(storeName).clear());
     }
 
     async deleteAllByIndex(storeName, indexName, indexValue) {
 
-        const store = this.store(storeName);
+        const store = this.#store(storeName);
         const index = store.index(indexName);
 
         return new Promise((resolve, reject) => {
@@ -95,16 +101,24 @@ export default class DatabaseOperation {
     }
 
     count(storeName) {
-        return this.#requestPromise(this.store(storeName).count());
+        return this.#requestPromise(this.#store(storeName).count());
     }
 
     clear(storeName) {
-        return this.#requestPromise(this.store(storeName).clear());
+        return this.#requestPromise(this.#store(storeName).clear());
     }
 
     /**
-     * 将一个 IDBRequest 请求转换为 Promise。
-     * @param {IDBRequest} request - 要转换的请求。
+     * 获取指定store
+     * @param {string} storeName - store名称
+     */
+    #store(storeName) {
+        return this.#stores[storeName];
+    }
+
+    /**
+     * 将IDBRequest转换为Promise
+     * @param {IDBRequest} request - 要转换的请求
      * @returns {Promise<any>}
      */
     #requestPromise(request) {
@@ -115,10 +129,49 @@ export default class DatabaseOperation {
     }
 
     /**
-     * 获取指定 store
-     * @param {string} storeName 
+     * 添加或更新请求的Promise封装,将主键值设置到数据对象中
+     * 
+     * @param {IDBRequest} request - 要封装的请求
+     * @param {IDBObjectStore} store - 对应的对象存储
+     * @param {Object} processedData - 处理后的数据
+     * @returns {Promise<any>}
      */
-    store(storeName) {
-        return this.#stores[storeName];
+    #addOrUpdateRequestPromise(request, store, processedData) {
+        return new Promise((resolve, reject) => {
+            request.onsuccess = () => {
+                if (processedData.isKeyDeleted) {
+                    processedData.data[store.keyPath] = request.result;
+                }
+                resolve(request.result);
+            };
+            request.onerror = () => {
+                if (processedData.isKeyDeleted) {
+                    processedData.data[store.keyPath] = processedData.oldValueOfKey;
+                }
+                reject(request.error);
+            };
+        });
+    }
+
+    /**
+     * 删除autoIncrement主键字段,以确保IndexedDB能正确生成自增键.
+     *
+     * 当对象的主键字段存在但值为"undefined"或"null"时,
+     * 直接插入到开启autoIncrement的对象存储会报DataError.
+     * 本方法会删除该字段,使对象在插入时触发autoIncrement自动生成主键.
+     *
+     * @param {Object} data - 需要处理的数据
+     * @param {IDBObjectStore} store - store对象
+     * @returns {Object} - 处理后的对象
+     */
+    #deleteKeyForAutoIncrement(data, store) {
+        const processedData = { isKeyDeleted: false, data: data };
+        const keyPath = store.keyPath;
+        const autoIncrement = store.autoIncrement;
+        if (autoIncrement && keyPath in data && (data[keyPath] === undefined || data[keyPath] === null)) {
+            processedData.oldValueOfKey = processedData.data[keyPath];
+            processedData.isKeyDeleted = delete processedData.data[keyPath];
+        }
+        return processedData;
     }
 }
