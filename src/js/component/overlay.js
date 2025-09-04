@@ -19,11 +19,12 @@
  * @author allurx
  */
 export default class Overlay {
-
+    
+    /** @type {HTMLElement} */
     element;
 
     constructor({ containerSelector = "body" } = {}) {
-        this.element = document.querySelector(containerSelector).appendChild(this.#appendToContainer());
+        this.element = document.querySelector(containerSelector).appendChild(this.#renderTemplate());
     }
 
     show() {
@@ -34,10 +35,10 @@ export default class Overlay {
         this.element.hidden = true;
     }
 
-    #appendToContainer() {
+    #renderTemplate() {
         const template = document.createElement("template");
         template.innerHTML = this.#template().trim();
-        return document.body.appendChild(template.content.firstElementChild);
+        return template.content.firstElementChild;
     }
 
     #template() {
