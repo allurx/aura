@@ -6,7 +6,5 @@
     // 使用ES模块
     "module": "ESNext",
 
-    // 对js启用类型检查
-    // "checkJs": true
   }
 }
