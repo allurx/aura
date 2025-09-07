@@ -19,7 +19,7 @@
  * @author allurx
  */
 export default class Overlay {
-    
+
     /** @type {HTMLElement} */
     element;
 
@@ -27,20 +27,34 @@ export default class Overlay {
         this.element = document.querySelector(containerSelector).appendChild(this.#renderTemplate());
     }
 
+    /** 
+     * 显示遮罩
+     */
     show() {
         this.element.hidden = false;
     }
 
+    /** 
+     * 隐藏遮罩 
+     */
     hide() {
         this.element.hidden = true;
     }
 
+    /**
+     * 渲染模板
+     * @return {HTMLElement} - 遮罩元素
+     */
     #renderTemplate() {
         const template = document.createElement("template");
         template.innerHTML = this.#template().trim();
         return template.content.firstElementChild;
     }
 
+    /** 
+     * 模板
+     * @return {string} - 遮罩元素的html模板
+     */
     #template() {
         return `
             <div id="overlay" hidden>
