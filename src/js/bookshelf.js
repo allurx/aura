@@ -90,7 +90,7 @@ class Bookshelf {
 
         // 找到当前书籍类型下的文件,并将其添加的页面元素中
         Aura.database.getAllByIndex(this.bookStore.name, this.bookStore.indexes.genreId.name, this.currentBookGenreId)
-            .then(books => books.forEach(book => this.createBookElement(new Book({ ...book }))));
+            .then(books => books.forEach(book => this.createBookElement(new Book(book))));
     }
 
     // 切换到当前书籍分类
