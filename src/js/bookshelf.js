@@ -29,6 +29,10 @@ import TableOfContents from "./model/tableOfContents.js";
  */
 class Bookshelf {
 
+    /** 
+     * 书籍分类列表
+     * @type {Array<{id: number, name: string}>}  
+     */
     bookGenres = [
         { id: 1, name: "玄幻" },
         { id: 2, name: "奇幻" },
@@ -48,27 +52,36 @@ class Bookshelf {
         { id: 16, name: "魔幻" }
     ];
 
-    // 数据库属性
+    // 数据库存储
     bookStore = Aura.databaseProperties.stores.book;
     chapterStore = Aura.databaseProperties.stores.chapter;
     tableOfContentsStore = Aura.databaseProperties.stores.tableOfContents;
     readingProgressStore = Aura.databaseProperties.stores.readingProgress;
 
-
-    // 当前书籍分类
+    /** 
+     * 当前书籍分类id
+     * @type {number} 
+     */
     currentBookGenreId = 1;
 
-    // 遮罩层
+    /** 
+     * 遮罩层
+     * @type {Overlay} 
+     */
     overlay = new Overlay();
 
-    // 初始化
+    /**
+     * 初始化
+     */
     init() {
         this.initNav();
         this.bindEvent();
         this.switchCurrentGenre();
     }
 
-    // 初始化左侧导航栏
+    /**
+     * 初始化导航栏
+     */
     initNav() {
         const navElement = document.querySelector("nav");
         this.bookGenres.forEach(bookGenre => {
@@ -79,7 +92,10 @@ class Bookshelf {
         })
     }
 
-    // 书籍分类切换
+    /**
+     * 切换书籍分类
+     * @param {HTMLElement} button - 书籍分类按钮
+     */
     switchGenre(button) {
         document.querySelector("nav button.active")?.classList.remove("active");
         button.classList.add("active");
@@ -90,15 +106,20 @@ class Bookshelf {
 
         // 找到当前书籍类型下的文件,并将其添加的页面元素中
         Aura.database.getAllByIndex(this.bookStore.name, this.bookStore.indexes.genreId.name, this.currentBookGenreId)
-            .then(books => books.forEach(book => this.createBookElement(new Book({ ...book }))));
+            .then(books => books.forEach(book => this.createBookElement(new Book(book))));
     }
 
-    // 切换到当前书籍分类
+    /**
+     * 切换到当前书籍分类
+     */
     switchCurrentGenre() {
         this.switchGenre(document.querySelector(`nav button[data-id="${this.currentBookGenreId}"]`));
     }
 
-    // 添加书籍
+    /**
+     * 添加书籍
+     * @param {HTMLInputElement} bookInput - 书籍文件输入框
+     */
     async addBook(bookInput) {
         try {
             this.overlay.show();
@@ -155,19 +176,28 @@ class Bookshelf {
         }
     }
 
-    // 创建书籍元素
+    /**
+     * 创建书籍元素
+     * @param {Book} book - 书籍实例
+     */
     createBookElement(book) {
         document.getElementById("books").insertAdjacentHTML("beforeend", book.template());
     }
 
-    // 阅读书籍
+    /**
+     * 阅读书籍
+     * @param {HTMLElement} bookElement - 书籍元素
+     */
     readBook(bookElement) {
         const bookId = Number(bookElement.parentElement.dataset.id);
         window.location.href = "./page/reader.html";
         window.sessionStorage.setItem("bookId", bookId);
     }
 
-    // 删除书籍
+    /**
+     * 删除书籍
+     * @param {HTMLElement} deleteBookElement - 删除书籍按钮元素
+     */
     async deleteBook(deleteBookElement) {
         if (confirm("确定要删除这本书吗？")) {
             const bookElement = deleteBookElement.closest(".book");
@@ -190,7 +220,9 @@ class Bookshelf {
         }
     }
 
-    // 清空书架
+    /**
+     * 清空书架
+     */
     async clearBookshelf() {
         if (confirm("确定要清空书架中的所有书籍吗?")) {
 
@@ -227,7 +259,9 @@ class Bookshelf {
         }
     }
 
-    // 绑定事件
+    /**
+     * 绑定事件
+     */
     bindEvent() {
         EventBinderUtil.bind("nav button", "click", this.switchGenre.bind(this));
         EventBinderUtil.bind("#book-input", "change", this.addBook.bind(this));
@@ -240,4 +274,5 @@ class Bookshelf {
     }
 }
 
+// 初始化书架
 new Bookshelf().init();

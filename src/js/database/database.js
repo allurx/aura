@@ -40,7 +40,10 @@ export default class Database {
     /** @type {TransactionManager} */
     #transactionManager = new TransactionManager(this);
 
-    /** @type {Promise<IDBDatabase>} 用于处理并发打开请求的Promise */
+    /**
+     * 用于处理并发打开请求的Promise
+     * @type {Promise<IDBDatabase>}
+     */
     #openPromise = null;
 
     constructor(name, version, properties) {

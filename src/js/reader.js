@@ -44,22 +44,26 @@ class Reader {
     /** @type {Overlay} */
     overlay = new Overlay();
 
-    // 数据库属性
+    // 数据库存储
     bookStore = Aura.databaseProperties.stores.book;
     chapterStore = Aura.databaseProperties.stores.chapter;
     tableOfContentsStore = Aura.databaseProperties.stores.tableOfContents;
     readingProgressStore = Aura.databaseProperties.stores.readingProgress;
     settingStore = Aura.databaseProperties.stores.setting;
 
-    // 初始化阅读器
-    async init(bookId) {
+    /**
+     * 初始化阅读器
+     */
+    async init() {
+        // 从sessionStorage读取bookId，注意读取到的值是字符串类型
+        const bookId = Number(sessionStorage.getItem("bookId"))
         if (bookId) {
             console.log("已从sessionStorage读取到bookId:", bookId);
             await Promise.all([
-                Aura.database.getByKey(this.bookStore.name, bookId).then(book => this.book = new Book({ ...book })),
-                Aura.database.getByKey(this.tableOfContentsStore.name, bookId).then(toc => this.toc = new TableOfContents({ ...toc })),
-                Aura.database.getByKey(this.readingProgressStore.name, bookId).then(readingProgress => this.readingProgress = new ReadingProgress({ ...readingProgress })),
-                Aura.database.getByIndex(this.settingStore.name, this.settingStore.indexes.name.name, "reader-setting").then(setting => this.setting = setting ? new ReaderSetting({ ...setting }) : Aura.reader.setting)
+                Aura.database.getByKey(this.bookStore.name, bookId).then(book => this.book = new Book(book)),
+                Aura.database.getByKey(this.tableOfContentsStore.name, bookId).then(toc => this.toc = new TableOfContents(toc)),
+                Aura.database.getByKey(this.readingProgressStore.name, bookId).then(readingProgress => this.readingProgress = new ReadingProgress(readingProgress)),
+                Aura.database.getByIndex(this.settingStore.name, this.settingStore.indexes.name.name, "reader-setting").then(setting => this.setting = setting ? new ReaderSetting(setting) : new ReaderSetting(Aura.reader.setting))
             ]).then(() => {
                 this.renderToc();
                 this.renderTheme();
@@ -74,14 +78,18 @@ class Reader {
         }
     }
 
-    // 通过css动画，防止页面频繁加载时元素闪烁
+    /**
+     * 显示reader,通过css动画防止页面频繁加载时元素闪烁
+     */
     showReader() {
         document.getElementById("reader").classList.add("visible");
     }
 
-    // 渲染目录
+    /**
+     * 渲染目录
+     */
     renderToc() {
-        const container = document.getElementById("toc");
+        const tocElement = document.getElementById("toc");
 
         // 创建文档片段，避免多次dom操作
         const fragment = document.createDocumentFragment();
@@ -94,15 +102,15 @@ class Reader {
         });
 
         // 一次性添加到容器
-        container.appendChild(fragment);
+        tocElement.appendChild(fragment);
 
         // 使用事件委托绑定click，避免大量事件监听器
-        container.addEventListener("click", (event) => {
+        tocElement.addEventListener("click", (event) => {
 
             // 判断点击的是否是 <p> 元素
             const p = event.target.closest("p");
 
-            if (p && container.contains(p)) {
+            if (p && tocElement.contains(p)) {
                 this.readingProgress.chapterIndex = Number(p.dataset.index);
                 this.readingProgress.lineIndex = 1;
                 this.readingProgress.scrollTop = 0;
@@ -112,18 +120,22 @@ class Reader {
         });
     }
 
-    // 渲染主题
+    /**
+     * 渲染主题选项
+     */
     renderTheme() {
-        const select = document.querySelector("#theme");
-        Aura.reader.themes.forEach(theme => select.add(new Option(theme.name, theme.value)));
+        const selectElement = document.querySelector("#theme");
+        Aura.reader.themes.forEach(theme => selectElement.add(new Option(theme.name, theme.value)));
     }
 
-    // 加载章节内容
+    /**
+     * 加载章节
+     */
     async loadChapter() {
         this.overlay.show();
         await Aura.database.getByIndex(this.chapterStore.name, this.chapterStore.indexes.chapterId.name,
             [this.readingProgress.bookId, this.readingProgress.chapterIndex])
-            .then(chapter => new Chapter({ ...chapter }))
+            .then(chapter => new Chapter(chapter))
             .then(async chapter => {
 
                 console.log("当前阅读进度: ", this.readingProgress);
@@ -160,13 +172,17 @@ class Reader {
 
     }
 
-    // 渲染章节阅读进度
+    /**
+     * 渲染进度
+     */
     renderProgress() {
         const rate = (((this.readingProgress.chapterIndex) / this.toc.contents.length) * 100).toFixed(2);
         document.getElementById("progress-rate").textContent = `${rate}%`;
     }
 
-    // 高亮目录
+    /**
+     * 高亮目录当前章节
+     */
     highlightToc() {
 
         // 移除之前的章节高亮
@@ -181,13 +197,15 @@ class Reader {
 
     }
 
-    // 绑定事件
+    /**
+     * 绑定事件
+     */
     bindEvent() {
 
         // 展开/关闭目录面板
         document.getElementById("toggle-toc-panel").onclick = () => {
-            const tocPanel = document.getElementById("toc-panel");
-            tocPanel.hidden = !tocPanel.hidden;
+            const tocPanelElement = document.getElementById("toc-panel");
+            tocPanelElement.hidden = !tocPanelElement.hidden;
             this.highlightToc();
         }
 
@@ -203,8 +221,8 @@ class Reader {
 
         // 展开/关闭设置面板
         document.getElementById("toggle-setting-panel").addEventListener("click", () => {
-            const settingPanel = document.getElementById("setting-panel");
-            settingPanel.hidden = !settingPanel.hidden;
+            const settingPanelElement = document.getElementById("setting-panel");
+            settingPanelElement.hidden = !settingPanelElement.hidden;
         });
 
         // 关闭设置面板
@@ -213,7 +231,7 @@ class Reader {
 
         // 重置设置面板
         document.getElementById("reset-setting-panel").onclick = () => {
-            this.setting = Aura.reader.setting;
+            this.setting = new ReaderSetting(Aura.reader.setting);
             this.applySetting();
             this.saveSetting();
         }
@@ -392,7 +410,7 @@ class Reader {
             }
 
             // 内容区域
-            const content = document.getElementById("content");
+            const contentElement = document.getElementById("content");
 
             // 记录触摸起始位置
             document.addEventListener("pointerdown", event => {
@@ -465,8 +483,8 @@ class Reader {
                     isTouching = false;
 
                     // 检查是否在有效区域内
-                    if (event.target.parentElement === content ||
-                        event.target === content ||
+                    if (event.target.parentElement === contentElement ||
+                        event.target === contentElement ||
                         event.target === document.body) {
 
                         // 点击 - 手指在x/y轴滑动距离同时小于该阈值时才算作点击
@@ -513,7 +531,7 @@ class Reader {
                 }
 
                 // 不要打印引用对象，因为pointermove事件会持续更新pointer对象，导致打印时指针信息不准确
-                console.debug("指针事件信息:", JSON.stringify(pointer, (key, value) => {
+                console.log("指针事件信息:", JSON.stringify(pointer, (key, value) => {
                     if (value instanceof Node) {
                         return {
                             tagName: value.tagName,
@@ -555,14 +573,18 @@ class Reader {
 
     }
 
-    // 保存设置
+    /**
+     * 保存阅读器设置
+     */
     async saveSetting() {
 
         // 保存设置
         await Aura.database.put(this.settingStore.name, this.setting);
     }
 
-    // 应用阅读器设置
+    /**
+     * 应用阅读器设置
+     */
     applySetting() {
         this.applyTheme(this.setting.theme);
         this.applyFontSize(this.setting.fontSize);
@@ -574,7 +596,9 @@ class Reader {
         this.applyBackgroundColor(this.setting.backgroundColor);
     }
 
-    // 应用主题设置
+    /**
+     * 应用主题设置
+     */
     applyTheme() {
         document.getElementById("theme").value = this.setting.theme;
         document.getElementById("theme-value").textContent = this.setting.theme;
@@ -583,26 +607,32 @@ class Reader {
         this.applyContentBackgroundColor(this.setting.contentBackgroundColor);
     }
 
-    // 应用字体大小设置
+    /**
+     * 应用字体大小设置
+     */
     applyFontSize() {
         document.getElementById("font-size").value = this.setting.fontSize;
         document.getElementById("font-size-value").textContent = this.setting.fontSize + "px";
         document.getElementById("content").style.fontSize = this.setting.fontSize + "px";
     }
 
-    // 应用页面宽度设置
+    /**
+     * 应用页面宽度设置
+     */
     applyPageWidth() {
         // 计算应用的新宽度，取屏幕可见宽度和新宽度的较小值
         const appliedWidth = Math.min(Math.round(this.setting.pageWidth), window.innerWidth);
-        const pageWidth = document.getElementById("width");
-        pageWidth.min = window.innerWidth > 768 ? 768 : 320;
-        pageWidth.max = window.innerWidth;
-        pageWidth.value = appliedWidth;
+        const pageWidthElement = document.getElementById("width");
+        pageWidthElement.min = window.innerWidth > 768 ? 768 : 320;
+        pageWidthElement.max = window.innerWidth;
+        pageWidthElement.value = appliedWidth;
         document.getElementById("width-value").textContent = appliedWidth + "px";
         document.getElementById("reader").style.width = appliedWidth + "px";
     }
 
-    // 应用页面内边距设置
+    /**
+     * 应用页面内边距设置
+     */
     applyPagePadding() {
         document.getElementById("padding").value = this.setting.pagePadding;
         document.getElementById("padding-value").textContent = this.setting.pagePadding + "px";
@@ -611,28 +641,36 @@ class Reader {
         document.getElementById("content").style.padding = `0 ${this.setting.pagePadding}px`;
     }
 
-    // 应用行高设置
+    /**
+     * 应用行高设置
+     */
     applyLineHeight() {
         document.getElementById("line-height").value = this.setting.lineHeight;
         document.getElementById("line-height-value").textContent = this.setting.lineHeight;
         document.getElementById("content").style.lineHeight = this.setting.lineHeight;
     }
 
-    // 应用字体颜色设置
+    /**
+     * 应用字体颜色设置
+     */
     applyFontColor() {
         document.getElementById("font-color").value = this.setting.fontColor;
         document.getElementById("font-color-value").textContent = this.setting.fontColor;
         document.getElementById("reader").style.color = this.setting.fontColor;
     }
 
-    // 应用正文背景色设置
+    /**
+     * 应用正文背景色设置
+     */
     applyContentBackgroundColor() {
         document.getElementById("content-background-color").value = this.setting.contentBackgroundColor;
         document.getElementById("content-background-color-value").textContent = this.setting.contentBackgroundColor;
         document.getElementById("reader").style.backgroundColor = this.setting.contentBackgroundColor;
     }
 
-    // 应用网页背景色设置
+    /**
+     * 应用网页背景色设置
+     */
     applyBackgroundColor() {
         document.getElementById("background-color").value = this.setting.backgroundColor;
         document.getElementById("background-color-value").textContent = this.setting.backgroundColor;
@@ -641,6 +679,6 @@ class Reader {
 
 }
 
-// 从sessionStorage读取bookId，注意读取到的值是字符串类型
-new Reader().init(Number(sessionStorage.getItem("bookId")));
+// 初始化阅读器
+new Reader().init();
 

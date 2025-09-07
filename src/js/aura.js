@@ -24,7 +24,9 @@ import Database from "./database/database.js"
  */
 export default class Aura {
 
-    // 数据库属性
+    /**
+     * 数据库属性
+     */
     static databaseProperties = {
         name: "Aura",
         version: 3,
@@ -78,7 +80,9 @@ export default class Aura {
         }
     };
 
-    // 阅读器配置
+    /**
+     * 阅读器配置数据
+     */
     static reader = {
         setting: new ReaderSetting({
             id: 1,
@@ -102,7 +106,10 @@ export default class Aura {
         ]
     }
 
-    // 数据库实例
+    /**
+     * 数据库实例
+     * @type {Database}
+     */
     static database = new Database(Aura.databaseProperties.name, Aura.databaseProperties.version, Aura.databaseProperties.stores);
 
 }

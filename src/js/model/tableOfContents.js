@@ -37,7 +37,7 @@ export default class TableOfContents {
     constructor({ id, bookId, contents }) {
         this.id = id;
         this.bookId = bookId;
-        this.contents = contents.map(content => new TableOfContents.Content({ ...content }));
+        this.contents = contents.map(content => new TableOfContents.Content(content));
     }
 
     /**

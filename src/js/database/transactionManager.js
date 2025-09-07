@@ -34,6 +34,8 @@ export default class TransactionManager {
      * @param {string|string[]} storeNames - 目标object store名称
      * @param {"readonly"|"readwrite"} mode - 事务模式
      * @param {(DatabaseOperation) => any} databaseOperation - 数据库操作函数
+     * @returns {Promise<any>} - 返回一个解析为数据库操作结果的Promise
+     * @throws {Error} - 如果事务失败或中止,会抛出错误
      */
     async execute(storeNames, mode, databaseOperation) {
 
