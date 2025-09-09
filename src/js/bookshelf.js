@@ -118,13 +118,13 @@ class Bookshelf {
 
     /**
      * 添加书籍
-     * @param {HTMLInputElement} bookInput - 书籍文件输入框
+     * @param {HTMLInputElement} bookInputElement - 书籍文件输入框
      */
-    async addBook(bookInput) {
+    async addBook(bookInputElement) {
         try {
             this.overlay.show();
             // 每本书在自己的独立事务中,允许部分事务成功
-            await Promise.all(Array.from(bookInput.files)
+            await Promise.all(Array.from(bookInputElement.files)
                 .map(async file => {
 
                     if (file.type !== "text/plain") {
@@ -171,7 +171,7 @@ class Bookshelf {
                 }));
         } finally {
             // 重置,支持重复上传同一文件
-            bookInput.value = "";
+            bookInputElement.value = "";
             this.overlay.hide();
         }
     }
@@ -186,10 +186,10 @@ class Bookshelf {
 
     /**
      * 阅读书籍
-     * @param {HTMLElement} bookElement - 书籍元素
+     * @param {HTMLElement} bookBodyElement - 书籍元素
      */
-    readBook(bookElement) {
-        const bookId = Number(bookElement.parentElement.dataset.id);
+    readBook(bookBodyElement) {
+        const bookId = Number(bookBodyElement.parentElement.dataset.id);
         window.location.href = "./page/reader.html";
         window.sessionStorage.setItem("bookId", bookId);
     }
