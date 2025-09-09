@@ -128,7 +128,7 @@ class Bookshelf {
                 .map(async file => {
 
                     if (file.type !== "text/plain") {
-                        alert(`文件${file.name}不是文本文件`);
+                        alert(`${file.name}不是文本文件`);
                         return;
                     }
 
