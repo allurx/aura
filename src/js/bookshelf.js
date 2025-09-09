@@ -118,17 +118,17 @@ class Bookshelf {
 
     /**
      * 添加书籍
-     * @param {HTMLInputElement} bookInput - 书籍文件输入框
+     * @param {HTMLInputElement} bookInputElement - 书籍文件输入框
      */
-    async addBook(bookInput) {
+    async addBook(bookInputElement) {
         try {
             this.overlay.show();
             // 每本书在自己的独立事务中,允许部分事务成功
-            await Promise.all(Array.from(bookInput.files)
+            await Promise.all(Array.from(bookInputElement.files)
                 .map(async file => {
 
                     if (file.type !== "text/plain") {
-                        alert(`文件${file.name}不是文本文件`);
+                        alert(`${file.name}不是文本文件`);
                         return;
                     }
 
@@ -171,7 +171,7 @@ class Bookshelf {
                 }));
         } finally {
             // 重置,支持重复上传同一文件
-            bookInput.value = "";
+            bookInputElement.value = "";
             this.overlay.hide();
         }
     }
@@ -186,10 +186,10 @@ class Bookshelf {
 
     /**
      * 阅读书籍
-     * @param {HTMLElement} bookElement - 书籍元素
+     * @param {HTMLElement} bookBodyElement - 书籍元素
      */
-    readBook(bookElement) {
-        const bookId = Number(bookElement.parentElement.dataset.id);
+    readBook(bookBodyElement) {
+        const bookId = Number(bookBodyElement.parentElement.dataset.id);
         window.location.href = "./page/reader.html";
         window.sessionStorage.setItem("bookId", bookId);
     }
@@ -225,37 +225,20 @@ class Bookshelf {
      */
     async clearBookshelf() {
         if (confirm("确定要清空书架中的所有书籍吗?")) {
-
-            // 在事务外部获取所有书籍的列表
-            const books = await Aura.database.getAll(this.bookStore.name);
-            if (books.length === 0) return;
-
-            // 将所有书的所有操作合并到一个事务中,要么都成功,要么都失败
             await Aura.database.transaction(
                 [this.bookStore.name, this.chapterStore.name, this.tableOfContentsStore.name, this.readingProgressStore.name],
                 Database.READ_WRITE,
                 async (dbop) => {
-
                     this.overlay.show();
-
-                    // 每本书有三个数据库操作,合并所有操作
-                    const deletePromises = books.flatMap(book => [
-                        dbop.deleteByKey(this.bookStore.name, book.id),
-                        dbop.deleteByKey(this.tableOfContentsStore.name, book.id),
-                        dbop.deleteByKey(this.readingProgressStore.name, book.id),
-                        dbop.deleteAllByIndex(this.chapterStore.name, this.chapterStore.indexes.bookId.name, book.id)
-                    ]);
-
-                    // 等待所有删除操作完成
-                    await Promise.all(deletePromises);
-
+                    dbop.deleteAll(this.bookStore.name);
+                    dbop.deleteAll(this.tableOfContentsStore.name);
+                    dbop.deleteAll(this.readingProgressStore.name);
+                    dbop.deleteAll(this.chapterStore.name);
                 }).then(() => {
-                    console.log("书架已清空!");
                     this.switchCurrentGenre();
                 }).finally(() => {
                     this.overlay.hide();
                 });
-
         }
     }
 
