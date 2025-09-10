@@ -416,7 +416,7 @@ class Reader {
             document.addEventListener("pointerdown", event => {
                 pointer.type = event.pointerType;
                 pointer.startTarget = event.target;
-                pointer.endTarget = pointer.startTarget;
+                pointer.endTarget = event.target;
                 pointer.startX = event.clientX;
                 pointer.startY = event.clientY;
                 pointer.lastX = pointer.startX;

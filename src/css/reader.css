@@ -49,13 +49,13 @@
   align-items: center;
   /* padding: 0 30px; */
   display: flex;
+  -webkit-user-select: none;
   user-select: none;
 }
 
 /* 顶部操作icon */
 .header-action {
   font-size: 1.6rem;
-  user-select: none;
   align-items: center;
   flex: 1;
 }
@@ -120,9 +120,10 @@
   background-color: inherit;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6);
   z-index: 1000;
-  user-select: none;
   overflow: hidden;
   white-space: nowrap;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* 面板头部 */
@@ -137,7 +138,7 @@
 
 .panel-header h2 {
   font-weight: bold;
-  font-size: 22px;
+  font-size: 1.4rem;
 }
 
 .panel-header-action {
@@ -206,6 +207,7 @@
 .setting-item-value {
   flex: 2;
   text-align: center;
+  -webkit-user-select: text;
   user-select: text;
 }
 
@@ -226,7 +228,6 @@
     min-width: 768px;
   }
   .panel {
-    min-width: 768px;
-    max-width: 80%;
+    width: 520px;
   }
 }

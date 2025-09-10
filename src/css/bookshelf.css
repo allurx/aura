@@ -34,6 +34,8 @@ html {
   flex-direction: column;
   height: 100%;
   width: 100%;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* 书架头部 */
@@ -44,7 +46,6 @@ header {
   justify-content: space-between;
   align-items: center;
   padding: 0 12px;
-  user-select: none;
 }
 
 #header-title {
@@ -110,7 +111,6 @@ nav button {
   word-break: keep-all;
 }
 
-nav button:hover,
 nav button.active {
   background-color: #374151;
   color: #ffd04b;
@@ -145,8 +145,9 @@ nav button.active {
   color: #cccccc;
   font-size: 3rem;
   cursor: pointer;
-  user-select: none;
   transition: border-color 0.3s, color 0.3s;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #book-input-label:hover {
@@ -203,20 +204,40 @@ input[type="file"] {
 }
 
 .delete-book {
-  cursor: pointer;
-  /* 默认透明 */
+  /* 默认隐藏和透明 */
+  display: none;
   opacity: 0;
+  cursor: pointer;
   transition: opacity 0.3s;
 }
 
-/* 悬停时显示 */
-.book:hover .delete-book {
-  opacity: 1;
+/* 非触摸屏 */
+@media (hover: hover) and (pointer: fine) {
+  nav button:hover {
+    background-color: #374151;
+    color: #ffd04b;
+  }
+
+  .delete-book {
+    display: block;
+  }
+
+  .book:hover .delete-book {
+    opacity: 1;
+  }
+
+  .book:hover {
+    background-color: #397fc4;
+    transform: translateY(-5px);
+  }
 }
 
-.book:hover {
-  background-color: #397fc4;
-  transform: translateY(-5px);
+/* 非触摸屏 */
+@media (hover: hover) and (pointer: fine) {
+  #bookshelf {
+    -webkit-user-select: text;
+    user-select: text;
+  }
 }
 
 /* 平板及以上 */
