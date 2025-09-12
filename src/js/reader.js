@@ -144,7 +144,7 @@ class Reader {
                 const contentElement = document.getElementById("content");
                 contentElement.innerHTML = "";
                 const fragment = document.createDocumentFragment();
-                chapter.content.split(/\r?\n/).forEach((line, index) => {
+                chapter.lines.forEach((line, index) => {
                     const p = document.createElement("p");
                     p.dataset.index = index + 1;
                     p.textContent = line;
