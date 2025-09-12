@@ -113,7 +113,6 @@ class Reader {
             if (p && tocElement.contains(p)) {
                 this.readingProgress.chapterIndex = Number(p.dataset.index);
                 this.readingProgress.lineIndex = 1;
-                this.readingProgress.scrollTop = 0;
                 this.loadChapter();
             }
 
@@ -153,11 +152,7 @@ class Reader {
                 contentElement.appendChild(fragment);
 
                 // 先滚动到之前阅读的行
-                contentElement.querySelector(`p[data-index="${this.readingProgress.lineIndex}"]`)?.scrollIntoView({ block: "start", behavior: "auto" });
-
-                // 微调scrollTop，兼顾移动端弹性滚动
-                const scrollAdjustment = this.readingProgress.scrollTop ? this.readingProgress.scrollTop - contentElement.scrollTop : 0;
-                contentElement.scrollTop += scrollAdjustment;
+                contentElement.querySelector(`p[data-index="${this.readingProgress.lineIndex}"]`)?.scrollIntoView({ block: "end", behavior: "auto" });
 
                 // 更新章节名称
                 const chapterElement = document.getElementById("chapter-name");
@@ -296,7 +291,7 @@ class Reader {
             this.saveSetting();
         });
 
-        // 实时计算当前章节最上方可见的<p>元素（可见比例超过一半才算，带防抖）
+        // 实时计算当前章节最下方可见的<p>元素(可见比例超过一半才算,带防抖)
         document.getElementById("content").addEventListener("scroll", (() => {
 
             // 用于防抖控制
@@ -324,19 +319,18 @@ class Reader {
                             // 超过一半才算可见
                             return visibleHeight > rect.height / 2;
                         })
-                        // 按top排序，取最上方
-                        .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)[0]
+                        // 按top排序,取最下方
+                        .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0]
                         || null;
 
-                    console.log("当前章节最上方可见的行：", line);
+                    console.log("当前章节最下方可见的行：", line);
 
                     if (line) {
                         this.readingProgress.lineIndex = Number(line.dataset.index);
-                        this.readingProgress.scrollTop = event.target.scrollTop;
                         await Aura.database.put(this.readingProgressStore.name, this.readingProgress);
                     }
 
-                    //防抖延迟时间（毫秒）
+                    // 防抖延迟时间(毫秒)
                 }, 200);
             };
 
@@ -554,7 +548,6 @@ class Reader {
                     } else {
                         reader.readingProgress.chapterIndex -= 1;
                         reader.readingProgress.lineIndex = 1;
-                        reader.readingProgress.scrollTop = 0;
                         reader.loadChapter();
                     }
                 } else {
@@ -563,7 +556,6 @@ class Reader {
                     } else {
                         reader.readingProgress.chapterIndex += 1;
                         reader.readingProgress.lineIndex = 1;
-                        reader.readingProgress.scrollTop = 0;
                         reader.loadChapter();
                     }
                 }

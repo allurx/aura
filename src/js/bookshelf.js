@@ -142,7 +142,7 @@ class Bookshelf {
                     const tableOfContents = new TableOfContents({ contents: chapters });
 
                     // 创建阅读进度
-                    const readingProgress = new ReadingProgress({ chapterIndex: 1, lineIndex: 1, scrollTop: 0 });
+                    const readingProgress = new ReadingProgress({ chapterIndex: 1, lineIndex: 1});
 
                     // 将书籍和章节存入数据库
                     await Aura.database.transaction(
