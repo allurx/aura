@@ -142,7 +142,7 @@ class Bookshelf {
                     const tableOfContents = new TableOfContents({ contents: chapters });
 
                     // 创建阅读进度
-                    const readingProgress = new ReadingProgress({ chapterIndex: 1, lineIndex: 1, scrollTop: 0 });
+                    const readingProgress = new ReadingProgress({ chapterIndex: 1, lineIndex: 1});
 
                     // 将书籍和章节存入数据库
                     await Aura.database.transaction(
@@ -211,12 +211,9 @@ class Bookshelf {
                     await dbop.deleteAllByIndex(this.chapterStore.name, this.chapterStore.indexes.bookId.name, bookId);
                     await dbop.deleteByKey(this.tableOfContentsStore.name, bookId);
                     await dbop.deleteByKey(this.readingProgressStore.name, bookId);
-                }
-            ).then(() => {
-                bookElement.remove();
-            }).finally(() => {
-                this.overlay.hide();
-            });
+                })
+                .then(() => bookElement.remove())
+                .finally(() => this.overlay.hide());
         }
     }
 
@@ -234,11 +231,9 @@ class Bookshelf {
                     dbop.deleteAll(this.tableOfContentsStore.name);
                     dbop.deleteAll(this.readingProgressStore.name);
                     dbop.deleteAll(this.chapterStore.name);
-                }).then(() => {
-                    this.switchCurrentGenre();
-                }).finally(() => {
-                    this.overlay.hide();
-                });
+                })
+                .then(() => this.switchCurrentGenre())
+                .finally(() => this.overlay.hide());
         }
     }
 

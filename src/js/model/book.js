@@ -35,6 +35,9 @@ export default class Book {
     /**@type {string} */
     title;
 
+    /** @type {number} */
+    createdTime;
+
     /**
      * @param {Object} data - 书籍数据
      * @property {number} id - 书籍id
@@ -42,25 +45,28 @@ export default class Book {
      * @property {string} hash - 文件哈希值
      * @property {string} fileName - 文件名
      * @property {string} title - 书名
+     * @property {number} createdTime - 创建时间
      */
-    constructor({ id, genreId, hash, fileName, title }) {
+    constructor({ id, genreId, hash, fileName, title, createdTime }) {
         this.id = id;
         this.genreId = genreId;
         this.hash = hash;
         this.fileName = fileName;
         this.title = title;
+        this.createdTime = createdTime;
     }
 
     /**
      * 创建书籍实例
      * @param {File} file - 上传的文件
      * @param {number} genreId - 书籍类型id
+     * @param {Chapter[]} chapters - 章节列表
      * @returns {Promise<Book>} 书籍实例
      */
     static async create(file, genreId) {
         const hash = await Book.hash(file);
         const title = file.name.substring(0, file.name.lastIndexOf("."));
-        return new Book({ genreId, hash, fileName: file.name, title })
+        return new Book({ genreId, hash, fileName: file.name, title, createdTime: Date.now() })
     }
 
     /**

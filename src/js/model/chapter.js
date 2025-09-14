@@ -21,7 +21,11 @@
 export default class Chapter {
 
     /** @type {RegExp} */
-    static CHAPTER_REGEX = /(第[0-9一二三四五六七八九十百千]+[章卷][\-–—\s]*[^\n]*)|(卷[0-9一二三四五六七八九十百千]+[\-–—\s]*[^\n]*)/g;
+    static CHAPTER_REGEX =
+        /(?:第[0-9一二三四五六七八九十百千万两]+[章卷]|卷[0-9一二三四五六七八九十百千万两]+)[\-–—\s]*[^\r\n]*(?:\r?\n)?/g;
+
+    /** @type {RegExp} */
+    static LINE_BREAK_REGEX = /\r?\n/;
 
     /** @type {number} */
     id;
@@ -35,8 +39,8 @@ export default class Chapter {
     /** @type {string} */
     title;
 
-    /** @type {string} */
-    content;
+    /** @type {string[]} */
+    lines;
 
     /**
      * @param {Object} data - 章节数据
@@ -44,14 +48,39 @@ export default class Chapter {
      * @property {number} index - 章节索引
      * @property {number} bookId - 书籍id
      * @property {string} title - 章节标题
-     * @property {string} content - 章节内容
+     * @property {string[]} lines - 章节内容行
      */
-    constructor({ id, bookId, index, title, content }) {
+    constructor({ id, bookId, index, title, lines }) {
         this.id = id;
         this.bookId = bookId;
         this.index = index;
         this.title = title;
-        this.content = content;
+        this.lines = lines;
+    }
+
+    /**
+     * 章节内容
+     * @return {string} 整个章节内容
+     */
+    get content() {
+        return this.lines.join("\n");
+    }
+
+    /**
+     * 按换行符切分文本,保证行数正确
+     * - 保留中间的空行
+     * - 去掉末尾因为换行导致的无效空行
+     * @param {string} text - 原始文本
+     * @returns {string[]} 切分后的行数组
+     */
+    static splitToLines(text) {
+        if (!text) return [];
+        const lines = text.split(/\r?\n/);
+        // 如果最后一行是空字符串,说明原文是以换行符结尾,去掉
+        if (lines.length > 1 && lines[lines.length - 1] === "") {
+            lines.pop();
+        }
+        return lines;
     }
 
     /**
@@ -72,23 +101,36 @@ export default class Chapter {
 
                 // 没有匹配到章节,则全文件作为一个章节
                 if (matches.length === 0) {
-                    chapters.push(new Chapter({ index: 1, title: "全文", content: text.trim() }));
+                    chapters.push(new Chapter({
+                        index: 1,
+                        title: "全文",
+                        lines: Chapter.splitToLines(text)
+                    }));
                     resolve(chapters);
                     return;
                 }
 
                 // 如果开头有介绍文字(第一个章节前有内容)
                 if (matches[0].index > 0) {
-                    chapters.push(new Chapter({ index: 1, title: "前言", content: text.slice(0, matches[0].index).trimStart() }));
+                    const preface = text.slice(0, matches[0].index);
+                    chapters.push(new Chapter({
+                        index: 1,
+                        title: "前言",
+                        lines: Chapter.splitToLines(preface)
+                    }));
                 }
 
                 // 遍历每个章节匹配
                 matches.forEach((match, i) => {
-                    const chapterTitle = match[0].trim();
+                    const chapterTitle = match[0];
                     const start = match.index + chapterTitle.length;
                     const end = i < matches.length - 1 ? matches[i + 1].index : text.length;
-                    const content = text.slice(start, end).trimStart();
-                    chapters.push(new Chapter({ index: chapters.length + 1, title: chapterTitle, content }));
+                    const content = text.slice(start, end);
+                    chapters.push(new Chapter({
+                        index: chapters.length + 1,
+                        title: chapterTitle.trim(),
+                        lines: Chapter.splitToLines(content)
+                    }));
                 });
 
                 resolve(chapters);
@@ -98,6 +140,5 @@ export default class Chapter {
             reader.readAsText(file, "UTF-8");
         });
     }
-
 
 }

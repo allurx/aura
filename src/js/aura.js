@@ -29,7 +29,7 @@ export default class Aura {
      */
     static databaseProperties = {
         name: "Aura",
-        version: 3,
+        version: 4,
         stores: {
             book: {
                 name: "book",

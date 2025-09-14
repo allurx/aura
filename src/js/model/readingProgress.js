@@ -32,23 +32,18 @@ export default class ReadingProgress {
     /** @type {number} */
     lineIndex;
 
-    /** @type {number} */
-    scrollTop;
-
     /**
      * @param {Object} data - 阅读进度数据
      * @property {number} id - 阅读进度id
      * @property {string} bookId - 书籍id
      * @property {number} chapterIndex - 当前章节索引
      * @property {number} lineIndex - 行索引
-     * @property {number} scrollTop - 滚动位置
      */
-    constructor({ id, bookId, chapterIndex, lineIndex, scrollTop }) {
+    constructor({ id, bookId, chapterIndex, lineIndex }) {
         this.id = id;
         this.bookId = bookId;
         this.chapterIndex = chapterIndex;
         this.lineIndex = lineIndex;
-        this.scrollTop = scrollTop;
     }
 
 }
