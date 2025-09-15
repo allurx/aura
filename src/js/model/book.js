@@ -30,10 +30,13 @@ export default class Book {
     hash;
 
     /** @type {string} */
-    fileName;
+    name;
 
     /**@type {string} */
     title;
+
+    /** @type {number} */
+    size;
 
     /** @type {number} */
     createdTime;
@@ -43,16 +46,18 @@ export default class Book {
      * @property {number} id - 书籍id
      * @property {number} genreId - 书籍类型id
      * @property {string} hash - 文件哈希值
-     * @property {string} fileName - 文件名
+     * @property {string} name - 文件名
      * @property {string} title - 书名
+     * @property {number} size - 文件大小
      * @property {number} createdTime - 创建时间
      */
-    constructor({ id, genreId, hash, fileName, title, createdTime }) {
+    constructor({ id, genreId, hash, name, title, size, createdTime }) {
         this.id = id;
         this.genreId = genreId;
         this.hash = hash;
-        this.fileName = fileName;
+        this.name = name;
         this.title = title;
+        this.size = size;
         this.createdTime = createdTime;
     }
 
@@ -66,7 +71,7 @@ export default class Book {
     static async create(file, genreId) {
         const hash = await Book.hash(file);
         const title = file.name.substring(0, file.name.lastIndexOf("."));
-        return new Book({ genreId, hash, fileName: file.name, title, createdTime: Date.now() })
+        return new Book({ genreId, hash, name: file.name, title, size: file.size, createdTime: Date.now() })
     }
 
     /**

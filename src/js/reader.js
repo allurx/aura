@@ -152,7 +152,7 @@ class Reader {
                 contentElement.appendChild(fragment);
 
                 // 先滚动到之前阅读的行
-                contentElement.querySelector(`p[data-index="${this.readingProgress.lineIndex}"]`)?.scrollIntoView({ block: "end", behavior: "auto" });
+                contentElement.querySelector(`p[data-index="${this.readingProgress.lineIndex}"]`).scrollIntoView({ block: "end", behavior: "auto" });
 
                 // 更新章节名称
                 const chapterElement = document.getElementById("chapter-name");
