@@ -67,6 +67,30 @@ export default class Chapter {
     }
 
     /**
+     * 将行渲染为p元素
+     * @param {HTMLElement} container - 容器
+     */
+    renderParagraph(container) {
+        container.innerHTML = "";
+        const fragment = document.createDocumentFragment();
+        this.lines.forEach((line, index) => {
+            const p = document.createElement("p");
+            p.dataset.index = index + 1;
+            p.textContent = line;
+            fragment.appendChild(p);
+        });
+        container.appendChild(fragment);
+    }
+
+    /**
+     * 渲染标题
+     * @param {HTMLElement} container - 容器
+     */
+    renderTitle(container) {
+        container.textContent = this.title;
+    }
+
+    /**
      * 按换行符切分文本,保证行数正确
      * - 保留中间的空行
      * - 去掉末尾因为换行导致的无效空行

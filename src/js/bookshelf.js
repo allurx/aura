@@ -74,15 +74,15 @@ class Bookshelf {
      * 初始化
      */
     init() {
-        this.initNav();
+        this.renderNav();
         this.bindEvent();
         this.switchCurrentGenre();
     }
 
     /**
-     * 初始化导航栏
+     * 渲染导航栏
      */
-    initNav() {
+    renderNav() {
         const navElement = document.querySelector("nav");
         this.bookGenres.forEach(bookGenre => {
             const button = document.createElement("button");
@@ -139,10 +139,10 @@ class Bookshelf {
                     const chapters = await Chapter.parse(file);
 
                     // 生成目录
-                    const tableOfContents = new TableOfContents({ contents: chapters });
+                    const tableOfContents = new TableOfContents({ contents: chapters.map(chapter => new TableOfContents.Content(chapter)) });
 
                     // 创建阅读进度
-                    const readingProgress = new ReadingProgress({ chapterIndex: 1, lineIndex: 1});
+                    const readingProgress = new ReadingProgress({ chapterIndex: 1, lineIndex: 1, ratio: 1 });
 
                     // 将书籍和章节存入数据库
                     await Aura.database.transaction(
@@ -199,9 +199,8 @@ class Bookshelf {
      * @param {HTMLElement} deleteBookElement - 删除书籍按钮元素
      */
     async deleteBook(deleteBookElement) {
-        if (confirm("确定要删除这本书吗？")) {
-            const bookElement = deleteBookElement.closest(".book");
-            const bookId = Number(bookElement.dataset.id);
+        if (confirm("确定要删除这本书吗?")) {
+            const bookId = Number(deleteBookElement.closest(".book").dataset.id);
             await Aura.database.transaction(
                 [this.bookStore.name, this.chapterStore.name, this.tableOfContentsStore.name, this.readingProgressStore.name],
                 Database.READ_WRITE,
@@ -212,7 +211,7 @@ class Bookshelf {
                     await dbop.deleteByKey(this.tableOfContentsStore.name, bookId);
                     await dbop.deleteByKey(this.readingProgressStore.name, bookId);
                 })
-                .then(() => bookElement.remove())
+                .then(() => this.switchCurrentGenre())
                 .finally(() => this.overlay.hide());
         }
     }

@@ -55,7 +55,7 @@ class Reader {
      * 初始化阅读器
      */
     async init() {
-        // 从sessionStorage读取bookId，注意读取到的值是字符串类型
+        // 从sessionStorage读取bookId,注意读取到的值是字符串类型
         const bookId = Number(sessionStorage.getItem("bookId"))
         if (bookId) {
             console.log("已从sessionStorage读取到bookId:", bookId);
@@ -91,7 +91,7 @@ class Reader {
     renderToc() {
         const tocElement = document.getElementById("toc");
 
-        // 创建文档片段，避免多次dom操作
+        // 创建文档片段,避免多次dom操作
         const fragment = document.createDocumentFragment();
 
         this.toc.contents.forEach(content => {
@@ -104,7 +104,7 @@ class Reader {
         // 一次性添加到容器
         tocElement.appendChild(fragment);
 
-        // 使用事件委托绑定click，避免大量事件监听器
+        // 使用事件委托绑定click,避免大量事件监听器
         tocElement.addEventListener("click", (event) => {
 
             // 判断点击的是否是 <p> 元素
@@ -113,6 +113,7 @@ class Reader {
             if (p && tocElement.contains(p)) {
                 this.readingProgress.chapterIndex = Number(p.dataset.index);
                 this.readingProgress.lineIndex = 1;
+                this.readingProgress.ratio = 1;
                 this.loadChapter();
             }
 
@@ -139,24 +140,16 @@ class Reader {
 
                 console.log("当前阅读进度: ", this.readingProgress);
 
-                // 创建内容行元素
                 const contentElement = document.getElementById("content");
-                contentElement.innerHTML = "";
-                const fragment = document.createDocumentFragment();
-                chapter.lines.forEach((line, index) => {
-                    const p = document.createElement("p");
-                    p.dataset.index = index + 1;
-                    p.textContent = line;
-                    fragment.appendChild(p);
-                });
-                contentElement.appendChild(fragment);
 
-                // 先滚动到之前阅读的行
-                contentElement.querySelector(`p[data-index="${this.readingProgress.lineIndex}"]`)?.scrollIntoView({ block: "end", behavior: "auto" });
+                // 渲染行
+                chapter.renderParagraph(contentElement);
 
-                // 更新章节名称
-                const chapterElement = document.getElementById("chapter-name");
-                chapterElement.textContent = chapter.title;
+                // 渲染标题
+                chapter.renderTitle(document.getElementById("chapter-name"));
+
+                // 恢复阅读进度,滚动到对应段落
+                this.readingProgress.restore(contentElement);
 
                 // 更新阅读进度
                 await Aura.database.put(this.readingProgressStore.name, this.readingProgress);
@@ -211,7 +204,9 @@ class Reader {
 
         // 切换全屏
         document.getElementById("toggle-fullscreen").addEventListener("click", async () => {
-            await FullscreenUtil.toggle(document.documentElement).catch(error => alert(error.message));
+            await FullscreenUtil.toggle(document.documentElement)
+                .then(() => document.getElementById("content").dispatchEvent(new Event("scroll")))
+                .catch(error => alert(error.message));
         });
 
         // 展开/关闭设置面板
@@ -291,7 +286,7 @@ class Reader {
             this.saveSetting();
         });
 
-        // 实时计算当前章节最下方可见的<p>元素(可见比例超过一半才算,带防抖)
+        // 实时计算当前章节最下方可见的<p>元素(带防抖)
         document.getElementById("content").addEventListener("scroll", (() => {
 
             // 用于防抖控制
@@ -302,41 +297,40 @@ class Reader {
                 // 清除上一次定时
                 clearTimeout(timer);
 
-                // 计算当前章节最上方可见的<p>元素
                 timer = setTimeout(async () => {
 
                     // 滚动容器可视区域
                     const cRect = event.target.getBoundingClientRect();
+
+                    // 计算当前章节最下方可见的p元素
                     const line = [...event.target.querySelectorAll("p")]
-                        .filter(p => {
-
-                            // p可视区域
+                        .map(p => {
                             const rect = p.getBoundingClientRect();
-
-                            // 可见高度 = 元素与容器可视区域的交集高度
                             const visibleHeight = Math.min(rect.bottom, cRect.bottom) - Math.max(rect.top, cRect.top);
-
-                            // 超过一半才算可见
-                            return visibleHeight > rect.height / 2;
+                            const ratio = Math.max(0, visibleHeight) / rect.height;
+                            return {
+                                index: Number(p.dataset.index),
+                                ratio: ratio,
+                                top: rect.top,
+                            };
                         })
-                        // 按top排序,取最下方
-                        .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0]
-                        || null;
+                        .filter(item => item.ratio > 0)
+                        .reduce((prev, current) => current.top > prev.top ? current : prev);
 
-                    console.log("当前章节最下方可见的行：", line);
+                    console.log("当前章节最下方可见的行: ", line);
 
                     if (line) {
-                        this.readingProgress.lineIndex = Number(line.dataset.index);
+                        this.readingProgress.lineIndex = Number(line.index);
+                        this.readingProgress.ratio = line.ratio;
                         await Aura.database.put(this.readingProgressStore.name, this.readingProgress);
                     }
 
-                    // 防抖延迟时间(毫秒)
-                }, 200);
+                }, 200); // 防抖延迟时间(毫秒)
             };
 
         })());
 
-        // 监听reader的resize事件，保存页宽
+        // 监听reader的resize事件,保存页宽
         new ResizeObserver(
             (() => {
 
@@ -367,7 +361,7 @@ class Reader {
             })()
         ).observe(document.getElementById("reader"));
 
-        // 监听页面点击事件，判断是否需要切换章节
+        // 监听页面点击事件,判断是否需要切换章节
         ((reader) => {
 
             // 点击和滑动阈值
@@ -420,28 +414,28 @@ class Reader {
                 if (event.pointerType === "touch") isTouching = true;
             });
 
-            // 监听pointermove事件，记录触摸移动位置
+            // 监听pointermove事件,记录触摸移动位置
             document.addEventListener("pointermove", event => {
                 pointer.endTarget = event.target;
                 pointer.lastX = event.clientX;
                 pointer.lastY = event.clientY;
             }, { passive: true });
 
-            //  监听pointercancel事件，处理触摸取消。在移动设备上pointer事件可能会因为各种情况被取消
+            //  监听pointercancel事件,处理触摸取消。在移动设备上pointer事件可能会因为各种情况被取消
             //  1.用户多任务切换频繁
             //  2.通知、来电等系统事件很多
             //  3.滑动触发系统滚动或回弹（iOS 橡皮筋）
             //  4.多指触控导致手势切换（如双指缩放）
             //  5.浏览器认为当前指针不再有效
             //  6.弹出系统手势拦截（长按菜单、拉伸/缩放等）
-            //  这个事件监听器就像是一个安全网，确保无论发生什么意外，触摸状态都能被正确重置，保持应用的稳定性！
+            //  这个事件监听器就像是一个安全网,确保无论发生什么意外,触摸状态都能被正确重置,保持应用的稳定性！
             document.addEventListener("pointercancel", event => handlePointerEnd(event));
 
-            // 监听pointerup事件，处理触摸结束， 注意该事件不一定会被触发，可能因为移动端各种情况被取消，所以要配合pointercancel事件一起使用
+            // 监听pointerup事件,处理触摸结束, 注意该事件不一定会被触发,可能因为移动端各种情况被取消,所以要配合pointercancel事件一起使用
             document.addEventListener("pointerup", event => handlePointerEnd(event));
 
-            // 处理触摸结束，判断是点击还是滑动，注意event可能是pointerup或者pointercancel
-            // 注意event是pointercancel时event.clientX和event.clientY可能无效，所以不要依赖此刻的坐标
+            // 处理触摸结束,判断是点击还是滑动,注意event可能是pointerup或者pointercancel
+            // 注意event是pointercancel时event.clientX和event.clientY可能无效,所以不要依赖此刻的坐标
             function handlePointerEnd(event) {
 
                 pointer.deltaX = pointer.lastX - pointer.startX;
@@ -524,7 +518,7 @@ class Reader {
                     }
                 }
 
-                // 不要打印引用对象，因为pointermove事件会持续更新pointer对象，导致打印时指针信息不准确
+                // 不要打印引用对象,因为pointermove事件会持续更新pointer对象,导致打印时指针信息不准确
                 console.log("指针事件信息:", JSON.stringify(pointer, (key, value) => {
                     if (value instanceof Node) {
                         return {
@@ -548,6 +542,7 @@ class Reader {
                     } else {
                         reader.readingProgress.chapterIndex -= 1;
                         reader.readingProgress.lineIndex = 1;
+                        reader.readingProgress.ratio = 1;
                         reader.loadChapter();
                     }
                 } else {
@@ -556,6 +551,7 @@ class Reader {
                     } else {
                         reader.readingProgress.chapterIndex += 1;
                         reader.readingProgress.lineIndex = 1;
+                        reader.readingProgress.ratio = 1;
                         reader.loadChapter();
                     }
                 }
@@ -612,7 +608,7 @@ class Reader {
      * 应用页面宽度设置
      */
     applyPageWidth() {
-        // 计算应用的新宽度，取屏幕可见宽度和新宽度的较小值
+        // 计算应用的新宽度,取屏幕可见宽度和新宽度的较小值
         const appliedWidth = Math.min(Math.round(this.setting.pageWidth), window.innerWidth);
         const pageWidthElement = document.getElementById("width");
         pageWidthElement.min = window.innerWidth > 768 ? 768 : 320;
