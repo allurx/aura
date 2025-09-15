@@ -32,18 +32,41 @@ export default class ReadingProgress {
     /** @type {number} */
     lineIndex;
 
+    /** 
+     * 行元素可见比例 (0 ~ 1),用于恢复阅读时滚动到精确位置
+     * @type {number}
+     */
+    ratio;
+
     /**
      * @param {Object} data - 阅读进度数据
      * @property {number} id - 阅读进度id
      * @property {string} bookId - 书籍id
      * @property {number} chapterIndex - 当前章节索引
      * @property {number} lineIndex - 行索引
+     * @property {number} ratio - 行元素可见比例
      */
-    constructor({ id, bookId, chapterIndex, lineIndex }) {
+    constructor({ id, bookId, chapterIndex, lineIndex, ratio }) {
         this.id = id;
         this.bookId = bookId;
         this.chapterIndex = chapterIndex;
         this.lineIndex = lineIndex;
+        this.ratio = ratio;
+    }
+
+    /**
+     * 恢复阅读进度,滚动到对应段落
+     * @param {HTMLElement} container - 容器
+     */
+    restore(container) {
+        const p = container.querySelector(`p[data-index="${this.lineIndex}"]`);
+
+        // 先定位到大概位置
+        p.scrollIntoView({ block: "end", behavior: "auto" });
+
+        // 然后微调到精确位置
+        const offset = p.offsetHeight * (1 - this.ratio);
+        container.scrollTop -= offset;
     }
 
 }

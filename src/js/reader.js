@@ -113,6 +113,7 @@ class Reader {
             if (p && tocElement.contains(p)) {
                 this.readingProgress.chapterIndex = Number(p.dataset.index);
                 this.readingProgress.lineIndex = 1;
+                this.readingProgress.ratio = 1;
                 this.loadChapter();
             }
 
@@ -139,24 +140,16 @@ class Reader {
 
                 console.log("当前阅读进度: ", this.readingProgress);
 
-                // 创建内容行元素
                 const contentElement = document.getElementById("content");
-                contentElement.innerHTML = "";
-                const fragment = document.createDocumentFragment();
-                chapter.lines.forEach((line, index) => {
-                    const p = document.createElement("p");
-                    p.dataset.index = index + 1;
-                    p.textContent = line;
-                    fragment.appendChild(p);
-                });
-                contentElement.appendChild(fragment);
 
-                // 先滚动到之前阅读的行
-                contentElement.querySelector(`p[data-index="${this.readingProgress.lineIndex}"]`).scrollIntoView({ block: "end", behavior: "auto" });
+                // 渲染行
+                chapter.renderParagraph(contentElement);
 
-                // 更新章节名称
-                const chapterElement = document.getElementById("chapter-name");
-                chapterElement.textContent = chapter.title;
+                // 渲染标题
+                chapter.renderTitle(document.getElementById("chapter-name"));
+
+                // 恢复阅读进度,滚动到对应段落
+                this.readingProgress.restore(contentElement);
 
                 // 更新阅读进度
                 await Aura.database.put(this.readingProgressStore.name, this.readingProgress);
@@ -211,7 +204,9 @@ class Reader {
 
         // 切换全屏
         document.getElementById("toggle-fullscreen").addEventListener("click", async () => {
-            await FullscreenUtil.toggle(document.documentElement).catch(error => alert(error.message));
+            await FullscreenUtil.toggle(document.documentElement)
+                .then(() => document.getElementById("content").dispatchEvent(new Event("scroll")))
+                .catch(error => alert(error.message));
         });
 
         // 展开/关闭设置面板
@@ -291,7 +286,7 @@ class Reader {
             this.saveSetting();
         });
 
-        // 实时计算当前章节最下方可见的<p>元素(可见比例超过一半才算,带防抖)
+        // 实时计算当前章节最下方可见的<p>元素(带防抖)
         document.getElementById("content").addEventListener("scroll", (() => {
 
             // 用于防抖控制
@@ -302,36 +297,35 @@ class Reader {
                 // 清除上一次定时
                 clearTimeout(timer);
 
-                // 计算当前章节最上方可见的<p>元素
                 timer = setTimeout(async () => {
 
                     // 滚动容器可视区域
                     const cRect = event.target.getBoundingClientRect();
+
+                    // 计算当前章节最下方可见的p元素
                     const line = [...event.target.querySelectorAll("p")]
-                        .filter(p => {
-
-                            // p可视区域
+                        .map(p => {
                             const rect = p.getBoundingClientRect();
-
-                            // 可见高度 = 元素与容器可视区域的交集高度
                             const visibleHeight = Math.min(rect.bottom, cRect.bottom) - Math.max(rect.top, cRect.top);
-
-                            // 超过一半才算可见
-                            return visibleHeight > rect.height / 2;
+                            const ratio = Math.max(0, visibleHeight) / rect.height;
+                            return {
+                                index: Number(p.dataset.index),
+                                ratio: ratio,
+                                top: rect.top,
+                            };
                         })
-                        // 按top排序,取最下方
-                        .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0]
-                        || null;
+                        .filter(item => item.ratio > 0)
+                        .reduce((prev, current) => current.top > prev.top ? current : prev);
 
-                    console.log("当前章节最下方可见的行：", line);
+                    console.log("当前章节最下方可见的行: ", line);
 
                     if (line) {
-                        this.readingProgress.lineIndex = Number(line.dataset.index);
+                        this.readingProgress.lineIndex = Number(line.index);
+                        this.readingProgress.ratio = line.ratio;
                         await Aura.database.put(this.readingProgressStore.name, this.readingProgress);
                     }
 
-                    // 防抖延迟时间(毫秒)
-                }, 200);
+                }, 200); // 防抖延迟时间(毫秒)
             };
 
         })());
@@ -548,6 +542,7 @@ class Reader {
                     } else {
                         reader.readingProgress.chapterIndex -= 1;
                         reader.readingProgress.lineIndex = 1;
+                        reader.readingProgress.ratio = 1;
                         reader.loadChapter();
                     }
                 } else {
@@ -556,6 +551,7 @@ class Reader {
                     } else {
                         reader.readingProgress.chapterIndex += 1;
                         reader.readingProgress.lineIndex = 1;
+                        reader.readingProgress.ratio = 1;
                         reader.loadChapter();
                     }
                 }
