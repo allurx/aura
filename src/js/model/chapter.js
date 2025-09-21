@@ -42,6 +42,18 @@ export default class Chapter {
     /** @type {string[]} */
     lines;
 
+    /** 
+     * 本章节在整本书的起始行号
+     * @type {number}  
+     */
+    startLineNumber;
+
+    /** 
+     * 本章节在整本书的结束行号
+     * @type {number}  
+     */
+    endLineNumber;
+
     /**
      * @param {Object} data - 章节数据
      * @property {number} id - 章节id
@@ -49,13 +61,17 @@ export default class Chapter {
      * @property {number} bookId - 书籍id
      * @property {string} title - 章节标题
      * @property {string[]} lines - 章节内容行
+     * @property {number} startLineNumber - 章节起始行号
+     * @property {number} endLineNumber - 章节结束行号
      */
-    constructor({ id, bookId, index, title, lines }) {
+    constructor({ id, bookId, index, title, lines, startLineNumber, endLineNumber }) {
         this.id = id;
         this.bookId = bookId;
         this.index = index;
         this.title = title;
         this.lines = lines;
+        this.startLineNumber = startLineNumber;
+        this.endLineNumber = endLineNumber;
     }
 
     /**
@@ -123,12 +139,18 @@ export default class Chapter {
                 // 匹配常见章节格式,支持多种标题形式
                 const matches = [...text.matchAll(Chapter.CHAPTER_REGEX)];
 
+                // 当前处理到的行号
+                let currentLineNumber = 1;
+
                 // 没有匹配到章节,则全文件作为一个章节
                 if (matches.length === 0) {
+                    const lines = Chapter.splitToLines(text);
                     chapters.push(new Chapter({
                         index: 1,
                         title: "全文",
-                        lines: Chapter.splitToLines(text)
+                        lines: lines,
+                        startLineNumber: currentLineNumber,
+                        endLineNumber: currentLineNumber + lines.length - 1
                     }));
                     resolve(chapters);
                     return;
@@ -137,11 +159,15 @@ export default class Chapter {
                 // 如果开头有介绍文字(第一个章节前有内容)
                 if (matches[0].index > 0) {
                     const preface = text.slice(0, matches[0].index);
+                    const lines = Chapter.splitToLines(preface);
                     chapters.push(new Chapter({
                         index: 1,
                         title: "前言",
-                        lines: Chapter.splitToLines(preface)
+                        lines: lines,
+                        startLineNumber: currentLineNumber,
+                        endLineNumber: currentLineNumber + lines.length - 1
                     }));
+                    currentLineNumber += lines.length;
                 }
 
                 // 遍历每个章节匹配
@@ -150,11 +176,16 @@ export default class Chapter {
                     const start = match.index + chapterTitle.length;
                     const end = i < matches.length - 1 ? matches[i + 1].index : text.length;
                     const content = text.slice(start, end);
+                    const lines = Chapter.splitToLines(content);
                     chapters.push(new Chapter({
                         index: chapters.length + 1,
                         title: chapterTitle.trim(),
-                        lines: Chapter.splitToLines(content)
+                        lines: lines,
+                        startLineNumber: currentLineNumber,
+                        // 结束行号 = 起始行号 + 标题行数 + 内容行数 - 1
+                        endLineNumber: currentLineNumber + lines.length
                     }));
+                    currentLineNumber += lines.length + 1;
                 });
 
                 resolve(chapters);
