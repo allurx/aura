@@ -21,24 +21,30 @@
 export default class Overlay {
 
     /** @type {HTMLElement} */
-    element;
+    #overlay;
 
-    constructor({ containerSelector = "body" } = {}) {
-        this.element = document.querySelector(containerSelector).appendChild(this.#renderTemplate());
+    /** @type {HTMLElement} */
+    #spinner;
+
+    constructor({ containerSelector = "body", overlayStyle = {}, spinnerStyle = {} } = {}) {
+        this.#overlay = document.querySelector(containerSelector).appendChild(this.#renderTemplate());
+        this.#spinner = document.querySelector("#spinner");
+        this.#applyOverlayStyle(overlayStyle);
+        this.#applySpinnerStyle(spinnerStyle);
     }
 
     /** 
      * 显示遮罩
      */
     show() {
-        this.element.hidden = false;
+        this.#overlay.hidden = false;
     }
 
     /** 
      * 隐藏遮罩 
      */
     hide() {
-        this.element.hidden = true;
+        this.#overlay.hidden = true;
     }
 
     /**
@@ -61,5 +67,32 @@ export default class Overlay {
                 <div id="spinner"></div>
             </div>
         `;
+    }
+
+    /**
+     * 应用遮罩层样式
+     * @param {Object} style
+     */
+    #applyOverlayStyle(style = {}) {
+        this.#applyStyle(this.#overlay, style);
+    }
+
+    /**
+     * 应用spinner样式
+     * @param {Object} style
+     */
+    #applySpinnerStyle(style = {}) {
+        this.#applyStyle(this.#spinner, style);
+    }
+
+    /**
+     * 应用样式对象到元素
+     * @param {HTMLElement} element
+     * @param {Object} style
+     */
+    #applyStyle(element, style) {
+        for (const [key, value] of Object.entries(style)) {
+            element.style[key] = value;
+        }
     }
 }

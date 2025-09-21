@@ -42,7 +42,10 @@ class Reader {
     setting;
 
     /** @type {Overlay} */
-    overlay = new Overlay();
+    overlay = new Overlay({
+        containerSelector: "#reader",
+        overlayStyle: { position: "absolute" }
+    });
 
     // 数据库存储
     bookStore = Aura.databaseProperties.stores.book;
@@ -107,7 +110,7 @@ class Reader {
         // 使用事件委托绑定click,避免大量事件监听器
         tocElement.addEventListener("click", (event) => {
 
-            // 判断点击的是否是 <p> 元素
+            // 判断点击的是否是<p>元素
             const p = event.target.closest("p");
 
             if (p && tocElement.contains(p)) {
@@ -458,7 +461,8 @@ class Reader {
                     if (event.button === 0 && pointer.startTarget === pointer.endTarget &&
 
                         // 点击的是body或者此刻content宽度等于窗口宽度
-                        (event.target === document.body || event.target.parentElement?.getBoundingClientRect().width === window.innerWidth)) {
+                        (event.target === document.body ||
+                            (contentElement.offsetWidth === window.innerWidth && event.target.parentElement === contentElement))) {
                         if (pointer.lastX < window.innerWidth / 2) {
                             switchChapter("prev");
                         } else {
