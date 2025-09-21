@@ -116,7 +116,7 @@ class Reader {
             if (p && tocElement.contains(p)) {
                 this.readingProgress.chapterIndex = Number(p.dataset.index);
                 this.readingProgress.lineIndex = 1;
-                this.readingProgress.ratio = 1;
+                this.readingProgress.lineVisibleRatio = 1;
                 this.loadChapter();
             }
 
@@ -167,7 +167,9 @@ class Reader {
      * 渲染进度
      */
     renderProgress() {
-        const rate = (((this.readingProgress.chapterIndex) / this.toc.contents.length) * 100).toFixed(2);
+        const currentLineNumber = this.toc.contents[this.readingProgress.chapterIndex - 1].startLineNumber + this.readingProgress.lineIndex;
+        const totalLineNumber = this.toc.contents[this.toc.contents.length - 1].endLineNumber;
+        const rate = ((currentLineNumber / totalLineNumber) * 100).toFixed(2);
         document.getElementById("progress-rate").textContent = `${rate}%`;
     }
 
@@ -324,8 +326,8 @@ class Reader {
 
                     if (line) {
                         this.readingProgress.lineIndex = Number(line.index);
-                        this.readingProgress.ratio = line.ratio;
-                        await Aura.database.put(this.readingProgressStore.name, this.readingProgress);
+                        this.readingProgress.lineVisibleRatio = line.ratio;
+                        await Aura.database.put(this.readingProgressStore.name, this.readingProgress).then(() => this.renderProgress());
                     }
 
                 }, 200); // 防抖延迟时间(毫秒)
@@ -546,7 +548,7 @@ class Reader {
                     } else {
                         reader.readingProgress.chapterIndex -= 1;
                         reader.readingProgress.lineIndex = 1;
-                        reader.readingProgress.ratio = 1;
+                        reader.readingProgress.lineVisibleRatio = 1;
                         reader.loadChapter();
                     }
                 } else {
@@ -555,7 +557,7 @@ class Reader {
                     } else {
                         reader.readingProgress.chapterIndex += 1;
                         reader.readingProgress.lineIndex = 1;
-                        reader.readingProgress.ratio = 1;
+                        reader.readingProgress.lineVisibleRatio = 1;
                         reader.loadChapter();
                     }
                 }

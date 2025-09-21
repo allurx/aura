@@ -36,7 +36,7 @@ export default class ReadingProgress {
      * 行元素可见比例 (0 ~ 1),用于恢复阅读时滚动到精确位置
      * @type {number}
      */
-    ratio;
+    lineVisibleRatio;
 
     /**
      * @param {Object} data - 阅读进度数据
@@ -44,14 +44,14 @@ export default class ReadingProgress {
      * @property {string} bookId - 书籍id
      * @property {number} chapterIndex - 当前章节索引
      * @property {number} lineIndex - 行索引
-     * @property {number} ratio - 行元素可见比例
+     * @property {number} lineVisibleRatio - 行元素可见比例
      */
-    constructor({ id, bookId, chapterIndex, lineIndex, ratio }) {
+    constructor({ id, bookId, chapterIndex, lineIndex, lineVisibleRatio }) {
         this.id = id;
         this.bookId = bookId;
         this.chapterIndex = chapterIndex;
         this.lineIndex = lineIndex;
-        this.ratio = ratio;
+        this.lineVisibleRatio = lineVisibleRatio;
     }
 
     /**
@@ -65,7 +65,7 @@ export default class ReadingProgress {
         p.scrollIntoView({ block: "end", behavior: "auto" });
 
         // 然后微调到精确位置
-        const offset = p.offsetHeight * (1 - this.ratio);
+        const offset = p.offsetHeight * (1 - this.lineVisibleRatio);
         container.scrollTop -= offset;
     }
 
