@@ -29,7 +29,7 @@ export default class Aura {
      */
     static databaseProperties = {
         name: "Aura",
-        version: 4,
+        version: 5,
         stores: {
             book: {
                 name: "book",
@@ -88,7 +88,7 @@ export default class Aura {
             id: 1,
             name: "reader-setting",
             theme: "yellow",
-            fontSize: 18,
+            fontSize: window.innerWidth > 768 ? 18 : 20,
             fontColor: "#000000",
             pageWidth: window.innerWidth > 768 ? 800 : window.innerWidth,
             pagePadding: 30,

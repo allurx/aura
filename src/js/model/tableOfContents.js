@@ -51,14 +51,24 @@ export default class TableOfContents {
         /** @type {string} */
         title;
 
+        /** @type {number} */
+        startLineNumber;
+
+        /** @type {number} */
+        endLineNumber;
+
         /** 
          * @param {Object} data - 目录内容数据
          * @property {number} index - 目录索引
          * @property {string} title - 目录标题
+        *  @property {number} startLineNumber - 章节起始行号
+        *  @property {number} endLineNumber - 章节结束行号
          */
-        constructor({ index, title }) {
+        constructor({ index, title, startLineNumber, endLineNumber }) {
             this.index = index;
             this.title = title;
+            this.startLineNumber = startLineNumber;
+            this.endLineNumber = endLineNumber;
         }
     }
 

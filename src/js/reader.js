@@ -42,7 +42,10 @@ class Reader {
     setting;
 
     /** @type {Overlay} */
-    overlay = new Overlay();
+    overlay = new Overlay({
+        containerSelector: "#reader",
+        overlayStyle: { position: "absolute" }
+    });
 
     // 数据库存储
     bookStore = Aura.databaseProperties.stores.book;
@@ -107,13 +110,13 @@ class Reader {
         // 使用事件委托绑定click,避免大量事件监听器
         tocElement.addEventListener("click", (event) => {
 
-            // 判断点击的是否是 <p> 元素
+            // 判断点击的是否是<p>元素
             const p = event.target.closest("p");
 
             if (p && tocElement.contains(p)) {
                 this.readingProgress.chapterIndex = Number(p.dataset.index);
                 this.readingProgress.lineIndex = 1;
-                this.readingProgress.ratio = 1;
+                this.readingProgress.lineVisibleRatio = 1;
                 this.loadChapter();
             }
 
@@ -164,7 +167,9 @@ class Reader {
      * 渲染进度
      */
     renderProgress() {
-        const rate = (((this.readingProgress.chapterIndex) / this.toc.contents.length) * 100).toFixed(2);
+        const currentLineNumber = this.toc.contents[this.readingProgress.chapterIndex - 1].startLineNumber + this.readingProgress.lineIndex;
+        const totalLineNumber = this.toc.contents[this.toc.contents.length - 1].endLineNumber;
+        const rate = ((currentLineNumber / totalLineNumber) * 100).toFixed(2);
         document.getElementById("progress-rate").textContent = `${rate}%`;
     }
 
@@ -321,8 +326,8 @@ class Reader {
 
                     if (line) {
                         this.readingProgress.lineIndex = Number(line.index);
-                        this.readingProgress.ratio = line.ratio;
-                        await Aura.database.put(this.readingProgressStore.name, this.readingProgress);
+                        this.readingProgress.lineVisibleRatio = line.ratio;
+                        await Aura.database.put(this.readingProgressStore.name, this.readingProgress).then(() => this.renderProgress());
                     }
 
                 }, 200); // 防抖延迟时间(毫秒)
@@ -458,7 +463,8 @@ class Reader {
                     if (event.button === 0 && pointer.startTarget === pointer.endTarget &&
 
                         // 点击的是body或者此刻content宽度等于窗口宽度
-                        (event.target === document.body || event.target.parentElement?.getBoundingClientRect().width === window.innerWidth)) {
+                        (event.target === document.body ||
+                            (contentElement.offsetWidth === window.innerWidth && event.target.parentElement === contentElement))) {
                         if (pointer.lastX < window.innerWidth / 2) {
                             switchChapter("prev");
                         } else {
@@ -542,7 +548,7 @@ class Reader {
                     } else {
                         reader.readingProgress.chapterIndex -= 1;
                         reader.readingProgress.lineIndex = 1;
-                        reader.readingProgress.ratio = 1;
+                        reader.readingProgress.lineVisibleRatio = 1;
                         reader.loadChapter();
                     }
                 } else {
@@ -551,7 +557,7 @@ class Reader {
                     } else {
                         reader.readingProgress.chapterIndex += 1;
                         reader.readingProgress.lineIndex = 1;
-                        reader.readingProgress.ratio = 1;
+                        reader.readingProgress.lineVisibleRatio = 1;
                         reader.loadChapter();
                     }
                 }
