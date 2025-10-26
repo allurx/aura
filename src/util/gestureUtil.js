@@ -1,0 +1,199 @@
+/*
+ * Copyright 2025 allurx
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import EventUtil from "./eventUtil.js";
+
+/**
+ * 手势工具类
+ * @author allurx
+ */
+export default class GestureUtil {
+
+    /**
+     * 绑定章节导航手势
+     * @param {HTMLElement} contentElement - 内容元素
+     * @param {Function} switchChapter - 切换章节的函数
+     * @param {Object} options - 配置选项
+     * @param {number} options.clickAndSwipeThreshold - 点击和滑动阈值(距离px) - 手指在x/y轴滑动距离同时小于该阈值时才算作点击
+     * @param {number} options.minSwipeAngle - 最小滑动角度阈值(度) - 确保是水平滑动
+     */
+    static bindChapterNavigation(contentElement, switchChapter, options = {
+        clickAndSwipeThreshold: 8,
+        minSwipeAngle: 30
+    }) {
+
+        // 追踪触摸状态
+        let isTouching = false;
+
+        // 追踪指针信息
+        const pointer = {
+            // 指针移动轨迹相对于x轴的角度
+            angle: 0,
+            // 指针类型 - mouse | touch
+            type: null,
+            // 指针事件动作 - mouse click | touch click | touch horizontal swipe | touch vertical swipe
+            action: null,
+            // 指针事件结束原因 - pointerup | pointercancel
+            endCause: null,
+            startX: 0,
+            startY: 0,
+            lastX: 0,
+            lastY: 0,
+            // 指针在x轴上的移动距离
+            deltaX: 0,
+            // 指针在y轴上的移动距离
+            deltaY: 0,
+            // 指针事件开始目标
+            startTarget: null,
+            // 指针事件结束目标
+            endTarget: null,
+        }
+
+        // 记录触摸起始位置
+        EventUtil.bind(document, "pointerdown", (event, target) => {
+            pointer.type = event.pointerType;
+            pointer.startTarget = event.target;
+            pointer.endTarget = event.target;
+            pointer.startX = event.clientX;
+            pointer.startY = event.clientY;
+            pointer.lastX = pointer.startX;
+            pointer.lastY = pointer.startY;
+            pointer.deltaX = 0;
+            pointer.deltaY = 0;
+            if (event.pointerType === "touch") isTouching = true;
+        });
+
+        // 监听pointermove事件,记录触摸移动位置
+        EventUtil.bind(document, "pointermove", (event, target) => {
+            pointer.endTarget = event.target;
+            pointer.lastX = event.clientX;
+            pointer.lastY = event.clientY;
+        }, { passive: true });
+
+        //  监听pointercancel事件,处理触摸取消。在移动设备上pointer事件可能会因为各种情况被取消
+        //  1.用户多任务切换频繁
+        //  2.通知、来电等系统事件很多
+        //  3.滑动触发系统滚动或回弹(iOS 橡皮筋)
+        //  4.多指触控导致手势切换(如双指缩放)
+        //  5.浏览器认为当前指针不再有效
+        //  6.弹出系统手势拦截(长按菜单、拉伸/缩放等)
+        //  这个事件监听器就像是一个安全网,确保无论发生什么意外,触摸状态都能被正确重置,保持应用的稳定性！
+        EventUtil.bind(document, "pointercancel", (event, target) => handlePointerEnd(event));
+
+        // 监听pointerup事件,处理触摸结束, 注意该事件不一定会被触发,可能因为移动端各种情况被取消,所以要配合pointercancel事件一起使用
+        EventUtil.bind(document, "pointerup", (event, target) => handlePointerEnd(event));
+
+        // 处理触摸结束,判断是点击还是滑动,注意event可能是pointerup或者pointercancel
+        // 注意event是pointercancel时event.clientX和event.clientY可能无效,所以不要依赖此刻的坐标
+        function handlePointerEnd(event) {
+
+            pointer.deltaX = pointer.lastX - pointer.startX;
+            pointer.deltaY = pointer.lastY - pointer.startY;
+            pointer.endCause = event.type;
+
+            // 计算指针移动的距离(绝对值)
+            const absDeltaX = Math.abs(pointer.deltaX);
+            const absDeltaY = Math.abs(pointer.deltaY);
+
+            // 计算指针移动的角度 - [0-90]°
+            pointer.angle = Math.atan2(absDeltaY, absDeltaX) * 180 / Math.PI;
+
+            // 处理鼠标事件
+            if (event.pointerType === "mouse") {
+
+                pointer.action = "mouse click";
+
+                // 鼠标左键点击时触发
+                if (event.button === 0 && pointer.startTarget === pointer.endTarget &&
+
+                    // 点击的是body或者此刻content宽度等于窗口宽度
+                    (event.target === document.body ||
+                        (contentElement.offsetWidth === window.innerWidth && event.target.parentElement === contentElement))) {
+                    if (pointer.lastX < window.innerWidth / 2) {
+                        switchChapter("prev");
+                    } else {
+                        switchChapter("next");
+                    }
+                }
+                // 处理触摸事件
+            } else if (event.pointerType === "touch" && isTouching) {
+
+                isTouching = false;
+
+                // 检查是否在有效区域内
+                if (event.target.parentElement === contentElement ||
+                    event.target === contentElement ||
+                    event.target === document.body) {
+
+                    // 点击 - 手指在x/y轴滑动距离同时小于该阈值时才算作点击
+                    if (absDeltaX < options.clickAndSwipeThreshold && absDeltaY < options.clickAndSwipeThreshold) {
+
+                        pointer.action = "touch click";
+
+                        // 点击左侧1/3区域
+                        if (pointer.lastX < window.innerWidth / 3) {
+                            switchChapter("prev");
+
+                            // 点击右侧1/3区域
+                        } else if (pointer.lastX > window.innerWidth / 3 * 2) {
+                            switchChapter("next");
+
+                            // 点击中间区域
+                        } else {
+                            // do nothing
+                        }
+
+                        // 水平滑动 - 手指在x轴滑动距离超过该阈值才算滑动
+                    } else if (absDeltaX > options.clickAndSwipeThreshold) {
+
+                        pointer.action = "touch horizontal swipe";
+
+                        // 只有当滑动角度小于30度时才认为是水平滑动
+                        if (pointer.angle < options.minSwipeAngle) {
+
+                            if (pointer.deltaX > 0) {
+                                // 向右滑动 - 上一章
+                                switchChapter("prev");
+                            } else {
+                                // 向左滑动 - 下一章
+                                switchChapter("next");
+                            }
+                        }
+
+                        // 垂直滑动
+                    } else {
+                        pointer.action = "touch vertical swipe";
+                        // do nothing保留原有的滚动行为
+                    }
+                }
+            }
+
+            // 不要打印引用对象,因为pointermove事件会持续更新pointer对象,导致打印时指针信息不准确
+            console.log("指针事件信息:", JSON.stringify(pointer, (key, value) => {
+                if (value instanceof Node) {
+                    return {
+                        tagName: value.tagName,
+                        id: value.id,
+                        className: value.className,
+                        childrenCount: value.children.length
+                    };
+                }
+                return value;
+            }, 4));
+
+        }
+    }
+}
