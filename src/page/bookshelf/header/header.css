@@ -1,0 +1,47 @@
+@charset "UTF-8";
+
+/*
+ * Copyright 2025 allurx
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+header {
+  display: flex;
+  /* 禁止缩放,保持自身的宽高 */
+  flex: 0 0 auto;
+  justify-content: space-between;
+  align-items: center;
+  height: 3.125rem;
+  width: 100%;
+  padding: 0 0.75rem;
+  overflow: hidden;
+}
+
+/* 隐藏右下角可拖动区域的样式 */
+header::-webkit-resizer {
+  display: none;
+}
+
+#header-title {
+  font-size: 2rem;
+  color: #409eff;
+  cursor: pointer;
+}
+
+/* 清空书籍 */
+#bookshelf-clear-btn {
+  font-size: 1.2rem;
+  color: white;
+  cursor: pointer;
+}
