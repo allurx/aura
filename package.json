@@ -3,9 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --open /bookshelf/bookshelf.html",
+    "dev": "vite --open page/bookshelf/bookshelf.html",
     "build": "vite build",
-    "preview": "vite preview --open /bookshelf/bookshelf.html"
+    "preview": "vite build && vite preview --open page/bookshelf/bookshelf.html"
   },
   "devDependencies": {
     "vite": "^7.1.12",
