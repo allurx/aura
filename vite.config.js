@@ -101,7 +101,7 @@ function createRedirectsPlugin() {
             mkdirSync(dirname(redirectsPath), { recursive: true });
 
             // 写入Cloudflare Pages的重定向规则
-            const content = "/    /bookshelf/bookshelf.html    200\n";
+            const content = "/    /page/bookshelf/bookshelf.html    200\n";
             writeFileSync(redirectsPath, content);
         }
     }
