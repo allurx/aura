@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import obfuscatorPlugin from "vite-plugin-javascript-obfuscator";
 import { defineConfig } from "vite";
+import obfuscatorPlugin from "vite-plugin-javascript-obfuscator";
 import { createHtmlPlugin } from "vite-plugin-html";
 import { join, dirname } from "path";
-import { cpSync, writeFileSync, mkdirSync } from "fs";
+import { writeFileSync, mkdirSync } from "fs";
 
 /**
  * vite配置
