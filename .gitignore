@@ -1,2 +1,4 @@
+.vite/
+.vscode/
 node_modules/
 dist/

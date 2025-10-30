@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,24 +14,19 @@
  * limitations under the License.
  */
 
-@import "../../style/base.css";
-@import "../../component/dialog/dialog.css";
-@import "../../component/overlay/overlay.css";
-@import "./header/header.css";
-@import "./nav/nav.css";
-@import "./main/main.css";
+import TableOfContents from "../model/tableOfContents.js";
+import BaseDao from "./baseDao.js";
+import { tableOfContentsStore } from "../core/database/DatabaseDefinition.js";
 
-body,
-html {
-    background-color: #1f2937;
-}
+/**
+ * 目录数据访问对象
+ * @author allurx
+ */
+export default class TableOfContentsDao extends BaseDao<TableOfContents> {
 
-/* 书架容器 */
-#bookshelf {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
+    constructor() {
+        super(tableOfContentsStore, TableOfContents);
+    }
+
+
 }

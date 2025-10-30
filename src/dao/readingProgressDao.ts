@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,24 +14,18 @@
  * limitations under the License.
  */
 
-@import "../../style/base.css";
-@import "../../component/dialog/dialog.css";
-@import "../../component/overlay/overlay.css";
-@import "./header/header.css";
-@import "./nav/nav.css";
-@import "./main/main.css";
+import ReadingProgress from "../model/readingProgress.js";
+import BaseDao from "./baseDao.js";
+import { readingProgressStore } from "../core/database/DatabaseDefinition.js";
 
-body,
-html {
-    background-color: #1f2937;
-}
+/**
+ * 阅读进度数据访问对象
+ * @author allurx
+ */
+export default class ReadingProgressDao extends BaseDao<ReadingProgress> {
 
-/* 书架容器 */
-#bookshelf {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
+    constructor() {
+        super(readingProgressStore, ReadingProgress);
+    }
+
 }
