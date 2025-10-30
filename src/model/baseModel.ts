@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,24 +14,21 @@
  * limitations under the License.
  */
 
-@import "../../style/base.css";
-@import "../../component/dialog/dialog.css";
-@import "../../component/overlay/overlay.css";
-@import "./header/header.css";
-@import "./nav/nav.css";
-@import "./main/main.css";
+/**
+ * 基础模型类
+ * @author allurx
+ */
+export default class BaseModel {
+  id!: string;
 
-body,
-html {
-    background-color: #1f2937;
-}
+  /**
+   * 更新模型属性
+   * @param {Partial<BaseModel>} data - 要更新的数据
+   * @return {this} 返回更新后的模型实例
+   */
+  update(data: Partial<BaseModel> = {}): this {
+    Object.assign(this, data);
+    return this;
+  }
 
-/* 书架容器 */
-#bookshelf {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
 }

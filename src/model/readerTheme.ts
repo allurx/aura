@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,24 +14,24 @@
  * limitations under the License.
  */
 
-@import "../../style/base.css";
-@import "../../component/dialog/dialog.css";
-@import "../../component/overlay/overlay.css";
-@import "./header/header.css";
-@import "./nav/nav.css";
-@import "./main/main.css";
+import BaseModel from "./baseModel.js";
 
-body,
-html {
-    background-color: #1f2937;
-}
+/**
+ * 阅读器主题
+ * @author allurx
+ */
+export default class ReaderTheme extends BaseModel {
+  name!: string;
+  value!: string;
+  fontColor!: string;
+  readerBackgroundColor!: string;
+  backgroundColor!: string;
 
-/* 书架容器 */
-#bookshelf {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
+  /**
+   * @param  data - 初始化阅读器主题所需的所有字段
+   */
+  constructor(data: Partial<ReaderTheme>) {
+    super();
+    Object.assign(this, data);
+  }
 }

@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,24 +14,10 @@
  * limitations under the License.
  */
 
-@import "../../style/base.css";
-@import "../../component/dialog/dialog.css";
-@import "../../component/overlay/overlay.css";
-@import "./header/header.css";
-@import "./nav/nav.css";
-@import "./main/main.css";
+/**
+ * 常用类型定义
+ * @author allurx
+ */
 
-body,
-html {
-    background-color: #1f2937;
-}
-
-/* 书架容器 */
-#bookshelf {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
-}
+// 非空数组类型
+export type NonEmptyArray<T> = [T, ...T[]];

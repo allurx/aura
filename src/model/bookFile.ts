@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,24 +14,21 @@
  * limitations under the License.
  */
 
-@import "../../style/base.css";
-@import "../../component/dialog/dialog.css";
-@import "../../component/overlay/overlay.css";
-@import "./header/header.css";
-@import "./nav/nav.css";
-@import "./main/main.css";
+import BaseModel from "./baseModel.js";
 
-body,
-html {
-    background-color: #1f2937;
-}
+/**
+ * 书籍文件
+ * @author allurx
+ */
+export default class BookFile extends BaseModel {
+  raw!: Blob;
+  hash!: string;
 
-/* 书架容器 */
-#bookshelf {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
+  /**
+   * @param  data - 初始化书籍文件所需的所有字段
+   */
+  constructor(data: Partial<BookFile>) {
+    super();
+    Object.assign(this, data);
+  }
 }

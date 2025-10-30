@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,24 +14,29 @@
  * limitations under the License.
  */
 
-@import "../../style/base.css";
-@import "../../component/dialog/dialog.css";
-@import "../../component/overlay/overlay.css";
-@import "./header/header.css";
-@import "./nav/nav.css";
-@import "./main/main.css";
+import BaseModel from "./baseModel.js";
 
-body,
-html {
-    background-color: #1f2937;
-}
+/**
+ * 阅读器设置
+ * @author allurx
+ */
+export default class ReaderSetting extends BaseModel {
 
-/* 书架容器 */
-#bookshelf {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
+  name!: string;
+  theme!: string;
+  fontSize!: number;
+  pageWidth!: number;
+  pagePadding!: number;
+  lineHeight!: number;
+  fontColor!: string;
+  readerBackgroundColor!: string;
+  backgroundColor!: string;
+
+  /**
+   * @param  data - 初始化阅读器设置所需的所有字段
+   */
+  constructor(data: Partial<ReaderSetting>) {
+    super();
+    Object.assign(this, data);
+  }
 }

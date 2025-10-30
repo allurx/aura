@@ -1,15 +1,20 @@
 {
-  "name": "aura",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "vite --open page/bookshelf/bookshelf.html",
-    "build": "vite build",
-    "preview": "vite build && vite preview --open page/bookshelf/bookshelf.html"
-  },
-  "devDependencies": {
-    "vite": "^7.1.12",
-    "vite-plugin-html": "^3.2.2",
-    "vite-plugin-javascript-obfuscator": "^3.1.0"
-  }
+    "name": "aura",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "lint": "eslint src --ext .ts",
+        "build": "npm run lint && vite build",
+        "dev": "npm run build && vite --open page/bookshelf/bookshelf.html",
+        "preview": "npm run build && vite preview --open page/bookshelf/bookshelf.html"
+    },
+    "devDependencies": {
+        "@types/node": "^24.9.2",
+        "prettier": "3.6.2",
+        "typescript": "5.9.3",
+        "typescript-eslint": "8.46.2",
+        "vite": "7.1.12",
+        "vite-plugin-html": "3.2.2",
+        "vite-plugin-javascript-obfuscator": "3.1.0"
+    }
 }

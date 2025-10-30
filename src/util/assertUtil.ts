@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,24 +14,23 @@
  * limitations under the License.
  */
 
-@import "../../style/base.css";
-@import "../../component/dialog/dialog.css";
-@import "../../component/overlay/overlay.css";
-@import "./header/header.css";
-@import "./nav/nav.css";
-@import "./main/main.css";
-
-body,
-html {
-    background-color: #1f2937;
+/**
+ * 断言工具类
+ * @author allurx
+ */
+export default class AssertUtil {
+    /**
+     * 确保值非null/undefined,否则抛出错误
+     * @param value 需要检查的值
+     * @param message 错误提示,可选
+     * @returns value
+     */
+    static assertExist<T>(value: T | null | undefined, message?: string): T {
+        if (value === null || value === undefined) {
+            throw new Error(message ?? "Value must not be null or undefined");
+        }
+        return value;
+    }
+    
 }
 
-/* 书架容器 */
-#bookshelf {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
-}
