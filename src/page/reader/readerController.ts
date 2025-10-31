@@ -91,7 +91,7 @@ export default class ReaderController {
                         .then((toc) => (this.toc = AssertUtil.assertExists(toc))),
                     this.readerSettingService
                         .getReaderSetting(transaction)
-                        .then((readerSetting) => (this.readerSetting = AssertUtil.assertExists(readerSetting))),
+                        .then((readerSetting) => (this.readerSetting = readerSetting)),
                     this.readingProgressService.getByBookId(bookId, transaction).then(async (readingProgress) => {
                         this.readingProgress = AssertUtil.assertExists(readingProgress);
                         this.chapter = AssertUtil.assertExists(
@@ -186,8 +186,9 @@ export default class ReaderController {
             // 设置ui事件
             .bindToggleSettingPanel()
             .bindCloseSettingPanel()
-            .bindResetSetting(async (readerSetting) => {
-                await this.saveReaderSetting(readerSetting);
+            .bindResetSetting(async (newSetting) => {
+                newSetting.id = this.readerSetting.id;
+                await this.saveReaderSetting(newSetting);
             })
 
             // 设置变更事件

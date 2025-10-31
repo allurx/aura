@@ -288,7 +288,7 @@ export default class BookshelfController {
 
                 // 已存相同hash的文件则跳过
                 if (existingFile !== null) {
-                    void this.bookshelfUi.alertDialog(`文件${file.name}已存在,已跳过添加`);
+                    void this.bookshelfUi.alertDialog(`文件${file.name}已存在`);
                     return null;
                 }
 

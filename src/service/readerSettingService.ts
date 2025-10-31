@@ -51,6 +51,6 @@ export default class ReaderSettingService {
             "reader-setting",
             transaction
         );
-        return readerSetting ? new ReaderSetting(readerSetting as ReaderSetting) : Aura.reader.setting;
+        return readerSetting ? new ReaderSetting(readerSetting) : Aura.reader.setting;
     }
 }

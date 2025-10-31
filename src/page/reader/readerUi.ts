@@ -340,20 +340,7 @@ export default class ReaderUi {
                 .then(() => {
                     this.dispatchContentScroll();
                 })
-                .catch(async (error: unknown) => {
-                    if (error instanceof Error) {
-                        await this.dialog.alert(error.message);
-                    } else {
-                        await this.dialog.alert("An unknown error occurred while toggling fullscreen.");
-                    }
-                });
-        });
-        EventUtil.bind(document, "fullscreenchange", () => {
-            const isFullscreen = FullscreenUtil.isActive();
-            const src = isFullscreen
-                ? this.toggleFullscreenElement.dataset["exit"]
-                : this.toggleFullscreenElement.dataset["enter"];
-            this.toggleFullscreenElement.src = AssertUtil.assertExists(src);
+                .catch(async () => await this.dialog.alert("当前浏览器不支持全屏功能"));
         });
         return this;
     }
@@ -385,9 +372,9 @@ export default class ReaderUi {
      * @param  handler - 事件处理函数
      * @return 当前实例
      */
-    bindResetSetting(handler: (readerSetting: ReaderSetting) => Promise<void>) {
+    bindResetSetting(handler: (newSetting: ReaderSetting) => Promise<void>) {
         EventUtil.bind(this.resetSettingPanelElement, "click", async () => {
-            const newSetting = new ReaderSetting(Aura.reader.setting);
+            const newSetting = Aura.reader.setting;
             this.renderSettingPanel(newSetting);
             await handler(newSetting);
         });
@@ -532,9 +519,9 @@ export default class ReaderUi {
             (() => {
                 let timer: number;
                 return (_, target: HTMLElement) => {
-                    if (timer) clearTimeout(timer);
-                    timer = window.setTimeout(
-                        () => async () => {
+                    if (timer) window.clearTimeout(timer);
+                    timer = window.setTimeout(() => {
+                        void (async () => {
                             // 滚动容器可视区域
                             const cRect = target.getBoundingClientRect();
 
@@ -557,9 +544,8 @@ export default class ReaderUi {
 
                             console.log("当前章节最上方可见的行: ", line);
                             await handler(line.index, line.ratio);
-                        },
-                        300
-                    );
+                        })();
+                    }, 300);
                 };
             })()
         );
@@ -577,16 +563,15 @@ export default class ReaderUi {
                 let timer: number;
                 return (entries) => {
                     if (timer) clearTimeout(timer);
-                    timer = window.setTimeout(
-                        () => async () => {
+                    timer = window.setTimeout(() => {
+                        void (async () => {
                             // reader
                             const entry = AssertUtil.assertExists(entries[0]);
                             const width = entry.contentRect.width;
                             console.log("检测到页面宽度变化：", width);
                             await handler(width);
-                        },
-                        300
-                    );
+                        })();
+                    }, 300);
                 };
             })()
         ).observe(this.readerElement);

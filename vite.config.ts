@@ -27,7 +27,7 @@ import { writeFileSync, mkdirSync } from "fs";
 export default defineConfig({
     root: "src",
     build: {
-        target: "ES2022",
+        target: "ESNext",
         outDir: "../dist",
         emptyOutDir: true,
         // https://cn.rollupjs.org/configuration-options
