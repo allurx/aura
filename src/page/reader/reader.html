@@ -14,105 +14,111 @@
     limitations under the License.
 -->
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Aura</title>
-    <link rel="icon" href="../../asset/image/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="reader.css" />
-    <script src="reader.js" type="module"></script>
-  </head>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Aura</title>
+        <link rel="icon" href="../../asset/image/favicon.svg" type="image/svg+xml" />
+        <link rel="stylesheet" href="reader.css" />
+        <script src="reader.js" type="module"></script>
+    </head>
 
-  <body>
-    <div id="reader">
-      <!-- 头部 -->
-      <header id="header">
-        <div id="header-action-left" class="header-action">
-          <span id="toggle-toc-panel" title="目录">☰</span>
+    <body>
+        <div id="reader">
+            <!-- 头部 -->
+            <header id="header">
+                <div id="header-action-left" class="header-action">
+                    <img id="toggle-toc-panel" src="../../asset/image/table-of-contents.svg" width="22" height="22" />
+                </div>
+                <div id="header-action-right" class="header-action">
+                    <img
+                        id="toggle-fullscreen"
+                        src="../../asset/image/fullscreen-enter.svg"
+                        width="22"
+                        height="22"
+                        data-enter="../../asset/image/fullscreen-enter.svg"
+                        data-exit="../../asset/image/fullscreen-exit.svg"
+                    />
+                    <img id="toggle-setting-panel" src="../../asset/image/setting.svg" width="22" height="22" />
+                </div>
+            </header>
+
+            <!-- 正文 -->
+            <main id="content"></main>
+
+            <!-- 底部 -->
+            <footer id="footer">
+                <div id="chapter-title"></div>
+                <div id="progress-rate"></div>
+            </footer>
+
+            <!-- 目录面板 -->
+            <section id="toc-panel" class="panel" hidden>
+                <header class="panel-header">
+                    <h2>目录</h2>
+                    <div class="panel-header-action">
+                        <span id="close-toc-panel" title="关闭">✖</span>
+                    </div>
+                </header>
+                <div id="toc" class="panel-body"></div>
+                <div class="panel-footer"></div>
+            </section>
+
+            <!-- 设置面板 -->
+            <section id="setting-panel" class="panel" hidden>
+                <header class="panel-header">
+                    <h2>设置</h2>
+                    <div class="panel-header-action">
+                        <span id="reset-setting-panel" title="重置">↺</span>
+                        <span id="close-setting-panel" title="关闭">✖</span>
+                    </div>
+                </header>
+                <div id="setting-body" class="panel-body">
+                    <div class="setting-item">
+                        <span class="setting-item-name">主题</span>
+                        <select id="theme" class="setting-item-control"></select>
+                        <span id="theme-value" class="setting-item-value"></span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-item-name">字号</span>
+                        <input type="range" id="font-size" min="12" max="100" step="1" class="setting-item-control" />
+                        <span id="font-size-value" class="setting-item-value"></span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-item-name">页宽</span>
+                        <input type="range" id="width" step="1" class="setting-item-control" />
+                        <span id="width-value" class="setting-item-value"></span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-item-name">边距</span>
+                        <input type="range" id="padding" min="0" max="100" step="1" class="setting-item-control" />
+                        <span id="padding-value" class="setting-item-value"></span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-item-name">行高</span>
+                        <input type="range" id="line-height" min="1" max="3" step="0.1" class="setting-item-control" />
+                        <span id="line-height-value" class="setting-item-value"></span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-item-name">字色</span>
+                        <input type="color" id="font-color" class="setting-item-control" />
+                        <span id="font-color-value" class="setting-item-value"></span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-item-name">阅读器背景</span>
+                        <input type="color" id="reader-background-color" class="setting-item-control" />
+                        <span id="reader-background-color-value" class="setting-item-value"></span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-item-name">网页背景</span>
+                        <input type="color" id="background-color" class="setting-item-control" />
+                        <span id="background-color-value" class="setting-item-value"></span>
+                    </div>
+                </div>
+                <div class="panel-footer"></div>
+            </section>
         </div>
-        <div id="header-action-right" class="header-action">
-          <span id="toggle-fullscreen" title="全屏">⛶</span>
-          <!-- ⚙ ⛄-->
-          <span id="toggle-setting-panel" title="设置">⚙</span>
-        </div>
-      </header>
-
-      <!-- 正文 -->
-      <main id="content"></main>
-
-      <!-- 底部 -->
-      <footer id="footer">
-        <div id="chapter-title"></div>
-        <div id="progress-rate"></div>
-      </footer>
-
-      <!-- 目录面板 -->
-      <section id="toc-panel" class="panel" hidden>
-        <header class="panel-header">
-          <h2>目录</h2>
-          <div class="panel-header-action">
-            <span id="close-toc-panel" title="关闭">✖</span>
-          </div>
-        </header>
-        <div id="toc" class="panel-body"></div>
-        <div class="panel-footer"></div>
-      </section>
-
-      <!-- 设置面板 -->
-      <section id="setting-panel" class="panel" hidden>
-        <header class="panel-header">
-          <h2>设置</h2>
-          <div class="panel-header-action">
-            <span id="reset-setting-panel" title="重置">↺</span>
-            <span id="close-setting-panel" title="关闭">✖</span>
-          </div>
-        </header>
-        <div id="setting-body" class="panel-body">
-          <div class="setting-item">
-            <span class="setting-item-name">主题</span>
-            <select id="theme" class="setting-item-control"></select>
-            <span id="theme-value" class="setting-item-value"></span>
-          </div>
-          <div class="setting-item">
-            <span class="setting-item-name">字号</span>
-            <input type="range" id="font-size" min="12" max="100" step="1" class="setting-item-control" />
-            <span id="font-size-value" class="setting-item-value"></span>
-          </div>
-          <div class="setting-item">
-            <span class="setting-item-name">页宽</span>
-            <input type="range" id="width" step="1" class="setting-item-control" />
-            <span id="width-value" class="setting-item-value"></span>
-          </div>
-          <div class="setting-item">
-            <span class="setting-item-name">边距</span>
-            <input type="range" id="padding" min="0" max="100" step="1" class="setting-item-control" />
-            <span id="padding-value" class="setting-item-value"></span>
-          </div>
-          <div class="setting-item">
-            <span class="setting-item-name">行高</span>
-            <input type="range" id="line-height" min="1" max="3" step="0.1" class="setting-item-control" />
-            <span id="line-height-value" class="setting-item-value"></span>
-          </div>
-          <div class="setting-item">
-            <span class="setting-item-name">字色</span>
-            <input type="color" id="font-color" class="setting-item-control" />
-            <span id="font-color-value" class="setting-item-value"></span>
-          </div>
-          <div class="setting-item">
-            <span class="setting-item-name">阅读器背景</span>
-            <input type="color" id="reader-background-color" class="setting-item-control" />
-            <span id="reader-background-color-value" class="setting-item-value"></span>
-          </div>
-          <div class="setting-item">
-            <span class="setting-item-name">网页背景</span>
-            <input type="color" id="background-color" class="setting-item-control" />
-            <span id="background-color-value" class="setting-item-value"></span>
-          </div>
-        </div>
-        <div class="panel-footer"></div>
-      </section>
-    </div>
-  </body>
+    </body>
 </html>

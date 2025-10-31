@@ -5,7 +5,7 @@
     "scripts": {
         "lint": "eslint src --ext .ts",
         "build": "npm run lint && vite build",
-        "dev": "npm run build && vite --open page/bookshelf/bookshelf.html",
+        "dev": "vite --open page/bookshelf/bookshelf.html",
         "preview": "npm run build && vite preview --open page/bookshelf/bookshelf.html"
     },
     "devDependencies": {

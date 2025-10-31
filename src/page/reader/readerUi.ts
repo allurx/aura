@@ -47,8 +47,8 @@ export default class ReaderUi {
     settingPanelElement: HTMLElement;
     toggleTocPanelElement: HTMLElement;
     closeTocPanelElement: HTMLElement;
-    toggleFullscreenElement: HTMLElement;
-    toggleSettingPanelElement: HTMLElement;
+    toggleFullscreenElement: HTMLImageElement;
+    toggleSettingPanelElement: HTMLImageElement;
     closeSettingPanelElement: HTMLElement;
     resetSettingPanelElement: HTMLElement;
     themeElement: HTMLSelectElement;
@@ -87,10 +87,10 @@ export default class ReaderUi {
         this.toggleTocPanelElement = AssertUtil.assertExists(document.querySelector<HTMLElement>("#toggle-toc-panel"));
         this.closeTocPanelElement = AssertUtil.assertExists(document.querySelector<HTMLElement>("#close-toc-panel"));
         this.toggleFullscreenElement = AssertUtil.assertExists(
-            document.querySelector<HTMLElement>("#toggle-fullscreen")
+            document.querySelector<HTMLImageElement>("#toggle-fullscreen")
         );
         this.toggleSettingPanelElement = AssertUtil.assertExists(
-            document.querySelector<HTMLElement>("#toggle-setting-panel")
+            document.querySelector<HTMLImageElement>("#toggle-setting-panel")
         );
         this.closeSettingPanelElement = AssertUtil.assertExists(
             document.querySelector<HTMLElement>("#close-setting-panel")
@@ -347,6 +347,13 @@ export default class ReaderUi {
                         await this.dialog.alert("An unknown error occurred while toggling fullscreen.");
                     }
                 });
+        });
+        EventUtil.bind(document, "fullscreenchange", () => {
+            const isFullscreen = FullscreenUtil.isActive();
+            const src = isFullscreen
+                ? this.toggleFullscreenElement.dataset["exit"]
+                : this.toggleFullscreenElement.dataset["enter"];
+            this.toggleFullscreenElement.src = AssertUtil.assertExists(src);
         });
         return this;
     }
