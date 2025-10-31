@@ -45,7 +45,7 @@ export default class NavUi {
     ];
 
     constructor() {
-        this.navElement = AssertUtil.assertExist(document.querySelector("nav"));
+        this.navElement = AssertUtil.assertExists(document.querySelector("nav"));
     }
 
     /**
@@ -98,7 +98,7 @@ export default class NavUi {
      * @param  handler - 处理函数
      * @returns 返回当前实例
      */
-    bindNavItemClick(handler:  (genreId: number) => Promise<void>) {
+    bindNavItemClick(handler: (genreId: number) => Promise<void>) {
         EventUtil.delegate(this.navElement, "button", "click", async (_, target) => {
             this.highlightActiveNavItem(target);
             await handler(Number(target.dataset["id"]));

@@ -30,8 +30,8 @@ export default class TableOfContents extends BaseModel {
      */
     constructor(data: Partial<TableOfContents>) {
         super();
-        this.id = AssertUtil.assertExist(data.id);
-        this.fileId = AssertUtil.assertExist(data.fileId);
+        this.id = AssertUtil.assertExists(data.id);
+        this.fileId = AssertUtil.assertExists(data.fileId);
         this.contents = (data.contents ?? []).map((content) => new TableOfContents.Content(content));
     }
 

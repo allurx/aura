@@ -21,14 +21,14 @@ import BaseModel from "./baseModel.js";
  * @author allurx
  */
 export default class BookFile extends BaseModel {
-  raw!: Blob;
-  hash!: string;
+    file!: File;
+    hash!: string;
 
-  /**
-   * @param  data - 初始化书籍文件所需的所有字段
-   */
-  constructor(data: Partial<BookFile>) {
-    super();
-    Object.assign(this, data);
-  }
+    /**
+     * @param  data - 初始化书籍文件所需的所有字段
+     */
+    constructor(data: Partial<BookFile>) {
+        super();
+        Object.assign(this, data);
+    }
 }

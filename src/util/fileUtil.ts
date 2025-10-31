@@ -89,7 +89,7 @@ export default class FileUtil {
                     // 匹配到章节
                 } else {
                     // 如果开头有介绍文字(第一个章节前有内容)
-                    const firstMatch = AssertUtil.assertExist(matches[0]);
+                    const firstMatch = AssertUtil.assertExists(matches[0]);
                     if (firstMatch.index > 0) {
                         const preface = text.slice(0, firstMatch.index);
                         const lines = this.#splitToLines(preface);

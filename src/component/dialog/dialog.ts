@@ -32,17 +32,19 @@ export default class Dialog {
 
     constructor({ containerElement = document.body } = {}) {
         this.#dialogElement = containerElement.appendChild(this.#renderTemplate());
-        this.#titleElement = AssertUtil.assertExist(this.#dialogElement.querySelector<HTMLDivElement>(".dialog-title"));
-        this.#bodyElement = AssertUtil.assertExist(
+        this.#titleElement = AssertUtil.assertExists(
+            this.#dialogElement.querySelector<HTMLDivElement>(".dialog-title")
+        );
+        this.#bodyElement = AssertUtil.assertExists(
             this.#dialogElement.querySelector<HTMLTableSectionElement>(".dialog-body")
         );
-        this.#confirmBtnElement = AssertUtil.assertExist(
+        this.#confirmBtnElement = AssertUtil.assertExists(
             this.#dialogElement.querySelector<HTMLButtonElement>(".dialog-confirm-btn")
         );
-        this.#cancelBtnElement = AssertUtil.assertExist(
+        this.#cancelBtnElement = AssertUtil.assertExists(
             this.#dialogElement.querySelector<HTMLButtonElement>(".dialog-cancel-btn")
         );
-        this.#closeBtnElement = AssertUtil.assertExist(
+        this.#closeBtnElement = AssertUtil.assertExists(
             this.#dialogElement.querySelector<HTMLButtonElement>(".dialog-close-btn")
         );
         this.#bindEvents();

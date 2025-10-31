@@ -27,8 +27,8 @@ export default class MainUi {
     bookInputElement: HTMLInputElement;
 
     constructor() {
-        this.bookListElement = AssertUtil.assertExist(document.querySelector<HTMLDivElement>("#book-list"));
-        this.bookInputElement = AssertUtil.assertExist(document.querySelector<HTMLInputElement>("#book-input"));
+        this.bookListElement = AssertUtil.assertExists(document.querySelector<HTMLDivElement>("#book-list"));
+        this.bookInputElement = AssertUtil.assertExists(document.querySelector<HTMLInputElement>("#book-input"));
     }
 
     /**
@@ -71,7 +71,7 @@ export default class MainUi {
      */
     bindBookInputChange(handler: (files: FileList) => Promise<void>) {
         EventUtil.bind(this.bookInputElement, "change", async () => {
-            await handler(AssertUtil.assertExist(this.bookInputElement.files));
+            await handler(AssertUtil.assertExists(this.bookInputElement.files));
         });
         return this;
     }
@@ -83,7 +83,7 @@ export default class MainUi {
      */
     bindBookBodyClick(handler: (bookId: string) => void) {
         EventUtil.delegate(this.bookListElement, ".book-body", "click", (_, target) => {
-            handler(AssertUtil.assertExist(target.parentElement?.dataset["id"]));
+            handler(AssertUtil.assertExists(target.parentElement?.dataset["id"]));
         });
         return this;
     }
@@ -95,7 +95,7 @@ export default class MainUi {
      */
     bindDeleteBookClick(handler: (bookId: string) => Promise<void>) {
         EventUtil.delegate(this.bookListElement, ".book-delete-btn", "click", async (_, target) => {
-            await handler(AssertUtil.assertExist(target.closest<HTMLElement>(".book")?.dataset["id"]));
+            await handler(AssertUtil.assertExists(target.closest<HTMLElement>(".book")?.dataset["id"]));
         });
         return this;
     }

@@ -79,7 +79,7 @@ export default class ReaderController {
             ],
             "readonly",
             async (transaction) => {
-                this.book = AssertUtil.assertExist(
+                this.book = AssertUtil.assertExists(
                     await this.bookService.getById(bookId, transaction),
                     `book not found, id: ${bookId}`
                 );
@@ -88,13 +88,13 @@ export default class ReaderController {
                 await Promise.all([
                     this.tableOfContentsService
                         .getTocByFileId(this.book.fileId, transaction)
-                        .then((toc) => (this.toc = AssertUtil.assertExist(toc))),
+                        .then((toc) => (this.toc = AssertUtil.assertExists(toc))),
                     this.readerSettingService
                         .getReaderSetting(transaction)
-                        .then((readerSetting) => (this.readerSetting = AssertUtil.assertExist(readerSetting))),
+                        .then((readerSetting) => (this.readerSetting = AssertUtil.assertExists(readerSetting))),
                     this.readingProgressService.getByBookId(bookId, transaction).then(async (readingProgress) => {
-                        this.readingProgress = AssertUtil.assertExist(readingProgress);
-                        this.chapter = AssertUtil.assertExist(
+                        this.readingProgress = AssertUtil.assertExists(readingProgress);
+                        this.chapter = AssertUtil.assertExists(
                             await this.chapterService.getByFileIdAndIndex(
                                 this.book.fileId,
                                 this.readingProgress.chapterIndex,
@@ -124,7 +124,7 @@ export default class ReaderController {
     async loadChapter() {
         // 获取章节
         this.chapter = await TransactionManager.runTransaction(chapterStore.name, "readonly", async (transaction) =>
-            AssertUtil.assertExist(
+            AssertUtil.assertExists(
                 await this.chapterService.getByFileIdAndIndex(
                     this.book.fileId,
                     this.readingProgress.chapterIndex,
