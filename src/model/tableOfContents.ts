@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import AssertUtil from "../util/assertUtil.js";
+import { assertExists } from "../util/assertUtil.js";
 import BaseModel from "./baseModel.js";
 
 /**
@@ -30,8 +30,8 @@ export default class TableOfContents extends BaseModel {
      */
     constructor(data: Partial<TableOfContents>) {
         super();
-        this.id = AssertUtil.assertExists(data.id);
-        this.fileId = AssertUtil.assertExists(data.fileId);
+        this.id = assertExists(data.id);
+        this.fileId = assertExists(data.fileId);
         this.contents = (data.contents ?? []).map((content) => new TableOfContents.Content(content));
     }
 

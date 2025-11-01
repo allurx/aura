@@ -15,7 +15,7 @@
  */
 
 import EventUtil from "../../../util/eventUtil.js";
-import AssertUtil from "../../../util/assertUtil.js";
+import { assertExists } from "../../../util/assertUtil.js";
 
 /**
  * 书架导航界面
@@ -45,7 +45,7 @@ export default class NavUi {
     ];
 
     constructor() {
-        this.navElement = AssertUtil.assertExists(document.querySelector("nav"));
+        this.navElement = assertExists(document.querySelector("nav"));
     }
 
     /**
@@ -55,7 +55,7 @@ export default class NavUi {
     renderNav() {
         this.bookGenres.forEach((bookGenre) => {
             const button = document.createElement("button");
-            button.dataset["id"] = bookGenre.id.toString();
+            button.dataset["id"] = String(bookGenre.id);
             button.textContent = bookGenre.name;
             this.navElement.appendChild(button);
         });

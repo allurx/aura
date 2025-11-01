@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import Aura from "../../core/aura.js";
 import BookService from "../../service/bookService.js";
 import ChapterService from "../../service/chapterService.js";
 import ReadingProgressService from "../../service/readingProgressService.js";
@@ -33,7 +34,7 @@ import {
     readingProgressStore,
     settingStore,
 } from "../../core/database/DatabaseDefinition.js";
-import AssertUtil from "../../util/assertUtil.js";
+import { assertExists } from "../../util/assertUtil.js";
 
 /**
  * 阅读器控制器
@@ -79,7 +80,7 @@ export default class ReaderController {
             ],
             "readonly",
             async (transaction) => {
-                this.book = AssertUtil.assertExists(
+                this.book = assertExists(
                     await this.bookService.getById(bookId, transaction),
                     `book not found, id: ${bookId}`
                 );
@@ -88,13 +89,13 @@ export default class ReaderController {
                 await Promise.all([
                     this.tableOfContentsService
                         .getTocByFileId(this.book.fileId, transaction)
-                        .then((toc) => (this.toc = AssertUtil.assertExists(toc))),
+                        .then((toc) => (this.toc = assertExists(toc))),
                     this.readerSettingService
                         .getReaderSetting(transaction)
                         .then((readerSetting) => (this.readerSetting = readerSetting)),
                     this.readingProgressService.getByBookId(bookId, transaction).then(async (readingProgress) => {
-                        this.readingProgress = AssertUtil.assertExists(readingProgress);
-                        this.chapter = AssertUtil.assertExists(
+                        this.readingProgress = assertExists(readingProgress);
+                        this.chapter = assertExists(
                             await this.chapterService.getByFileIdAndIndex(
                                 this.book.fileId,
                                 this.readingProgress.chapterIndex,
@@ -124,7 +125,7 @@ export default class ReaderController {
     async loadChapter() {
         // 获取章节
         this.chapter = await TransactionManager.runTransaction(chapterStore.name, "readonly", async (transaction) =>
-            AssertUtil.assertExists(
+            assertExists(
                 await this.chapterService.getByFileIdAndIndex(
                     this.book.fileId,
                     this.readingProgress.chapterIndex,
@@ -186,47 +187,35 @@ export default class ReaderController {
             // 设置ui事件
             .bindToggleSettingPanel()
             .bindCloseSettingPanel()
-            .bindResetSetting(async (newSetting) => {
+            .bindResetSetting(async () => {
+                const newSetting = Aura.reader.setting;
                 newSetting.id = this.readerSetting.id;
+                this.readerUi.renderSettingPanel(newSetting);
                 await this.saveReaderSetting(newSetting);
             })
 
             // 设置变更事件
-            .bindFontSizeChange(async (fontSize) => {
-                await this.saveReaderSetting({ fontSize });
-            })
-            .bindWidthChange(async (pageWidth) => {
-                await this.saveReaderSetting({ pageWidth });
-            })
-            .bindPaddingChange(async (pagePadding) => {
-                await this.saveReaderSetting({ pagePadding });
-            })
-            .bindLineHeightChange(async (lineHeight) => {
-                await this.saveReaderSetting({ lineHeight });
-            })
-            .bindFontColorChange(async (fontColor) => {
-                await this.saveReaderSetting({ fontColor });
-            })
-            .bindReaderBackgroundColorChange(async (readerBackgroundColor) => {
-                await this.saveReaderSetting({ readerBackgroundColor });
-            })
-            .bindBackgroundColorChange(async (backgroundColor) => {
-                await this.saveReaderSetting({ backgroundColor });
-            })
-            .bindThemeChange(async (theme) => {
-                await this.saveReaderSetting({
+            .bindFontSizeChange((fontSize) => this.saveReaderSetting({ fontSize }))
+            .bindWidthChange((pageWidth) => this.saveReaderSetting({ pageWidth }))
+            .bindPaddingChange((pagePadding) => this.saveReaderSetting({ pagePadding }))
+            .bindLineHeightChange((lineHeight) => this.saveReaderSetting({ lineHeight }))
+            .bindFontColorChange((fontColor) => this.saveReaderSetting({ fontColor }))
+            .bindReaderBackgroundColorChange((readerBackgroundColor) =>
+                this.saveReaderSetting({ readerBackgroundColor })
+            )
+            .bindBackgroundColorChange((backgroundColor) => this.saveReaderSetting({ backgroundColor }))
+            .bindThemeChange((theme) =>
+                this.saveReaderSetting({
                     theme: theme.value,
                     fontColor: theme.fontColor,
                     backgroundColor: theme.backgroundColor,
                     readerBackgroundColor: theme.readerBackgroundColor,
-                });
-            })
+                })
+            )
 
             // 其它事件
             .bindToggleFullscreen()
-            .observeReaderResize(async (pageWidth) => {
-                await this.saveReaderSetting({ pageWidth });
-            })
+            .observeReaderResize((pageWidth) => this.saveReaderSetting({ pageWidth }))
             .bindChapterNavigation(this.switchChapter.bind(this))
             .bindContentScroll(async (lineIndex, lineVisibleRatio) => {
                 await this.saveReadingProgress({ lineIndex, lineVisibleRatio });

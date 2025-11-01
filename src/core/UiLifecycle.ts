@@ -15,22 +15,14 @@
  */
 
 /**
- * 断言工具类
+ * ui生命周期接口
  * @author allurx
  */
-export default class AssertUtil {
-    /**
-     * 确保值非null/undefined,否则抛出错误
-     * @param value 需要检查的值
-     * @param message 错误提示,可选
-     * @returns value
-     */
-    static assertExists<T>(value: T | null | undefined, message?: string): T {
-        if (value === null || value === undefined) {
-            throw new Error(message ?? "Value must not be null or undefined");
-        }
-        return value;
-    }
+export default interface UiLifecycle {
+    /** 初始化 */
+    init(): void;
+    /** 绑定事件 */
+    bindEvent(): void;
+    /** 销毁 */
+    destroy(): void;
 }
-
-export const assertExists = AssertUtil.assertExists.bind(AssertUtil);

@@ -39,7 +39,7 @@ export default defineConfig(
             //  Allow classes with only static members for utility purposes
             "@typescript-eslint/no-extraneous-class": "off",
             // Allow unused type parameters in some cases
-            "@typescript-eslint/no-unnecessary-type-parameters": "off",
-        },
+            "@typescript-eslint/no-unnecessary-type-parameters": "off"
+        }
     }
 );
