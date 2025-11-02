@@ -26,9 +26,9 @@ export default class HeaderUi {
     clearBookshelfElement: HTMLSpanElement;
 
     constructor() {
-        this.headerTitleElement = assertExists(document.querySelector<HTMLSpanElement>("#header-title"));
+        this.headerTitleElement = assertExists(document.querySelector<HTMLSpanElement>("#title"));
         this.clearBookshelfElement = assertExists(
-            document.querySelector<HTMLSpanElement>("#bookshelf-clear-btn")
+            document.querySelector<HTMLSpanElement>("#clear-btn")
         );
     }
 

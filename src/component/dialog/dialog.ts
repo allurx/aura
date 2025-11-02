@@ -90,6 +90,7 @@ export default class Dialog {
             this.#dialogElement.showModal();
             // 移除dialog打开时的第一个可聚焦的后代元素的焦点
             this.#cancelBtnElement.blur();
+            this.#confirmBtnElement.blur();
         });
     }
 

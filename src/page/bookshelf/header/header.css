@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-header {
+#bookshelf header {
   display: flex;
   /* 禁止缩放,保持自身的宽高 */
   flex: 0 0 auto;
@@ -28,13 +28,13 @@ header {
   overflow: hidden;
 }
 
-#header-title {
+#title {
   font-size: 2rem;
   color: #409eff;
   cursor: pointer;
 }
 
 /* 清空书籍 */
-#bookshelf-clear-btn {
+#clear-btn {
   cursor: pointer;
 }
