@@ -53,7 +53,6 @@ export default defineConfig({
         assetsInlineLimit: 0,
     },
     plugins: [
-        // 代码混淆插件
         // https://github.com/elmeet/vite-plugin-javascript-obfuscator
         obfuscatorPlugin({
             apply: "build",
@@ -72,7 +71,7 @@ export default defineConfig({
                 renameGlobals: false,
             },
         }),
-        // html插件,移除注释和空白
+        // https://github.com/vbenjs/vite-plugin-html
         createHtmlPlugin({
             minify: {
                 collapseWhitespace: true,

@@ -22,9 +22,8 @@ import BaseModel from "./baseModel.js";
  */
 export default class Book extends BaseModel {
     fileId!: string;
+    fileName!: string;
     genreId!: number;
-    hash!: string;
-    title!: string;
     createdTime!: number;
 
     /**
@@ -45,10 +44,14 @@ export default class Book extends BaseModel {
                     <span class="book-delete-btn">✖</span>
                 </div>
                 <div class="book-body">
-                    <span class="book-title">${this.title}</span>
+                    <span class="book-title">${this.#extractTitle(this.fileName)}</span>
                 </div>
                 <div class="book-footer"></div>
             </div>
             `;
+    }
+
+    #extractTitle(filename: string): string {
+        return filename.substring(0, filename.lastIndexOf("."));
     }
 }

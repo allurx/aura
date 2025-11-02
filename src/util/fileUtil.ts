@@ -30,15 +30,6 @@ export default class FileUtil {
     static #LINE_BREAK_REGEX = /\r?\n/;
 
     /**
-     * 从文件名中提取书名(去掉扩展名)
-     * @param filename - 文件名
-     * @returns  书名
-     */
-    static extractTitle(filename: string): string {
-        return filename.substring(0, filename.lastIndexOf("."));
-    }
-
-    /**
      * 计算文件的SHA-256哈希值
      * 注意: crypto.subtle需要HTTPS协议或localhost环境
      * @param file - 上传的文件
