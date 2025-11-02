@@ -225,8 +225,7 @@ export default class BookshelfService {
                         id: crypto.randomUUID(),
                         genreId: genreId,
                         fileId: bookfile.id,
-                        hash: bookfile.hash,
-                        title: FileUtil.extractTitle(hashFile.file.name),
+                        fileName: hashFile.file.name,
                         createdTime: Date.now(),
                     });
 

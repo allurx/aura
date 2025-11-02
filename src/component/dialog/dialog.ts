@@ -24,28 +24,22 @@ import { assertExists } from "../../util/assertUtil.js";
 export default class Dialog {
     #dialogElement: HTMLDialogElement;
     #titleElement: HTMLSpanElement;
-    #bodyElement: HTMLTableSectionElement;
-    #confirmBtnElement: HTMLButtonElement;
+    #closeBtnElement: HTMLSpanElement;
+    #bodyElement: HTMLElement;
     #cancelBtnElement: HTMLButtonElement;
-    #closeBtnElement: HTMLButtonElement;
+    #confirmBtnElement: HTMLButtonElement;
     #resolve: ((ok: boolean) => void) | null = null;
 
     constructor({ containerElement = document.body } = {}) {
         this.#dialogElement = containerElement.appendChild(this.#renderTemplate());
-        this.#titleElement = assertExists(
-            this.#dialogElement.querySelector<HTMLDivElement>(".dialog-title")
-        );
-        this.#bodyElement = assertExists(
-            this.#dialogElement.querySelector<HTMLTableSectionElement>(".dialog-body")
-        );
-        this.#confirmBtnElement = assertExists(
-            this.#dialogElement.querySelector<HTMLButtonElement>(".dialog-confirm-btn")
-        );
+        this.#titleElement = assertExists(this.#dialogElement.querySelector<HTMLDivElement>(".dialog-title"));
+        this.#closeBtnElement = assertExists(this.#dialogElement.querySelector<HTMLSpanElement>(".dialog-close-btn"));
+        this.#bodyElement = assertExists(this.#dialogElement.querySelector<HTMLElement>(".dialog-body"));
         this.#cancelBtnElement = assertExists(
             this.#dialogElement.querySelector<HTMLButtonElement>(".dialog-cancel-btn")
         );
-        this.#closeBtnElement = assertExists(
-            this.#dialogElement.querySelector<HTMLButtonElement>(".dialog-close-btn")
+        this.#confirmBtnElement = assertExists(
+            this.#dialogElement.querySelector<HTMLButtonElement>(".dialog-confirm-btn")
         );
         this.#bindEvents();
     }
@@ -95,7 +89,7 @@ export default class Dialog {
             this.#resolve = resolve;
             this.#dialogElement.showModal();
             // 移除dialog打开时的第一个可聚焦的后代元素的焦点
-            this.#closeBtnElement.blur();
+            this.#cancelBtnElement.blur();
         });
     }
 
@@ -108,6 +102,7 @@ export default class Dialog {
             this.#resolve = null;
             // 清理,防止下次误判
             this.#dialogElement.returnValue = "";
+            this.#bodyElement.textContent = "";
             resolve?.(ok);
         });
 
@@ -154,17 +149,15 @@ export default class Dialog {
     #template() {
         return `
       <dialog class="dialog">
-        <div class="dialog-wrapper">
           <header class="dialog-header">
             <span class="dialog-title"></span>
-            <button class="dialog-close-btn" title="关闭">✖</button>
+            <span class="dialog-close-btn" title="关闭">✖</span>
           </header>
           <section class="dialog-body"></section>
           <footer class="dialog-footer">
             <button type="button" class="dialog-cancel-btn">取消</button>
             <button type="button" class="dialog-confirm-btn">确定</button>
           </footer>
-        </div>
       </dialog>
     `;
     }
