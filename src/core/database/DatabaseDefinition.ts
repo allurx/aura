@@ -19,7 +19,6 @@
  * @author allurx
  */
 export default class DatabaseDefinition {
-
     // 数据库名称
     static name = "aura";
 
@@ -28,6 +27,14 @@ export default class DatabaseDefinition {
 
     // 数据库对象存储定义
     static stores = {
+        category: {
+            name: "category",
+            keyPath: "id",
+            autoIncrement: false,
+            indexes: {
+                ukName: { name: "uk_name", path: "name", unique: true },
+            },
+        },
         file: {
             name: "file",
             keyPath: "id",
@@ -43,7 +50,7 @@ export default class DatabaseDefinition {
             autoIncrement: false,
             indexes: {
                 idxFileId: { name: "idx_file_id", path: "fileId", unique: false },
-                idxGenreId: { name: "idx_genre_id", path: "genreId", unique: false },
+                idxCategoryId: { name: "idx_category_id", path: "categoryId", unique: false },
             },
             description: "书籍",
         },
@@ -84,15 +91,26 @@ export default class DatabaseDefinition {
             },
             description: "设置",
         },
+        theme: {
+            name: "theme",
+            keyPath: "id",
+            autoIncrement: false,
+            indexes: {
+                ukName: { name: "uk_name", path: "name", unique: true },
+            },
+            description: "主题",
+        },
     };
 }
 
 export const stores = DatabaseDefinition.stores;
+export const categoryStore = DatabaseDefinition.stores.category;
 export const fileStore = DatabaseDefinition.stores.file;
 export const bookStore = DatabaseDefinition.stores.book;
 export const tableOfContentsStore = DatabaseDefinition.stores.tableOfContents;
 export const chapterStore = DatabaseDefinition.stores.chapter;
 export const readingProgressStore = DatabaseDefinition.stores.readingProgress;
 export const settingStore = DatabaseDefinition.stores.setting;
+export const themeStore = DatabaseDefinition.stores.theme;
 
 export type StoreDefinition = (typeof DatabaseDefinition.stores)[keyof typeof DatabaseDefinition.stores];

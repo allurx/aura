@@ -23,7 +23,7 @@ import BaseModel from "./baseModel.js";
 export default class Book extends BaseModel {
     fileId!: string;
     fileName!: string;
-    genreId!: number;
+    categoryId!: string;
     createdTime!: number;
 
     /**

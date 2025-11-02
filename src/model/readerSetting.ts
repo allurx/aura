@@ -21,22 +21,20 @@ import BaseModel from "./baseModel.js";
  * @author allurx
  */
 export default class ReaderSetting extends BaseModel {
+    name!: string;
+    fontSize!: number;
+    pageWidth!: number;
+    pagePadding!: number;
+    lineHeight!: number;
+    fontColor!: string;
+    readerBackgroundColor!: string;
+    backgroundColor!: string;
 
-  name!: string;
-  theme!: string;
-  fontSize!: number;
-  pageWidth!: number;
-  pagePadding!: number;
-  lineHeight!: number;
-  fontColor!: string;
-  readerBackgroundColor!: string;
-  backgroundColor!: string;
-
-  /**
-   * @param  data - 初始化阅读器设置所需的所有字段
-   */
-  constructor(data: Partial<ReaderSetting>) {
-    super();
-    Object.assign(this, data);
-  }
+    /**
+     * @param  data - 初始化阅读器设置所需的所有字段
+     */
+    constructor(data: Partial<ReaderSetting>) {
+        super();
+        Object.assign(this, data);
+    }
 }

@@ -18,20 +18,28 @@ import Book from "../model/book";
 import BookFile from "../model/bookFile";
 import TableOfContents from "../model/tableOfContents";
 import ReadingProgress from "../model/readingProgress";
+import CategoryService from "./categoryService";
 import BookService from "./bookService";
 import ChapterService from "./chapterService";
+import ThemeService from "./themeService";
 import ReadingProgressService from "./readingProgressService";
-import ReaderSettingService from "./readerSettingService";
+import SettingService from "./settingService";
 import TableOfContentsService from "./tableOfContentsService";
 import FileService from "./fileService";
 import FileUtil from "../util/fileUtil";
 import { assertExists } from "../util/assertUtil";
 import TransactionManager from "../core/database/transactionManager.js";
+import CategorySeed from "../core/database/seed/categorySeed";
+import ThemeSeed from "../core/database/seed/themeSeed";
+import SettingSeed from "../core/database/seed/settingSeed";
 import {
+    categoryStore,
     fileStore,
     bookStore,
     tableOfContentsStore,
     chapterStore,
+    settingStore,
+    themeStore,
     readingProgressStore,
 } from "../core/database/DatabaseDefinition.js";
 
@@ -40,31 +48,35 @@ import {
  * @author allurx
  */
 export default class BookshelfService {
+    categoryService: CategoryService;
     fileService: FileService;
     bookService: BookService;
     chapterService: ChapterService;
+    themeService: ThemeService;
     readingProgressService: ReadingProgressService;
-    readerSettingService: ReaderSettingService;
+    settingService: SettingService;
     tableOfContentsService: TableOfContentsService;
 
     constructor() {
+        this.categoryService = new CategoryService();
         this.fileService = new FileService();
         this.bookService = new BookService();
         this.chapterService = new ChapterService();
+        this.themeService = new ThemeService();
         this.readingProgressService = new ReadingProgressService();
-        this.readerSettingService = new ReaderSettingService();
+        this.settingService = new SettingService();
         this.tableOfContentsService = new TableOfContentsService();
     }
 
     /**
      * 添加书籍
      * @param files - 书籍文件列表
-     * @param genreId - 书籍分类id
+     * @param categoryId - 书籍分类id
      * @param callback - 每添加一本书籍后的回调函数
      */
-    async addBook(files: File[], genreId: number, callback: (book: Book, index: number) => void) {
+    async addBook(files: File[], categoryId: string, callback: (book: Book, index: number) => void) {
         // 在事务外部执行异步函数汇总数据以避免事务被浏览器提前提交
-        const groupedHashFilesData = await this.#groupFileByHash(files, genreId);
+        const groupedHashFilesData = await this.#groupFileByHash(files, categoryId);
 
         await TransactionManager.runTransaction(
             [
@@ -82,15 +94,15 @@ export default class BookshelfService {
                         // 保存分组下的书籍文件、章节和目录
                         if (bookData) {
                             console.log(`Processing file with hash: ${hash}`);
-                            await this.fileService.save(bookData.bookFile, transaction);
-                            await this.chapterService.save(bookData.chapters, transaction);
-                            await this.tableOfContentsService.save(bookData.tableOfContents, transaction);
+                            await this.fileService.add(bookData.bookFile, transaction);
+                            await this.chapterService.addAll(bookData.chapters, transaction);
+                            await this.tableOfContentsService.update(bookData.tableOfContents, transaction);
                         }
 
                         // 保存分组下的所有书籍和阅读进度
                         const bookPromises = books.map(async ({ book, readingProgress }) => {
-                            await this.bookService.save(book, transaction);
-                            await this.readingProgressService.save(readingProgress, transaction);
+                            await this.bookService.add(book, transaction);
+                            await this.readingProgressService.update(readingProgress, transaction);
 
                             callback(book, 1);
                             // 创建书籍元素
@@ -154,9 +166,14 @@ export default class BookshelfService {
         );
     }
 
-    async clickNavItem(genreId: number, callback: (book: Book, index: number) => void) {
+    /**
+     * 点击导航栏分类项
+     * @param categoryId - 分类id
+     * @param callback - 每获取一本书籍后的回调函数
+     */
+    async clickNavItem(categoryId: string, callback: (book: Book, index: number) => void) {
         await TransactionManager.runTransaction(bookStore.name, "readonly", async (transaction) => {
-            const books = await this.bookService.listByGenreId(genreId, transaction);
+            const books = await this.bookService.getAllByCategoryId(categoryId, transaction);
             books.forEach((book, index) => {
                 callback(book, index);
             });
@@ -164,11 +181,45 @@ export default class BookshelfService {
     }
 
     /**
+     * 获取所有分类
+     */
+    async getAllCategories() {
+        return await TransactionManager.runTransaction([categoryStore.name], "readonly", async (transaction) => {
+            return await this.categoryService.getAll(transaction);
+        });
+    }
+
+    /**
+     * 初始化种子数据
+     */
+    async seedDatabase() {
+        await TransactionManager.runTransaction(
+            [categoryStore.name, settingStore.name, themeStore.name],
+            "readwrite",
+            async (transaction) => {
+                if ((await this.categoryService.count(transaction)) === 0) {
+                    await this.categoryService.addAll(CategorySeed.categories, transaction);
+                }
+                if ((await this.themeService.count(transaction)) === 0) {
+                    await this.themeService.addAll(ThemeSeed.themes, transaction);
+                }
+                if ((await this.settingService.count("defaultReaderSetting", transaction)) === 0) {
+                    await this.settingService.add(SettingSeed.defaultReaderSetting, transaction);
+                }
+                if ((await this.settingService.count("readerSetting", transaction)) === 0) {
+                    await this.settingService.add(SettingSeed.readerSetting, transaction);
+                }
+            }
+        );
+    }
+
+    /**
      * 根据文件hash分组书籍文件
      * @param  files - 书籍文件列表
+     * @param categoryId - 书籍分类id
      * @returns  分组的书籍文件数据
      */
-    async #groupFileByHash(files: File[], genreId: number) {
+    async #groupFileByHash(files: File[], categoryId: string) {
         // 计算所有文件的hash
         const hashedFilesPromises = files.map(async (file) => ({
             file: file,
@@ -223,7 +274,7 @@ export default class BookshelfService {
                     // 书籍
                     const book = new Book({
                         id: crypto.randomUUID(),
-                        genreId: genreId,
+                        categoryId: categoryId,
                         fileId: bookfile.id,
                         fileName: hashFile.file.name,
                         createdTime: Date.now(),

@@ -14,20 +14,16 @@
  * limitations under the License.
  */
 
+import BaseDao from "./baseDao.js";
+import Theme from "../model/theme.js";
+import { themeStore } from "../core/database/DatabaseDefinition";
+
 /**
- * 基础模型类
+ * 主题Dao
  * @author allurx
  */
-export default abstract class BaseModel {
-    id!: string;
-
-    /**
-     * 更新模型属性
-     * @param {Partial<BaseModel>} data - 要更新的数据
-     * @return {this} 返回更新后的模型实例
-     */
-    update(data: Partial<this>): this {
-        Object.assign(this, data);
-        return this;
+export default class ThemeDao extends BaseDao<Theme> {
+    constructor() {
+        super(themeStore, Theme);
     }
 }

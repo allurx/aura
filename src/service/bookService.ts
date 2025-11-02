@@ -30,12 +30,12 @@ export default class BookService {
     }
 
     /**
-     * 保存书籍
+     * 添加书籍
      * @param book - 书籍实例
      * @param transaction - 事务对象
      */
-    async save(book: Book, transaction: IDBTransaction) {
-        return await this.bookDao.put(book, transaction);
+    async add(book: Book, transaction: IDBTransaction) {
+        return await this.bookDao.add(book, transaction);
     }
 
     /**
@@ -67,12 +67,12 @@ export default class BookService {
 
     /**
      * 根据书籍类型id获取书籍列表
-     * @param genreId - 书籍类型id
+     * @param categoryId - 书籍类型id
      * @param transaction - 事务对象
      * @returns 书籍实例列表
      */
-    async listByGenreId(genreId: number, transaction: IDBTransaction) {
-        return await this.bookDao.getAllByIndex(bookStore.indexes.idxGenreId.name, genreId, transaction);
+    async getAllByCategoryId(categoryId: string, transaction: IDBTransaction) {
+        return await this.bookDao.getAllByIndex(bookStore.indexes.idxCategoryId.name, categoryId, transaction);
     }
 
     /**

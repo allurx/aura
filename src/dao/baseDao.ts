@@ -39,6 +39,10 @@ export default class BaseDao<T> {
         return await this.#requestPromise(store.add(data));
     }
 
+    async addAll(dataArray: T[], transaction: IDBTransaction) {
+        return await Promise.all(dataArray.map((data) => this.add(data, transaction)));
+    }
+
     async put(data: T, transaction: IDBTransaction) {
         const store = transaction.objectStore(this.storeName);
         return await this.#requestPromise(store.put(data));

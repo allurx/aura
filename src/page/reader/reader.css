@@ -211,10 +211,6 @@
     user-select: text;
 }
 
-#theme {
-    height: 100%;
-}
-
 /* 平板及以上 */
 @media (min-width: 768px) {
     #reader {

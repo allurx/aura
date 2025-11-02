@@ -14,20 +14,17 @@
  * limitations under the License.
  */
 
+import BaseModel from "./baseModel.js";
+
 /**
- * 基础模型类
+ * 分类
  * @author allurx
  */
-export default abstract class BaseModel {
-    id!: string;
+export default class Category extends BaseModel {
+    name!: string;
 
-    /**
-     * 更新模型属性
-     * @param {Partial<BaseModel>} data - 要更新的数据
-     * @return {this} 返回更新后的模型实例
-     */
-    update(data: Partial<this>): this {
+    constructor(data: Partial<Category>) {
+        super();
         Object.assign(this, data);
-        return this;
     }
 }

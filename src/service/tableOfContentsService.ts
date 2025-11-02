@@ -30,11 +30,11 @@ export default class TableOfContentsService {
     }
 
     /**
-     * 保存目录
+     * 更新目录
      * @param  tableOfContents - 目录实例
      * @param  transaction - 事务对象
      */
-    async save(tableOfContents: TableOfContents, transaction: IDBTransaction) {
+    async update(tableOfContents: TableOfContents, transaction: IDBTransaction) {
         return await this.tableOfContentsDao.put(tableOfContents, transaction);
     }
 
@@ -60,7 +60,7 @@ export default class TableOfContentsService {
      * @param  fileId - 文件id
      * @param  transaction - 事务对象
      */
-    async getTocByFileId(fileId: string, transaction: IDBTransaction) {
+    async getByFileId(fileId: string, transaction: IDBTransaction) {
         return await this.tableOfContentsDao.getByIndex(
             tableOfContentsStore.indexes.ukFileId.name,
             fileId,

@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-import Aura from "../../core/aura.js";
 import BookService from "../../service/bookService.js";
 import ChapterService from "../../service/chapterService.js";
 import ReadingProgressService from "../../service/readingProgressService.js";
 import TableOfContentsService from "../../service/tableOfContentsService.js";
-import ReaderSettingService from "../../service/readerSettingService.js";
+import SettingService from "../../service/settingService.js";
 import ReaderUi from "./readerUi.js";
 import Book from "../../model/book.js";
 import Chapter from "../../model/chapter.js";
@@ -46,14 +45,15 @@ export default class ReaderController {
     chapter!: Chapter;
     readerSetting!: ReaderSetting;
     readingProgress!: ReadingProgress;
-
-    readerUi: ReaderUi;
+    defaultReaderSetting!: ReaderSetting;
 
     bookService: BookService;
     chapterService: ChapterService;
     readingProgressService: ReadingProgressService;
     tableOfContentsService: TableOfContentsService;
-    readerSettingService: ReaderSettingService;
+    settingService: SettingService;
+
+    readerUi: ReaderUi;
 
     constructor() {
         this.readerUi = new ReaderUi();
@@ -61,7 +61,7 @@ export default class ReaderController {
         this.chapterService = new ChapterService();
         this.readingProgressService = new ReadingProgressService();
         this.tableOfContentsService = new TableOfContentsService();
-        this.readerSettingService = new ReaderSettingService();
+        this.settingService = new SettingService();
     }
 
     /**
@@ -88,11 +88,16 @@ export default class ReaderController {
                 // 并行加载数据
                 await Promise.all([
                     this.tableOfContentsService
-                        .getTocByFileId(this.book.fileId, transaction)
+                        .getByFileId(this.book.fileId, transaction)
                         .then((toc) => (this.toc = assertExists(toc))),
-                    this.readerSettingService
-                        .getReaderSetting(transaction)
-                        .then((readerSetting) => (this.readerSetting = readerSetting)),
+                    this.settingService
+                        .get("defaultReaderSetting", ReaderSetting, transaction)
+                        .then((readerSetting) => {
+                            this.defaultReaderSetting = readerSetting;
+                        }),
+                    this.settingService.get("readerSetting", ReaderSetting, transaction).then((readerSetting) => {
+                        this.readerSetting = readerSetting;
+                    }),
                     this.readingProgressService.getByBookId(bookId, transaction).then(async (readingProgress) => {
                         this.readingProgress = assertExists(readingProgress);
                         this.chapter = assertExists(
@@ -153,7 +158,7 @@ export default class ReaderController {
     async saveReadingProgress(readingProgress: Partial<ReadingProgress>) {
         await TransactionManager.runTransaction(readingProgressStore.name, "readwrite", async (transaction) => {
             this.readingProgress.update(readingProgress);
-            await this.readingProgressService.save(this.readingProgress, transaction);
+            await this.readingProgressService.update(this.readingProgress, transaction);
         });
     }
 
@@ -164,7 +169,7 @@ export default class ReaderController {
     async saveReaderSetting(readerSetting: Partial<ReaderSetting>) {
         await TransactionManager.runTransaction(settingStore.name, "readwrite", async (transaction) => {
             this.readerSetting.update(readerSetting);
-            await this.readerSettingService.saveReaderSetting(this.readerSetting, transaction);
+            await this.settingService.update(this.readerSetting, transaction);
         });
     }
 
@@ -188,8 +193,10 @@ export default class ReaderController {
             .bindToggleSettingPanel()
             .bindCloseSettingPanel()
             .bindResetSetting(async () => {
-                const newSetting = Aura.reader.setting;
-                newSetting.id = this.readerSetting.id;
+                const newSetting = new ReaderSetting(this.defaultReaderSetting).update({
+                    id: this.readerSetting.id,
+                    name: this.readerSetting.name,
+                });
                 this.readerUi.renderSettingPanel(newSetting);
                 await this.saveReaderSetting(newSetting);
             })
@@ -204,14 +211,6 @@ export default class ReaderController {
                 this.saveReaderSetting({ readerBackgroundColor })
             )
             .bindBackgroundColorChange((backgroundColor) => this.saveReaderSetting({ backgroundColor }))
-            .bindThemeChange((theme) =>
-                this.saveReaderSetting({
-                    theme: theme.value,
-                    fontColor: theme.fontColor,
-                    backgroundColor: theme.backgroundColor,
-                    readerBackgroundColor: theme.readerBackgroundColor,
-                })
-            )
 
             // 其它事件
             .bindToggleFullscreen()

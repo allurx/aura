@@ -17,21 +17,20 @@
 import BaseModel from "./baseModel.js";
 
 /**
- * 阅读器主题
+ * 阅主题
  * @author allurx
  */
-export default class ReaderTheme extends BaseModel {
-  name!: string;
-  value!: string;
-  fontColor!: string;
-  readerBackgroundColor!: string;
-  backgroundColor!: string;
+export default class Theme extends BaseModel {
+    name!: string;
+    fontColor!: string;
+    readerBackgroundColor!: string;
+    backgroundColor!: string;
 
-  /**
-   * @param  data - 初始化阅读器主题所需的所有字段
-   */
-  constructor(data: Partial<ReaderTheme>) {
-    super();
-    Object.assign(this, data);
-  }
+    /**
+     * @param  data - 初始化主题所需的所有字段
+     */
+    constructor(data: Partial<Theme>) {
+        super();
+        Object.assign(this, data);
+    }
 }

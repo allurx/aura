@@ -18,13 +18,11 @@
  * 阅读器界面
  * @author allurx
  */
-import Aura from "../../core/aura.js";
 import Overlay from "../../component/overlay/overlay.js";
 import Dialog from "../../component/dialog/dialog.js";
 import EventUtil from "../../util/eventUtil.js";
 import GestureUtil from "../../util/gestureUtil.js";
 import FullscreenUtil from "../../util/fullscreenUtil.js";
-import ReaderTheme from "../../model/readerTheme.js";
 import ReaderSetting from "../../model/readerSetting.js";
 import ReadingProgress from "../../model/readingProgress.js";
 import TableOfContents from "../../model/tableOfContents.js";
@@ -51,8 +49,6 @@ export default class ReaderUi {
     toggleSettingPanelElement: HTMLImageElement;
     closeSettingPanelElement: HTMLElement;
     resetSettingPanelElement: HTMLElement;
-    themeElement: HTMLSelectElement;
-    themeValueElement: HTMLElement;
     fontSizeElement: HTMLInputElement;
     fontSizeValueElement: HTMLElement;
     widthElement: HTMLInputElement;
@@ -94,8 +90,6 @@ export default class ReaderUi {
         this.resetSettingPanelElement = assertExists(document.querySelector<HTMLElement>("#reset-setting-panel"));
 
         // 设置选项
-        this.themeElement = assertExists(document.querySelector<HTMLSelectElement>("#theme"));
-        this.themeValueElement = assertExists(document.querySelector<HTMLElement>("#theme-value"));
         this.fontSizeElement = assertExists(document.querySelector<HTMLInputElement>("#font-size"));
         this.fontSizeValueElement = assertExists(document.querySelector<HTMLElement>("#font-size-value"));
         this.widthElement = assertExists(document.querySelector<HTMLInputElement>("#width"));
@@ -262,7 +256,6 @@ export default class ReaderUi {
      * @return 当前实例
      */
     renderSettingPanel(readerSetting: ReaderSetting) {
-        this.renderTheme(assertExists(Aura.reader.themes.find((theme) => theme.value === readerSetting.theme)));
         this.renderFontSize(readerSetting.fontSize);
         this.renderPageWidth(readerSetting.pageWidth);
         this.renderPagePadding(readerSetting.pagePadding);
@@ -360,23 +353,6 @@ export default class ReaderUi {
      */
     bindResetSetting(handler: () => Promise<void>) {
         EventUtil.bind(this.resetSettingPanelElement, "click", handler);
-        return this;
-    }
-
-    /**
-     * 绑定主题切换事件
-     * @param handler - 事件处理函数
-     * @return 当前实例
-     */
-    bindThemeChange(handler: (theme: ReaderTheme) => Promise<void>) {
-        EventUtil.bind(this.themeElement, "change", async (_, target) => {
-            const theme = assertExists(Aura.reader.themes.find((item) => item.value === target.value));
-            this.renderTheme(theme)
-                .renderFontColor(theme.fontColor)
-                .renderBackgroundColor(theme.backgroundColor)
-                .renderReaderBackgroundColor(theme.readerBackgroundColor);
-            await handler(theme);
-        });
         return this;
     }
 
@@ -557,22 +533,6 @@ export default class ReaderUi {
                 };
             })()
         ).observe(this.readerElement);
-        return this;
-    }
-
-    /**
-     * 渲染主题
-     * @param theme - 主题
-     * @return 当前实例
-     */
-    renderTheme(theme: ReaderTheme) {
-        if (this.themeElement.options.length === 0) {
-            Aura.reader.themes.forEach((theme) => {
-                this.themeElement.add(new Option(theme.name, theme.value));
-            });
-        }
-        this.themeElement.value = theme.value;
-        this.themeValueElement.textContent = theme.value;
         return this;
     }
 

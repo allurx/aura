@@ -14,20 +14,17 @@
  * limitations under the License.
  */
 
+import BaseDao from "./baseDao.js";
+import Category from "../model/Category.js";
+import { categoryStore } from "../core/database/DatabaseDefinition.js";
+
 /**
- * 基础模型类
+ * 分类Dao
  * @author allurx
  */
-export default abstract class BaseModel {
-    id!: string;
-
-    /**
-     * 更新模型属性
-     * @param {Partial<BaseModel>} data - 要更新的数据
-     * @return {this} 返回更新后的模型实例
-     */
-    update(data: Partial<this>): this {
-        Object.assign(this, data);
-        return this;
+export default class CategoryDao extends BaseDao<Category> {
+    
+    constructor() {
+        super(categoryStore, Category);
     }
 }

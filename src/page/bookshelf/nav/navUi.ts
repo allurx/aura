@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import Category from "../../../model/Category.js";
 import EventUtil from "../../../util/eventUtil.js";
 import { assertExists } from "../../../util/assertUtil.js";
 
@@ -24,26 +25,6 @@ import { assertExists } from "../../../util/assertUtil.js";
 export default class NavUi {
     navElement: HTMLElement;
 
-    // 书籍分类列表
-    bookGenres: { id: number; name: string }[] = [
-        { id: 1, name: "玄幻" },
-        { id: 2, name: "奇幻" },
-        { id: 3, name: "武侠" },
-        { id: 4, name: "仙侠" },
-        { id: 5, name: "科幻" },
-        { id: 6, name: "末日" },
-        { id: 7, name: "都市" },
-        { id: 8, name: "职场" },
-        { id: 9, name: "言情" },
-        { id: 10, name: "军事" },
-        { id: 11, name: "历史" },
-        { id: 12, name: "游戏" },
-        { id: 13, name: "体育" },
-        { id: 14, name: "灵异" },
-        { id: 15, name: "恐怖" },
-        { id: 16, name: "魔幻" },
-    ];
-
     constructor() {
         this.navElement = assertExists(document.querySelector("nav"));
     }
@@ -52,11 +33,11 @@ export default class NavUi {
      * 渲染导航栏
      * @returns 返回当前实例
      */
-    renderNav() {
-        this.bookGenres.forEach((bookGenre) => {
+    renderNav(categories: Category[]) {
+        categories.forEach((category) => {
             const button = document.createElement("button");
-            button.dataset["id"] = String(bookGenre.id);
-            button.textContent = bookGenre.name;
+            button.dataset["id"] = category.id;
+            button.textContent = category.name;
             this.navElement.appendChild(button);
         });
         return this;
@@ -83,12 +64,12 @@ export default class NavUi {
     }
 
     /**
-     * 触发导航栏点击事件
-     * @param genreId - 书籍分类id
+     * 点击导航栏项目
+     * @param categoryId - 书籍分类id
      * @returns 返回当前实例
      */
-    dispatchNavItemClick(genreId: number) {
-        const navItem = this.navElement.querySelector(`button[data-id="${String(genreId)}"]`);
+    clickNavItem(categoryId: string) {
+        const navItem = this.navElement.querySelector(`button[data-id="${categoryId}"]`);
         navItem?.dispatchEvent(new Event("click", { bubbles: true }));
         return this;
     }
@@ -98,10 +79,10 @@ export default class NavUi {
      * @param  handler - 处理函数
      * @returns 返回当前实例
      */
-    bindNavItemClick(handler: (genreId: number) => Promise<void>) {
+    bindNavItemClick(handler: (categoryId: string) => Promise<void>) {
         EventUtil.delegate(this.navElement, "button", "click", async (_, target) => {
             this.highlightActiveNavItem(target);
-            await handler(Number(target.dataset["id"]));
+            await handler(assertExists(target.dataset["id"]));
         });
         return this;
     }

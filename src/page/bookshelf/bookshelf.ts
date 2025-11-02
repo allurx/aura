@@ -27,9 +27,9 @@ class Bookshelf {
         this.controller = new BookshelfController();
     }
 
-    init() {
-        this.controller.init();
+    async init() {
+        await this.controller.init();
     }
 }
 
-new Bookshelf().init();
+await new Bookshelf().init();

@@ -29,8 +29,8 @@ export default class FileService {
         this.fileDao = new FileDao();
     }
 
-    async save(bookFile: BookFile, transaction: IDBTransaction) {
-        return await this.fileDao.put(bookFile, transaction);
+    async add(bookFile: BookFile, transaction: IDBTransaction) {
+        return await this.fileDao.add(bookFile, transaction);
     }
 
     async clear(transaction: IDBTransaction) {

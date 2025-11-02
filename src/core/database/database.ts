@@ -21,10 +21,10 @@ import DatabaseDefinition from "./DatabaseDefinition.js";
  * @author allurx
  */
 export default class Database {
-    #name;
-    #version;
-    #stores;
-    #instance: IDBDatabase | null = null;
+    #name: string;
+    #version: number;
+    #stores: typeof DatabaseDefinition.stores;
+    #instance!: IDBDatabase | null;
 
     constructor(name: string, version: number, stores: typeof DatabaseDefinition.stores) {
         this.#name = name;
@@ -37,8 +37,7 @@ export default class Database {
      * @returns {Promise<IDBDatabase>} 返回一个解析为数据库实例的Promise.
      */
     async instance(): Promise<IDBDatabase> {
-        if (this.#instance) return this.#instance;
-        return await this.#connect();
+        return this.#instance ?? (await this.#connect());
     }
 
     /**
@@ -50,18 +49,12 @@ export default class Database {
             const request = indexedDB.open(this.#name, this.#version);
             request.onupgradeneeded = () => {
                 const db = request.result;
-
-                // 开发阶段方便调试,删除旧的对象存储
-                Array.from(db.objectStoreNames).forEach((storeName) => {
-                    db.deleteObjectStore(storeName);
-                });
-
                 Object.values(this.#stores).forEach((storeProperty) => {
                     // 创建新的对象存储
                     if (!db.objectStoreNames.contains(storeProperty.name)) {
                         const store = db.createObjectStore(storeProperty.name, {
-                            keyPath: storeProperty.keyPath,
                             autoIncrement: storeProperty.autoIncrement,
+                            keyPath: storeProperty.keyPath,
                         });
                         Object.values(storeProperty.indexes).forEach((index) => {
                             store.createIndex(index.name, index.path, { unique: index.unique });
@@ -89,9 +82,6 @@ export default class Database {
      * 关闭数据库连接
      */
     close() {
-        if (this.#instance) {
-            this.#instance.close();
-            this.#instance = null;
-        }
+        this.#instance?.close();
     }
 }

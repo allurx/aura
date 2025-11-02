@@ -30,11 +30,11 @@ export default class ReadingProgressService {
     }
 
     /**
-     * 保存阅读进度
+     * 更新阅读进度
      * @param readingProgress - 阅读进度
      * @param transaction - 事务对象
      */
-    async save(readingProgress: ReadingProgress, transaction: IDBTransaction) {
+    async update(readingProgress: ReadingProgress, transaction: IDBTransaction) {
         await this.readingProgressDao.put(readingProgress, transaction);
     }
 

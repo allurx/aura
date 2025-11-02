@@ -30,12 +30,12 @@ export default class ChapterService {
     }
 
     /**
-     * 保存章节
+     * 批量添加章节
      * @param chapters - 章节数组
      * @param transaction - 事务对象
      */
-    async save(chapters: Chapter[], transaction: IDBTransaction) {
-        return await this.chapterDao.putAll(chapters, transaction);
+    async addAll(chapters: Chapter[], transaction: IDBTransaction) {
+        return await this.chapterDao.addAll(chapters, transaction);
     }
 
     /**
