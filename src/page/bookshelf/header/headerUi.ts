@@ -15,7 +15,7 @@
  */
 
 import EventUtil from "../../../util/eventUtil.js";
-import AssertUtil from "../../../util/assertUtil.js";
+import { assertExists } from "../../../util/assertUtil.js";
 
 /**
  * 书架头部界面
@@ -26,8 +26,8 @@ export default class HeaderUi {
     clearBookshelfElement: HTMLSpanElement;
 
     constructor() {
-        this.headerTitleElement = AssertUtil.assertExist(document.querySelector<HTMLSpanElement>("#header-title"));
-        this.clearBookshelfElement = AssertUtil.assertExist(
+        this.headerTitleElement = assertExists(document.querySelector<HTMLSpanElement>("#header-title"));
+        this.clearBookshelfElement = assertExists(
             document.querySelector<HTMLSpanElement>("#bookshelf-clear-btn")
         );
     }
@@ -37,10 +37,10 @@ export default class HeaderUi {
      * @param  handler - 处理函数
      * @returns  返回当前实例
      */
-    bindClearBookshelfClick(handler: () => void) {
+    bindClearBookshelfClick(handler: () => Promise<void>) {
         EventUtil.bind(this.clearBookshelfElement, "click", handler);
         return this;
-    }
+    }   
 
     /**
      * 绑定头部标题点击事件

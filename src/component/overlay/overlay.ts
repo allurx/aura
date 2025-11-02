@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import AssertUtil from "../../util/assertUtil.js";
+import { assertExists } from "../../util/assertUtil.js";
 
 /**
  * 遮罩
@@ -26,7 +26,7 @@ export default class Overlay {
 
     constructor({ containerElement = document.body, overlayStyle = {}, spinnerStyle = {} } = {}) {
         this.#overlay = containerElement.appendChild(this.#renderTemplate());
-        this.#spinner = AssertUtil.assertExist(this.#overlay.querySelector("#spinner")) as HTMLDivElement;
+        this.#spinner = assertExists(this.#overlay.querySelector("#spinner")) as HTMLDivElement;
         this.#applyOverlayStyle(overlayStyle);
         this.#applySpinnerStyle(spinnerStyle);
     }
@@ -66,7 +66,7 @@ export default class Overlay {
     #renderTemplate(): HTMLDivElement {
         const template = document.createElement("template");
         template.innerHTML = this.#template().trim();
-        return AssertUtil.assertExist(template.content.firstElementChild) as HTMLDivElement;
+        return assertExists(template.content.firstElementChild) as HTMLDivElement;
     }
 
     /**

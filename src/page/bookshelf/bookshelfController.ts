@@ -18,28 +18,7 @@ import HeaderUi from "./header/headerUi.js";
 import NavUi from "./nav/navUi.js";
 import MainUi from "./main/mainUi.js";
 import BookshelfUi from "./bookshelfUi.js";
-import FileService from "../../service/fileService.js";
-import BookService from "../../service/bookService.js";
-import ChapterService from "../../service/chapterService.js";
-import ReadingProgressService from "../../service/readingProgressService.js";
-import ReaderSettingService from "../../service/readerSettingService.js";
-import TableOfContentsService from "../../service/tableOfContentsService.js";
-import Book from "../../model/book.js";
-import Chapter from "../../model/chapter.js";
-import BookFile from "../../model/bookFile.js";
-import TableOfContents from "../../model/tableOfContents.js";
-import ReadingProgress from "../../model/readingProgress.js";
-import TransactionManager from "../../core/database/transactionManager.js";
-import FileUtil from "../../util/fileUtil.js";
-import {
-    fileStore,
-    bookStore,
-    tableOfContentsStore,
-    chapterStore,
-    readingProgressStore,
-} from "../../core/database/DatabaseDefinition.js";
-import { NonEmptyArray } from "../../type/type.js";
-import AssertUtil from "../../util/assertUtil.js";
+import BookshelfService from "../../service/bookshelfService.js";
 
 /**
  * 书架控制器
@@ -50,28 +29,17 @@ export default class BookshelfController {
     navUi: NavUi;
     mainUi: MainUi;
     bookshelfUi: BookshelfUi;
-    fileService: FileService;
-    bookService: BookService;
-    chapterService: ChapterService;
-    readingProgressService: ReadingProgressService;
-    readerSettingService: ReaderSettingService;
-    tableOfContentsService: TableOfContentsService;
+    bookshelfService: BookshelfService;
 
     // 当前选中的书籍分类id
-    genreId: number;
+    genreId = 1;
 
     constructor() {
         this.headerUi = new HeaderUi();
         this.navUi = new NavUi();
         this.mainUi = new MainUi();
         this.bookshelfUi = new BookshelfUi();
-        this.fileService = new FileService();
-        this.bookService = new BookService();
-        this.chapterService = new ChapterService();
-        this.readingProgressService = new ReadingProgressService();
-        this.readerSettingService = new ReaderSettingService();
-        this.tableOfContentsService = new TableOfContentsService();
-        this.genreId = 1;
+        this.bookshelfService = new BookshelfService();
     }
 
     init() {
@@ -96,82 +64,17 @@ export default class BookshelfController {
     async addBook(files: FileList) {
         await this.bookshelfUi
             .showOverlayWhile(async () => {
-                // 在事务外部执行异步函数汇总数据以避免事务被浏览器提前提交
-                const groupedData = await this.#groupFilesByHash(files);
-
-                await TransactionManager.runTransaction(
-                    [
-                        ...(groupedData.every((item) => item.existingFile) ? [] : [fileStore.name]),
-                        bookStore.name,
-                        chapterStore.name,
-                        tableOfContentsStore.name,
-                        readingProgressStore.name,
-                    ],
-                    "readwrite",
-                    async (transaction) => {
-                        await Promise.all(
-                            groupedData.map(
-                                async ({ existingFile, hash, bookFile, chapters, tableOfContents, books }) => {
-                                    console.log(`Processing file with hash: ${hash}`);
-
-                                    // 如果文件不存在则保存文件及其章节和目录
-                                    if (!existingFile) {
-                                        await this.fileService.save(bookFile, transaction);
-                                        await this.chapterService.save(chapters, transaction);
-                                        await this.tableOfContentsService.save(
-                                            AssertUtil.assertExist(tableOfContents),
-                                            transaction
-                                        );
-                                    }
-
-                                    // 为每个分组的文件创建书籍和阅读进度
-                                    await Promise.all(
-                                        books.map(async ({ book, readingProgress }) => {
-                                            // 保存书籍
-                                            await this.bookService.save(book, transaction);
-
-                                            // 保存阅读进度
-                                            await this.readingProgressService.save(readingProgress, transaction);
-
-                                            // 创建书籍元素
-                                            this.mainUi.renderBookElement(book, 1);
-                                        })
-                                    );
-                                }
-                            )
-                        );
-                    }
-                );
+                // 只处理文本文件
+                const validFiles = Array.from(files).filter((file) => {
+                    const isTextFile = file.type === "text/plain";
+                    if (!isTextFile) void this.bookshelfUi.alertDialog(`${file.name}不是文本文件`);
+                    return isTextFile;
+                });
+                await this.bookshelfService.addBook(validFiles, this.genreId, (book, index) => {
+                    this.mainUi.renderBookElement(book, index);
+                });
             })
             .finally(() => this.mainUi.clearBookInput());
-    }
-
-    /**
-     * 清空书架
-     */
-    async clearBookshelf() {
-        if (await this.bookshelfUi.confirmDialog("确定要清空书架中的所有书籍吗?")) {
-            await this.bookshelfUi.showOverlayWhile(async () => {
-                await TransactionManager.runTransaction(
-                    [
-                        fileStore.name,
-                        bookStore.name,
-                        chapterStore.name,
-                        tableOfContentsStore.name,
-                        readingProgressStore.name,
-                    ],
-                    "readwrite",
-                    async (transaction) =>
-                        await Promise.all([
-                            this.fileService.clear(transaction),
-                            this.bookService.clear(transaction),
-                            this.chapterService.clear(transaction),
-                            this.tableOfContentsService.clear(transaction),
-                            this.readingProgressService.clear(transaction),
-                        ])
-                ).then(() => this.navUi.dispatchNavItemClick(this.genreId));
-            });
-        }
     }
 
     /**
@@ -181,36 +84,20 @@ export default class BookshelfController {
     async deleteBook(bookId: string) {
         if (await this.bookshelfUi.confirmDialog("确定要删除这本书吗?")) {
             await this.bookshelfUi.showOverlayWhile(async () => {
-                await TransactionManager.runTransaction(
-                    [
-                        fileStore.name,
-                        bookStore.name,
-                        chapterStore.name,
-                        tableOfContentsStore.name,
-                        readingProgressStore.name,
-                    ],
-                    "readwrite",
-                    async (transaction) => {
-                        // 如果该文件没有其他书籍则删除对应的file, chapter和tableOfContents
-                        const book = AssertUtil.assertExist(
-                            await this.bookService.getById(bookId, transaction),
-                            `Book[${bookId}] not found`
-                        );
-                        const count = await this.bookService.countByFileId(book.fileId, transaction);
+                await this.bookshelfService
+                    .deleteBook(bookId)
+                    .then(() => this.navUi.dispatchNavItemClick(this.genreId));
+            });
+        }
+    }
 
-                        if (count <= 1)
-                            await Promise.all([
-                                this.fileService.deleteById(book.fileId, transaction),
-                                this.chapterService.deleteByFileId(book.fileId, transaction),
-                                this.tableOfContentsService.deleteByFileId(book.fileId, transaction),
-                            ]);
-
-                        await Promise.all([
-                            this.bookService.deleteById(bookId, transaction),
-                            this.readingProgressService.deleteByBookId(bookId, transaction),
-                        ]);
-                    }
-                ).then(() => this.navUi.dispatchNavItemClick(this.genreId));
+    /**
+     * 清空书架
+     */
+    async clearBookshelf() {
+        if (await this.bookshelfUi.confirmDialog("确定要清空书架中的所有书籍吗?")) {
+            await this.bookshelfUi.showOverlayWhile(async () => {
+                await this.bookshelfService.clearBookshelf().then(() => this.navUi.dispatchNavItemClick(this.genreId));
             });
         }
     }
@@ -218,141 +105,24 @@ export default class BookshelfController {
     bindEvent() {
         // 绑定头部事件
         this.headerUi
-            .bindClearBookshelfClick(() => void this.clearBookshelf())
+            .bindClearBookshelfClick(() => this.clearBookshelf())
             .bindHeaderTitleClick(() => this.navUi.toggleVisibility());
 
         // 绑定导航栏事件
         this.navUi.bindNavItemClick(async (genreId) => {
             this.genreId = genreId;
             this.mainUi.removeBookElements();
-            await TransactionManager.runTransaction(bookStore.name, "readonly", async (transaction) => {
-                const books = await this.bookService.listByGenreId(genreId, transaction);
-                books.forEach((book, index) => this.mainUi.renderBookElement(book, index));
+            await this.bookshelfService.clickNavItem(genreId, (book, index) => {
+                this.mainUi.renderBookElement(book, index);
             });
         });
 
         // 绑定书籍主体事件
         this.mainUi
-            .bindBookInputChange(async (files) => {
-                await this.addBook(files);
-            })
+            .bindBookInputChange((files) => this.addBook(files))
             .bindBookBodyClick((bookId) => {
                 this.readBook(bookId);
             })
-            .bindDeleteBookClick(async (bookId) => {
-                await this.deleteBook(bookId);
-            });
+            .bindDeleteBookClick((bookId) => this.deleteBook(bookId));
     }
-
-    /**
-     * 根据文件hash分组书籍文件
-     * @param  files - 书籍文件列表
-     * @returns  分组的书籍文件数据
-     */
-    async #groupFilesByHash(files: FileList): Promise<InstanceType<typeof BookshelfController.GroupedData>[]> {
-        // 根据hash分组并行处理重复文件
-        const groupedFiles: Map<string, NonEmptyArray<{ file: File; hash: string }>> = await Promise.all(
-            Array.from(files)
-
-                // 只处理文本文件
-                .filter((file) => {
-                    const isTextFile = file.type === "text/plain";
-                    if (!isTextFile) alert(`${file.name}不是文本文件`);
-                    return isTextFile;
-                })
-
-                // 所有添加的书籍文件
-                .map(async (file) => ({
-                    file: file,
-                    hash: await FileUtil.computeHash(file),
-                }))
-
-            // 按hash分组[hash => [{file, hash}, ...]
-        ).then((wrappedFiles) =>
-            wrappedFiles.reduce((acc, wrappedFile) => {
-                if (!acc.has(wrappedFile.hash)) {
-                    acc.set(wrappedFile.hash, [wrappedFile]);
-                } else {
-                    acc.get(wrappedFile.hash)?.push(wrappedFile);
-                }
-                return acc;
-            }, new Map<string, NonEmptyArray<{ file: File; hash: string }>>())
-        );
-
-        return await Promise.all(
-            Array.from(groupedFiles.entries())
-
-                // 为每个分组生成数据
-                .map(async ([hash, wrappedFiles]) => {
-                    // 将同一hash的文件视为同一书籍,只解析第一个文件的章节和目录
-                    const file = wrappedFiles[0].file;
-
-                    // 检查文件是否已存在
-                    const existingFile = await TransactionManager.runTransaction(
-                        [fileStore.name],
-                        "readonly",
-                        async (transaction) => await this.fileService.getByHash(hash, transaction)
-                    );
-
-                    // 创建书籍文件
-                    const bookFile =
-                        existingFile ??
-                        new BookFile({
-                            id: crypto.randomUUID(),
-                            raw: new Blob([file], { type: file.type }),
-                            hash: hash,
-                        });
-                    const chapters = existingFile ? [] : await FileUtil.parseChapters(file, bookFile.id);
-                    const tableOfContents = existingFile
-                        ? null
-                        : new TableOfContents({
-                              id: crypto.randomUUID(),
-                              fileId: bookFile.id,
-                              contents: chapters,
-                          });
-                    return new BookshelfController.GroupedData({
-                        existingFile,
-                        hash,
-                        bookFile,
-                        chapters,
-                        tableOfContents,
-                        books: wrappedFiles.map((wrappedFile) => {
-                            // 创建书籍
-                            const book = new Book({
-                                id: crypto.randomUUID(),
-                                genreId: this.genreId,
-                                fileId: bookFile.id,
-                                hash: bookFile.hash,
-                                name: wrappedFile.file.name,
-                                createdTime: Date.now(),
-                            });
-
-                            // 创建阅读进度
-                            const readingProgress = new ReadingProgress({
-                                id: crypto.randomUUID(),
-                                bookId: book.id,
-                                chapterIndex: 1,
-                                lineIndex: 1,
-                                lineVisibleRatio: 1,
-                            });
-                            return { book, readingProgress };
-                        }),
-                    });
-                })
-        );
-    }
-
-    // 分组数据结构
-    static GroupedData = class GroupedData {
-        existingFile!: BookFile | null;
-        hash!: string;
-        bookFile!: BookFile;
-        chapters!: Chapter[];
-        tableOfContents!: TableOfContents | null;
-        books!: { book: Book; readingProgress: ReadingProgress }[];
-
-        constructor(data: Required<GroupedData>) {
-            Object.assign(this, data);
-        }
-    };
 }

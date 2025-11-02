@@ -15,7 +15,7 @@
  */
 
 import EventUtil from "../../util/eventUtil.js";
-import AssertUtil from "../../util/assertUtil.js";
+import { assertExists } from "../../util/assertUtil.js";
 
 /**
  * 对话框组件
@@ -32,17 +32,19 @@ export default class Dialog {
 
     constructor({ containerElement = document.body } = {}) {
         this.#dialogElement = containerElement.appendChild(this.#renderTemplate());
-        this.#titleElement = AssertUtil.assertExist(this.#dialogElement.querySelector<HTMLDivElement>(".dialog-title"));
-        this.#bodyElement = AssertUtil.assertExist(
+        this.#titleElement = assertExists(
+            this.#dialogElement.querySelector<HTMLDivElement>(".dialog-title")
+        );
+        this.#bodyElement = assertExists(
             this.#dialogElement.querySelector<HTMLTableSectionElement>(".dialog-body")
         );
-        this.#confirmBtnElement = AssertUtil.assertExist(
+        this.#confirmBtnElement = assertExists(
             this.#dialogElement.querySelector<HTMLButtonElement>(".dialog-confirm-btn")
         );
-        this.#cancelBtnElement = AssertUtil.assertExist(
+        this.#cancelBtnElement = assertExists(
             this.#dialogElement.querySelector<HTMLButtonElement>(".dialog-cancel-btn")
         );
-        this.#closeBtnElement = AssertUtil.assertExist(
+        this.#closeBtnElement = assertExists(
             this.#dialogElement.querySelector<HTMLButtonElement>(".dialog-close-btn")
         );
         this.#bindEvents();

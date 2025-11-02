@@ -15,45 +15,40 @@
  */
 
 import BaseModel from "./baseModel.js";
-import FileUtil from "../util/fileUtil.js";
 
 /**
  * 书籍
  * @author allurx
  */
 export default class Book extends BaseModel {
-  fileId!: string;
-  genreId!: number;
-  hash!: string;
-  name!: string;
-  createdTime!: number;
+    fileId!: string;
+    genreId!: number;
+    hash!: string;
+    title!: string;
+    createdTime!: number;
 
-  title() {
-    return FileUtil.extractTitle(this.name);
-  }
+    /**
+     * @param  data - 初始化书籍所需的所有字段
+     */
+    constructor(data: Partial<Book>) {
+        super();
+        Object.assign(this, data);
+    }
 
-  /**
-   * @param  data - 初始化书籍所需的所有字段
-   */
-  constructor(data: Partial<Book>) {
-    super();
-    Object.assign(this, data);
-  }
-
-  /**
-   * @returns 书籍元素的html模板
-   */
-  template(): string {
-    return `
+    /**
+     * @returns 书籍元素的html模板
+     */
+    template(): string {
+        return `
             <div data-id="${this.id}" class="book">
                 <div class="book-header">
                     <span class="book-delete-btn">✖</span>
                 </div>
                 <div class="book-body">
-                    <span class="book-title">${this.title()}</span>
+                    <span class="book-title">${this.title}</span>
                 </div>
                 <div class="book-footer"></div>
             </div>
             `;
-  }
+    }
 }

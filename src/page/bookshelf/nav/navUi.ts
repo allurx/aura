@@ -15,7 +15,7 @@
  */
 
 import EventUtil from "../../../util/eventUtil.js";
-import AssertUtil from "../../../util/assertUtil.js";
+import { assertExists } from "../../../util/assertUtil.js";
 
 /**
  * 书架导航界面
@@ -45,7 +45,7 @@ export default class NavUi {
     ];
 
     constructor() {
-        this.navElement = AssertUtil.assertExist(document.querySelector("nav"));
+        this.navElement = assertExists(document.querySelector("nav"));
     }
 
     /**
@@ -55,7 +55,7 @@ export default class NavUi {
     renderNav() {
         this.bookGenres.forEach((bookGenre) => {
             const button = document.createElement("button");
-            button.dataset["id"] = bookGenre.id.toString();
+            button.dataset["id"] = String(bookGenre.id);
             button.textContent = bookGenre.name;
             this.navElement.appendChild(button);
         });
@@ -98,7 +98,7 @@ export default class NavUi {
      * @param  handler - 处理函数
      * @returns 返回当前实例
      */
-    bindNavItemClick(handler:  (genreId: number) => Promise<void>) {
+    bindNavItemClick(handler: (genreId: number) => Promise<void>) {
         EventUtil.delegate(this.navElement, "button", "click", async (_, target) => {
             this.highlightActiveNavItem(target);
             await handler(Number(target.dataset["id"]));

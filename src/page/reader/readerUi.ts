@@ -29,7 +29,7 @@ import ReaderSetting from "../../model/readerSetting.js";
 import ReadingProgress from "../../model/readingProgress.js";
 import TableOfContents from "../../model/tableOfContents.js";
 import Chapter from "../../model/chapter.js";
-import AssertUtil from "../../util/assertUtil.js";
+import { assertExists } from "../../util/assertUtil.js";
 
 /**
  * 阅读器界面
@@ -47,8 +47,8 @@ export default class ReaderUi {
     settingPanelElement: HTMLElement;
     toggleTocPanelElement: HTMLElement;
     closeTocPanelElement: HTMLElement;
-    toggleFullscreenElement: HTMLElement;
-    toggleSettingPanelElement: HTMLElement;
+    toggleFullscreenElement: HTMLImageElement;
+    toggleSettingPanelElement: HTMLImageElement;
     closeSettingPanelElement: HTMLElement;
     resetSettingPanelElement: HTMLElement;
     themeElement: HTMLSelectElement;
@@ -73,57 +73,47 @@ export default class ReaderUi {
 
     constructor() {
         // 页面元素
-        this.readerElement = AssertUtil.assertExist(document.querySelector<HTMLElement>("#reader"));
-        this.contentElement = AssertUtil.assertExist(document.querySelector<HTMLElement>("#content"));
-        this.headerElement = AssertUtil.assertExist(document.querySelector<HTMLElement>("#header"));
-        this.footerElement = AssertUtil.assertExist(document.querySelector<HTMLElement>("#footer"));
-        this.chapterTitleElement = AssertUtil.assertExist(document.querySelector<HTMLElement>("#chapter-title"));
-        this.progressRateElement = AssertUtil.assertExist(document.querySelector<HTMLElement>("#progress-rate"));
-        this.tocElement = AssertUtil.assertExist(document.querySelector<HTMLElement>("#toc"));
-        this.tocPanelElement = AssertUtil.assertExist(document.querySelector<HTMLElement>("#toc-panel"));
-        this.settingPanelElement = AssertUtil.assertExist(document.querySelector<HTMLElement>("#setting-panel"));
+        this.readerElement = assertExists(document.querySelector<HTMLElement>("#reader"));
+        this.contentElement = assertExists(document.querySelector<HTMLElement>("#content"));
+        this.headerElement = assertExists(document.querySelector<HTMLElement>("#header"));
+        this.footerElement = assertExists(document.querySelector<HTMLElement>("#footer"));
+        this.chapterTitleElement = assertExists(document.querySelector<HTMLElement>("#chapter-title"));
+        this.progressRateElement = assertExists(document.querySelector<HTMLElement>("#progress-rate"));
+        this.tocElement = assertExists(document.querySelector<HTMLElement>("#toc"));
+        this.tocPanelElement = assertExists(document.querySelector<HTMLElement>("#toc-panel"));
+        this.settingPanelElement = assertExists(document.querySelector<HTMLElement>("#setting-panel"));
 
         // 控制按钮
-        this.toggleTocPanelElement = AssertUtil.assertExist(document.querySelector<HTMLElement>("#toggle-toc-panel"));
-        this.closeTocPanelElement = AssertUtil.assertExist(document.querySelector<HTMLElement>("#close-toc-panel"));
-        this.toggleFullscreenElement = AssertUtil.assertExist(
-            document.querySelector<HTMLElement>("#toggle-fullscreen")
+        this.toggleTocPanelElement = assertExists(document.querySelector<HTMLElement>("#toggle-toc-panel"));
+        this.closeTocPanelElement = assertExists(document.querySelector<HTMLElement>("#close-toc-panel"));
+        this.toggleFullscreenElement = assertExists(document.querySelector<HTMLImageElement>("#toggle-fullscreen"));
+        this.toggleSettingPanelElement = assertExists(
+            document.querySelector<HTMLImageElement>("#toggle-setting-panel")
         );
-        this.toggleSettingPanelElement = AssertUtil.assertExist(
-            document.querySelector<HTMLElement>("#toggle-setting-panel")
-        );
-        this.closeSettingPanelElement = AssertUtil.assertExist(
-            document.querySelector<HTMLElement>("#close-setting-panel")
-        );
-        this.resetSettingPanelElement = AssertUtil.assertExist(
-            document.querySelector<HTMLElement>("#reset-setting-panel")
-        );
+        this.closeSettingPanelElement = assertExists(document.querySelector<HTMLElement>("#close-setting-panel"));
+        this.resetSettingPanelElement = assertExists(document.querySelector<HTMLElement>("#reset-setting-panel"));
 
         // 设置选项
-        this.themeElement = AssertUtil.assertExist(document.querySelector<HTMLSelectElement>("#theme"));
-        this.themeValueElement = AssertUtil.assertExist(document.querySelector<HTMLElement>("#theme-value"));
-        this.fontSizeElement = AssertUtil.assertExist(document.querySelector<HTMLInputElement>("#font-size"));
-        this.fontSizeValueElement = AssertUtil.assertExist(document.querySelector<HTMLElement>("#font-size-value"));
-        this.widthElement = AssertUtil.assertExist(document.querySelector<HTMLInputElement>("#width"));
-        this.widthValueElement = AssertUtil.assertExist(document.querySelector<HTMLElement>("#width-value"));
-        this.paddingElement = AssertUtil.assertExist(document.querySelector<HTMLInputElement>("#padding"));
-        this.paddingValueElement = AssertUtil.assertExist(document.querySelector<HTMLElement>("#padding-value"));
-        this.lineHeightElement = AssertUtil.assertExist(document.querySelector<HTMLInputElement>("#line-height"));
-        this.lineHeightValueElement = AssertUtil.assertExist(document.querySelector<HTMLElement>("#line-height-value"));
-        this.fontColorElement = AssertUtil.assertExist(document.querySelector<HTMLInputElement>("#font-color"));
-        this.fontColorValueElement = AssertUtil.assertExist(document.querySelector<HTMLElement>("#font-color-value"));
-        this.readerBackgroundColorElement = AssertUtil.assertExist(
+        this.themeElement = assertExists(document.querySelector<HTMLSelectElement>("#theme"));
+        this.themeValueElement = assertExists(document.querySelector<HTMLElement>("#theme-value"));
+        this.fontSizeElement = assertExists(document.querySelector<HTMLInputElement>("#font-size"));
+        this.fontSizeValueElement = assertExists(document.querySelector<HTMLElement>("#font-size-value"));
+        this.widthElement = assertExists(document.querySelector<HTMLInputElement>("#width"));
+        this.widthValueElement = assertExists(document.querySelector<HTMLElement>("#width-value"));
+        this.paddingElement = assertExists(document.querySelector<HTMLInputElement>("#padding"));
+        this.paddingValueElement = assertExists(document.querySelector<HTMLElement>("#padding-value"));
+        this.lineHeightElement = assertExists(document.querySelector<HTMLInputElement>("#line-height"));
+        this.lineHeightValueElement = assertExists(document.querySelector<HTMLElement>("#line-height-value"));
+        this.fontColorElement = assertExists(document.querySelector<HTMLInputElement>("#font-color"));
+        this.fontColorValueElement = assertExists(document.querySelector<HTMLElement>("#font-color-value"));
+        this.readerBackgroundColorElement = assertExists(
             document.querySelector<HTMLInputElement>("#reader-background-color")
         );
-        this.readerBackgroundColorValueElement = AssertUtil.assertExist(
+        this.readerBackgroundColorValueElement = assertExists(
             document.querySelector<HTMLElement>("#reader-background-color-value")
         );
-        this.backgroundColorElement = AssertUtil.assertExist(
-            document.querySelector<HTMLInputElement>("#background-color")
-        );
-        this.backgroundColorValueElement = AssertUtil.assertExist(
-            document.querySelector<HTMLElement>("#background-color-value")
-        );
+        this.backgroundColorElement = assertExists(document.querySelector<HTMLInputElement>("#background-color"));
+        this.backgroundColorValueElement = assertExists(document.querySelector<HTMLElement>("#background-color-value"));
 
         this.overlay = new Overlay({
             containerElement: this.readerElement,
@@ -200,7 +190,7 @@ export default class ReaderUi {
      * @return  当前实例
      */
     restoreReadingProgress(lineIndex: number, lineVisibleRatio: number) {
-        const p: HTMLParagraphElement = AssertUtil.assertExist(
+        const p: HTMLParagraphElement = assertExists(
             this.contentElement.querySelector<HTMLParagraphElement>(`p[data-index="${String(lineIndex)}"]`)
         );
 
@@ -272,9 +262,7 @@ export default class ReaderUi {
      * @return 当前实例
      */
     renderSettingPanel(readerSetting: ReaderSetting) {
-        this.renderTheme(
-            AssertUtil.assertExist(Aura.reader.themes.find((theme) => theme.value === readerSetting.theme))
-        );
+        this.renderTheme(assertExists(Aura.reader.themes.find((theme) => theme.value === readerSetting.theme)));
         this.renderFontSize(readerSetting.fontSize);
         this.renderPageWidth(readerSetting.pageWidth);
         this.renderPagePadding(readerSetting.pagePadding);
@@ -333,18 +321,12 @@ export default class ReaderUi {
      * @return 当前实例
      */
     bindToggleFullscreen() {
-        EventUtil.bind(this.toggleFullscreenElement, "click", async () => {
-            await FullscreenUtil.toggle(document.documentElement)
+        EventUtil.bind(this.toggleFullscreenElement, "click", () => {
+            FullscreenUtil.toggle(document.documentElement)
                 .then(() => {
                     this.dispatchContentScroll();
                 })
-                .catch(async (error: unknown) => {
-                    if (error instanceof Error) {
-                        await this.dialog.alert(error.message);
-                    } else {
-                        await this.dialog.alert("An unknown error occurred while toggling fullscreen.");
-                    }
-                });
+                .catch(async () => await this.dialog.alert("当前浏览器不支持全屏功能"));
         });
         return this;
     }
@@ -376,12 +358,8 @@ export default class ReaderUi {
      * @param  handler - 事件处理函数
      * @return 当前实例
      */
-    bindResetSetting(handler: (readerSetting: ReaderSetting) => Promise<void>) {
-        EventUtil.bind(this.resetSettingPanelElement, "click", async () => {
-            const newSetting = new ReaderSetting(Aura.reader.setting);
-            this.renderSettingPanel(newSetting);
-            await handler(newSetting);
-        });
+    bindResetSetting(handler: () => Promise<void>) {
+        EventUtil.bind(this.resetSettingPanelElement, "click", handler);
         return this;
     }
 
@@ -392,7 +370,7 @@ export default class ReaderUi {
      */
     bindThemeChange(handler: (theme: ReaderTheme) => Promise<void>) {
         EventUtil.bind(this.themeElement, "change", async (_, target) => {
-            const theme = AssertUtil.assertExist(Aura.reader.themes.find((item) => item.value === target.value));
+            const theme = assertExists(Aura.reader.themes.find((item) => item.value === target.value));
             this.renderTheme(theme)
                 .renderFontColor(theme.fontColor)
                 .renderBackgroundColor(theme.backgroundColor)
@@ -523,9 +501,9 @@ export default class ReaderUi {
             (() => {
                 let timer: number;
                 return (_, target: HTMLElement) => {
-                    if (timer) clearTimeout(timer);
-                    timer = window.setTimeout(
-                        () => async () => {
+                    if (timer) window.clearTimeout(timer);
+                    timer = window.setTimeout(() => {
+                        void (async () => {
                             // 滚动容器可视区域
                             const cRect = target.getBoundingClientRect();
 
@@ -548,9 +526,8 @@ export default class ReaderUi {
 
                             console.log("当前章节最上方可见的行: ", line);
                             await handler(line.index, line.ratio);
-                        },
-                        300
-                    );
+                        })();
+                    }, 300);
                 };
             })()
         );
@@ -568,16 +545,15 @@ export default class ReaderUi {
                 let timer: number;
                 return (entries) => {
                     if (timer) clearTimeout(timer);
-                    timer = window.setTimeout(
-                        () => async () => {
+                    timer = window.setTimeout(() => {
+                        void (async () => {
                             // reader
-                            const entry = AssertUtil.assertExist(entries[0]);
+                            const entry = assertExists(entries[0]);
                             const width = entry.contentRect.width;
                             console.log("检测到页面宽度变化：", width);
                             await handler(width);
-                        },
-                        300
-                    );
+                        })();
+                    }, 300);
                 };
             })()
         ).observe(this.readerElement);

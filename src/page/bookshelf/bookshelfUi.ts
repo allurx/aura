@@ -47,4 +47,13 @@ export default class BookshelfUi {
     async confirmDialog(content: Node | string, options: object = {}): Promise<boolean> {
         return await this.dialog.confirm(content, options);
     }
+
+    /**
+     * 显示警告对话框
+     * @param  content 正文内容
+     * @param options 选项
+     */
+    async alertDialog(content: Node | string, options: object = {}): Promise<void> {
+        await this.dialog.alert(content, options);
+    }
 }

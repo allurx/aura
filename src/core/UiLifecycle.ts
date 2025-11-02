@@ -14,21 +14,15 @@
  * limitations under the License.
  */
 
-import BaseModel from "./baseModel.js";
-
 /**
- * 书籍文件
+ * ui生命周期接口
  * @author allurx
  */
-export default class BookFile extends BaseModel {
-    file!: File;
-    hash!: string;
-
-    /**
-     * @param  data - 初始化书籍文件所需的所有字段
-     */
-    constructor(data: Partial<BookFile>) {
-        super();
-        Object.assign(this, data);
-    }
+export default interface UiLifecycle {
+    /** 初始化 */
+    init(): void;
+    /** 绑定事件 */
+    bindEvent(): void;
+    /** 销毁 */
+    destroy(): void;
 }

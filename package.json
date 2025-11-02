@@ -5,7 +5,7 @@
     "scripts": {
         "lint": "eslint src --ext .ts",
         "build": "npm run lint && vite build",
-        "dev": "npm run build && vite --open page/bookshelf/bookshelf.html",
+        "dev": "vite --open page/bookshelf/bookshelf.html",
         "preview": "npm run build && vite preview --open page/bookshelf/bookshelf.html"
     },
     "devDependencies": {
@@ -16,5 +16,12 @@
         "vite": "7.1.12",
         "vite-plugin-html": "3.2.2",
         "vite-plugin-javascript-obfuscator": "3.1.0"
+    },
+    "prettier": {
+        "tabWidth": 4,
+        "printWidth": 120,
+        "semi": true,
+        "singleQuote": false,
+        "trailingComma": "es5"
     }
 }
