@@ -25,23 +25,23 @@ import BookFile from "./file.model";
 export default class FileService {
     private readonly repository: FileRepository;
 
-    constructor() {
+    public constructor() {
         this.repository = new FileRepository();
     }
 
-    async add(bookFile: BookFile, transaction: IDBTransaction) {
+    public async add(bookFile: BookFile, transaction: IDBTransaction) {
         return await this.repository.add(bookFile, transaction);
     }
 
-    async clear(transaction: IDBTransaction) {
+    public async clear(transaction: IDBTransaction) {
         await this.repository.clear(transaction);
     }
 
-    async getByHash(hash: string, transaction: IDBTransaction) {
+    public async getByHash(hash: string, transaction: IDBTransaction) {
         return await this.repository.getByIndex(fileStore.indexes.ukHash.name, hash, transaction);
     }
 
-    async deleteById(fileId: string, transaction: IDBTransaction) {
+    public async deleteById(fileId: string, transaction: IDBTransaction) {
         await this.repository.deleteByKey(fileId, transaction);
     }
 }

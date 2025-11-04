@@ -22,10 +22,10 @@ import { assertExists } from "../../../core/util/assert.util";
  * @author allurx
  */
 export default class HeaderUi {
-    headerTitleElement: HTMLSpanElement;
-    clearBookshelfElement: HTMLSpanElement;
+    private readonly headerTitleElement: HTMLSpanElement;
+    private readonly clearBookshelfElement: HTMLSpanElement;
 
-    constructor() {
+    public constructor() {
         this.headerTitleElement = assertExists(document.querySelector<HTMLSpanElement>("#title"));
         this.clearBookshelfElement = assertExists(document.querySelector<HTMLSpanElement>("#clear-btn"));
     }
@@ -35,7 +35,7 @@ export default class HeaderUi {
      * @param  handler - 处理函数
      * @returns  返回当前实例
      */
-    bindClearBookshelfClick(handler: () => Promise<void>) {
+    public bindClearBookshelfClick(handler: () => Promise<void>) {
         EventUtil.bind(this.clearBookshelfElement, "click", handler);
         return this;
     }
@@ -44,7 +44,7 @@ export default class HeaderUi {
      * 绑定头部标题点击事件
      * @returns 返回当前实例
      */
-    bindHeaderTitleClick(handler: () => void) {
+    public bindHeaderTitleClick(handler: () => void) {
         EventUtil.bind(this.headerTitleElement, "click", handler);
         return this;
     }

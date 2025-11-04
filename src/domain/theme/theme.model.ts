@@ -16,19 +16,20 @@
 
 import BaseModel from "../base.model";
 import { ClassFields } from "../../core/type/common.type";
+import ObjectUtil from "../../core/util/object.util";
 
 /**
  * 阅主题
  * @author allurx
  */
 export default class Theme extends BaseModel {
-    readonly name!: string;
-    readonly fontColor!: string;
-    readonly readerBackgroundColor!: string;
-    readonly backgroundColor!: string;
+    public readonly name!: string;
+    public readonly fontColor!: string;
+    public readonly readerBackgroundColor!: string;
+    public readonly backgroundColor!: string;
 
-    constructor(data: ClassFields<Theme>) {
+    public constructor(data: ClassFields<Theme>) {
         super();
-        Object.assign(this, data);
+        ObjectUtil.assignOwnProperties<Theme>(this, data);
     }
 }

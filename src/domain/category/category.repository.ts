@@ -23,7 +23,7 @@ import { categoryStore } from "../../core/database/database-definition";
  * @author allurx
  */
 export default class CategoryRepository extends BaseRepository<Category> {
-    constructor() {
+    public constructor() {
         super(categoryStore, Category);
     }
 }

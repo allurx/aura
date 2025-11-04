@@ -27,11 +27,11 @@ import { assertExists } from "../../core/util/assert.util";
  * @author allurx
  */
 export default class ReaderUi {
-    private element: HTMLElement;
-    private overlay: Overlay;
-    private dialog: Dialog;
+    private readonly element: HTMLElement;
+    private readonly overlay: Overlay;
+    private readonly dialog: Dialog;
 
-    constructor() {
+    public constructor() {
         this.element = assertExists(document.querySelector<HTMLElement>("#reader"));
         this.dialog = new Dialog();
         this.overlay = new Overlay({
@@ -40,17 +40,17 @@ export default class ReaderUi {
         });
     }
 
-    renderWidth(width: number) {
+    public renderWidth(width: number) {
         this.element.style.width = String(width) + "px";
         return this;
     }
 
-    renderFontColor(fontColor: string) {
+    public renderFontColor(fontColor: string) {
         this.element.style.color = fontColor;
         return this;
     }
 
-    renderBackgroundColor(backgroundColor: string) {
+    public renderBackgroundColor(backgroundColor: string) {
         this.element.style.backgroundColor = backgroundColor;
         return this;
     }
@@ -58,7 +58,7 @@ export default class ReaderUi {
     /**
      * 显示阅读器
      */
-    show() {
+    public show() {
         this.element.classList.add("visible");
     }
 
@@ -66,7 +66,7 @@ export default class ReaderUi {
      * 在执行处理函数时显示遮罩
      * @param handler - 处理函数
      */
-    async showOverlayWhile(handler: () => Promise<void>) {
+    public async showOverlayWhile(handler: () => Promise<void>) {
         await this.overlay.showWhile(handler);
     }
 
@@ -76,7 +76,7 @@ export default class ReaderUi {
      * @param options 选项
      * @returns  用户是否确认
      */
-    async confirmDialog(content: Node | string, options: object = {}): Promise<boolean> {
+    public async confirmDialog(content: Node | string, options: object = {}): Promise<boolean> {
         return await this.dialog.confirm(content, options);
     }
 
@@ -85,7 +85,7 @@ export default class ReaderUi {
      * @param  content 正文内容
      * @param options 选项
      */
-    async alertDialog(content: Node | string, options: object = {}): Promise<boolean> {
+    public async alertDialog(content: Node | string, options: object = {}): Promise<boolean> {
         return await this.dialog.alert(content, options);
     }
 
@@ -94,7 +94,7 @@ export default class ReaderUi {
      * @param  handler - 事件处理函数
      * @return 当前实例
      */
-    observeReaderResize(handler: (width: number) => Promise<void>) {
+    public observeReaderResize(handler: (width: number) => Promise<void>) {
         new ResizeObserver(
             (() => {
                 let timer: number;

@@ -25,7 +25,7 @@ export type NonEmptyArray<T> = [T, ...T[]];
 /**
  * ClassFields<T>
  * 提取类T的字段类型(排除方法)
- * 注意(...args: never[]) => unknown在某些边界情况下推断不够严格。
+ * 注意(...args: unknown[]) => unknown在某些边界情况下推断不够严格。
  * 不使用Function类型,避免ESLint报警
  * @link https://typescript-eslint.io/rules/no-unsafe-function-type/
  */

@@ -23,7 +23,7 @@ import { chapterStore } from "../../core/database/database-definition";
  * @author allurx
  */
 export default class ChapterRepository extends BaseRepository<Chapter> {
-    constructor() {
+    public constructor() {
         super(chapterStore, Chapter);
     }
 }

@@ -16,21 +16,22 @@
 
 import BaseModel from "../base.model";
 import { ClassFields } from "../../core/type/common.type";
+import ObjectUtil from "../../core/util/object.util";
 
 /**
  * 阅读进度
  * @author allurx
  */
 export default class ReadingProgress extends BaseModel {
-    readonly bookId!: string;
-    readonly chapterIndex!: number;
-    readonly lineIndex!: number;
+    public readonly bookId!: string;
+    public readonly chapterIndex!: number;
+    public readonly lineIndex!: number;
 
     // 行元素可见比例 (0 ~ 1),用于恢复阅读时滚动到精确位置
-    readonly lineVisibleRatio!: number;
+    public readonly lineVisibleRatio!: number;
 
-    constructor(data: ClassFields<ReadingProgress>) {
+    public constructor(data: ClassFields<ReadingProgress>) {
         super();
-        Object.assign(this, data);
+        ObjectUtil.assignOwnProperties<ReadingProgress>(this, data);
     }
 }

@@ -26,7 +26,7 @@ import SettingRepository from "./setting.repository";
 export default class SettingService {
     private readonly repository: SettingRepository;
 
-    constructor() {
+    public constructor() {
         this.repository = new SettingRepository();
     }
 
@@ -35,7 +35,7 @@ export default class SettingService {
      * @param setting - 设置
      * @param transaction - 事务对象
      */
-    async add(setting: object, transaction: IDBTransaction): Promise<void> {
+    public async add(setting: object, transaction: IDBTransaction): Promise<void> {
         await this.repository.add(setting, transaction);
     }
 
@@ -45,7 +45,7 @@ export default class SettingService {
      * @param transaction - 事务对象
      * @return {Promise<void>}
      */
-    async update(setting: object, transaction: IDBTransaction): Promise<void> {
+    public async update(setting: object, transaction: IDBTransaction): Promise<void> {
         await this.repository.put(setting, transaction);
     }
 
@@ -56,7 +56,7 @@ export default class SettingService {
      * @param constructor - 设置构造函数
      * @return  设置
      */
-    async get<T>(name: string, constructor: new (data: T) => T, transaction: IDBTransaction): Promise<T> {
+    public async get<T>(name: string, constructor: new (data: T) => T, transaction: IDBTransaction): Promise<T> {
         const setting = await this.repository.getByIndex(settingStore.indexes.ukName.name, name, transaction);
         return new constructor(assertExists(setting) as T);
     }
@@ -67,7 +67,7 @@ export default class SettingService {
      * @param transaction - 事务对象
      * @return 设置数量
      */
-    async count(settingEnum: SettingEnum, transaction: IDBTransaction): Promise<number> {
+    public async count(settingEnum: SettingEnum, transaction: IDBTransaction): Promise<number> {
         return this.repository.countByIndex(settingStore.indexes.ukName.name, settingEnum, transaction);
     }
 }

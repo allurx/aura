@@ -23,25 +23,25 @@ import ReaderSetting from "../../../domain/setting/reader-setting.model";
  * @author allurx
  */
 export default class SettingUi {
-    private settingPanelElement: HTMLElement;
-    private closeSettingPanelElement: HTMLElement;
-    private resetSettingPanelElement: HTMLElement;
-    private fontSizeElement: HTMLInputElement;
-    private fontSizeValueElement: HTMLElement;
-    private widthElement: HTMLInputElement;
-    private widthValueElement: HTMLElement;
-    private paddingElement: HTMLInputElement;
-    private paddingValueElement: HTMLElement;
-    private lineHeightElement: HTMLInputElement;
-    private lineHeightValueElement: HTMLElement;
-    private fontColorElement: HTMLInputElement;
-    private fontColorValueElement: HTMLElement;
-    private readerBackgroundColorElement: HTMLInputElement;
-    private readerBackgroundColorValueElement: HTMLElement;
-    private backgroundColorElement: HTMLInputElement;
-    private backgroundColorValueElement: HTMLElement;
+    private readonly settingPanelElement: HTMLElement;
+    private readonly closeSettingPanelElement: HTMLElement;
+    private readonly resetSettingPanelElement: HTMLElement;
+    private readonly fontSizeElement: HTMLInputElement;
+    private readonly fontSizeValueElement: HTMLElement;
+    private readonly widthElement: HTMLInputElement;
+    private readonly widthValueElement: HTMLElement;
+    private readonly paddingElement: HTMLInputElement;
+    private readonly paddingValueElement: HTMLElement;
+    private readonly lineHeightElement: HTMLInputElement;
+    private readonly lineHeightValueElement: HTMLElement;
+    private readonly fontColorElement: HTMLInputElement;
+    private readonly fontColorValueElement: HTMLElement;
+    private readonly readerBackgroundColorElement: HTMLInputElement;
+    private readonly readerBackgroundColorValueElement: HTMLElement;
+    private readonly backgroundColorElement: HTMLInputElement;
+    private readonly backgroundColorValueElement: HTMLElement;
 
-    constructor() {
+    public constructor() {
         // 面板元素
         this.settingPanelElement = assertExists(document.querySelector<HTMLElement>("#setting-panel"));
 
@@ -74,7 +74,7 @@ export default class SettingUi {
      * 切换设置面板显示状态
      * @return 当前实例
      */
-    toggleSettingPanel() {
+    public toggleSettingPanel() {
         this.settingPanelElement.hidden = !this.settingPanelElement.hidden;
         return this;
     }
@@ -84,7 +84,7 @@ export default class SettingUi {
      * @param  readerSetting - 阅读器设置
      * @return 当前实例
      */
-    render(readerSetting: ReaderSetting) {
+    public render(readerSetting: ReaderSetting) {
         this.renderFontSize(readerSetting.fontSize);
         this.renderPageWidth(readerSetting.pageWidth);
         this.renderPagePadding(readerSetting.pagePadding);
@@ -99,7 +99,7 @@ export default class SettingUi {
      * 绑定设置面板关闭事件
      * @return 当前实例
      */
-    bindCloseSettingPanel() {
+    public bindCloseSettingPanel() {
         EventUtil.bind(this.closeSettingPanelElement, "click", () => {
             this.settingPanelElement.hidden = true;
         });
@@ -111,7 +111,7 @@ export default class SettingUi {
      * @param  handler - 事件处理函数
      * @return 当前实例
      */
-    bindResetSetting(handler: () => Promise<void>) {
+    public bindResetSetting(handler: () => Promise<void>) {
         EventUtil.bind(this.resetSettingPanelElement, "click", handler);
         return this;
     }
@@ -121,7 +121,7 @@ export default class SettingUi {
      * @param  handler - 事件处理函数
      * @return  当前实例
      */
-    bindFontSizeChange(handler: (fontSize: number) => Promise<void>) {
+    public bindFontSizeChange(handler: (fontSize: number) => Promise<void>) {
         EventUtil.bind(this.fontSizeElement, "input", async (_, target) => {
             const fontSize = target.value;
             this.renderFontSize(Number(fontSize));
@@ -135,7 +135,7 @@ export default class SettingUi {
      * @param  handler - 事件处理函数
      * @return 当前实例
      */
-    bindWidthChange(handler: (width: number) => Promise<void>) {
+    public bindWidthChange(handler: (width: number) => Promise<void>) {
         EventUtil.bind(this.widthElement, "input", async (_, target) => {
             // 计算应用的新宽度,取屏幕可见宽度和新宽度的较小值
             const pageWidth = Math.min(Math.round(Number(target.value)), window.innerWidth);
@@ -150,7 +150,7 @@ export default class SettingUi {
      * @param  handler - 事件处理函数
      * @return  当前实例
      */
-    bindPaddingChange(handler: (padding: number) => Promise<void>) {
+    public bindPaddingChange(handler: (padding: number) => Promise<void>) {
         EventUtil.bind(this.paddingElement, "input", async (_, target) => {
             const pagePadding = Number(target.value);
             this.renderPagePadding(pagePadding);
@@ -164,7 +164,7 @@ export default class SettingUi {
      * @param  handler - 事件处理函数
      * @return 当前实例
      */
-    bindLineHeightChange(handler: (lineHeight: number) => Promise<void>) {
+    public bindLineHeightChange(handler: (lineHeight: number) => Promise<void>) {
         EventUtil.bind(this.lineHeightElement, "input", async (_, target) => {
             const lineHeight = Number(target.value);
             this.renderLineHeight(lineHeight);
@@ -178,7 +178,7 @@ export default class SettingUi {
      * @param handler - 事件处理函数
      * @return 当前实例
      */
-    bindFontColorChange(handler: (fontColor: string) => Promise<void>) {
+    public bindFontColorChange(handler: (fontColor: string) => Promise<void>) {
         EventUtil.bind(this.fontColorElement, "input", async (_, target) => {
             const fontColor = target.value;
             this.renderFontColor(fontColor);
@@ -192,7 +192,7 @@ export default class SettingUi {
      * @param handler - 事件处理函数
      * @return 当前实例
      */
-    bindReaderBackgroundColorChange(handler: (backgroundColor: string) => Promise<void>) {
+    public bindReaderBackgroundColorChange(handler: (backgroundColor: string) => Promise<void>) {
         EventUtil.bind(this.readerBackgroundColorElement, "input", async (_, target) => {
             const readerBackgroundColor = target.value;
             this.renderReaderBackgroundColor(readerBackgroundColor);
@@ -206,7 +206,7 @@ export default class SettingUi {
      * @param handler - 事件处理函数
      * @return 当前实例
      */
-    bindBackgroundColorChange(handler: (backgroundColor: string) => Promise<void>) {
+    public bindBackgroundColorChange(handler: (backgroundColor: string) => Promise<void>) {
         EventUtil.bind(this.backgroundColorElement, "input", async (_, target) => {
             const backgroundColor = target.value;
             this.renderBackgroundColor(backgroundColor);

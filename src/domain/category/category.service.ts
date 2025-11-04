@@ -23,7 +23,7 @@ import Category from "./category.model";
 export default class CategoryService {
     private readonly repository: CategoryRepository;
 
-    constructor() {
+    public constructor() {
         this.repository = new CategoryRepository();
     }
 
@@ -32,7 +32,7 @@ export default class CategoryService {
      * @param categories 分类列表
      * @param transaction 事务
      */
-    async addAll(categories: Category[], transaction: IDBTransaction) {
+    public async addAll(categories: Category[], transaction: IDBTransaction) {
         return await this.repository.addAll(categories, transaction);
     }
 
@@ -40,7 +40,7 @@ export default class CategoryService {
      * 获取所有分类
      * @param transaction 事务
      */
-    async getAll(transaction: IDBTransaction) {
+    public async getAll(transaction: IDBTransaction) {
         return await this.repository.getAll(transaction);
     }
 
@@ -48,7 +48,7 @@ export default class CategoryService {
      * 统计分类数量
      * @param transaction 事务
      */
-    async count(transaction: IDBTransaction) {
+    public async count(transaction: IDBTransaction) {
         return await this.repository.count(transaction);
     }
 }

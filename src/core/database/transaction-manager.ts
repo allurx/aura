@@ -23,7 +23,7 @@ import { DatabaseModeEnum } from "../constant/database-mode.enum";
  * @author allurx
  */
 export default class TransactionManager {
-    private static DATABASE = new Database(
+    private static readonly DATABASE = new Database(
         DatabaseDefinition.name,
         DatabaseDefinition.version,
         DatabaseDefinition.stores
@@ -39,7 +39,7 @@ export default class TransactionManager {
      * @param  operation - 一个接收IDBTransaction参数并返回Promise的函数, 用于执行具体的数据库操作
      * @returns  解析为operation结果的Promise
      */
-    static async runTransaction<T>(
+    public static async runTransaction<T>(
         storeNames: string | string[],
         mode: DatabaseModeEnum,
         operation: (transaction: IDBTransaction) => Promise<T>

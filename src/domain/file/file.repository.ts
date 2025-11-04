@@ -23,7 +23,7 @@ import { fileStore } from "../../core/database/database-definition";
  * @author allurx
  */
 export default class FileRepository extends BaseRepository<BookFile> {
-    constructor() {
+    public constructor() {
         super(fileStore, BookFile);
     }
 }

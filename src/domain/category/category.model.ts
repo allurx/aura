@@ -16,16 +16,17 @@
 
 import BaseModel from "../base.model";
 import { ClassFields } from "../../core/type/common.type";
+import ObjectUtil from "../../core/util/object.util";
 
 /**
  * 分类
  * @author allurx
  */
 export default class Category extends BaseModel {
-    readonly name!: string;
+    public readonly name!: string;
 
-    constructor(data: ClassFields<Category>) {
+    public constructor(data: ClassFields<Category>) {
         super();
-        Object.assign(this, data);
+        ObjectUtil.assignOwnProperties<Category>(this, data);
     }
 }

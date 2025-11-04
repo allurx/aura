@@ -25,7 +25,7 @@ import { tocStore } from "../../core/database/database-definition";
 export default class TocService {
     private readonly repository: TocRepository;
 
-    constructor() {
+    public constructor() {
         this.repository = new TocRepository();
     }
 
@@ -34,7 +34,7 @@ export default class TocService {
      * @param  toc - 目录实例
      * @param  transaction - 事务对象
      */
-    async update(toc: Toc, transaction: IDBTransaction) {
+    public async update(toc: Toc, transaction: IDBTransaction) {
         return await this.repository.put(toc, transaction);
     }
 
@@ -43,7 +43,7 @@ export default class TocService {
      * @param  fileId - 文件id
      * @param  transaction - 事务对象
      */
-    async deleteByFileId(fileId: string, transaction: IDBTransaction) {
+    public async deleteByFileId(fileId: string, transaction: IDBTransaction) {
         await this.repository.deleteByIndex(tocStore.indexes.ukFileId.name, fileId, transaction);
     }
 
@@ -51,7 +51,7 @@ export default class TocService {
      * 删除所有目录
      * @param  transaction - 事务对象
      */
-    async clear(transaction: IDBTransaction) {
+    public async clear(transaction: IDBTransaction) {
         await this.repository.clear(transaction);
     }
 
@@ -60,7 +60,7 @@ export default class TocService {
      * @param  fileId - 文件id
      * @param  transaction - 事务对象
      */
-    async getByFileId(fileId: string, transaction: IDBTransaction) {
+    public async getByFileId(fileId: string, transaction: IDBTransaction) {
         return await this.repository.getByIndex(tocStore.indexes.ukFileId.name, fileId, transaction);
     }
 }

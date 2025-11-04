@@ -39,17 +39,17 @@ import ReaderState from "./reader.state";
  * @author allurx
  */
 export default class ReaderService {
-    private bookService: BookService;
-    private chapterService: ChapterService;
-    private readingProgressService: ReadingProgressService;
-    private tableOfContentsService: TocService;
-    private settingService: SettingService;
+    private readonly bookService: BookService;
+    private readonly chapterService: ChapterService;
+    private readonly readingProgressService: ReadingProgressService;
+    private readonly tocService: TocService;
+    private readonly settingService: SettingService;
 
-    constructor() {
+    public constructor() {
         this.readingProgressService = new ReadingProgressService();
         this.bookService = new BookService();
         this.chapterService = new ChapterService();
-        this.tableOfContentsService = new TocService();
+        this.tocService = new TocService();
         this.settingService = new SettingService();
     }
 
@@ -57,7 +57,7 @@ export default class ReaderService {
      * 初始化阅读器
      * @param bookId - 书籍id
      */
-    async init(bookId: string) {
+    public async init(bookId: string) {
         // 加载数据
         return await TransactionManager.runTransaction(
             [bookStore.name, tocStore.name, chapterStore.name, readingProgressStore.name, settingStore.name],
@@ -70,7 +70,7 @@ export default class ReaderService {
 
                 // 并行加载数据
                 const [toc, readerSetting, defaultReaderSetting, { readingProgress, chapter }] = await Promise.all([
-                    this.tableOfContentsService.getByFileId(book.fileId, transaction),
+                    this.tocService.getByFileId(book.fileId, transaction),
                     this.settingService.get(SettingEnum.READER_SETTING, ReaderSetting, transaction),
                     this.settingService.get(SettingEnum.DEFAULT_READER_SETTING, ReaderSetting, transaction),
                     (async () => {
@@ -104,7 +104,7 @@ export default class ReaderService {
      * 更新阅读进度
      * @param readingProgress - 阅读进度对象
      */
-    async updateReadingProgress(readingProgress: ReadingProgress) {
+    public async updateReadingProgress(readingProgress: ReadingProgress) {
         await TransactionManager.runTransaction(
             readingProgressStore.name,
             DatabaseModeEnum.READ_WRITE,
@@ -118,7 +118,7 @@ export default class ReaderService {
      * 更新阅读器设置并保存
      * @param readerSetting - 阅读器设置对象
      */
-    async updateReaderSetting(readerSetting: ReaderSetting) {
+    public async updateReaderSetting(readerSetting: ReaderSetting) {
         await TransactionManager.runTransaction(settingStore.name, DatabaseModeEnum.READ_WRITE, async (transaction) => {
             await this.settingService.update(readerSetting, transaction);
         });
@@ -129,7 +129,7 @@ export default class ReaderService {
      * @param fileId - 书籍文件id
      * @param chapterIndex - 章节索引
      */
-    async getChapter(fileId: string, chapterIndex: number) {
+    public async getChapter(fileId: string, chapterIndex: number) {
         return await TransactionManager.runTransaction(
             chapterStore.name,
             DatabaseModeEnum.READ_ONLY,

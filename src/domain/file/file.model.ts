@@ -16,17 +16,18 @@
 
 import BaseModel from "../base.model";
 import { ClassFields } from "../../core/type/common.type";
+import ObjectUtil from "../../core/util/object.util";
 
 /**
  * 书籍文件
  * @author allurx
  */
 export default class BookFile extends BaseModel {
-    readonly file!: File;
-    readonly hash!: string;
+    public readonly file!: File;
+    public readonly hash!: string;
 
-    constructor(data: ClassFields<BookFile>) {
+    public constructor(data: ClassFields<BookFile>) {
         super();
-        Object.assign(this, data);
+        ObjectUtil.assignOwnProperties<BookFile>(this, data);
     }
 }

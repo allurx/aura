@@ -20,7 +20,7 @@ import Category from "../../../domain/category/category.model";
  * @author allurx
  */
 export default class CategorySeed {
-    static categories = [
+    public static readonly categories = [
         new Category({ id: crypto.randomUUID(), name: "玄幻" }),
         new Category({ id: crypto.randomUUID(), name: "奇幻" }),
         new Category({ id: crypto.randomUUID(), name: "武侠" }),

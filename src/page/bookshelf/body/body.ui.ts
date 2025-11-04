@@ -23,10 +23,10 @@ import { assertExists } from "../../../core/util/assert.util";
  * @author allurx
  */
 export default class MainUi {
-    bookListElement: HTMLDivElement;
-    bookInputElement: HTMLInputElement;
+    private readonly bookListElement: HTMLDivElement;
+    private readonly bookInputElement: HTMLInputElement;
 
-    constructor() {
+    public constructor() {
         this.bookListElement = assertExists(document.querySelector<HTMLDivElement>("#book-list"));
         this.bookInputElement = assertExists(document.querySelector<HTMLInputElement>("#book-input"));
     }
@@ -36,7 +36,7 @@ export default class MainUi {
      * @param book - 书籍实例
      * @returns  返回当前实例
      */
-    renderBookElement(book: Book, index: number) {
+    public renderBookElement(book: Book, index: number) {
         this.bookListElement.insertAdjacentHTML("beforeend", book.template());
         const bookElement = this.bookListElement.lastElementChild;
         // 创建顺序延迟,形成"瀑布入场"动画效果
@@ -48,7 +48,7 @@ export default class MainUi {
      * 清空书籍输入框, 以支持重复上传同一文件
      * @returns 返回当前实例
      */
-    clearBookInput() {
+    public clearBookInput() {
         this.bookInputElement.value = "";
         return this;
     }
@@ -57,7 +57,7 @@ export default class MainUi {
      * 清空书籍列表元素
      * @returns 返回当前实例
      */
-    removeBookElements() {
+    public removeBookElements() {
         this.bookListElement.querySelectorAll(".book").forEach((element) => {
             element.remove();
         });
@@ -69,7 +69,7 @@ export default class MainUi {
      * @param  handler - 处理函数
      * @returns 返回当前实例
      */
-    bindBookInputChange(handler: (files: FileList) => Promise<void>) {
+    public bindBookInputChange(handler: (files: FileList) => Promise<void>) {
         EventUtil.bind(this.bookInputElement, "change", async () => {
             await handler(assertExists(this.bookInputElement.files));
         });
@@ -81,7 +81,7 @@ export default class MainUi {
      * @param handler - 处理函数
      * @returns 返回当前实例
      */
-    bindBookBodyClick(handler: (bookId: string) => void) {
+    public bindBookBodyClick(handler: (bookId: string) => void) {
         EventUtil.delegate(this.bookListElement, ".book-body", "click", (_, target) => {
             handler(assertExists(target.parentElement?.dataset["id"]));
         });
@@ -93,7 +93,7 @@ export default class MainUi {
      * @param handler - 处理函数
      * @returns 返回当前实例
      */
-    bindDeleteBookClick(handler: (bookId: string) => Promise<void>) {
+    public bindDeleteBookClick(handler: (bookId: string) => Promise<void>) {
         EventUtil.delegate(this.bookListElement, ".book-delete-btn", "click", async (_, target) => {
             await handler(assertExists(target.closest<HTMLElement>(".book")?.dataset["id"]));
         });

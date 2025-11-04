@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
-import Book from "./book.model";
-import BaseRepository from "../base.repository";
-import { bookStore } from "../../core/database/database-definition";
-
 /**
- * 书籍数据访问对象
+ * 对象工具类
  * @author allurx
  */
-export default class BookRepository extends BaseRepository<Book> {
-    public constructor() {
-        super(bookStore, Book);
+export default class ObjectUtil {
+    /**
+     * 只赋值对象自身存在的属性
+     * @param target - 目标对象
+     * @param source - 源对象
+     */
+    public static assignOwnProperties<T extends object>(target: T, source: Partial<T>) {
+        (Object.keys(target) as (keyof T)[]).forEach((key) => {
+            const value = source[key];
+            if (value !== undefined) target[key] = value;
+        });
     }
 }

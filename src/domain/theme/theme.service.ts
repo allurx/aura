@@ -23,7 +23,7 @@ import Theme from "./theme.model";
  */
 export default class ThemeService {
     private readonly repository: ThemeRepository;
-    constructor() {
+    public constructor() {
         this.repository = new ThemeRepository();
     }
 
@@ -32,7 +32,7 @@ export default class ThemeService {
      * @param themes 主题列表
      * @param transaction 事务
      */
-    async addAll(themes: Theme[], transaction: IDBTransaction) {
+    public async addAll(themes: Theme[], transaction: IDBTransaction) {
         await this.repository.addAll(themes, transaction);
     }
 
@@ -40,7 +40,7 @@ export default class ThemeService {
      * 获取所有主题
      * @param transaction 事务
      */
-    async getAll(transaction: IDBTransaction) {
+    public async getAll(transaction: IDBTransaction) {
         return await this.repository.getAll(transaction);
     }
 
@@ -48,7 +48,7 @@ export default class ThemeService {
      * 统计主题数量
      * @param transaction 事务
      */
-    async count(transaction: IDBTransaction) {
+    public async count(transaction: IDBTransaction) {
         return await this.repository.count(transaction);
     }
 }

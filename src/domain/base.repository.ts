@@ -25,86 +25,86 @@ export default abstract class BaseRepository<T> {
     private readonly storeDefinition: StoreDefinition;
     private readonly modelConstructor: new (data: T) => T;
 
-    constructor(storeDefinition: StoreDefinition, modelConstructor: new (data: T) => T) {
+    protected constructor(storeDefinition: StoreDefinition, modelConstructor: new (data: T) => T) {
         this.storeDefinition = storeDefinition;
         this.modelConstructor = modelConstructor;
     }
 
-    get storeName() {
-        return this.storeDefinition.name;
-    }
-
-    async add(data: T, transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName);
+    public async add(data: T, transaction: IDBTransaction) {
+        const store = transaction.objectStore(this.storeName());
         return await this.requestPromise(store.add(data));
     }
 
-    async addAll(dataArray: T[], transaction: IDBTransaction) {
+    public async addAll(dataArray: T[], transaction: IDBTransaction) {
         return await Promise.all(dataArray.map((data) => this.add(data, transaction)));
     }
 
-    async put(data: T, transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName);
+    public async put(data: T, transaction: IDBTransaction) {
+        const store = transaction.objectStore(this.storeName());
         return await this.requestPromise(store.put(data));
     }
 
-    async putAll(dataArray: T[], transaction: IDBTransaction) {
+    public async putAll(dataArray: T[], transaction: IDBTransaction) {
         return await Promise.all(dataArray.map((data) => this.put(data, transaction)));
     }
 
-    async getByKey(key: IDBValidKey, transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName);
+    public async getByKey(key: IDBValidKey, transaction: IDBTransaction) {
+        const store = transaction.objectStore(this.storeName());
         const result = await this.requestPromise<unknown>(store.get(key));
         return result ? this.createModel(result as Required<T>) : null;
     }
 
-    async getByIndex(indexName: string, indexValue: IDBValidKey, transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName);
+    public async getByIndex(indexName: string, indexValue: IDBValidKey, transaction: IDBTransaction) {
+        const store = transaction.objectStore(this.storeName());
         const result = await this.requestPromise<unknown>(store.index(indexName).get(indexValue));
         return result ? this.createModel(result as Required<T>) : null;
     }
 
-    async getAll(transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName);
+    public async getAll(transaction: IDBTransaction) {
+        const store = transaction.objectStore(this.storeName());
         const result = await this.requestPromise<unknown[]>(store.getAll());
         return result.map((item) => this.createModel(item as Required<T>));
     }
 
-    async getAllByIndex(indexName: string, indexValue: IDBValidKey, transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName);
+    public async getAllByIndex(indexName: string, indexValue: IDBValidKey, transaction: IDBTransaction) {
+        const store = transaction.objectStore(this.storeName());
         const result = await this.requestPromise(store.index(indexName).getAll(indexValue));
         return result.map((item) => this.createModel(item as Required<T>));
     }
 
-    async deleteByKey(key: IDBValidKey, transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName);
+    public async deleteByKey(key: IDBValidKey, transaction: IDBTransaction) {
+        const store = transaction.objectStore(this.storeName());
         await this.requestPromise(store.delete(key));
     }
 
-    async deleteByIndex(indexName: string, indexValue: IDBValidKey, transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName);
+    public async deleteByIndex(indexName: string, indexValue: IDBValidKey, transaction: IDBTransaction) {
+        const store = transaction.objectStore(this.storeName());
         const key = await this.requestPromise(store.index(indexName).getKey(indexValue));
         if (key) await this.requestPromise(store.delete(key));
     }
 
-    async deleteAllByIndex(indexName: string, indexValue: IDBValidKey, transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName);
+    public async deleteAllByIndex(indexName: string, indexValue: IDBValidKey, transaction: IDBTransaction) {
+        const store = transaction.objectStore(this.storeName());
         await this.deleteAllByIndexRequestPromise(store, indexName, indexValue);
     }
 
-    async count(transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName);
+    public async count(transaction: IDBTransaction) {
+        const store = transaction.objectStore(this.storeName());
         return await this.requestPromise(store.count());
     }
 
-    async countByIndex(indexName: string, indexValue: IDBValidKey, transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName);
+    public async countByIndex(indexName: string, indexValue: IDBValidKey, transaction: IDBTransaction) {
+        const store = transaction.objectStore(this.storeName());
         return await this.requestPromise(store.index(indexName).count(indexValue));
     }
 
-    async clear(transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName);
+    public async clear(transaction: IDBTransaction) {
+        const store = transaction.objectStore(this.storeName());
         await this.requestPromise(store.clear());
+    }
+
+    private storeName() {
+        return this.storeDefinition.name;
     }
 
     private createModel(data: Required<T>): T {

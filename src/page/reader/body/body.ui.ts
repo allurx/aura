@@ -22,27 +22,27 @@ import EventUtil from "../../../core/util/event.util";
  * @author allurx
  */
 export default class BodyUi {
-    private element: HTMLElement;
+    private readonly element: HTMLElement;
 
-    constructor() {
+    public constructor() {
         this.element = assertExists(document.querySelector<HTMLElement>("#content"));
     }
 
-    getElement(): HTMLElement {
+    public getElement(): HTMLElement {
         return this.element;
     }
 
-    renderFontSize(fontSize: number) {
+    public renderFontSize(fontSize: number) {
         this.element.style.fontSize = String(fontSize) + "px";
         return this;
     }
 
-    renderPadding(padding: number) {
+    public renderPadding(padding: number) {
         this.element.style.padding = `0 ${String(padding)}px`;
         return this;
     }
 
-    renderLineHeight(lineHeight: number) {
+    public renderLineHeight(lineHeight: number) {
         this.element.style.lineHeight = String(lineHeight);
         return this;
     }
@@ -52,7 +52,7 @@ export default class BodyUi {
      * @param  lines - 章节内容行数组
      * @return  当前实例
      */
-    renderChapter(lines: string[]) {
+    public renderChapter(lines: string[]) {
         this.element.innerHTML = "";
         const fragment = document.createDocumentFragment();
         lines.forEach((line, index) => {
@@ -71,7 +71,7 @@ export default class BodyUi {
      * @param lineVisibleRatio - 行可见比例
      * @return  当前实例
      */
-    restoreReadingProgress(lineIndex: number, lineVisibleRatio: number) {
+    public restoreReadingProgress(lineIndex: number, lineVisibleRatio: number) {
         const p = assertExists(
             this.element.querySelector<HTMLParagraphElement>(`p[data-index="${String(lineIndex)}"]`)
         );
@@ -89,7 +89,7 @@ export default class BodyUi {
      * 触发内容滚动事件
      * @return  当前实例
      */
-    dispatchContentScroll() {
+    public dispatchContentScroll() {
         this.element.dispatchEvent(new Event("scroll"));
         return this;
     }
@@ -99,7 +99,7 @@ export default class BodyUi {
      * @param handler - 事件处理函数
      * @return 当前实例
      */
-    bindContentScroll(handler: (lineIndex: number, lineVisibleRatio: number) => Promise<void>) {
+    public bindContentScroll(handler: (lineIndex: number, lineVisibleRatio: number) => Promise<void>) {
         EventUtil.bind(
             this.element,
             "scroll",

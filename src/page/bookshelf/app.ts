@@ -21,13 +21,13 @@ import BookshelfController from "./bookshelf.controller";
  * @author allurx
  */
 class App {
-    controller: BookshelfController;
+    private readonly controller: BookshelfController;
 
-    constructor() {
+    public constructor() {
         this.controller = new BookshelfController();
     }
 
-    async init() {
+    public async init() {
         await this.controller.init();
     }
 }

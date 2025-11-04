@@ -20,7 +20,7 @@ import Theme from "../../../domain/theme/theme.model";
  * @author allurx
  */
 export default class ThemeSeed {
-    static themes = [
+    public static readonly themes = [
         new Theme({
             id: crypto.randomUUID(),
             name: "浅色",

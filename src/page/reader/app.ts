@@ -21,13 +21,13 @@
 import ReaderController from "./reader.controller";
 
 class App {
-    private controller: ReaderController;
+    private readonly controller: ReaderController;
 
-    constructor() {
+    public constructor() {
         this.controller = new ReaderController();
     }
 
-    async init() {
+    public async init() {
         const bookId = sessionStorage.getItem("bookId");
         if (!bookId) throw new Error("未从sessionStorage读取到bookId");
         await this.controller.init(bookId);

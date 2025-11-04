@@ -21,12 +21,12 @@ import DatabaseDefinition from "./database-definition";
  * @author allurx
  */
 export default class Database {
-    private name: string;
-    private version: number;
-    private stores: typeof DatabaseDefinition.stores;
+    private readonly name: string;
+    private readonly version: number;
+    private readonly stores: typeof DatabaseDefinition.stores;
     private singleton!: IDBDatabase | null;
 
-    constructor(name: string, version: number, stores: typeof DatabaseDefinition.stores) {
+    public constructor(name: string, version: number, stores: typeof DatabaseDefinition.stores) {
         this.name = name;
         this.version = version;
         this.stores = stores;
@@ -36,7 +36,7 @@ export default class Database {
      * 获取数据库实例
      * @returns {Promise<IDBDatabase>} 返回一个解析为数据库实例的Promise.
      */
-    async instance(): Promise<IDBDatabase> {
+    public async instance(): Promise<IDBDatabase> {
         return this.singleton ?? (await this.connect());
     }
 
@@ -81,7 +81,7 @@ export default class Database {
     /**
      * 关闭数据库连接
      */
-    close() {
+    public close() {
         this.singleton?.close();
     }
 }

@@ -16,32 +16,33 @@
 
 import BaseModel from "../base.model";
 import { ClassFields } from "../../core/type/common.type";
+import ObjectUtil from "../../core/util/object.util";
 
 /**
  * 章节
  * @author allurx
  */
 export default class Chapter extends BaseModel {
-    readonly fileId!: string;
-    readonly index!: number;
-    readonly title!: string;
-    readonly lines!: string[];
+    public readonly fileId!: string;
+    public readonly index!: number;
+    public readonly title!: string;
+    public readonly lines!: string[];
 
     // 本章节在整本书的起始行号
-    readonly startLineNumber!: number;
+    public readonly startLineNumber!: number;
 
     // 本章节在整本书的结束行号
-    readonly endLineNumber!: number;
+    public readonly endLineNumber!: number;
 
-    constructor(data: ClassFields<Chapter>) {
+    public constructor(data: ClassFields<Chapter>) {
         super();
-        Object.assign(this, data);
+        ObjectUtil.assignOwnProperties<Chapter>(this, data);
     }
 
     /**
      * @return {string} 整个章节内容
      */
-    content(): string {
+    public content(): string {
         return this.lines.join("\n");
     }
 }

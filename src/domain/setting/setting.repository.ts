@@ -22,7 +22,7 @@ import { settingStore } from "../../core/database/database-definition";
  * @author allurx
  */
 export default class SettingRepository extends BaseRepository<object> {
-    constructor() {
+    public constructor() {
         super(settingStore, Object);
     }
 }

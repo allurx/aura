@@ -21,17 +21,17 @@ import { assertExists } from "../../../core/util/assert.util";
  * @author allurx
  */
 export default class FooterUi {
-    private footerElement: HTMLElement;
-    private chapterTitleElement: HTMLElement;
-    private progressRateElement: HTMLElement;
+    private readonly footerElement: HTMLElement;
+    private readonly chapterTitleElement: HTMLElement;
+    private readonly progressRateElement: HTMLElement;
 
-    constructor() {
+    public constructor() {
         this.footerElement = assertExists(document.querySelector<HTMLElement>("#footer"));
         this.chapterTitleElement = assertExists(this.footerElement.querySelector<HTMLElement>("#chapter-title"));
         this.progressRateElement = assertExists(this.footerElement.querySelector<HTMLElement>("#progress-rate"));
     }
 
-    renderPadding(padding: number) {
+    public renderPadding(padding: number) {
         this.footerElement.style.padding = `0 ${String(padding)}px`;
         return this;
     }
@@ -41,7 +41,7 @@ export default class FooterUi {
      * @param title - 标题
      * @return  当前实例
      */
-    renderChapterTitle(title: string) {
+    public renderChapterTitle(title: string) {
         this.chapterTitleElement.textContent = title;
         return this;
     }
@@ -52,7 +52,7 @@ export default class FooterUi {
      * @param numberOfLines - 总行数
      * @return 当前实例
      */
-    renderReadingProgress(currentLineNumber: number, numberOfLines: number) {
+    public renderReadingProgress(currentLineNumber: number, numberOfLines: number) {
         const rate = ((currentLineNumber / numberOfLines) * 100).toFixed(2);
         this.progressRateElement.textContent = `${rate}%`;
         return this;
