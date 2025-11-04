@@ -3,9 +3,10 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "lint": "eslint src --ext .ts",
-        "build": "npm run lint && vite build",
-        "dev": "vite --open page/bookshelf/bookshelf.html",
+        "lint": "eslint src",
+        "type-check": "tsc --noEmit",
+        "build": "npm run lint && npm run type-check && vite build",
+        "dev": "npm run lint && npm run type-check && vite --open page/bookshelf/bookshelf.html",
         "preview": "npm run build && vite preview --open page/bookshelf/bookshelf.html"
     },
     "devDependencies": {

@@ -16,24 +16,18 @@
  * limitations under the License.
  */
 
-@import "../../core/style/base.css";
-@import "./header/header.css";
-@import "./nav/nav.css";
-@import "./body/body.css";
-@import "../../core/component/dialog/dialog.css";
-@import "../../core/component/overlay/overlay.css";
-
-body,
-html {
-    background-color: #1f2937;
+/* 目录样式 */
+#toc p {
+    padding: 12px 0;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-bottom: 0.1px solid #666666;
 }
 
-/* 书架容器 */
-#bookshelf {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
+/* 章节 hover 或当前章节 */
+#toc p:hover,
+#toc p.active {
+    color: #337ab7;
 }

@@ -16,24 +16,35 @@
  * limitations under the License.
  */
 
-@import "../../core/style/base.css";
-@import "./header/header.css";
-@import "./nav/nav.css";
-@import "./body/body.css";
-@import "../../core/component/dialog/dialog.css";
-@import "../../core/component/overlay/overlay.css";
-
-body,
-html {
-    background-color: #1f2937;
-}
-
-/* 书架容器 */
-#bookshelf {
+/* 设置面板整体布局 */
+#setting-body {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
+}
+
+/* 设置项布局 */
+.setting-item {
+    padding: 18px 0;
+    display: flex;
+    font-size: 1rem;
+    line-height: 2;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    border-bottom: 0.1px solid #666666;
+}
+
+.setting-item-name {
+    flex: 1;
+}
+
+.setting-item-control {
+    flex: 4;
+}
+
+.setting-item-value {
+    flex: 2;
+    text-align: center;
+    -webkit-user-select: text;
+    user-select: text;
 }

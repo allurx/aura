@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,24 +14,21 @@
  * limitations under the License.
  */
 
-@import "../../core/style/base.css";
-@import "./header/header.css";
-@import "./nav/nav.css";
-@import "./body/body.css";
-@import "../../core/component/dialog/dialog.css";
-@import "../../core/component/overlay/overlay.css";
+/**
+ * 常用类型定义
+ * @author allurx
+ */
 
-body,
-html {
-    background-color: #1f2937;
-}
+// 非空数组类型
+export type NonEmptyArray<T> = [T, ...T[]];
 
-/* 书架容器 */
-#bookshelf {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
-}
+/**
+ * ClassFields<T>
+ * 提取类T的字段类型(排除方法)
+ * 注意(...args: never[]) => unknown在某些边界情况下推断不够严格。
+ * 不使用Function类型,避免ESLint报警
+ * @link https://typescript-eslint.io/rules/no-unsafe-function-type/
+ */
+export type ClassFields<T> = {
+    [K in keyof T as T[K] extends (...args: never[]) => unknown ? never : K]: T[K];
+};

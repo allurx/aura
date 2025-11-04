@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,24 +14,24 @@
  * limitations under the License.
  */
 
-@import "../../core/style/base.css";
-@import "./header/header.css";
-@import "./nav/nav.css";
-@import "./body/body.css";
-@import "../../core/component/dialog/dialog.css";
-@import "../../core/component/overlay/overlay.css";
+/**
+ * 阅读器
+ * @author allurx
+ */
+import ReaderController from "./reader.controller";
 
-body,
-html {
-    background-color: #1f2937;
+class App {
+    private controller: ReaderController;
+
+    constructor() {
+        this.controller = new ReaderController();
+    }
+
+    async init() {
+        const bookId = sessionStorage.getItem("bookId");
+        if (!bookId) throw new Error("未从sessionStorage读取到bookId");
+        await this.controller.init(bookId);
+    }
 }
 
-/* 书架容器 */
-#bookshelf {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
-}
+await new App().init();

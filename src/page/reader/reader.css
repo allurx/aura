@@ -15,10 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-@import "../../style/base.css";
-@import "../../component/dialog/dialog.css";
-@import "../../component/overlay/overlay.css";
+@import "../../core/style/base.css";
+@import "./header/header.css";
+@import "./body/body.css";
+@import "./footer/footer.css";
+@import "./toc/toc.css";
+@import "./setting/setting.css";
+@import "../../core/component/dialog/dialog.css";
+@import "../../core/component/overlay/overlay.css";
 
 /* 阅读器整体容器 */
 #reader {
@@ -42,7 +46,6 @@
     opacity: 1;
 }
 
-/* 顶部和底部栏样式 */
 #header,
 #footer {
     display: flex;
@@ -54,62 +57,7 @@
     overflow: hidden;
 }
 
-/* 顶部操作icon */
-.header-action {
-    display: flex;
-    align-items: center;
-    flex: 1;
-}
-
-.header-action img {
-    cursor: pointer;
-}
-
-/* 顶部左侧操作区域 */
-#header-action-left {
-    justify-content: left;
-}
-
-/* 顶部右侧操作区域 */
-#header-action-right {
-    gap: 20px;
-    justify-content: right;
-}
-
-/* 正文内容区域 */
-#content {
-    height: calc(100% - 120px);
-    overflow-x: hidden;
-    overflow-y: auto;
-    scrollbar-width: auto;
-    scrollbar-color: #666666 transparent;
-    word-break: break-word;
-    outline: none;
-}
-
-/* 阅读进度 */
-#progress-rate {
-    font-weight: bold;
-    text-align: right;
-    flex: 1;
-    font-size: 0.9rem;
-}
-
-/* 章节标题 */
-#chapter-title {
-    font-weight: bold;
-    text-align: left;
-    font-size: 0.9rem;
-    flex: 1;
-    /* 不换行 */
-    white-space: nowrap;
-    /* 超出隐藏 */
-    overflow: hidden;
-    /* 超出用省略号替代 */
-    text-overflow: ellipsis;
-}
-
-/* 弹出面板（目录、设置） */
+/* 弹出面板(目录、设置) */
 .panel {
     position: absolute;
     left: 50%;
@@ -126,7 +74,6 @@
     user-select: none;
 }
 
-/* 面板头部 */
 .panel-header {
     padding: 0 30px 0;
     width: 100%;
@@ -160,59 +107,6 @@
 
 .panel-footer {
     height: 60px;
-}
-
-/* 目录样式 */
-#toc p {
-    padding: 12px 0;
-    cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    border-bottom: 0.1px solid #666666;
-}
-
-/* 章节 hover 或当前章节 */
-#toc p:hover,
-#toc p.active {
-    color: #337ab7;
-}
-
-/* 设置面板整体布局 */
-#setting-body {
-    display: flex;
-    flex-direction: column;
-}
-
-/* 设置项布局 */
-.setting-item {
-    padding: 18px 0;
-    display: flex;
-    font-size: 1rem;
-    line-height: 2;
-    gap: 10px;
-    justify-content: center;
-    align-items: center;
-    border-bottom: 0.1px solid #666666;
-}
-
-.setting-item-name {
-    flex: 1;
-}
-
-.setting-item-control {
-    flex: 4;
-}
-
-.setting-item-value {
-    flex: 2;
-    text-align: center;
-    -webkit-user-select: text;
-    user-select: text;
-}
-
-#theme {
-    height: 100%;
 }
 
 /* 平板及以上 */
