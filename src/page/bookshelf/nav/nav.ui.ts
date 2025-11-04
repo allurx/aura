@@ -23,9 +23,9 @@ import { assertExists } from "../../../core/util/assert.util";
  * @author allurx
  */
 export default class NavUi {
-    navElement: HTMLElement;
+    private readonly navElement: HTMLElement;
 
-    constructor() {
+    public constructor() {
         this.navElement = assertExists(document.querySelector("nav"));
     }
 
@@ -33,7 +33,7 @@ export default class NavUi {
      * 渲染导航栏
      * @returns 返回当前实例
      */
-    renderNav(categories: Category[]) {
+    public renderNav(categories: Category[]) {
         categories.forEach((category) => {
             const button = document.createElement("button");
             button.dataset["id"] = category.id;
@@ -47,7 +47,7 @@ export default class NavUi {
      * 切换导航栏可见性
      * @returns 返回当前实例
      */
-    toggleVisibility() {
+    public toggleVisibility() {
         this.navElement.classList.toggle("hidden");
         return this;
     }
@@ -57,7 +57,7 @@ export default class NavUi {
      * @param  navItemElement - 导航栏项目元素
      * @returns 返回当前实例
      */
-    highlightActiveNavItem(navItemElement: HTMLElement) {
+    public highlightActiveNavItem(navItemElement: HTMLElement) {
         this.navElement.querySelector("button.active")?.classList.remove("active");
         navItemElement.classList.add("active");
         return this;
@@ -68,7 +68,7 @@ export default class NavUi {
      * @param categoryId - 书籍分类id
      * @returns 返回当前实例
      */
-    clickNavItem(categoryId: string) {
+    public clickNavItem(categoryId: string) {
         const navItem = this.navElement.querySelector(`button[data-id="${categoryId}"]`);
         navItem?.dispatchEvent(new Event("click", { bubbles: true }));
         return this;
@@ -79,7 +79,7 @@ export default class NavUi {
      * @param  handler - 处理函数
      * @returns 返回当前实例
      */
-    bindNavItemClick(handler: (categoryId: string) => Promise<void>) {
+    public bindNavItemClick(handler: (categoryId: string) => Promise<void>) {
         EventUtil.delegate(this.navElement, "button", "click", async (_, target) => {
             this.highlightActiveNavItem(target);
             await handler(assertExists(target.dataset["id"]));

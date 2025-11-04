@@ -25,7 +25,7 @@ import { bookStore } from "../../core/database/database-definition";
 export default class BookService {
     private readonly repository: BookRepository;
 
-    constructor() {
+    public constructor() {
         this.repository = new BookRepository();
     }
 
@@ -34,7 +34,7 @@ export default class BookService {
      * @param book - 书籍实例
      * @param transaction - 事务对象
      */
-    async add(book: Book, transaction: IDBTransaction) {
+    public async add(book: Book, transaction: IDBTransaction) {
         return await this.repository.add(book, transaction);
     }
 
@@ -43,7 +43,7 @@ export default class BookService {
      * @param  bookId - 书籍id
      * @param transaction - 事务对象
      */
-    async deleteById(bookId: string, transaction: IDBTransaction) {
+    public async deleteById(bookId: string, transaction: IDBTransaction) {
         await this.repository.deleteByKey(bookId, transaction);
     }
 
@@ -51,7 +51,7 @@ export default class BookService {
      * 删除所有书籍
      * @param  transaction - 事务对象
      */
-    async clear(transaction: IDBTransaction) {
+    public async clear(transaction: IDBTransaction) {
         await this.repository.clear(transaction);
     }
 
@@ -61,7 +61,7 @@ export default class BookService {
      * @param transaction - 事务对象
      * @returns 书籍实例
      */
-    async getById(bookId: string, transaction: IDBTransaction) {
+    public async getById(bookId: string, transaction: IDBTransaction) {
         return await this.repository.getByKey(bookId, transaction);
     }
 
@@ -71,7 +71,7 @@ export default class BookService {
      * @param transaction - 事务对象
      * @returns 书籍实例列表
      */
-    async getAllByCategoryId(categoryId: string, transaction: IDBTransaction) {
+    public async getAllByCategoryId(categoryId: string, transaction: IDBTransaction) {
         return await this.repository.getAllByIndex(bookStore.indexes.idxCategoryId.name, categoryId, transaction);
     }
 
@@ -81,7 +81,7 @@ export default class BookService {
      * @param transaction - 事务对象
      * @returns 关联的书籍数量
      */
-    async countByFileId(fileId: string, transaction: IDBTransaction): Promise<number> {
+    public async countByFileId(fileId: string, transaction: IDBTransaction): Promise<number> {
         return await this.repository.countByIndex(bookStore.indexes.idxFileId.name, fileId, transaction);
     }
 }

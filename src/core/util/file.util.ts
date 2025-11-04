@@ -25,7 +25,7 @@ export default class FileUtil {
      * @param file - 上传的文件
      * @returns  文件的SHA-256哈希值
      */
-    static async computeHash(file: File): Promise<string> {
+    public static async computeHash(file: File): Promise<string> {
         const arrayBuffer = await file.arrayBuffer();
         const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
         const hashArray = Array.from(new Uint8Array(hashBuffer));

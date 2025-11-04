@@ -33,17 +33,17 @@ import ReaderState from "./reader.state";
  * @author allurx
  */
 export default class ReaderController {
-    private doc: DocUi;
-    private reader: ReaderUi;
-    private header: HeaderUi;
-    private body: BodyUi;
-    private footer: FooterUi;
-    private setting: SettingUi;
-    private toc: TocUi;
-    private readerService: ReaderService;
+    private readonly doc: DocUi;
+    private readonly reader: ReaderUi;
+    private readonly header: HeaderUi;
+    private readonly body: BodyUi;
+    private readonly footer: FooterUi;
+    private readonly setting: SettingUi;
+    private readonly toc: TocUi;
+    private readonly readerService: ReaderService;
     private state!: ReaderState;
 
-    constructor() {
+    public constructor() {
         this.doc = new DocUi();
         this.reader = new ReaderUi();
         this.header = new HeaderUi();
@@ -58,7 +58,7 @@ export default class ReaderController {
      * 初始化阅读器
      * @param bookId - 书籍id
      */
-    async init(bookId: string) {
+    public async init(bookId: string) {
         this.state = await this.readerService.init(bookId);
 
         // 渲染界面
@@ -90,7 +90,7 @@ export default class ReaderController {
     /**
      * 加载章节
      */
-    async loadChapter() {
+    private async loadChapter() {
         // 获取章节数据
         this.state.chapter = await this.readerService.getChapter(
             this.state.book.fileId,
@@ -118,7 +118,7 @@ export default class ReaderController {
      * 更新阅读进度
      * @param readingProgress - 阅读进度对象
      */
-    async updateReadingProgress(readingProgress: Partial<ReadingProgress>) {
+    private async updateReadingProgress(readingProgress: Partial<ReadingProgress>) {
         this.state.readingProgress.update(readingProgress);
         await this.readerService.updateReadingProgress(this.state.readingProgress);
     }
@@ -127,7 +127,7 @@ export default class ReaderController {
      * 更新阅读器设置并保存
      * @param readerSetting - 阅读器设置对象
      */
-    async updateReaderSetting(readerSetting: Partial<ReaderSetting>) {
+    private async updateReaderSetting(readerSetting: Partial<ReaderSetting>) {
         this.state.readerSetting.update(readerSetting);
         await this.readerService.updateReaderSetting(this.state.readerSetting);
     }
@@ -136,7 +136,7 @@ export default class ReaderController {
      * 切换章节
      * @param  direction - 方向
      */
-    async switchChapter(direction: SwitchChapterDirectionEnum) {
+    private async switchChapter(direction: SwitchChapterDirectionEnum) {
         if (direction === SwitchChapterDirectionEnum.PREV) {
             if (this.state.readingProgress.chapterIndex === 1) {
                 await this.reader.alertDialog("已经是第一章了");
@@ -166,7 +166,7 @@ export default class ReaderController {
         }
     }
 
-    renderAll(readerSetting: ReaderSetting) {
+    private renderAll(readerSetting: ReaderSetting) {
         this.body.renderFontSize(readerSetting.fontSize);
         this.reader.renderWidth(readerSetting.pageWidth);
 
@@ -186,7 +186,7 @@ export default class ReaderController {
     /**
      * 绑定ui事件
      */
-    bindEvent() {
+    private bindEvent() {
         // reader ui事件
         this.reader.observeReaderResize((pageWidth) => this.updateReaderSetting({ pageWidth }));
 

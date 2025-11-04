@@ -22,12 +22,12 @@ import EventUtil from "../../../core/util/event.util";
  * @author allurx
  */
 export default class HeaderUi {
-    private headerElement: HTMLElement;
-    private toggleTocPanelElement: HTMLImageElement;
-    private toggleFullscreenElement: HTMLImageElement;
-    private toggleSettingPanelElement: HTMLImageElement;
+    private readonly headerElement: HTMLElement;
+    private readonly toggleTocPanelElement: HTMLImageElement;
+    private readonly toggleFullscreenElement: HTMLImageElement;
+    private readonly toggleSettingPanelElement: HTMLImageElement;
 
-    constructor() {
+    public constructor() {
         this.headerElement = assertExists(document.querySelector<HTMLElement>("#header"));
         this.toggleTocPanelElement = assertExists(
             this.headerElement.querySelector<HTMLImageElement>("#toggle-toc-panel")
@@ -40,7 +40,7 @@ export default class HeaderUi {
         );
     }
 
-    renderPadding(padding: number) {
+    public renderPadding(padding: number) {
         this.headerElement.style.padding = `0 ${String(padding)}px`;
         return this;
     }
@@ -50,7 +50,7 @@ export default class HeaderUi {
      * @param handler - 事件处理函数
      * @return 当前实例
      */
-    bindToggleTocPanel(handler: () => void) {
+    public bindToggleTocPanel(handler: () => void) {
         EventUtil.bind(this.toggleTocPanelElement, "click", handler);
         return this;
     }
@@ -59,7 +59,7 @@ export default class HeaderUi {
      * @param handler - 事件处理函数
      * @return 当前实例
      */
-    bindToggleFullscreen(handler: () => void) {
+    public bindToggleFullscreen(handler: () => void) {
         EventUtil.bind(this.toggleFullscreenElement, "click", handler);
         return this;
     }
@@ -69,7 +69,7 @@ export default class HeaderUi {
      * @param handler - 事件处理函数
      * @return 当前实例
      */
-    bindToggleSettingPanel(handler: () => void) {
+    public bindToggleSettingPanel(handler: () => void) {
         EventUtil.bind(this.toggleSettingPanelElement, "click", handler);
         return this;
     }

@@ -23,7 +23,7 @@ import { tocStore } from "../../core/database/database-definition";
  * @author allurx
  */
 export default class TocRepository extends BaseRepository<Toc> {
-    constructor() {
+    public constructor() {
         super(tocStore, Toc);
     }
 }

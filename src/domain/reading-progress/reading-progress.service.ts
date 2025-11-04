@@ -25,7 +25,7 @@ import { readingProgressStore } from "../../core/database/database-definition";
 export default class ReadingProgressService {
     private readonly repository: ReadingProgressRepository;
 
-    constructor() {
+    public constructor() {
         this.repository = new ReadingProgressRepository();
     }
 
@@ -34,7 +34,7 @@ export default class ReadingProgressService {
      * @param readingProgress - 阅读进度
      * @param transaction - 事务对象
      */
-    async update(readingProgress: ReadingProgress, transaction: IDBTransaction) {
+    public async update(readingProgress: ReadingProgress, transaction: IDBTransaction) {
         await this.repository.put(readingProgress, transaction);
     }
 
@@ -43,7 +43,7 @@ export default class ReadingProgressService {
      * @param bookId - 书籍id
      * @param transaction - 事务对象
      */
-    async deleteByBookId(bookId: string, transaction: IDBTransaction) {
+    public async deleteByBookId(bookId: string, transaction: IDBTransaction) {
         await this.repository.deleteByIndex(readingProgressStore.indexes.ukBookId.name, bookId, transaction);
     }
 
@@ -51,7 +51,7 @@ export default class ReadingProgressService {
      * 删除所有阅读进度
      * @param transaction - 事务对象
      */
-    async clear(transaction: IDBTransaction) {
+    public async clear(transaction: IDBTransaction) {
         await this.repository.clear(transaction);
     }
 
@@ -61,7 +61,7 @@ export default class ReadingProgressService {
      * @param transaction - 事务对象
      * @return 阅读进度
      */
-    async getByBookId(bookId: string, transaction: IDBTransaction) {
+    public async getByBookId(bookId: string, transaction: IDBTransaction) {
         return await this.repository.getByIndex(readingProgressStore.indexes.ukBookId.name, bookId, transaction);
     }
 }

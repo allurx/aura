@@ -23,11 +23,11 @@ import Toc from "../../../domain/toc/toc.model";
  * @author allurx
  */
 export default class TocUi {
-    private tocElement: HTMLElement;
-    private tocPanelElement: HTMLElement;
-    private closeTocPanelElement: HTMLElement;
+    private readonly tocElement: HTMLElement;
+    private readonly tocPanelElement: HTMLElement;
+    private readonly closeTocPanelElement: HTMLElement;
 
-    constructor() {
+    public constructor() {
         this.tocElement = assertExists(document.querySelector<HTMLElement>("#toc"));
         this.tocPanelElement = assertExists(document.querySelector<HTMLElement>("#toc-panel"));
         this.closeTocPanelElement = assertExists(document.querySelector<HTMLElement>("#close-toc-panel"));
@@ -37,7 +37,7 @@ export default class TocUi {
      * 切换目录面板显示状态
      * @return 当前实例
      */
-    toggleTocPanel() {
+    public toggleTocPanel() {
         this.tocPanelElement.hidden = !this.tocPanelElement.hidden;
         return this;
     }
@@ -47,7 +47,7 @@ export default class TocUi {
      * @param chapterIndex 章节索引
      * @return 当前实例
      */
-    highlightCurrentChapter(chapterIndex: number) {
+    public highlightCurrentChapter(chapterIndex: number) {
         if (!this.tocPanelElement.hidden) {
             // 移除之前的章节高亮
             this.tocElement.querySelector("p.active")?.classList.remove("active");
@@ -67,7 +67,7 @@ export default class TocUi {
      * @param  contents - 目录内容数组
      * @return 当前实例
      */
-    render(contents: InstanceType<typeof Toc.Content>[]) {
+    public render(contents: InstanceType<typeof Toc.Content>[]) {
         // 创建文档片段,避免多次dom操作
         const fragment = document.createDocumentFragment();
 
@@ -88,7 +88,7 @@ export default class TocUi {
      * @param  handler - 事件处理函数
      * @return 当前实例
      */
-    bindTocItemClick(handler: (chapterIndex: number) => Promise<void>) {
+    public bindTocItemClick(handler: (chapterIndex: number) => Promise<void>) {
         EventUtil.delegate(this.tocElement, "p", "click", async (_, target) => {
             await handler(Number(target.dataset["index"]));
         });
@@ -99,7 +99,7 @@ export default class TocUi {
      * 绑定目录面板关闭事件
      * @return 当前实例
      */
-    bindCloseTocPanel() {
+    public bindCloseTocPanel() {
         EventUtil.bind(this.closeTocPanelElement, "click", () => {
             this.tocPanelElement.hidden = true;
         });

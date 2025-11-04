@@ -16,23 +16,24 @@
 
 import BaseModel from "../base.model";
 import { ClassFields } from "../../core/type/common.type";
+import ObjectUtil from "../../core/util/object.util";
 
 /**
  * 阅读器设置
  * @author allurx
  */
 export default class ReaderSetting extends BaseModel {
-    readonly name!: string;
-    fontSize!: number;
-    pageWidth!: number;
-    pagePadding!: number;
-    lineHeight!: number;
-    fontColor!: string;
-    readerBackgroundColor!: string;
-    backgroundColor!: string;
+    public readonly name!: string;
+    public fontSize!: number;
+    public pageWidth!: number;
+    public pagePadding!: number;
+    public lineHeight!: number;
+    public fontColor!: string;
+    public readerBackgroundColor!: string;
+    public backgroundColor!: string;
 
-    constructor(data: ClassFields<ReaderSetting>) {
+    public constructor(data: ClassFields<ReaderSetting>) {
         super();
-        Object.assign(this, data);
+        ObjectUtil.assignOwnProperties<ReaderSetting>(this, data);
     }
 }

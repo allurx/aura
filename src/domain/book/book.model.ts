@@ -16,26 +16,27 @@
 
 import { ClassFields } from "../../core/type/common.type";
 import BaseModel from "../base.model";
+import ObjectUtil from "../../core/util/object.util";
 
 /**
  * 书籍
  * @author allurx
  */
 export default class Book extends BaseModel {
-    readonly fileId!: string;
-    readonly fileName!: string;
-    readonly categoryId!: string;
-    readonly createdTime!: number;
+    public readonly fileId!: string;
+    public readonly fileName!: string;
+    public readonly categoryId!: string;
+    public readonly createdTime!: number;
 
-    constructor(data: ClassFields<Book>) {
+    public constructor(data: ClassFields<Book>) {
         super();
-        Object.assign(this, data);
+        ObjectUtil.assignOwnProperties<Book>(this, data);
     }
 
     /**
      * @returns 书籍元素的html模板
      */
-    template(): string {
+    public template(): string {
         return `
             <div data-id="${this.id}" class="book">
                 <div class="book-header">

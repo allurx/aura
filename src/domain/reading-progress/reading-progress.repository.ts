@@ -23,7 +23,7 @@ import { readingProgressStore } from "../../core/database/database-definition";
  * @author allurx
  */
 export default class ReadingProgressRepository extends BaseRepository<ReadingProgress> {
-    constructor() {
+    public constructor() {
         super(readingProgressStore, ReadingProgress);
     }
 }

@@ -33,7 +33,7 @@ export default class ChapterService {
 
     private readonly repository: ChapterRepository;
 
-    constructor() {
+    public constructor() {
         this.repository = new ChapterRepository();
     }
 
@@ -42,7 +42,7 @@ export default class ChapterService {
      * @param chapters - 章节数组
      * @param transaction - 事务对象
      */
-    async addAll(chapters: Chapter[], transaction: IDBTransaction) {
+    public async addAll(chapters: Chapter[], transaction: IDBTransaction) {
         return await this.repository.addAll(chapters, transaction);
     }
 
@@ -51,7 +51,7 @@ export default class ChapterService {
      * @param fileId - 所属文件id
      * @param transaction - 事务对象
      */
-    async deleteByFileId(fileId: string, transaction: IDBTransaction) {
+    public async deleteByFileId(fileId: string, transaction: IDBTransaction) {
         await this.repository.deleteAllByIndex(chapterStore.indexes.idxFileId.name, fileId, transaction);
     }
 
@@ -59,7 +59,7 @@ export default class ChapterService {
      * 删除所有章节
      * @param transaction - 事务对象
      */
-    async clear(transaction: IDBTransaction) {
+    public async clear(transaction: IDBTransaction) {
         await this.repository.clear(transaction);
     }
 
@@ -70,7 +70,7 @@ export default class ChapterService {
      * @param transaction - 事务对象
      * @return 章节
      */
-    async getByFileIdAndIndex(fileId: string, index: number, transaction: IDBTransaction) {
+    public async getByFileIdAndIndex(fileId: string, index: number, transaction: IDBTransaction) {
         return await this.repository.getByIndex(chapterStore.indexes.ukFileIdIndex.name, [fileId, index], transaction);
     }
 
@@ -80,7 +80,7 @@ export default class ChapterService {
      * @param fileId - 文件id
      * @returns 章节列表
      */
-    async parseChapters(file: File, fileId: string): Promise<Chapter[]> {
+    public async parseChapters(file: File, fileId: string): Promise<Chapter[]> {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => {

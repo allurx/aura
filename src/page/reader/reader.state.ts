@@ -15,23 +15,24 @@
  */
 import Book from "../../domain/book/book.model";
 import Chapter from "../../domain/chapter/chapter.model";
-import TableOfContents from "../../domain/toc/toc.model";
+import Toc from "../../domain/toc/toc.model";
 import ReaderSetting from "../../domain/setting/reader-setting.model";
 import ReadingProgress from "../../domain/reading-progress/reading-progress.model";
+import ObjectUtil from "../../core/util/object.util";
 
 /**
  * 阅读器状态
  * @author allurx
  */
 export default class ReaderState {
-    book!: Book;
-    chapter!: Chapter;
-    toc!: TableOfContents;
-    readerSetting!: ReaderSetting;
-    defaultReaderSetting!: ReaderSetting;
-    readingProgress!: ReadingProgress;
+    public readonly book!: Book;
+    public readonly toc!: Toc;
+    public readonly readerSetting!: ReaderSetting;
+    public readonly defaultReaderSetting!: ReaderSetting;
+    public readonly readingProgress!: ReadingProgress;
+    public chapter!: Chapter;
 
-    constructor(data: Required<ReaderState>) {
-        Object.assign(this, data);
+    public constructor(data: Required<ReaderState>) {
+        ObjectUtil.assignOwnProperties<ReaderState>(this, data);
     }
 }

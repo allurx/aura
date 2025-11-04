@@ -22,7 +22,7 @@ import { SettingEnum } from "../../constant/setting.enum";
  */
 export default class SettingSeed {
     // 默认阅读设置
-    static defaultReaderSetting = new ReaderSetting({
+    public static readonly defaultReaderSetting = new ReaderSetting({
         id: crypto.randomUUID(),
         name: SettingEnum.DEFAULT_READER_SETTING,
         fontSize: window.innerWidth > 768 ? 18 : 20,
@@ -35,7 +35,7 @@ export default class SettingSeed {
     });
 
     // 自定义阅读设置
-    static readerSetting = new ReaderSetting(this.defaultReaderSetting).update({
+    public static readonly readerSetting = new ReaderSetting(this.defaultReaderSetting).update({
         id: crypto.randomUUID(),
         name: SettingEnum.READER_SETTING,
     });

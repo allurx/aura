@@ -23,7 +23,7 @@ import { themeStore } from "../../core/database/database-definition";
  * @author allurx
  */
 export default class ThemeRepository extends BaseRepository<Theme> {
-    constructor() {
+    public constructor() {
         super(themeStore, Theme);
     }
 }

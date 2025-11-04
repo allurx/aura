@@ -26,16 +26,16 @@ import { assertExists } from "../../core/util/assert.util";
  * @author allurx
  */
 export default class BookshelfController {
-    header: HeaderUi;
-    nav: NavUi;
-    main: MainUi;
-    bookshelf: BookshelfUi;
-    bookshelfService: BookshelfService;
+    private readonly header: HeaderUi;
+    private readonly nav: NavUi;
+    private readonly main: MainUi;
+    private readonly bookshelf: BookshelfUi;
+    private readonly bookshelfService: BookshelfService;
 
     // 当前选中的书籍分类id
-    categoryId!: string;
+    private categoryId!: string;
 
-    constructor() {
+    public constructor() {
         this.header = new HeaderUi();
         this.nav = new NavUi();
         this.main = new MainUi();
@@ -43,7 +43,7 @@ export default class BookshelfController {
         this.bookshelfService = new BookshelfService();
     }
 
-    async init() {
+    public async init() {
         await this.bookshelfService.seedDatabase();
         const categories = await this.bookshelfService.getAllCategories();
         this.categoryId = assertExists(categories[0]).id;
@@ -56,7 +56,7 @@ export default class BookshelfController {
      * 阅读书籍
      * @param bookId - 书籍id
      */
-    readBook(bookId: string) {
+    private readBook(bookId: string) {
         window.location.href = "../reader/reader.html";
         window.sessionStorage.setItem("bookId", bookId);
     }
@@ -65,7 +65,7 @@ export default class BookshelfController {
      * 添加书籍
      * @param files - 书籍文件列表
      */
-    async addBook(files: FileList) {
+    private async addBook(files: FileList) {
         await this.bookshelf
             .showOverlayWhile(async () => {
                 // 只处理文本文件
@@ -85,7 +85,7 @@ export default class BookshelfController {
      * 删除书籍
      * @param bookId - 书籍id
      */
-    async deleteBook(bookId: string) {
+    private async deleteBook(bookId: string) {
         if (await this.bookshelf.confirmDialog("确定要删除这本书吗?")) {
             await this.bookshelf.showOverlayWhile(async () => {
                 await this.bookshelfService.deleteBook(bookId).then(() => this.nav.clickNavItem(this.categoryId));
@@ -96,7 +96,7 @@ export default class BookshelfController {
     /**
      * 清空书架
      */
-    async clearBookshelf() {
+    private async clearBookshelf() {
         if (await this.bookshelf.confirmDialog("确定要清空书架中的所有书籍吗?")) {
             await this.bookshelf.showOverlayWhile(async () => {
                 await this.bookshelfService.clearBookshelf().then(() => this.nav.clickNavItem(this.categoryId));
@@ -104,7 +104,7 @@ export default class BookshelfController {
         }
     }
 
-    bindEvent() {
+    private bindEvent() {
         // 绑定头部事件
         this.header
             .bindClearBookshelfClick(() => this.clearBookshelf())

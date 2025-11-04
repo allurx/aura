@@ -22,15 +22,15 @@ import { assertExists } from "../../util/assert.util";
  * @author allurx
  */
 export default class Dialog {
-    private dialogElement: HTMLDialogElement;
-    private titleElement: HTMLSpanElement;
-    private closeBtnElement: HTMLSpanElement;
-    private bodyElement: HTMLElement;
-    private cancelBtnElement: HTMLButtonElement;
-    private confirmBtnElement: HTMLButtonElement;
+    private readonly dialogElement: HTMLDialogElement;
+    private readonly titleElement: HTMLSpanElement;
+    private readonly closeBtnElement: HTMLSpanElement;
+    private readonly bodyElement: HTMLElement;
+    private readonly cancelBtnElement: HTMLButtonElement;
+    private readonly confirmBtnElement: HTMLButtonElement;
     private resolve: ((ok: boolean) => void) | null = null;
 
-    constructor({ containerElement = document.body } = {}) {
+    public constructor({ containerElement = document.body } = {}) {
         this.dialogElement = containerElement.appendChild(this.renderTemplate());
         this.titleElement = assertExists(this.dialogElement.querySelector<HTMLDivElement>(".dialog-title"));
         this.closeBtnElement = assertExists(this.dialogElement.querySelector<HTMLSpanElement>(".dialog-close-btn"));
@@ -45,14 +45,17 @@ export default class Dialog {
     /**
      * alert,只有确认按钮
      */
-    async alert(content: Node | string, { title = "提示", confirmBtnText = "确定" } = {}) {
+    public async alert(content: Node | string, { title = "提示", confirmBtnText = "确定" } = {}) {
         return this.show({ type: "alert", content, title, confirmBtnText });
     }
 
     /**
      * confirm,带取消按钮
      */
-    async confirm(content: Node | string, { title = "确认", confirmBtnText = "确定", cancelBtnText = "取消" } = {}) {
+    public async confirm(
+        content: Node | string,
+        { title = "确认", confirmBtnText = "确定", cancelBtnText = "取消" } = {}
+    ) {
         return this.show({ type: "confirm", content, title, confirmBtnText, cancelBtnText });
     }
 

@@ -16,52 +16,50 @@
 
 import BaseModel from "../base.model";
 import { ClassFields } from "../../core/type/common.type";
+import ObjectUtil from "../../core/util/object.util";
 
 /**
  * 目录
  * @author allurx
  */
 export default class Toc extends BaseModel {
-    readonly fileId!: string;
-    readonly contents!: InstanceType<typeof Toc.Content>[];
+    public readonly fileId!: string;
+    public readonly contents!: InstanceType<typeof Toc.Content>[];
 
-    constructor(data: ClassFields<Toc>) {
+    public constructor(data: ClassFields<Toc>) {
         super();
-        Object.assign(this, data);
+        ObjectUtil.assignOwnProperties<Toc>(this, data);
     }
 
     /**
      * 章节数量
      */
-    numberOfChapters() {
+    public numberOfChapters() {
         return this.contents.length;
     }
 
     /**
      * 行数
      */
-    numberOfLines() {
+    public numberOfLines() {
         return this.contents[this.contents.length - 1]?.endLineNumber ?? 0;
     }
 
     /**
      * 目录内容
      */
-    static Content = class Content {
+    public static Content = class Content {
         // 目录索引
-        readonly index!: number;
+        public readonly index!: number;
         // 目录标题
-        readonly title!: string;
+        public readonly title!: string;
         // 章节起始行号
-        readonly startLineNumber!: number;
+        public readonly startLineNumber!: number;
         // 章节结束行号
-        readonly endLineNumber!: number;
+        public readonly endLineNumber!: number;
 
-        /**
-         * @param {Object} data - 初始化目录内容所需的所有字段
-         */
-        constructor(data: Partial<Content>) {
-            Object.assign(this, data);
+        public constructor(data: ClassFields<Content>) {
+            ObjectUtil.assignOwnProperties<Content>(this, data);
         }
     };
 }

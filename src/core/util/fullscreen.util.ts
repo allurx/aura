@@ -23,7 +23,7 @@ export default class FullscreenUtil {
      * 检查浏览器是否支持全屏api
      * @return  是否支持全屏
      */
-    static isSupported(): boolean {
+    public static isSupported(): boolean {
         return document.fullscreenEnabled;
     }
 
@@ -31,7 +31,7 @@ export default class FullscreenUtil {
      * 是否有元素处于全屏状态
      * @return 是否有元素处于全屏状态
      */
-    static isActive(): boolean {
+    public static isActive(): boolean {
         return FullscreenUtil.getElement() !== null;
     }
 
@@ -39,7 +39,7 @@ export default class FullscreenUtil {
      * 获取当前全屏元素
      * @return 全屏元素或null
      */
-    static getElement(): Element | null {
+    public static getElement(): Element | null {
         return document.fullscreenElement ?? null;
     }
 
@@ -48,7 +48,7 @@ export default class FullscreenUtil {
      * @param  element - 需要全屏的元素
      * @return 全屏操作的Promise
      */
-    static async enter(element: Element): Promise<void> {
+    public static async enter(element: Element): Promise<void> {
         return element.requestFullscreen();
     }
 
@@ -56,7 +56,7 @@ export default class FullscreenUtil {
      * 退出全屏
      * @return 退出全屏操作的Promise
      */
-    static async exit(): Promise<void> {
+    public static async exit(): Promise<void> {
         return document.exitFullscreen();
     }
 
@@ -65,7 +65,7 @@ export default class FullscreenUtil {
      * @param  element - 需要全屏的元素
      * @return 切换全屏操作的Promise
      */
-    static async toggle(element: Element): Promise<void> {
+    public static async toggle(element: Element): Promise<void> {
         return FullscreenUtil.isActive() ? FullscreenUtil.exit() : FullscreenUtil.enter(element);
     }
 
@@ -73,7 +73,7 @@ export default class FullscreenUtil {
      * 监听全屏状态变化
      * @param  callback - 回调函数
      */
-    static onChange(callback: () => void): void {
+    public static onChange(callback: () => void): void {
         document.addEventListener("fullscreenchange", callback);
     }
 }

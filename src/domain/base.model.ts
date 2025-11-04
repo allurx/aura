@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import ObjectUtil from "../core/util/object.util";
 
 import { ClassFields } from "../core/type/common.type";
 
@@ -22,7 +23,7 @@ import { ClassFields } from "../core/type/common.type";
  */
 export default abstract class BaseModel {
     // 模型唯一标识符(uuid)
-    readonly id!: string;
+    id!: string;
 
     /**
      * 更新模型属性
@@ -30,7 +31,7 @@ export default abstract class BaseModel {
      * @return {this} 返回更新后的模型实例
      */
     update(data: Partial<ClassFields<this>>): this {
-        Object.assign(this, data);
+        ObjectUtil.assignOwnProperties(this, data);
         return this;
     }
 }

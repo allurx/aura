@@ -20,13 +20,13 @@
  */
 export default class DatabaseDefinition {
     // 数据库名称
-    static name = "aura";
+    public static readonly name = "aura";
 
     // 数据库版本
-    static version = 1;
+    public static readonly version = 1;
 
     // 数据库对象存储定义
-    static stores = {
+    public static readonly stores = {
         category: {
             name: "category",
             keyPath: "id",

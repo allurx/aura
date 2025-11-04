@@ -22,10 +22,10 @@ import Dialog from "../../core/component/dialog/dialog";
  * @author allurx
  */
 export default class BookshelfUi {
-    overlay: Overlay;
-    dialog: Dialog;
+    private readonly overlay: Overlay;
+    private readonly dialog: Dialog;
 
-    constructor() {
+    public constructor() {
         this.overlay = new Overlay();
         this.dialog = new Dialog();
     }
@@ -34,7 +34,7 @@ export default class BookshelfUi {
      * 在执行处理函数时显示遮罩
      * @param  handler - 处理函数
      */
-    async showOverlayWhile(handler: () => Promise<void>) {
+    public async showOverlayWhile(handler: () => Promise<void>) {
         await this.overlay.showWhile(handler);
     }
 
@@ -44,7 +44,7 @@ export default class BookshelfUi {
      * @param options 选项
      * @returns  用户是否确认
      */
-    async confirmDialog(content: Node | string, options: object = {}): Promise<boolean> {
+    public async confirmDialog(content: Node | string, options: object = {}): Promise<boolean> {
         return await this.dialog.confirm(content, options);
     }
 
@@ -53,7 +53,7 @@ export default class BookshelfUi {
      * @param  content 正文内容
      * @param options 选项
      */
-    async alertDialog(content: Node | string, options: object = {}): Promise<void> {
+    public async alertDialog(content: Node | string, options: object = {}): Promise<void> {
         await this.dialog.alert(content, options);
     }
 }

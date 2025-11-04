@@ -28,7 +28,7 @@ export default class EventUtil {
      * @param handler - 事件处理函数
      * @param options - 事件选项
      */
-    static bind<E extends Event, N extends Node | Element>(
+    public static bind<E extends Event, N extends Node | Element>(
         targetElement: N,
         eventType: string,
         handler: (event: E, targetElement: N) => Promise<void> | void,
@@ -54,7 +54,7 @@ export default class EventUtil {
      * @param handler - 事件处理函数
      * @param options - 事件选项
      */
-    static delegate<N extends Node | Element>(
+    public static delegate<N extends Node | Element>(
         delegatorElement: N,
         targetSelector: string,
         eventType: string,

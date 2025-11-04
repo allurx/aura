@@ -23,7 +23,7 @@ import EventUtil from "../../../core/util/event.util";
  */
 export default class DocUi {
     // 追踪指针信息
-    private pointer = {
+    private readonly pointer = {
         // 指针移动轨迹相对于x轴的角度
         angle: 0,
         // 指针类型 - mouse | touch
@@ -48,7 +48,7 @@ export default class DocUi {
         isTouching: false,
     };
 
-    renderBackgroundColor(backgroundColor: string) {
+    public renderBackgroundColor(backgroundColor: string) {
         document.body.style.backgroundColor = backgroundColor;
         return this;
     }
@@ -59,7 +59,7 @@ export default class DocUi {
      * @param handler - 事件处理函数
      * @return 当前实例
      */
-    bindChapterNavigation(
+    public bindChapterNavigation(
         targetElement: HTMLElement,
         handler: (direction: SwitchChapterDirectionEnum) => Promise<void>
     ) {
@@ -117,7 +117,7 @@ export default class DocUi {
      * @param options.minSwipeAngle - 最小滑动角度阈值(度) - 确保是水平滑动
      * @return 章节切换方向或null
      */
-    handlePointerEnd(
+    private handlePointerEnd(
         targetElement: HTMLElement,
         event: PointerEvent,
         options = {

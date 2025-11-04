@@ -16,7 +16,7 @@
 
 import Book from "../../domain/book/book.model";
 import BookFile from "../../domain/file/file.model";
-import TableOfContents from "../../domain/toc/toc.model";
+import Toc from "../../domain/toc/toc.model";
 import ReadingProgress from "../../domain/reading-progress/reading-progress.model";
 import CategoryService from "../../domain/category/category.service";
 import BookService from "../../domain/book/book.service";
@@ -50,16 +50,16 @@ import { DatabaseModeEnum } from "../../core/constant/database-mode.enum";
  * @author allurx
  */
 export default class BookshelfService {
-    categoryService: CategoryService;
-    fileService: FileService;
-    bookService: BookService;
-    chapterService: ChapterService;
-    themeService: ThemeService;
-    readingProgressService: ReadingProgressService;
-    settingService: SettingService;
-    tableOfContentsService: TocService;
+    private readonly categoryService: CategoryService;
+    private readonly fileService: FileService;
+    private readonly bookService: BookService;
+    private readonly chapterService: ChapterService;
+    private readonly themeService: ThemeService;
+    private readonly readingProgressService: ReadingProgressService;
+    private readonly settingService: SettingService;
+    private readonly tocService: TocService;
 
-    constructor() {
+    public constructor() {
         this.categoryService = new CategoryService();
         this.fileService = new FileService();
         this.bookService = new BookService();
@@ -67,7 +67,7 @@ export default class BookshelfService {
         this.themeService = new ThemeService();
         this.readingProgressService = new ReadingProgressService();
         this.settingService = new SettingService();
-        this.tableOfContentsService = new TocService();
+        this.tocService = new TocService();
     }
 
     /**
@@ -76,7 +76,7 @@ export default class BookshelfService {
      * @param categoryId - 书籍分类id
      * @param callback - 每添加一本书籍后的回调函数
      */
-    async addBook(files: File[], categoryId: string, callback: (book: Book, index: number) => void) {
+    public async addBook(files: File[], categoryId: string, callback: (book: Book, index: number) => void) {
         // 在事务外部执行异步函数汇总数据以避免事务被浏览器提前提交
         const groupedHashFilesData = await this.groupFileByHash(files, categoryId);
 
@@ -98,7 +98,7 @@ export default class BookshelfService {
                             console.log(`Processing file with hash: ${hash}`);
                             await this.fileService.add(bookData.bookFile, transaction);
                             await this.chapterService.addAll(bookData.chapters, transaction);
-                            await this.tableOfContentsService.update(bookData.tableOfContents, transaction);
+                            await this.tocService.update(bookData.toc, transaction);
                         }
 
                         // 保存分组下的所有书籍和阅读进度
@@ -121,12 +121,12 @@ export default class BookshelfService {
      * 删除书籍
      * @param bookId - 书籍id
      */
-    async deleteBook(bookId: string) {
+    public async deleteBook(bookId: string) {
         await TransactionManager.runTransaction(
             [fileStore.name, bookStore.name, chapterStore.name, tocStore.name, readingProgressStore.name],
             DatabaseModeEnum.READ_WRITE,
             async (transaction) => {
-                // 如果该文件没有其他书籍则删除对应的file, chapter和tableOfContents
+                // 如果该文件没有其他书籍则删除对应的file, chapter和toc
                 const book = assertExists(
                     await this.bookService.getById(bookId, transaction),
                     `Book[${bookId}] not found`
@@ -139,7 +139,7 @@ export default class BookshelfService {
                     await Promise.all([
                         this.fileService.deleteById(book.fileId, transaction),
                         this.chapterService.deleteByFileId(book.fileId, transaction),
-                        this.tableOfContentsService.deleteByFileId(book.fileId, transaction),
+                        this.tocService.deleteByFileId(book.fileId, transaction),
                     ]);
 
                 await Promise.all([
@@ -153,7 +153,7 @@ export default class BookshelfService {
     /**
      * 清空书架
      */
-    async clearBookshelf() {
+    public async clearBookshelf() {
         await TransactionManager.runTransaction(
             [fileStore.name, bookStore.name, chapterStore.name, tocStore.name, readingProgressStore.name],
             DatabaseModeEnum.READ_WRITE,
@@ -162,7 +162,7 @@ export default class BookshelfService {
                     this.fileService.clear(transaction),
                     this.bookService.clear(transaction),
                     this.chapterService.clear(transaction),
-                    this.tableOfContentsService.clear(transaction),
+                    this.tocService.clear(transaction),
                     this.readingProgressService.clear(transaction),
                 ])
         );
@@ -173,7 +173,7 @@ export default class BookshelfService {
      * @param categoryId - 分类id
      * @param callback - 每获取一本书籍后的回调函数
      */
-    async clickNavItem(categoryId: string, callback: (book: Book, index: number) => void) {
+    public async clickNavItem(categoryId: string, callback: (book: Book, index: number) => void) {
         await TransactionManager.runTransaction(bookStore.name, DatabaseModeEnum.READ_ONLY, async (transaction) => {
             const books = await this.bookService.getAllByCategoryId(categoryId, transaction);
             books.forEach((book, index) => {
@@ -185,7 +185,7 @@ export default class BookshelfService {
     /**
      * 获取所有分类
      */
-    async getAllCategories() {
+    public async getAllCategories() {
         return await TransactionManager.runTransaction(
             [categoryStore.name],
             DatabaseModeEnum.READ_ONLY,
@@ -198,7 +198,7 @@ export default class BookshelfService {
     /**
      * 初始化种子数据
      */
-    async seedDatabase() {
+    public async seedDatabase() {
         await TransactionManager.runTransaction(
             [categoryStore.name, settingStore.name, themeStore.name],
             DatabaseModeEnum.READ_WRITE,
@@ -252,15 +252,15 @@ export default class BookshelfService {
                     hash: hash,
                 });
                 const chapters = await this.chapterService.parseChapters(file, bookFile.id);
-                const tableOfContents = new TableOfContents({
+                const toc = new Toc({
                     id: crypto.randomUUID(),
                     fileId: bookFile.id,
-                    contents: chapters,
+                    contents: chapters.map((chapter) => new Toc.Content(chapter)),
                 });
                 bookData = {
                     bookFile: bookFile,
                     chapters: chapters,
-                    tableOfContents: tableOfContents,
+                    toc: toc,
                 };
             }
 

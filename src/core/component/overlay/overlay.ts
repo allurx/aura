@@ -21,10 +21,10 @@ import { assertExists } from "../../util/assert.util";
  * @author allurx
  */
 export default class Overlay {
-    private overlay: HTMLDivElement;
-    private spinner: HTMLDivElement;
+    private readonly overlay: HTMLDivElement;
+    private readonly spinner: HTMLDivElement;
 
-    constructor({ containerElement = document.body, overlayStyle = {}, spinnerStyle = {} } = {}) {
+    public constructor({ containerElement = document.body, overlayStyle = {}, spinnerStyle = {} } = {}) {
         this.overlay = containerElement.appendChild(this.renderTemplate());
         this.spinner = assertExists(this.overlay.querySelector("#spinner")) as HTMLDivElement;
         this.applyOverlayStyle(overlayStyle);
@@ -35,7 +35,7 @@ export default class Overlay {
      * 在执行异步处理函数时显示遮罩
      * @param handler - 异步处理函数
      */
-    async showWhile(handler: () => Promise<void>) {
+    public async showWhile(handler: () => Promise<void>) {
         try {
             await this.show();
             await handler();
@@ -47,7 +47,7 @@ export default class Overlay {
     /**
      * 显示遮罩
      */
-    async show() {
+    public async show() {
         this.overlay.hidden = false;
         // 确保浏览器获得一次绘制机会
         await new Promise(requestAnimationFrame);
@@ -56,7 +56,7 @@ export default class Overlay {
     /**
      * 隐藏遮罩
      */
-    hide() {
+    public hide() {
         this.overlay.hidden = true;
     }
 
