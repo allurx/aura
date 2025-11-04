@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,24 +14,16 @@
  * limitations under the License.
  */
 
-@import "../../core/style/base.css";
-@import "./header/header.css";
-@import "./nav/nav.css";
-@import "./body/body.css";
-@import "../../core/component/dialog/dialog.css";
-@import "../../core/component/overlay/overlay.css";
+import ReadingProgress from "./reading-progress.model";
+import BaseRepository from "../base.repository";
+import { readingProgressStore } from "../../core/database/database-definition";
 
-body,
-html {
-    background-color: #1f2937;
-}
-
-/* 书架容器 */
-#bookshelf {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
+/**
+ * 阅读进度数据访问对象
+ * @author allurx
+ */
+export default class ReadingProgressRepository extends BaseRepository<ReadingProgress> {
+    constructor() {
+        super(readingProgressStore, ReadingProgress);
+    }
 }

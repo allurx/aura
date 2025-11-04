@@ -14,22 +14,22 @@
  * limitations under the License.
  */
 
-import DatabaseDefinition from "./DatabaseDefinition.js";
+import DatabaseDefinition from "./database-definition";
 
 /**
  * 数据库
  * @author allurx
  */
 export default class Database {
-    #name: string;
-    #version: number;
-    #stores: typeof DatabaseDefinition.stores;
-    #instance!: IDBDatabase | null;
+    private name: string;
+    private version: number;
+    private stores: typeof DatabaseDefinition.stores;
+    private singleton!: IDBDatabase | null;
 
     constructor(name: string, version: number, stores: typeof DatabaseDefinition.stores) {
-        this.#name = name;
-        this.#version = version;
-        this.#stores = stores;
+        this.name = name;
+        this.version = version;
+        this.stores = stores;
     }
 
     /**
@@ -37,19 +37,19 @@ export default class Database {
      * @returns {Promise<IDBDatabase>} 返回一个解析为数据库实例的Promise.
      */
     async instance(): Promise<IDBDatabase> {
-        return this.#instance ?? (await this.#connect());
+        return this.singleton ?? (await this.connect());
     }
 
     /**
      * 连接数据库
      * @returns {Promise<IDBDatabase>} 返回一个解析为数据库实例的Promise.
      */
-    #connect(): Promise<IDBDatabase> {
+    private connect(): Promise<IDBDatabase> {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open(this.#name, this.#version);
+            const request = indexedDB.open(this.name, this.version);
             request.onupgradeneeded = () => {
                 const db = request.result;
-                Object.values(this.#stores).forEach((storeProperty) => {
+                Object.values(this.stores).forEach((storeProperty) => {
                     // 创建新的对象存储
                     if (!db.objectStoreNames.contains(storeProperty.name)) {
                         const store = db.createObjectStore(storeProperty.name, {
@@ -64,8 +64,8 @@ export default class Database {
             };
 
             request.onsuccess = () => {
-                this.#instance = request.result;
-                resolve(this.#instance);
+                this.singleton = request.result;
+                resolve(this.singleton);
             };
 
             request.onerror = () => {
@@ -82,6 +82,6 @@ export default class Database {
      * 关闭数据库连接
      */
     close() {
-        this.#instance?.close();
+        this.singleton?.close();
     }
 }

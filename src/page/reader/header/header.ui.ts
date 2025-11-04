@@ -1,0 +1,76 @@
+/*
+ * Copyright 2025 allurx
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { assertExists } from "../../../core/util/assert.util";
+import EventUtil from "../../../core/util/event.util";
+
+/**
+ * 阅读器头部界面
+ * @author allurx
+ */
+export default class HeaderUi {
+    private headerElement: HTMLElement;
+    private toggleTocPanelElement: HTMLImageElement;
+    private toggleFullscreenElement: HTMLImageElement;
+    private toggleSettingPanelElement: HTMLImageElement;
+
+    constructor() {
+        this.headerElement = assertExists(document.querySelector<HTMLElement>("#header"));
+        this.toggleTocPanelElement = assertExists(
+            this.headerElement.querySelector<HTMLImageElement>("#toggle-toc-panel")
+        );
+        this.toggleFullscreenElement = assertExists(
+            this.headerElement.querySelector<HTMLImageElement>("#toggle-fullscreen")
+        );
+        this.toggleSettingPanelElement = assertExists(
+            this.headerElement.querySelector<HTMLImageElement>("#toggle-setting-panel")
+        );
+    }
+
+    renderPadding(padding: number) {
+        this.headerElement.style.padding = `0 ${String(padding)}px`;
+        return this;
+    }
+
+    /**
+     * 绑定目录面板切换事件
+     * @param handler - 事件处理函数
+     * @return 当前实例
+     */
+    bindToggleTocPanel(handler: () => void) {
+        EventUtil.bind(this.toggleTocPanelElement, "click", handler);
+        return this;
+    }
+    /**
+     * 绑定全屏切换事件
+     * @param handler - 事件处理函数
+     * @return 当前实例
+     */
+    bindToggleFullscreen(handler: () => void) {
+        EventUtil.bind(this.toggleFullscreenElement, "click", handler);
+        return this;
+    }
+
+    /**
+     * 绑定设置面板切换事件
+     * @param handler - 事件处理函数
+     * @return 当前实例
+     */
+    bindToggleSettingPanel(handler: () => void) {
+        EventUtil.bind(this.toggleSettingPanelElement, "click", handler);
+        return this;
+    }
+}

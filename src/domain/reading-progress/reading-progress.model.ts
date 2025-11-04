@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,24 +14,23 @@
  * limitations under the License.
  */
 
-@import "../../core/style/base.css";
-@import "./header/header.css";
-@import "./nav/nav.css";
-@import "./body/body.css";
-@import "../../core/component/dialog/dialog.css";
-@import "../../core/component/overlay/overlay.css";
+import BaseModel from "../base.model";
+import { ClassFields } from "../../core/type/common.type";
 
-body,
-html {
-    background-color: #1f2937;
-}
+/**
+ * 阅读进度
+ * @author allurx
+ */
+export default class ReadingProgress extends BaseModel {
+    readonly bookId!: string;
+    readonly chapterIndex!: number;
+    readonly lineIndex!: number;
 
-/* 书架容器 */
-#bookshelf {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
+    // 行元素可见比例 (0 ~ 1),用于恢复阅读时滚动到精确位置
+    readonly lineVisibleRatio!: number;
+
+    constructor(data: ClassFields<ReadingProgress>) {
+        super();
+        Object.assign(this, data);
+    }
 }
