@@ -6,7 +6,7 @@
         "lint": "eslint src",
         "type-check": "tsc --noEmit",
         "build": "npm run lint && npm run type-check && vite build",
-        "dev": "npm run lint && npm run type-check && vite --open page/bookshelf/bookshelf.html",
+        "dev": "npm run lint && npm run type-check && vite --host --open page/bookshelf/bookshelf.html",
         "preview": "npm run build && vite preview --open page/bookshelf/bookshelf.html"
     },
     "devDependencies": {

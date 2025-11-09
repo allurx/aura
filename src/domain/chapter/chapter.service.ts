@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
+import BaseService from "../base.service";
 import Chapter from "./chapter.model";
 import ChapterRepository from "./chapter.repository";
-import { chapterStore } from "../../core/database/database-definition";
 import { assertExists } from "../../core/util/assert.util";
 
 /**
  * 章节服务
  * @author allurx
  */
-export default class ChapterService {
+export default class ChapterService extends BaseService<Chapter>{
     // 章节正则
     private readonly chapterRegex: RegExp =
         /(?:第[0-9一二三四五六七八九十百千万两]+[章卷]|卷[0-9一二三四五六七八九十百千万两]+)[-–—\s]*[^\r\n]*(?:\r?\n)?/g;
@@ -31,47 +31,8 @@ export default class ChapterService {
     // 换行符正则
     private readonly lineBreakRegex: RegExp = /\r?\n/;
 
-    private readonly repository: ChapterRepository;
-
     public constructor() {
-        this.repository = new ChapterRepository();
-    }
-
-    /**
-     * 批量添加章节
-     * @param chapters - 章节数组
-     * @param transaction - 事务对象
-     */
-    public async addAll(chapters: Chapter[], transaction: IDBTransaction) {
-        return await this.repository.addAll(chapters, transaction);
-    }
-
-    /**
-     * 根据文件id删除章节
-     * @param fileId - 所属文件id
-     * @param transaction - 事务对象
-     */
-    public async deleteByFileId(fileId: string, transaction: IDBTransaction) {
-        await this.repository.deleteAllByIndex(chapterStore.indexes.idxFileId.name, fileId, transaction);
-    }
-
-    /**
-     * 删除所有章节
-     * @param transaction - 事务对象
-     */
-    public async clear(transaction: IDBTransaction) {
-        await this.repository.clear(transaction);
-    }
-
-    /**
-     * 根据文件id和章节索引获取章节
-     * @param fileId - 文件id
-     * @param index - 章节索引
-     * @param transaction - 事务对象
-     * @return 章节
-     */
-    public async getByFileIdAndIndex(fileId: string, index: number, transaction: IDBTransaction) {
-        return await this.repository.getByIndex(chapterStore.indexes.ukFileIdIndex.name, [fileId, index], transaction);
+        super(new ChapterRepository());
     }
 
     /**

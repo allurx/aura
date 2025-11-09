@@ -14,11 +14,27 @@
  * limitations under the License.
  */
 
+import Dialog from "../dialog/dialog";
+
 /**
- * Application setting keys.
+ * 可对话接口
  * @author allurx
  */
-export enum SettingEnum {
-    DEFAULT_READER_SETTING = "defaultReaderSetting",
-    READER_SETTING = "readerSetting",
+export default interface Dialogable {
+    readonly dialog: Dialog;
+
+    /**
+     * 显示确认对话框
+     * @param  content 内容
+     * @param options 选项
+     * @returns  用户是否确认
+     */
+    confirmDialog(content: Node | string, options: object): Promise<boolean>;
+
+    /**
+     * 显示警告对话框
+     * @param  content 内容
+     * @param options 选项
+     */
+    alertDialog(content: Node | string, options: object): Promise<boolean>;
 }

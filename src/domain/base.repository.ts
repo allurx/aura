@@ -48,13 +48,13 @@ export default abstract class BaseRepository<T> {
         return await Promise.all(dataArray.map((data) => this.put(data, transaction)));
     }
 
-    public async getByKey(key: IDBValidKey, transaction: IDBTransaction) {
+    public async getByKey(key: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
         const store = transaction.objectStore(this.storeName());
         const result = await this.requestPromise<unknown>(store.get(key));
         return result ? this.createModel(result as Required<T>) : null;
     }
 
-    public async getByIndex(indexName: string, indexValue: IDBValidKey, transaction: IDBTransaction) {
+    public async getByIndex(indexName: string, indexValue: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
         const store = transaction.objectStore(this.storeName());
         const result = await this.requestPromise<unknown>(store.index(indexName).get(indexValue));
         return result ? this.createModel(result as Required<T>) : null;
@@ -66,24 +66,24 @@ export default abstract class BaseRepository<T> {
         return result.map((item) => this.createModel(item as Required<T>));
     }
 
-    public async getAllByIndex(indexName: string, indexValue: IDBValidKey, transaction: IDBTransaction) {
+    public async getAllByIndex(indexName: string, indexValue: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
         const store = transaction.objectStore(this.storeName());
         const result = await this.requestPromise(store.index(indexName).getAll(indexValue));
         return result.map((item) => this.createModel(item as Required<T>));
     }
 
-    public async deleteByKey(key: IDBValidKey, transaction: IDBTransaction) {
+    public async deleteByKey(key: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
         const store = transaction.objectStore(this.storeName());
         await this.requestPromise(store.delete(key));
     }
 
-    public async deleteByIndex(indexName: string, indexValue: IDBValidKey, transaction: IDBTransaction) {
+    public async deleteByIndex(indexName: string, indexValue: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
         const store = transaction.objectStore(this.storeName());
         const key = await this.requestPromise(store.index(indexName).getKey(indexValue));
         if (key) await this.requestPromise(store.delete(key));
     }
 
-    public async deleteAllByIndex(indexName: string, indexValue: IDBValidKey, transaction: IDBTransaction) {
+    public async deleteAllByIndex(indexName: string, indexValue: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
         const store = transaction.objectStore(this.storeName());
         await this.deleteAllByIndexRequestPromise(store, indexName, indexValue);
     }
@@ -93,7 +93,7 @@ export default abstract class BaseRepository<T> {
         return await this.requestPromise(store.count());
     }
 
-    public async countByIndex(indexName: string, indexValue: IDBValidKey, transaction: IDBTransaction) {
+    public async countByIndex(indexName: string, indexValue: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
         const store = transaction.objectStore(this.storeName());
         return await this.requestPromise(store.index(indexName).count(indexValue));
     }
@@ -135,9 +135,9 @@ export default abstract class BaseRepository<T> {
      * @param indexValue - 索引值
      * @returns 删除完成的Promise
      */
-    private deleteAllByIndexRequestPromise(store: IDBObjectStore, indexName: string, indexValue: IDBValidKey) {
+    private deleteAllByIndexRequestPromise(store: IDBObjectStore, indexName: string, indexValue: IDBValidKey | IDBKeyRange): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            const request = store.index(indexName).openCursor(IDBKeyRange.only(indexValue));
+            const request = store.index(indexName).openCursor(indexValue);
             request.onsuccess = async () => {
                 const cursor = request.result;
                 if (cursor) {

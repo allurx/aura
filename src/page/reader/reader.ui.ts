@@ -18,75 +18,17 @@
  * 阅读器界面
  * @author allurx
  */
-import Overlay from "../../core/component/overlay/overlay";
-import Dialog from "../../core/component/dialog/dialog";
+
 import { assertExists } from "../../core/util/assert.util";
+import Ui from "../../core/component/ui";
 
 /**
  * 阅读器界面
  * @author allurx
  */
-export default class ReaderUi {
-    private readonly element: HTMLElement;
-    private readonly overlay: Overlay;
-    private readonly dialog: Dialog;
-
-    public constructor() {
-        this.element = assertExists(document.querySelector<HTMLElement>("#reader"));
-        this.dialog = new Dialog();
-        this.overlay = new Overlay({
-            containerElement: this.element,
-            overlayStyle: { position: "absolute" },
-        });
-    }
-
-    public renderWidth(width: number) {
-        this.element.style.width = String(width) + "px";
-        return this;
-    }
-
-    public renderFontColor(fontColor: string) {
-        this.element.style.color = fontColor;
-        return this;
-    }
-
-    public renderBackgroundColor(backgroundColor: string) {
-        this.element.style.backgroundColor = backgroundColor;
-        return this;
-    }
-
-    /**
-     * 显示阅读器
-     */
-    public show() {
-        this.element.classList.add("visible");
-    }
-
-    /**
-     * 在执行处理函数时显示遮罩
-     * @param handler - 处理函数
-     */
-    public async showOverlayWhile(handler: () => Promise<void>) {
-        await this.overlay.showWhile(handler);
-    }
-
-    /**
-     * 显示确认对话框
-     * @param  content 正文内容
-     * @param options 选项
-     * @returns  用户是否确认
-     */
-    public async confirmDialog(content: Node | string, options: object = {}): Promise<boolean> {
-        return await this.dialog.confirm(content, options);
-    }
-
-    /**
-     * 显示警告对话框
-     * @param  content 正文内容
-     * @param options 选项
-     */
-    public async alertDialog(content: Node | string, options: object = {}): Promise<boolean> {
-        return await this.dialog.alert(content, options);
+export default class ReaderUi extends Ui {
+    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
+        super(args);
     }
 
     /**
@@ -94,7 +36,7 @@ export default class ReaderUi {
      * @param  handler - 事件处理函数
      * @return 当前实例
      */
-    public observeReaderResize(handler: (width: number) => Promise<void>) {
+    public observeReaderResize(handler: (width: string) => Promise<void>) {
         new ResizeObserver(
             (() => {
                 let timer: number;
@@ -102,16 +44,15 @@ export default class ReaderUi {
                     if (timer) clearTimeout(timer);
                     timer = window.setTimeout(() => {
                         void (async () => {
-                            // reader
                             const entry = assertExists(entries[0]);
                             const width = entry.contentRect.width;
                             console.log("检测到页面宽度变化：", width);
-                            await handler(width);
+                            await handler(String(width));
                         })();
                     }, 300);
                 };
             })()
-        ).observe(this.element);
+        ).observe(this.root);
         return this;
     }
 }

@@ -46,67 +46,77 @@
                 <div id="chapter-title"></div>
                 <div id="progress-rate"></div>
             </footer>
+        </div>
 
-            <!-- 目录面板 -->
-            <section id="toc-panel" class="panel" hidden>
-                <header class="panel-header">
-                    <h2>目录</h2>
-                    <div class="panel-header-action">
-                        <span id="close-toc-panel" title="关闭">✖</span>
-                    </div>
-                </header>
-                <div id="toc" class="panel-body"></div>
-                <div class="panel-footer"></div>
-            </section>
-
-            <!-- 设置面板 -->
-            <section id="setting-panel" class="panel" hidden>
-                <header class="panel-header">
-                    <h2>设置</h2>
-                    <div class="panel-header-action">
-                        <span id="reset-setting-panel" title="重置">↺</span>
-                        <span id="close-setting-panel" title="关闭">✖</span>
-                    </div>
-                </header>
-                <div id="setting-body" class="panel-body">
-                    <div class="setting-item">
-                        <span class="setting-item-name">字号</span>
-                        <input type="range" id="font-size" min="12" max="100" step="1" class="setting-item-control" />
-                        <span id="font-size-value" class="setting-item-value"></span>
-                    </div>
-                    <div class="setting-item">
-                        <span class="setting-item-name">页宽</span>
-                        <input type="range" id="width" step="1" class="setting-item-control" />
-                        <span id="width-value" class="setting-item-value"></span>
-                    </div>
-                    <div class="setting-item">
-                        <span class="setting-item-name">边距</span>
-                        <input type="range" id="padding" min="0" max="100" step="1" class="setting-item-control" />
-                        <span id="padding-value" class="setting-item-value"></span>
-                    </div>
-                    <div class="setting-item">
-                        <span class="setting-item-name">行高</span>
-                        <input type="range" id="line-height" min="1" max="3" step="0.1" class="setting-item-control" />
-                        <span id="line-height-value" class="setting-item-value"></span>
-                    </div>
-                    <div class="setting-item">
-                        <span class="setting-item-name">字色</span>
-                        <input type="color" id="font-color" class="setting-item-control" />
-                        <span id="font-color-value" class="setting-item-value"></span>
-                    </div>
-                    <div class="setting-item">
-                        <span class="setting-item-name">阅读器背景</span>
-                        <input type="color" id="reader-background-color" class="setting-item-control" />
-                        <span id="reader-background-color-value" class="setting-item-value"></span>
-                    </div>
-                    <div class="setting-item">
-                        <span class="setting-item-name">网页背景</span>
-                        <input type="color" id="background-color" class="setting-item-control" />
-                        <span id="background-color-value" class="setting-item-value"></span>
-                    </div>
+        <!-- 目录 -->
+        <section id="toc">
+            <header>
+                <h2>目录</h2>
+                <div class="action">
+                    <span class="close" title="关闭">✖</span>
                 </div>
-                <div class="panel-footer"></div>
-            </section>
+            </header>
+            <section class="main"></section>
+            <footer class="footer"></footer>
+        </section>
+
+        <!-- 设置 -->
+        <div class="setting">
+            <aside></aside>
+            <div class="main">
+                <header>
+                    <span class="reset" title="重置">↺</span>
+                    <span class="close" title="关闭">✖</span>
+                </header>
+                <section>
+                    <div class="item" data-property="font-size" data-unit="px">
+                        <span class="name">字号</span>
+                        <input class="control" min="12" max="100" step="1" type="range" />
+                        <span class="display"></span>
+                    </div>
+                    <div class="item" data-property="width" data-unit="px">
+                        <span class="name">宽度</span>
+                        <input class="control" type="range" step="1" min="800" max="800" />
+                        <span class="display"></span>
+                    </div>
+                    <div class="item" data-property="padding-top" data-unit="px">
+                        <span class="name">上内边距</span>
+                        <input type="range" class="control" min="0" max="100" step="1" />
+                        <span class="display"></span>
+                    </div>
+                    <div class="item" data-property="padding-bottom" data-unit="px">
+                        <span class="name">下内边距</span>
+                        <input type="range" class="control" min="0" max="100" step="1" />
+                        <span class="display"></span>
+                    </div>
+                    <div class="item" data-property="padding-left" data-unit="px">
+                        <span class="name">左内边距</span>
+                        <input type="range" class="control" min="0" max="100" step="1" />
+                        <span class="display"></span>
+                    </div>
+                    <div class="item" data-property="padding-right" data-unit="px">
+                        <span class="name">右内边距</span>
+                        <input type="range" class="control" min="0" max="100" step="1" />
+                        <span class="display"></span>
+                    </div>
+                    <div class="item" data-property="line-height" data-unit="px">
+                        <span class="name">行高</span>
+                        <input class="control" min="16" max="48" step="1" type="range" />
+                        <span class="display"></span>
+                    </div>
+                    <div class="item" data-property="color">
+                        <span class="name">文本颜色</span>
+                        <input class="control" type="color" />
+                        <span class="display"></span>
+                    </div>
+                    <div class="item" data-property="background-color">
+                        <span class="name">背景颜色</span>
+                        <input class="control" type="color" />
+                        <span class="display"></span>
+                    </div>
+                </section>
+                <footer class="footer"></footer>
+            </div>
         </div>
     </body>
 </html>

@@ -17,20 +17,16 @@
 import BaseModel from "../base.model";
 import { ClassFields } from "../../core/type/common.type";
 import ObjectUtil from "../../core/util/object.util";
+import { SettingName } from "../../core/constant/setting.name";
+import { ConfigurableStyleProperty } from "../../core/component/constant/configurable.style.property";
 
 /**
  * 阅读器设置
  * @author allurx
  */
 export default class ReaderSetting extends BaseModel {
-    public readonly name!: string;
-    public fontSize!: number;
-    public pageWidth!: number;
-    public pagePadding!: number;
-    public lineHeight!: number;
-    public fontColor!: string;
-    public readerBackgroundColor!: string;
-    public backgroundColor!: string;
+    public readonly name!: SettingName;
+    public style!: Partial<Record<ConfigurableStyleProperty, string>>;
 
     public constructor(data: ClassFields<ReaderSetting>) {
         super();

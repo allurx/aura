@@ -14,16 +14,28 @@
  * limitations under the License.
  */
 
-import ReadingProgressRepository from "./reading-progress.repository";
-import ReadingProgress from "./reading-progress.model";
-import BaseService from "../base.service";
+import Overlay from "./overlay";
 
 /**
- * 阅读进度服务
+ * 可遮罩接口
  * @author allurx
  */
-export default class ReadingProgressService extends BaseService<ReadingProgress> {
-    public constructor() {
-        super(new ReadingProgressRepository());
-    }
+export default interface Overlayable {
+    readonly overlay: Overlay;
+
+    /**
+     * 显示遮罩
+     */
+    showOverlay(): Promise<void>;
+
+    /**
+     * 隐藏遮罩
+     */
+    hideOverlay(): Promise<void>;
+
+    /**
+     * 在执行处理函数时显示遮罩
+     * @param handler - 处理函数
+     */
+    showOverlayWhile(handler: () => Promise<void>): Promise<void>;
 }

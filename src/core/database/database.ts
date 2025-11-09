@@ -49,6 +49,12 @@ export default class Database {
             const request = indexedDB.open(this.name, this.version);
             request.onupgradeneeded = () => {
                 const db = request.result;
+
+                // 开发阶段方便调试,删除旧的对象存储
+                Array.from(db.objectStoreNames).forEach((storeName) => {
+                    db.deleteObjectStore(storeName);
+                });
+                
                 Object.values(this.stores).forEach((storeProperty) => {
                     // 创建新的对象存储
                     if (!db.objectStoreNames.contains(storeProperty.name)) {

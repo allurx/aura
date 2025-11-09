@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import ReadingProgressRepository from "./reading-progress.repository";
-import ReadingProgress from "./reading-progress.model";
-import BaseService from "../base.service";
-
 /**
- * 阅读进度服务
+ * Application setting names.
  * @author allurx
  */
-export default class ReadingProgressService extends BaseService<ReadingProgress> {
-    public constructor() {
-        super(new ReadingProgressRepository());
-    }
+export enum SettingName {
+    SETTING = "setting",
+    READER = "readerSetting",
+    READER_HEADER = "readerHeaderSetting",
+    READER_CONTENT = "readerContentSetting",
+    READER_FOOTER = "readerFooterSetting",
+    READER_DOC = "readerDocSetting",
+    READER_TOC = "readerTocSetting",
 }

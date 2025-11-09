@@ -16,39 +16,14 @@
 
 import ThemeRepository from "./theme.repository";
 import Theme from "./theme.model";
+import BaseService from "../base.service";
 
 /**
  * 主题服务
  * @author allurx
  */
-export default class ThemeService {
-    private readonly repository: ThemeRepository;
+export default class ThemeService extends BaseService<Theme> {
     public constructor() {
-        this.repository = new ThemeRepository();
-    }
-
-    /**
-     * 添加多个主题
-     * @param themes 主题列表
-     * @param transaction 事务
-     */
-    public async addAll(themes: Theme[], transaction: IDBTransaction) {
-        await this.repository.addAll(themes, transaction);
-    }
-
-    /**
-     * 获取所有主题
-     * @param transaction 事务
-     */
-    public async getAll(transaction: IDBTransaction) {
-        return await this.repository.getAll(transaction);
-    }
-
-    /**
-     * 统计主题数量
-     * @param transaction 事务
-     */
-    public async count(transaction: IDBTransaction) {
-        return await this.repository.count(transaction);
+        super(new ThemeRepository());
     }
 }

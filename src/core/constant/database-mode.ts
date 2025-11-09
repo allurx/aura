@@ -14,16 +14,11 @@
  * limitations under the License.
  */
 
-import ReadingProgressRepository from "./reading-progress.repository";
-import ReadingProgress from "./reading-progress.model";
-import BaseService from "../base.service";
-
 /**
- * 阅读进度服务
+ * Database operation modes.
  * @author allurx
  */
-export default class ReadingProgressService extends BaseService<ReadingProgress> {
-    public constructor() {
-        super(new ReadingProgressRepository());
-    }
+export enum DatabaseMode {
+    READ_ONLY = "readonly",
+    READ_WRITE = "readwrite",
 }

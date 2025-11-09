@@ -16,51 +16,14 @@
 
 import TocRepository from "./toc.repository";
 import Toc from "./toc.model";
-import { tocStore } from "../../core/database/database-definition";
+import BaseService from "../base.service";
 
 /**
  * 目录服务
  * @author allurx
  */
-export default class TocService {
-    private readonly repository: TocRepository;
-
+export default class TocService extends BaseService<Toc> {
     public constructor() {
-        this.repository = new TocRepository();
-    }
-
-    /**
-     * 更新目录
-     * @param  toc - 目录实例
-     * @param  transaction - 事务对象
-     */
-    public async update(toc: Toc, transaction: IDBTransaction) {
-        return await this.repository.put(toc, transaction);
-    }
-
-    /**
-     * 根据文件id删除目录
-     * @param  fileId - 文件id
-     * @param  transaction - 事务对象
-     */
-    public async deleteByFileId(fileId: string, transaction: IDBTransaction) {
-        await this.repository.deleteByIndex(tocStore.indexes.ukFileId.name, fileId, transaction);
-    }
-
-    /**
-     * 删除所有目录
-     * @param  transaction - 事务对象
-     */
-    public async clear(transaction: IDBTransaction) {
-        await this.repository.clear(transaction);
-    }
-
-    /**
-     * 根据文件id获取目录
-     * @param  fileId - 文件id
-     * @param  transaction - 事务对象
-     */
-    public async getByFileId(fileId: string, transaction: IDBTransaction) {
-        return await this.repository.getByIndex(tocStore.indexes.ukFileId.name, fileId, transaction);
+        super(new TocRepository());
     }
 }

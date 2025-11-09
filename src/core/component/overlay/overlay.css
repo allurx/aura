@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-#overlay {
-  position: fixed;
+.overlay {
+  position: absolute;
   left: 0;
   top: 0;
   width: 100%;
@@ -35,12 +35,12 @@
 }
 
 /* 隐藏遮罩层 */
-#overlay[hidden] {
+.overlay[hidden] {
   display: none;
 }
 
 /* loading动画小圆圈 */
-#spinner {
+.spinner {
   width: 3.125rem;
   height: 3.125rem;
   border: 0.375rem solid #397fc4;

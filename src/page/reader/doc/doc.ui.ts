@@ -14,14 +14,20 @@
  * limitations under the License.
  */
 
-import { SwitchChapterDirectionEnum } from "../../../core/constant/switch-chapter-direction.enum";
+import Ui from "../../../core/component/ui";
 import EventUtil from "../../../core/util/event.util";
+import { SwitchChapterDirection } from "../../../core/constant/switch-chapter-direction";
+import FullscreenUtil from "../../../core/util/fullscreen.util";
 
 /**
  * 阅读器文档界面
  * @author allurx
  */
-export default class DocUi {
+export default class DocUi extends Ui {
+    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
+        super(args);
+    }
+
     // 追踪指针信息
     private readonly pointer = {
         // 指针移动轨迹相对于x轴的角度
@@ -48,9 +54,16 @@ export default class DocUi {
         isTouching: false,
     };
 
-    public renderBackgroundColor(backgroundColor: string) {
-        document.body.style.backgroundColor = backgroundColor;
+    /**
+     * 显示阅读器
+     */
+    public show() {
+        this.root.classList.add("visible");
         return this;
+    }
+
+    public async toggleFullscreen() {
+        return FullscreenUtil.toggle(document.documentElement);
     }
 
     /**
@@ -61,7 +74,7 @@ export default class DocUi {
      */
     public bindChapterNavigation(
         targetElement: HTMLElement,
-        handler: (direction: SwitchChapterDirectionEnum) => Promise<void>
+        handler: (direction: SwitchChapterDirection) => Promise<void>
     ) {
         // 记录触摸起始位置
         EventUtil.bind(document, "pointerdown", (event: PointerEvent) => {
@@ -126,7 +139,7 @@ export default class DocUi {
         }
     ) {
         // 章节切换方向
-        let direction: SwitchChapterDirectionEnum = SwitchChapterDirectionEnum.INVALID;
+        let direction: SwitchChapterDirection = SwitchChapterDirection.INVALID;
 
         this.pointer.deltaX = this.pointer.lastX - this.pointer.startX;
         this.pointer.deltaY = this.pointer.lastY - this.pointer.startY;
@@ -153,9 +166,9 @@ export default class DocUi {
                         (event.target as HTMLElement).parentElement === targetElement))
             ) {
                 if (this.pointer.lastX < window.innerWidth / 2) {
-                    direction = SwitchChapterDirectionEnum.PREV;
+                    direction = SwitchChapterDirection.PREV;
                 } else {
-                    direction = SwitchChapterDirectionEnum.NEXT;
+                    direction = SwitchChapterDirection.NEXT;
                 }
             }
             // 处理触摸事件
@@ -174,11 +187,11 @@ export default class DocUi {
 
                     // 点击左侧1/3区域
                     if (this.pointer.lastX < window.innerWidth / 3) {
-                        direction = SwitchChapterDirectionEnum.PREV;
+                        direction = SwitchChapterDirection.PREV;
 
                         // 点击右侧1/3区域
                     } else if (this.pointer.lastX > (window.innerWidth / 3) * 2) {
-                        direction = SwitchChapterDirectionEnum.NEXT;
+                        direction = SwitchChapterDirection.NEXT;
 
                         // 点击中间区域
                     } else {
@@ -193,10 +206,10 @@ export default class DocUi {
                     if (this.pointer.angle < options.minSwipeAngle) {
                         if (this.pointer.deltaX > 0) {
                             // 向右滑动 - 上一章
-                            direction = SwitchChapterDirectionEnum.PREV;
+                            direction = SwitchChapterDirection.PREV;
                         } else {
                             // 向左滑动 - 下一章
-                            direction = SwitchChapterDirectionEnum.NEXT;
+                            direction = SwitchChapterDirection.NEXT;
                         }
                     }
 

@@ -30,4 +30,21 @@ export default class ObjectUtil {
             if (value !== undefined) target[key] = value;
         });
     }
+
+    public static isNull<T>(value: T): boolean {
+        return value === null;
+    }
+
+    public static isUndefined<T>(value: T): boolean {
+        return value === undefined;
+    }
+
+    public static isNullOrUndefined<T>(value: T): boolean {
+        return value === null || value === undefined;
+    }
 }
+
+export const assignOwnProperties = ObjectUtil.assignOwnProperties.bind(ObjectUtil);
+export const isNull = ObjectUtil.isNull.bind(ObjectUtil);
+export const isUndefined = ObjectUtil.isUndefined.bind(ObjectUtil);
+export const isNullOrUndefined = ObjectUtil.isNullOrUndefined.bind(ObjectUtil);

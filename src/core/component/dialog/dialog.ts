@@ -30,7 +30,7 @@ export default class Dialog {
     private readonly confirmBtnElement: HTMLButtonElement;
     private resolve: ((ok: boolean) => void) | null = null;
 
-    public constructor({ containerElement = document.body } = {}) {
+    public constructor({ containerElement }: { containerElement: HTMLElement }) {
         this.dialogElement = containerElement.appendChild(this.renderTemplate());
         this.titleElement = assertExists(this.dialogElement.querySelector<HTMLDivElement>(".dialog-title"));
         this.closeBtnElement = assertExists(this.dialogElement.querySelector<HTMLSpanElement>(".dialog-close-btn"));

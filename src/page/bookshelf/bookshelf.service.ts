@@ -23,7 +23,6 @@ import BookService from "../../domain/book/book.service";
 import ChapterService from "../../domain/chapter/chapter.service";
 import ThemeService from "../../domain/theme/theme.service";
 import ReadingProgressService from "../../domain/reading-progress/reading-progress.service";
-import SettingService from "../../domain/setting/setting.service";
 import TocService from "../../domain/toc/toc.service";
 import FileService from "../../domain/file/file.service";
 import FileUtil from "../../core/util/file.util";
@@ -31,7 +30,7 @@ import { assertExists } from "../../core/util/assert.util";
 import TransactionManager from "../../core/database/transaction-manager";
 import CategorySeed from "../../core/database/seed/category.seed";
 import ThemeSeed from "../../core/database/seed/theme.seed";
-import SettingSeed from "../../core/database/seed/setting.seed";
+import { DatabaseMode } from "../../core/constant/database-mode";
 import {
     categoryStore,
     fileStore,
@@ -42,8 +41,6 @@ import {
     themeStore,
     readingProgressStore,
 } from "../../core/database/database-definition";
-import { SettingEnum } from "../../core/constant/setting.enum";
-import { DatabaseModeEnum } from "../../core/constant/database-mode.enum";
 
 /**
  * 书架服务
@@ -56,7 +53,6 @@ export default class BookshelfService {
     private readonly chapterService: ChapterService;
     private readonly themeService: ThemeService;
     private readonly readingProgressService: ReadingProgressService;
-    private readonly settingService: SettingService;
     private readonly tocService: TocService;
 
     public constructor() {
@@ -66,7 +62,6 @@ export default class BookshelfService {
         this.chapterService = new ChapterService();
         this.themeService = new ThemeService();
         this.readingProgressService = new ReadingProgressService();
-        this.settingService = new SettingService();
         this.tocService = new TocService();
     }
 
@@ -89,7 +84,7 @@ export default class BookshelfService {
                 tocStore.name,
                 readingProgressStore.name,
             ],
-            DatabaseModeEnum.READ_WRITE,
+            DatabaseMode.READ_WRITE,
             async (transaction) => {
                 await Promise.all(
                     groupedHashFilesData.map(async ({ hash, bookData, books }) => {
@@ -124,27 +119,36 @@ export default class BookshelfService {
     public async deleteBook(bookId: string) {
         await TransactionManager.runTransaction(
             [fileStore.name, bookStore.name, chapterStore.name, tocStore.name, readingProgressStore.name],
-            DatabaseModeEnum.READ_WRITE,
+            DatabaseMode.READ_WRITE,
             async (transaction) => {
                 // 如果该文件没有其他书籍则删除对应的file, chapter和toc
-                const book = assertExists(
-                    await this.bookService.getById(bookId, transaction),
-                    `Book[${bookId}] not found`
-                );
+                const book = assertExists(await this.bookService.getByKey(bookId, transaction), `Book[${bookId}] not found`);
 
                 // 计算相同hash的书籍数量
-                const count = await this.bookService.countByFileId(book.fileId, transaction);
+                const count = await this.bookService.countByIndex(
+                    bookStore.indexes.idxFileId.name,
+                    book.fileId,
+                    transaction
+                );
 
                 if (count <= 1)
                     await Promise.all([
-                        this.fileService.deleteById(book.fileId, transaction),
-                        this.chapterService.deleteByFileId(book.fileId, transaction),
-                        this.tocService.deleteByFileId(book.fileId, transaction),
+                        this.fileService.deleteByKey(book.fileId, transaction),
+                        this.chapterService.deleteAllByIndex(
+                            chapterStore.indexes.idxFileId.name,
+                            book.fileId,
+                            transaction
+                        ),
+                        this.tocService.deleteByIndex(tocStore.indexes.ukFileId.name, book.fileId, transaction),
                     ]);
 
                 await Promise.all([
-                    this.bookService.deleteById(bookId, transaction),
-                    this.readingProgressService.deleteByBookId(bookId, transaction),
+                    this.bookService.deleteByKey(bookId, transaction),
+                    this.readingProgressService.deleteByIndex(
+                        readingProgressStore.indexes.ukBookId.name,
+                        bookId,
+                        transaction
+                    ),
                 ]);
             }
         );
@@ -156,7 +160,7 @@ export default class BookshelfService {
     public async clearBookshelf() {
         await TransactionManager.runTransaction(
             [fileStore.name, bookStore.name, chapterStore.name, tocStore.name, readingProgressStore.name],
-            DatabaseModeEnum.READ_WRITE,
+            DatabaseMode.READ_WRITE,
             async (transaction) =>
                 await Promise.all([
                     this.fileService.clear(transaction),
@@ -174,8 +178,12 @@ export default class BookshelfService {
      * @param callback - 每获取一本书籍后的回调函数
      */
     public async clickNavItem(categoryId: string, callback: (book: Book, index: number) => void) {
-        await TransactionManager.runTransaction(bookStore.name, DatabaseModeEnum.READ_ONLY, async (transaction) => {
-            const books = await this.bookService.getAllByCategoryId(categoryId, transaction);
+        await TransactionManager.runTransaction(bookStore.name, DatabaseMode.READ_ONLY, async (transaction) => {
+            const books = await this.bookService.getAllByIndex(
+                bookStore.indexes.idxCategoryId.name,
+                categoryId,
+                transaction
+            );
             books.forEach((book, index) => {
                 callback(book, index);
             });
@@ -188,7 +196,7 @@ export default class BookshelfService {
     public async getAllCategories() {
         return await TransactionManager.runTransaction(
             [categoryStore.name],
-            DatabaseModeEnum.READ_ONLY,
+            DatabaseMode.READ_ONLY,
             async (transaction) => {
                 return await this.categoryService.getAll(transaction);
             }
@@ -201,11 +209,9 @@ export default class BookshelfService {
     public async seedDatabase() {
         await TransactionManager.runTransaction(
             [categoryStore.name, settingStore.name, themeStore.name],
-            DatabaseModeEnum.READ_WRITE,
+            DatabaseMode.READ_WRITE,
             async (transaction) => {
-                if ((await this.settingService.count(SettingEnum.DEFAULT_READER_SETTING, transaction)) === 0) {
-                    await this.settingService.add(SettingSeed.defaultReaderSetting, transaction);
-                    await this.settingService.add(SettingSeed.readerSetting, transaction);
+                if ((await this.categoryService.count(transaction)) === 0) {
                     await this.categoryService.addAll(CategorySeed.categories, transaction);
                     await this.themeService.addAll(ThemeSeed.themes, transaction);
                 }
@@ -239,13 +245,15 @@ export default class BookshelfService {
             // 检查文件是否已存在
             const existingFile = await TransactionManager.runTransaction(
                 [fileStore.name],
-                DatabaseModeEnum.READ_ONLY,
-                async (transaction) => await this.fileService.getByHash(hash, transaction)
+                DatabaseMode.READ_ONLY,
+                async (transaction) =>
+                    await this.fileService.getByIndex(fileStore.indexes.ukHash.name, hash, transaction)
             );
 
             // 如果文件不存在则解析章节和目录
             let bookData = null;
             if (!existingFile) {
+                console.log(`Parsing new file with hash: ${hash}`);
                 const bookFile = new BookFile({
                     id: crypto.randomUUID(),
                     file: file,

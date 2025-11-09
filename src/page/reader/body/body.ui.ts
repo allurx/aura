@@ -14,37 +14,17 @@
  * limitations under the License.
  */
 
-import { assertExists } from "../../../core/util/assert.util";
+import Ui from "../../../core/component/ui";
 import EventUtil from "../../../core/util/event.util";
+import { assertExists } from "../../../core/util/assert.util";
 
 /**
  * 阅读器正文界面
  * @author allurx
  */
-export default class BodyUi {
-    private readonly element: HTMLElement;
-
-    public constructor() {
-        this.element = assertExists(document.querySelector<HTMLElement>("#content"));
-    }
-
-    public getElement(): HTMLElement {
-        return this.element;
-    }
-
-    public renderFontSize(fontSize: number) {
-        this.element.style.fontSize = String(fontSize) + "px";
-        return this;
-    }
-
-    public renderPadding(padding: number) {
-        this.element.style.padding = `0 ${String(padding)}px`;
-        return this;
-    }
-
-    public renderLineHeight(lineHeight: number) {
-        this.element.style.lineHeight = String(lineHeight);
-        return this;
+export default class BodyUi extends Ui {
+    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
+        super(args);
     }
 
     /**
@@ -53,7 +33,7 @@ export default class BodyUi {
      * @return  当前实例
      */
     public renderChapter(lines: string[]) {
-        this.element.innerHTML = "";
+        this.root.innerHTML = "";
         const fragment = document.createDocumentFragment();
         lines.forEach((line, index) => {
             const p = document.createElement("p");
@@ -61,7 +41,7 @@ export default class BodyUi {
             p.textContent = line;
             fragment.appendChild(p);
         });
-        this.element.appendChild(fragment);
+        this.root.appendChild(fragment);
         return this;
     }
 
@@ -72,16 +52,14 @@ export default class BodyUi {
      * @return  当前实例
      */
     public restoreReadingProgress(lineIndex: number, lineVisibleRatio: number) {
-        const p = assertExists(
-            this.element.querySelector<HTMLParagraphElement>(`p[data-index="${String(lineIndex)}"]`)
-        );
+        const p = assertExists(this.root.querySelector<HTMLParagraphElement>(`p[data-index="${String(lineIndex)}"]`));
 
         // 先定位到大概位置
         p.scrollIntoView({ block: "start", behavior: "auto" });
 
         // 然后微调到精确位置
         const offset = p.offsetHeight * (1 - lineVisibleRatio);
-        this.element.scrollTop += offset;
+        this.root.scrollTop += offset;
         return this;
     }
 
@@ -90,7 +68,7 @@ export default class BodyUi {
      * @return  当前实例
      */
     public dispatchContentScroll() {
-        this.element.dispatchEvent(new Event("scroll"));
+        this.root.dispatchEvent(new Event("scroll"));
         return this;
     }
 
@@ -101,7 +79,7 @@ export default class BodyUi {
      */
     public bindContentScroll(handler: (lineIndex: number, lineVisibleRatio: number) => Promise<void>) {
         EventUtil.bind(
-            this.element,
+            this.root,
             "scroll",
             (() => {
                 let timer: number;

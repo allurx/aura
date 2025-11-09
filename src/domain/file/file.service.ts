@@ -15,33 +15,17 @@
  */
 
 import FileRepository from "./file.repository";
-import { fileStore } from "../../core/database/database-definition";
 import BookFile from "./file.model";
+import BaseService from "../base.service";
 
 /**
  * 文件服务类
  * @author allurx
  */
-export default class FileService {
-    private readonly repository: FileRepository;
+export default class FileService extends BaseService<BookFile> {
 
     public constructor() {
-        this.repository = new FileRepository();
+        super(new FileRepository());
     }
 
-    public async add(bookFile: BookFile, transaction: IDBTransaction) {
-        return await this.repository.add(bookFile, transaction);
-    }
-
-    public async clear(transaction: IDBTransaction) {
-        await this.repository.clear(transaction);
-    }
-
-    public async getByHash(hash: string, transaction: IDBTransaction) {
-        return await this.repository.getByIndex(fileStore.indexes.ukHash.name, hash, transaction);
-    }
-
-    public async deleteById(fileId: string, transaction: IDBTransaction) {
-        await this.repository.deleteByKey(fileId, transaction);
-    }
 }
