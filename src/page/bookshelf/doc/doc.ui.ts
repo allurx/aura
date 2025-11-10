@@ -14,20 +14,8 @@
  * limitations under the License.
  */
 
-import BaseModel from "../base.model";
-import { ClassFields } from "../../core/type/common.type";
-import ObjectUtil from "../../core/util/object.util";
-
 /**
- * 分类
+ * 文档界面
  * @author allurx
  */
-export default class Category extends BaseModel {
-    public readonly name!: string;
-    public readonly order!: number;
-
-    public constructor(data: ClassFields<Category>) {
-        super();
-        ObjectUtil.assignOwnProperties<Category>(this, data);
-    }
-}
+export default class DocUi {}

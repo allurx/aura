@@ -45,8 +45,8 @@ export default class BookshelfController {
 
     public async init() {
         await this.bookshelfService.seedDatabase();
-        const categories = await this.bookshelfService.getAllCategories();
-        this.categoryId = assertExists(categories[0]).id;
+        const categories = await this.bookshelfService.getCategories();
+        this.categoryId = assertExists(categories.find((category) => category.order === 1)).id;
         this.nav.renderNav(categories);
         this.bindEvent();
         this.nav.clickNavItem(this.categoryId);
@@ -74,9 +74,9 @@ export default class BookshelfController {
                     if (!isTextFile) void this.bookshelf.alertDialog(`${file.name}不是文本文件`);
                     return isTextFile;
                 });
-                await this.bookshelfService.addBook(validFiles, this.categoryId, (book, index) => {
-                    this.main.renderBookElement(book, index);
-                });
+                await this.bookshelfService
+                    .addBook(validFiles, this.categoryId)
+                    .then((books) => this.main.renderBookElements(books));
             })
             .finally(() => this.main.clearBookInput());
     }
@@ -88,7 +88,7 @@ export default class BookshelfController {
     private async deleteBook(bookId: string) {
         if (await this.bookshelf.confirmDialog("确定要删除这本书吗?")) {
             await this.bookshelf.showOverlayWhile(async () => {
-                await this.bookshelfService.deleteBook(bookId).then(() => this.nav.clickNavItem(this.categoryId));
+                await this.bookshelfService.deleteBook(bookId).then(() => this.main.removeBookElement(bookId));
             });
         }
     }
@@ -99,7 +99,7 @@ export default class BookshelfController {
     private async clearBookshelf() {
         if (await this.bookshelf.confirmDialog("确定要清空书架中的所有书籍吗?")) {
             await this.bookshelf.showOverlayWhile(async () => {
-                await this.bookshelfService.clearBookshelf().then(() => this.nav.clickNavItem(this.categoryId));
+                await this.bookshelfService.clearBookshelf().then(() => this.main.removeBookElements());
             });
         }
     }
@@ -111,12 +111,11 @@ export default class BookshelfController {
             .bindHeaderTitleClick(() => this.nav.toggleVisibility());
 
         // 绑定导航栏事件
-        this.nav.bindNavItemClick(async (categoryId) => {
+        this.nav.delegateNavItemClick(async (categoryId) => {
             this.categoryId = categoryId;
+            const books = await this.bookshelfService.getBooksByCategoryId(categoryId);
             this.main.removeBookElements();
-            await this.bookshelfService.clickNavItem(categoryId, (book, index) => {
-                this.main.renderBookElement(book, index);
-            });
+            books.forEach((book, index) => this.main.renderBookElement(book, index));
         });
 
         // 绑定书籍主体事件

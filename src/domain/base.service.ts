@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
+import BaseModel from "./base.model";
 import BaseRepository from "./base.repository";
 
 /**
  * 基础服务
  * @author allurx
  */
-export default class BaseService<T> {
+export default class BaseService<T extends BaseModel> {
     protected readonly repository: BaseRepository<T>;
 
     public constructor(repository: BaseRepository<T>) {

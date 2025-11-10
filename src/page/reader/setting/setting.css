@@ -117,7 +117,7 @@
 }
 
 .setting > .main {
-    width: 80%;
+    flex: 1;
     height: 100%;
     overflow: hidden;
 }
@@ -186,13 +186,25 @@
         width: 100%;
     }
 
-    .setting > aside {
-        min-width: 8rem;
-        max-width: 10rem;
-    }
-
     .setting.open {
         left: 0;
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6);
+    }
+
+    .setting > aside {
+        min-width: 10rem;
+        max-width: 12rem;
+    }
+
+    .setting > aside .node .title {
+        font-size: 1.2rem;
+    }
+
+    .setting > .main > header {
+        font-size: 1.4rem;
+    }
+
+    .setting > .main > section > .item {
+        font-size: 1.2rem;
     }
 }

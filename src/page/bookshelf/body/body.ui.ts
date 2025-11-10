@@ -34,6 +34,7 @@ export default class MainUi {
     /**
      * 创建书籍元素并添加到页面中
      * @param book - 书籍实例
+     * @param index - 书籍索引
      * @returns  返回当前实例
      */
     public renderBookElement(book: Book, index: number) {
@@ -44,12 +45,16 @@ export default class MainUi {
         return this;
     }
 
-    /**
-     * 清空书籍输入框, 以支持重复上传同一文件
-     * @returns 返回当前实例
-     */
-    public clearBookInput() {
-        this.bookInputElement.value = "";
+    public renderBookElements(books: Book[]) {
+        books
+            .sort((a, b) => a.createdTime - b.createdTime)
+            .forEach((book, index) => this.renderBookElement(book, index + 1));
+        return this;
+    }
+
+    public removeBookElement(bookId: string) {
+        const bookElement = this.bookListElement.querySelector<HTMLElement>(`.book[data-id="${bookId}"]`);
+        bookElement?.remove();
         return this;
     }
 
@@ -61,6 +66,15 @@ export default class MainUi {
         this.bookListElement.querySelectorAll(".book").forEach((element) => {
             element.remove();
         });
+        return this;
+    }
+
+    /**
+     * 清空书籍输入框, 以支持重复上传同一文件
+     * @returns 返回当前实例
+     */
+    public clearBookInput() {
+        this.bookInputElement.value = "";
         return this;
     }
 

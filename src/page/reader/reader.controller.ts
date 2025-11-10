@@ -229,9 +229,16 @@ export default class ReaderController {
     private async updateSetting(settingName: SettingName, style: Partial<Record<ConfigurableStyleProperty, string>>) {
         const setting =
             this.state.settings.get(settingName) ??
-            new ReaderSetting({ id: crypto.randomUUID(), name: settingName, style: {} });
+            new ReaderSetting({
+                id: crypto.randomUUID(),
+                name: settingName,
+                style: {},
+                createdTime: Date.now(),
+                updatedTime: Date.now(),
+            });
         // style合并覆盖setting.style
         setting.style = { ...setting.style, ...style };
+        setting.updatedTime = Date.now();
         this.state.settings.set(settingName, setting);
         await this.readerService.updateSetting(setting);
     }
@@ -257,6 +264,7 @@ export default class ReaderController {
                         chapterIndex: this.state.readingProgress.chapterIndex - 1,
                         lineIndex: 1,
                         lineVisibleRatio: 1,
+                        updatedTime: Date.now(),
                     });
                     await this.loadChapter();
                 });
@@ -270,6 +278,7 @@ export default class ReaderController {
                         chapterIndex: this.state.readingProgress.chapterIndex + 1,
                         lineIndex: 1,
                         lineVisibleRatio: 1,
+                        updatedTime: Date.now(),
                     });
                     await this.loadChapter();
                 });
@@ -304,7 +313,7 @@ export default class ReaderController {
 
         // body ui事件
         this.bodyUi.bindContentScroll(async (lineIndex, lineVisibleRatio) => {
-            await this.updateReadingProgress({ lineIndex, lineVisibleRatio });
+            await this.updateReadingProgress({ lineIndex, lineVisibleRatio, updatedTime: Date.now() });
             this.footerUi.renderReadingProgress(
                 this.state.chapter.startLineNumber + lineIndex,
                 this.state.toc.numberOfLines()
@@ -315,7 +324,12 @@ export default class ReaderController {
         this.tocUi
             .delegateTocItemClick(async (chapterIndex) => {
                 await this.readerUi.showOverlayWhile(async () => {
-                    await this.updateReadingProgress({ chapterIndex, lineIndex: 1, lineVisibleRatio: 1 });
+                    await this.updateReadingProgress({
+                        chapterIndex,
+                        lineIndex: 1,
+                        lineVisibleRatio: 1,
+                        updatedTime: Date.now(),
+                    });
                     await this.loadChapter();
                 });
             })

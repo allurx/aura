@@ -20,7 +20,7 @@
  */
 export default class ObjectUtil {
     /**
-     * 只赋值对象自身存在的属性
+     * 赋值对象自身属性
      * @param target - 目标对象
      * @param source - 源对象
      */
@@ -29,6 +29,7 @@ export default class ObjectUtil {
             const value = source[key];
             if (value !== undefined) target[key] = value;
         });
+        return target;
     }
 
     public static isNull<T>(value: T): boolean {

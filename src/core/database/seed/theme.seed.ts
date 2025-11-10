@@ -27,6 +27,8 @@ export default class ThemeSeed {
             fontColor: "#000000",
             readerBackgroundColor: "#ffffff",
             backgroundColor: "#ffffff",
+            createdTime: Date.now(),
+            updatedTime: Date.now(),
         }),
         new Theme({
             id: crypto.randomUUID(),
@@ -34,6 +36,8 @@ export default class ThemeSeed {
             fontColor: "#e3e3e3",
             readerBackgroundColor: "#111a2e",
             backgroundColor: "#111a2e",
+            createdTime: Date.now(),
+            updatedTime: Date.now(),
         }),
         new Theme({
             id: crypto.randomUUID(),
@@ -41,6 +45,8 @@ export default class ThemeSeed {
             fontColor: "#e3e3e3",
             readerBackgroundColor: "#202124",
             backgroundColor: "#202124",
+            createdTime: Date.now(),
+            updatedTime: Date.now(),
         }),
         new Theme({
             id: crypto.randomUUID(),
@@ -48,6 +54,8 @@ export default class ThemeSeed {
             fontColor: "#000000",
             readerBackgroundColor: "#f2e8c8",
             backgroundColor: "#be966e",
+            createdTime: Date.now(),
+            updatedTime: Date.now(),
         }),
         new Theme({
             id: crypto.randomUUID(),
@@ -55,6 +63,8 @@ export default class ThemeSeed {
             fontColor: "#000000",
             readerBackgroundColor: "#d2e3fc",
             backgroundColor: "#d2e3fc",
+            createdTime: Date.now(),
+            updatedTime: Date.now(),
         }),
         new Theme({
             id: crypto.randomUUID(),
@@ -62,6 +72,8 @@ export default class ThemeSeed {
             fontColor: "#e3e3e3",
             readerBackgroundColor: "#3c3c3c",
             backgroundColor: "#3c3c3c",
+            createdTime: Date.now(),
+            updatedTime: Date.now(),
         }),
     ];
 }

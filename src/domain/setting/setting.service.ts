@@ -24,7 +24,7 @@ import ReaderSetting from "./reader-setting.model";
  * 设置服务
  * @author allurx
  */
-export default class SettingService extends BaseService<object> {
+export default class SettingService extends BaseService<ReaderSetting> {
     public constructor() {
         super(new SettingRepository());
     }
@@ -38,6 +38,6 @@ export default class SettingService extends BaseService<object> {
      */
     public async getReaderSetting(name: SettingName, transaction: IDBTransaction): Promise<ReaderSetting | null> {
         const setting = await this.getByIndex(settingStore.indexes.ukName.name, name, transaction);
-        return setting ? new ReaderSetting(setting as ReaderSetting) : null;
+        return setting ? new ReaderSetting(setting) : null;
     }
 }

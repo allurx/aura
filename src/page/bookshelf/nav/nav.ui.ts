@@ -23,7 +23,7 @@ import { assertExists } from "../../../core/util/assert.util";
  * @author allurx
  */
 export default class NavUi {
-    private readonly navElement: HTMLElement;
+    public readonly navElement: HTMLElement;
 
     public constructor() {
         this.navElement = assertExists(document.querySelector("nav"));
@@ -34,12 +34,14 @@ export default class NavUi {
      * @returns 返回当前实例
      */
     public renderNav(categories: Category[]) {
-        categories.forEach((category) => {
-            const button = document.createElement("button");
-            button.dataset["id"] = category.id;
-            button.textContent = category.name;
-            this.navElement.appendChild(button);
-        });
+        categories
+            .sort((a, b) => a.order - b.order)
+            .forEach((category) => {
+                const button = document.createElement("button");
+                button.dataset["id"] = category.id;
+                button.textContent = category.name;
+                this.navElement.appendChild(button);
+            });
         return this;
     }
 
@@ -79,7 +81,7 @@ export default class NavUi {
      * @param  handler - 处理函数
      * @returns 返回当前实例
      */
-    public bindNavItemClick(handler: (categoryId: string) => Promise<void>) {
+    public delegateNavItemClick(handler: (categoryId: string) => Promise<void>) {
         EventUtil.delegate(this.navElement, "button", "click", async (_, target) => {
             this.highlightActiveNavItem(target);
             await handler(assertExists(target.dataset["id"]));

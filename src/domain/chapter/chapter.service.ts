@@ -23,7 +23,7 @@ import { assertExists } from "../../core/util/assert.util";
  * 章节服务
  * @author allurx
  */
-export default class ChapterService extends BaseService<Chapter>{
+export default class ChapterService extends BaseService<Chapter> {
     // 章节正则
     private readonly chapterRegex: RegExp =
         /(?:第[0-9一二三四五六七八九十百千万两]+[章卷]|卷[0-9一二三四五六七八九十百千万两]+)[-–—\s]*[^\r\n]*(?:\r?\n)?/g;
@@ -66,6 +66,8 @@ export default class ChapterService extends BaseService<Chapter>{
                             lines: lines,
                             startLineNumber: currentLineNumber,
                             endLineNumber: currentLineNumber + lines.length - 1,
+                            createdTime: Date.now(),
+                            updatedTime: Date.now(),
                         })
                     );
                     resolve(chapters);
@@ -86,6 +88,8 @@ export default class ChapterService extends BaseService<Chapter>{
                                 lines: lines,
                                 startLineNumber: currentLineNumber,
                                 endLineNumber: currentLineNumber + lines.length - 1,
+                                createdTime: Date.now(),
+                                updatedTime: Date.now(),
                             })
                         );
                         currentLineNumber += lines.length;
@@ -108,6 +112,8 @@ export default class ChapterService extends BaseService<Chapter>{
                                 startLineNumber: currentLineNumber,
                                 // 结束行号 = 起始行号 + 标题行数 + 内容行数 - 1
                                 endLineNumber: currentLineNumber + lines.length,
+                                createdTime: Date.now(),
+                                updatedTime: Date.now(),
                             })
                         );
                         currentLineNumber += lines.length + 1;

@@ -15,13 +15,14 @@
  */
 
 import { StoreDefinition } from "../core/database/database-definition";
+import BaseModel from "./base.model";
 
 /**
  * 基础数据访问仓库
  * @template T - 模型类型
  * @author allurx
  */
-export default abstract class BaseRepository<T> {
+export default abstract class BaseRepository<T extends BaseModel> {
     private readonly storeDefinition: StoreDefinition;
     private readonly modelConstructor: new (data: T) => T;
 
@@ -83,7 +84,11 @@ export default abstract class BaseRepository<T> {
         if (key) await this.requestPromise(store.delete(key));
     }
 
-    public async deleteAllByIndex(indexName: string, indexValue: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
+    public async deleteAllByIndex(
+        indexName: string,
+        indexValue: IDBValidKey | IDBKeyRange,
+        transaction: IDBTransaction
+    ) {
         const store = transaction.objectStore(this.storeName());
         await this.deleteAllByIndexRequestPromise(store, indexName, indexValue);
     }
@@ -135,7 +140,11 @@ export default abstract class BaseRepository<T> {
      * @param indexValue - 索引值
      * @returns 删除完成的Promise
      */
-    private deleteAllByIndexRequestPromise(store: IDBObjectStore, indexName: string, indexValue: IDBValidKey | IDBKeyRange): Promise<void> {
+    private deleteAllByIndexRequestPromise(
+        store: IDBObjectStore,
+        indexName: string,
+        indexValue: IDBValidKey | IDBKeyRange
+    ): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             const request = store.index(indexName).openCursor(indexValue);
             request.onsuccess = async () => {

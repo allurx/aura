@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import BaseModel from "../base.model";
 import { ClassFields } from "../../core/type/common.type";
 import ObjectUtil from "../../core/util/object.util";
 import { SettingName } from "../../core/constant/setting.name";
 import { ConfigurableStyleProperty } from "../../core/component/constant/configurable.style.property";
+import BaseModel from "../base.model";
 
 /**
  * 阅读器设置

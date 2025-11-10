@@ -69,9 +69,9 @@ export default class BookshelfService {
      * 添加书籍
      * @param files - 书籍文件列表
      * @param categoryId - 书籍分类id
-     * @param callback - 每添加一本书籍后的回调函数
+     * @returns  添加的书籍列表
      */
-    public async addBook(files: File[], categoryId: string, callback: (book: Book, index: number) => void) {
+    public async addBook(files: File[], categoryId: string): Promise<Book[]> {
         // 在事务外部执行异步函数汇总数据以避免事务被浏览器提前提交
         const groupedHashFilesData = await this.groupFileByHash(files, categoryId);
 
@@ -86,30 +86,32 @@ export default class BookshelfService {
             ],
             DatabaseMode.READ_WRITE,
             async (transaction) => {
-                await Promise.all(
-                    groupedHashFilesData.map(async ({ hash, bookData, books }) => {
-                        // 保存分组下的书籍文件、章节和目录
-                        if (bookData) {
-                            console.log(`Processing file with hash: ${hash}`);
-                            await this.fileService.add(bookData.bookFile, transaction);
-                            await this.chapterService.addAll(bookData.chapters, transaction);
-                            await this.tocService.update(bookData.toc, transaction);
-                        }
+                const groupsPromises = groupedHashFilesData.map(({ hash, bookData, books }) => {
+                    // 保存分组下的书籍文件、章节和目录
+                    const groupPromises = [];
+                    if (bookData) {
+                        console.log(`Processing file with hash: ${hash}`);
+                        groupPromises.push(
+                            this.fileService.add(bookData.bookFile, transaction),
+                            this.chapterService.addAll(bookData.chapters, transaction),
+                            this.tocService.update(bookData.toc, transaction)
+                        );
+                    }
 
-                        // 保存分组下的所有书籍和阅读进度
-                        const bookPromises = books.map(async ({ book, readingProgress }) => {
-                            await this.bookService.add(book, transaction);
-                            await this.readingProgressService.update(readingProgress, transaction);
-
-                            callback(book, 1);
-                            // 创建书籍元素
-                            //this.mainUi.renderBookElement(book, 1);
-                        });
-                        await Promise.all(bookPromises);
-                    })
-                );
+                    // 保存分组下的所有书籍和阅读进度
+                    books.forEach(({ book, readingProgress }) => {
+                        groupPromises.push(
+                            this.bookService.add(book, transaction),
+                            this.readingProgressService.add(readingProgress, transaction)
+                        );
+                    });
+                    return Promise.all(groupPromises);
+                });
+                await Promise.all(groupsPromises);
             }
         );
+
+        return groupedHashFilesData.flatMap(({ books }) => books).flatMap(({ book }) => book);
     }
 
     /**
@@ -122,7 +124,10 @@ export default class BookshelfService {
             DatabaseMode.READ_WRITE,
             async (transaction) => {
                 // 如果该文件没有其他书籍则删除对应的file, chapter和toc
-                const book = assertExists(await this.bookService.getByKey(bookId, transaction), `Book[${bookId}] not found`);
+                const book = assertExists(
+                    await this.bookService.getByKey(bookId, transaction),
+                    `Book[${bookId}] not found`
+                );
 
                 // 计算相同hash的书籍数量
                 const count = await this.bookService.countByIndex(
@@ -173,27 +178,20 @@ export default class BookshelfService {
     }
 
     /**
-     * 点击导航栏分类项
-     * @param categoryId - 分类id
-     * @param callback - 每获取一本书籍后的回调函数
+     * 获取指定分类下的所有书籍
+     * @param categoryId - 书籍分类id
+     * @returns  书籍列表
      */
-    public async clickNavItem(categoryId: string, callback: (book: Book, index: number) => void) {
-        await TransactionManager.runTransaction(bookStore.name, DatabaseMode.READ_ONLY, async (transaction) => {
-            const books = await this.bookService.getAllByIndex(
-                bookStore.indexes.idxCategoryId.name,
-                categoryId,
-                transaction
-            );
-            books.forEach((book, index) => {
-                callback(book, index);
-            });
+    public async getBooksByCategoryId(categoryId: string): Promise<Book[]> {
+        return await TransactionManager.runTransaction(bookStore.name, DatabaseMode.READ_ONLY, async (transaction) => {
+            return await this.bookService.getAllByIndex(bookStore.indexes.idxCategoryId.name, categoryId, transaction);
         });
     }
 
     /**
      * 获取所有分类
      */
-    public async getAllCategories() {
+    public async getCategories() {
         return await TransactionManager.runTransaction(
             [categoryStore.name],
             DatabaseMode.READ_ONLY,
@@ -258,12 +256,16 @@ export default class BookshelfService {
                     id: crypto.randomUUID(),
                     file: file,
                     hash: hash,
+                    createdTime: Date.now(),
+                    updatedTime: Date.now(),
                 });
                 const chapters = await this.chapterService.parseChapters(file, bookFile.id);
                 const toc = new Toc({
                     id: crypto.randomUUID(),
                     fileId: bookFile.id,
                     contents: chapters.map((chapter) => new Toc.Content(chapter)),
+                    createdTime: Date.now(),
+                    updatedTime: Date.now(),
                 });
                 bookData = {
                     bookFile: bookFile,
@@ -286,6 +288,7 @@ export default class BookshelfService {
                         fileId: bookfile.id,
                         fileName: hashFile.file.name,
                         createdTime: Date.now(),
+                        updatedTime: Date.now(),
                     });
 
                     // 阅读进度
@@ -295,6 +298,8 @@ export default class BookshelfService {
                         chapterIndex: 1,
                         lineIndex: 1,
                         lineVisibleRatio: 1,
+                        createdTime: Date.now(),
+                        updatedTime: Date.now(),
                     });
                     return { book, readingProgress };
                 }),
