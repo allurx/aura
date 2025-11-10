@@ -31,6 +31,7 @@ export default class AssertUtil {
         }
         return value;
     }
+    
 }
 
 export const assertExists = AssertUtil.assertExists.bind(AssertUtil);

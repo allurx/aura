@@ -16,7 +16,7 @@
 
 import Database from "./database";
 import DatabaseDefinition from "./database-definition";
-import { DatabaseModeEnum } from "../constant/database-mode.enum";
+import { DatabaseMode } from "../constant/database-mode";
 
 /**
  * 事务管理器, 负责事务的创建和管理
@@ -41,7 +41,7 @@ export default class TransactionManager {
      */
     public static async runTransaction<T>(
         storeNames: string | string[],
-        mode: DatabaseModeEnum,
+        mode: DatabaseMode,
         operation: (transaction: IDBTransaction) => Promise<T>
     ): Promise<T> {
         const transaction = await this.createTransaction(storeNames, mode);
@@ -67,10 +67,7 @@ export default class TransactionManager {
      * @param  mode - 事务模式
      * @returns 解析为IDBTransaction的Promise
      */
-    private static async createTransaction(
-        storeName: string | string[],
-        mode: DatabaseModeEnum
-    ): Promise<IDBTransaction> {
+    private static async createTransaction(storeName: string | string[], mode: DatabaseMode): Promise<IDBTransaction> {
         const database = await TransactionManager.DATABASE.instance();
         return database.transaction(storeName, mode);
     }

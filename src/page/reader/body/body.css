@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
- /* 正文内容区域 */
+/* 正文内容区域 */
 #content {
     height: calc(100% - 120px);
     overflow-x: hidden;
@@ -25,4 +25,5 @@
     scrollbar-color: #666666 transparent;
     word-break: break-word;
     outline: none;
+    padding: 0 30px;
 }

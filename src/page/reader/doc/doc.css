@@ -1,3 +1,5 @@
+@charset "UTF-8";
+
 /*
  * Copyright 2025 allurx
  *
@@ -14,16 +16,12 @@
  * limitations under the License.
  */
 
-import ReadingProgressRepository from "./reading-progress.repository";
-import ReadingProgress from "./reading-progress.model";
-import BaseService from "../base.service";
+html {
+    background-color: #be966e;
+    opacity: 0;
+}
 
-/**
- * 阅读进度服务
- * @author allurx
- */
-export default class ReadingProgressService extends BaseService<ReadingProgress> {
-    public constructor() {
-        super(new ReadingProgressRepository());
-    }
+/* 防止页面频繁加载时元素闪烁 */
+html.visible {
+    opacity: 1;
 }

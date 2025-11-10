@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import BaseService from "../base.service";
 import CategoryRepository from "./category.repository";
 import Category from "./category.model";
 
@@ -20,35 +22,8 @@ import Category from "./category.model";
  * 分类服务
  * @author allurx
  */
-export default class CategoryService {
-    private readonly repository: CategoryRepository;
-
+export default class CategoryService extends BaseService<Category> {
     public constructor() {
-        this.repository = new CategoryRepository();
-    }
-
-    /**
-     * 保存分类
-     * @param categories 分类列表
-     * @param transaction 事务
-     */
-    public async addAll(categories: Category[], transaction: IDBTransaction) {
-        return await this.repository.addAll(categories, transaction);
-    }
-
-    /**
-     * 获取所有分类
-     * @param transaction 事务
-     */
-    public async getAll(transaction: IDBTransaction) {
-        return await this.repository.getAll(transaction);
-    }
-
-    /**
-     * 统计分类数量
-     * @param transaction 事务
-     */
-    public async count(transaction: IDBTransaction) {
-        return await this.repository.count(transaction);
+        super(new CategoryRepository());
     }
 }

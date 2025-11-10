@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import Ui from "../../../core/component/ui";
 import { assertExists } from "../../../core/util/assert.util";
 import EventUtil from "../../../core/util/event.util";
 import Toc from "../../../domain/toc/toc.model";
@@ -22,23 +23,22 @@ import Toc from "../../../domain/toc/toc.model";
  * 目录面板
  * @author allurx
  */
-export default class TocUi {
-    private readonly tocElement: HTMLElement;
-    private readonly tocPanelElement: HTMLElement;
-    private readonly closeTocPanelElement: HTMLElement;
+export default class TocUi extends Ui {
+    private readonly tocContentElement: HTMLElement;
+    private readonly closeTocElement: HTMLElement;
 
-    public constructor() {
-        this.tocElement = assertExists(document.querySelector<HTMLElement>("#toc"));
-        this.tocPanelElement = assertExists(document.querySelector<HTMLElement>("#toc-panel"));
-        this.closeTocPanelElement = assertExists(document.querySelector<HTMLElement>("#close-toc-panel"));
+    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
+        super(args);
+        this.tocContentElement = assertExists(this.root.querySelector<HTMLElement>(".main"));
+        this.closeTocElement = assertExists(this.root.querySelector<HTMLElement>(".close"));
     }
 
     /**
      * 切换目录面板显示状态
      * @return 当前实例
      */
-    public toggleTocPanel() {
-        this.tocPanelElement.hidden = !this.tocPanelElement.hidden;
+    public toggleToc() {
+        this.root.classList.toggle("open");
         return this;
     }
 
@@ -48,16 +48,18 @@ export default class TocUi {
      * @return 当前实例
      */
     public highlightCurrentChapter(chapterIndex: number) {
-        if (!this.tocPanelElement.hidden) {
+        if (this.root.classList.contains("open")) {
             // 移除之前的章节高亮
-            this.tocElement.querySelector("p.active")?.classList.remove("active");
+            this.tocContentElement.querySelector("p.active")?.classList.remove("active");
 
             // 高亮当前章节
-            const currentTocElement = this.tocElement.querySelector(`p[data-index="${String(chapterIndex)}"]`);
-            currentTocElement?.classList.add("active");
+            const currentTocItemElement = this.tocContentElement.querySelector(
+                `p[data-index="${String(chapterIndex)}"]`
+            );
+            currentTocItemElement?.classList.add("active");
 
             // 滚动到当前章节
-            currentTocElement?.scrollIntoView({ behavior: "smooth", block: "start" });
+            currentTocItemElement?.scrollIntoView({ behavior: "smooth", block: "start" });
         }
         return this;
     }
@@ -67,7 +69,7 @@ export default class TocUi {
      * @param  contents - 目录内容数组
      * @return 当前实例
      */
-    public render(contents: InstanceType<typeof Toc.Content>[]) {
+    public renderContents(contents: InstanceType<typeof Toc.Content>[]) {
         // 创建文档片段,避免多次dom操作
         const fragment = document.createDocumentFragment();
 
@@ -79,7 +81,7 @@ export default class TocUi {
         });
 
         // 一次性添加到容器
-        this.tocElement.appendChild(fragment);
+        this.tocContentElement.appendChild(fragment);
         return this;
     }
 
@@ -88,20 +90,20 @@ export default class TocUi {
      * @param  handler - 事件处理函数
      * @return 当前实例
      */
-    public bindTocItemClick(handler: (chapterIndex: number) => Promise<void>) {
-        EventUtil.delegate(this.tocElement, "p", "click", async (_, target) => {
+    public delegateTocItemClick(handler: (chapterIndex: number) => Promise<void>) {
+        EventUtil.delegate(this.tocContentElement, "p", "click", async (_, target) => {
             await handler(Number(target.dataset["index"]));
         });
         return this;
     }
 
     /**
-     * 绑定目录面板关闭事件
+     * 绑定关闭目录面板事件
      * @return 当前实例
      */
-    public bindCloseTocPanel() {
-        EventUtil.bind(this.closeTocPanelElement, "click", () => {
-            this.tocPanelElement.hidden = true;
+    public bindTocClose() {
+        EventUtil.bind(this.closeTocElement, "click", () => {
+            this.root.classList.remove("open");
         });
         return this;
     }

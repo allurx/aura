@@ -26,8 +26,8 @@ export default class BookshelfUi {
     private readonly dialog: Dialog;
 
     public constructor() {
-        this.overlay = new Overlay();
-        this.dialog = new Dialog();
+        this.overlay = new Overlay({ containerElement: document.body });
+        this.dialog = new Dialog({ containerElement: document.body });
     }
 
     /**

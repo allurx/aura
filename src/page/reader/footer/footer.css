@@ -16,6 +16,17 @@
  * limitations under the License.
  */
 
+#footer {
+    display: flex;
+    height: 60px;
+    justify-content: center;
+    align-items: center;
+    -webkit-user-select: none;
+    user-select: none;
+    overflow: hidden;
+    padding: 0 30px;
+}
+
 /* 阅读进度 */
 #progress-rate {
     font-weight: bold;

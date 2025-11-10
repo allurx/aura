@@ -23,7 +23,9 @@ import { ClassFields } from "../core/type/common.type";
  */
 export default abstract class BaseModel {
     // 模型唯一标识符(uuid)
-    id!: string;
+    public id!: string;
+    public createdTime!: number;
+    public updatedTime!: number;
 
     /**
      * 更新模型属性

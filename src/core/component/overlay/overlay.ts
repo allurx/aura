@@ -24,9 +24,17 @@ export default class Overlay {
     private readonly overlay: HTMLDivElement;
     private readonly spinner: HTMLDivElement;
 
-    public constructor({ containerElement = document.body, overlayStyle = {}, spinnerStyle = {} } = {}) {
+    public constructor({
+        containerElement,
+        overlayStyle = {},
+        spinnerStyle = {},
+    }: {
+        containerElement: HTMLElement;
+        overlayStyle?: Partial<CSSStyleDeclaration>;
+        spinnerStyle?: Partial<CSSStyleDeclaration>;
+    }) {
         this.overlay = containerElement.appendChild(this.renderTemplate());
-        this.spinner = assertExists(this.overlay.querySelector("#spinner")) as HTMLDivElement;
+        this.spinner = assertExists(this.overlay.querySelector(".spinner")) as HTMLDivElement;
         this.applyOverlayStyle(overlayStyle);
         this.applySpinnerStyle(spinnerStyle);
     }
@@ -35,19 +43,19 @@ export default class Overlay {
      * 在执行异步处理函数时显示遮罩
      * @param handler - 异步处理函数
      */
-    public async showWhile(handler: () => Promise<void>) {
+    public async showWhile(handler: () => Promise<void>): Promise<void> {
         try {
             await this.show();
             await handler();
         } finally {
-            this.hide();
+            await this.hide();
         }
     }
 
     /**
      * 显示遮罩
      */
-    public async show() {
+    public async show(): Promise<void> {
         this.overlay.hidden = false;
         // 确保浏览器获得一次绘制机会
         await new Promise(requestAnimationFrame);
@@ -56,8 +64,9 @@ export default class Overlay {
     /**
      * 隐藏遮罩
      */
-    public hide() {
+    public hide(): Promise<void> {
         this.overlay.hidden = true;
+        return Promise.resolve();
     }
 
     /**
@@ -73,7 +82,7 @@ export default class Overlay {
      * 应用遮罩层样式
      * @param style - 样式对象
      */
-    private applyOverlayStyle(style = {}) {
+    private applyOverlayStyle(style: Partial<CSSStyleDeclaration>) {
         this.applyStyle(this.overlay, style);
     }
 
@@ -81,7 +90,7 @@ export default class Overlay {
      * 应用spinner样式
      * @param style - 样式对象
      */
-    private applySpinnerStyle(style = {}) {
+    private applySpinnerStyle(style: Partial<CSSStyleDeclaration>) {
         this.applyStyle(this.spinner, style);
     }
 
@@ -101,8 +110,8 @@ export default class Overlay {
      */
     private template() {
         return `
-            <div id="overlay" hidden>
-                <div id="spinner"></div>
+            <div class="overlay" hidden>
+                <div class="spinner"></div>
             </div>
         `;
     }

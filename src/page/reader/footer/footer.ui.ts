@@ -13,27 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+import Ui from "../../../core/component/ui";
 import { assertExists } from "../../../core/util/assert.util";
 
 /**
  * 阅读器页脚界面
  * @author allurx
  */
-export default class FooterUi {
-    private readonly footerElement: HTMLElement;
+export default class FooterUi extends Ui {
     private readonly chapterTitleElement: HTMLElement;
     private readonly progressRateElement: HTMLElement;
 
-    public constructor() {
-        this.footerElement = assertExists(document.querySelector<HTMLElement>("#footer"));
-        this.chapterTitleElement = assertExists(this.footerElement.querySelector<HTMLElement>("#chapter-title"));
-        this.progressRateElement = assertExists(this.footerElement.querySelector<HTMLElement>("#progress-rate"));
-    }
-
-    public renderPadding(padding: number) {
-        this.footerElement.style.padding = `0 ${String(padding)}px`;
-        return this;
+    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
+        super(args);
+        this.chapterTitleElement = assertExists(this.root.querySelector<HTMLElement>("#chapter-title"));
+        this.progressRateElement = assertExists(this.root.querySelector<HTMLElement>("#progress-rate"));
     }
 
     /**

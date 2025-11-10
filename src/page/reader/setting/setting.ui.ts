@@ -14,84 +14,95 @@
  * limitations under the License.
  */
 
-import { assertExists } from "../../../core/util/assert.util";
+import Ui from "../../../core/component/ui";
 import EventUtil from "../../../core/util/event.util";
-import ReaderSetting from "../../../domain/setting/reader-setting.model";
+import StyleEngine from "../../../core/component/style.engine";
+import StyleConfigurable from "../../../core/component/style-configurable";
+import { ConfigurableStyleProperty } from "../../../core/component/constant/configurable.style.property";
+import { assertExists } from "../../../core/util/assert.util";
+import Optional from "../../../core/optional";
 
 /**
  * 阅读器设置面板
  * @author allurx
  */
-export default class SettingUi {
-    private readonly settingPanelElement: HTMLElement;
-    private readonly closeSettingPanelElement: HTMLElement;
-    private readonly resetSettingPanelElement: HTMLElement;
-    private readonly fontSizeElement: HTMLInputElement;
-    private readonly fontSizeValueElement: HTMLElement;
-    private readonly widthElement: HTMLInputElement;
-    private readonly widthValueElement: HTMLElement;
-    private readonly paddingElement: HTMLInputElement;
-    private readonly paddingValueElement: HTMLElement;
-    private readonly lineHeightElement: HTMLInputElement;
-    private readonly lineHeightValueElement: HTMLElement;
-    private readonly fontColorElement: HTMLInputElement;
-    private readonly fontColorValueElement: HTMLElement;
-    private readonly readerBackgroundColorElement: HTMLInputElement;
-    private readonly readerBackgroundColorValueElement: HTMLElement;
-    private readonly backgroundColorElement: HTMLInputElement;
-    private readonly backgroundColorValueElement: HTMLElement;
+export default class SettingUi extends Ui {
+    private readonly asideElement: HTMLElement;
+    private readonly closeElement: HTMLElement;
+    private readonly resetElement: HTMLElement;
+    private readonly itemsContainerElement: HTMLElement;
+    private readonly items: {
+        item: HTMLDivElement;
+        property: ConfigurableStyleProperty;
+        unit: string | null;
+        control: HTMLInputElement;
+        display: HTMLSpanElement;
+    }[];
 
-    public constructor() {
-        // 面板元素
-        this.settingPanelElement = assertExists(document.querySelector<HTMLElement>("#setting-panel"));
+    // Mapping of setting target IDs to their corresponding UI instances
+    private readonly uisMap: Map<string, Ui & StyleConfigurable>;
 
-        // 控制按钮
-        this.closeSettingPanelElement = assertExists(document.querySelector<HTMLElement>("#close-setting-panel"));
-        this.resetSettingPanelElement = assertExists(document.querySelector<HTMLElement>("#reset-setting-panel"));
+    /**
+     * 构造函数
+     * @param  canBootstrap - 是否可以自我引导
+     * @param  uis - 可配置样式的UI组件列表
+     */
+    public constructor({
+        canBootstrap = true,
+        args,
+        uis,
+    }: {
+        canBootstrap?: boolean;
+        args: ConstructorParameters<typeof Ui>[0];
+        uis: (Ui & StyleConfigurable)[];
+    }) {
+        super(args);
+        this.asideElement = assertExists(this.root.querySelector<HTMLElement>("aside"));
+        this.closeElement = assertExists(this.root.querySelector<HTMLElement>(".close"));
+        this.resetElement = assertExists(this.root.querySelector<HTMLElement>(".reset"));
+        this.itemsContainerElement = assertExists(this.root.querySelector<HTMLElement>("section"));
+        this.items = Array.from(this.itemsContainerElement.querySelectorAll<HTMLDivElement>(".item")).map((item) => ({
+            item,
+            property: assertExists(item.getAttribute("data-property")) as ConfigurableStyleProperty,
+            unit: item.getAttribute("data-unit"),
+            control: assertExists(item.querySelector<HTMLInputElement>(".control")),
+            display: assertExists(item.querySelector<HTMLSpanElement>(".display")),
+        }));
 
-        // 设置选项
-        this.fontSizeElement = assertExists(document.querySelector<HTMLInputElement>("#font-size"));
-        this.fontSizeValueElement = assertExists(document.querySelector<HTMLElement>("#font-size-value"));
-        this.widthElement = assertExists(document.querySelector<HTMLInputElement>("#width"));
-        this.widthValueElement = assertExists(document.querySelector<HTMLElement>("#width-value"));
-        this.paddingElement = assertExists(document.querySelector<HTMLInputElement>("#padding"));
-        this.paddingValueElement = assertExists(document.querySelector<HTMLElement>("#padding-value"));
-        this.lineHeightElement = assertExists(document.querySelector<HTMLInputElement>("#line-height"));
-        this.lineHeightValueElement = assertExists(document.querySelector<HTMLElement>("#line-height-value"));
-        this.fontColorElement = assertExists(document.querySelector<HTMLInputElement>("#font-color"));
-        this.fontColorValueElement = assertExists(document.querySelector<HTMLElement>("#font-color-value"));
-        this.readerBackgroundColorElement = assertExists(
-            document.querySelector<HTMLInputElement>("#reader-background-color")
-        );
-        this.readerBackgroundColorValueElement = assertExists(
-            document.querySelector<HTMLElement>("#reader-background-color-value")
-        );
-        this.backgroundColorElement = assertExists(document.querySelector<HTMLInputElement>("#background-color"));
-        this.backgroundColorValueElement = assertExists(document.querySelector<HTMLElement>("#background-color-value"));
+        this.uisMap = new Map(uis.map((ui) => [ui.id, ui]));
+        if (canBootstrap) this.uisMap.set(this.id, this);
     }
 
     /**
      * 切换设置面板显示状态
      * @return 当前实例
      */
-    public toggleSettingPanel() {
-        this.settingPanelElement.hidden = !this.settingPanelElement.hidden;
+    public toggleSetting() {
+        const isOpen = this.root.classList.toggle("open");
+        // 打开时默认激活第一个node
+        if (isOpen && !this.asideElement.querySelector(".node.active")) {
+            this.asideElement.querySelector<HTMLDivElement>(".node > .title")?.click();
+        }
         return this;
     }
 
     /**
-     * 渲染设置面板
-     * @param  readerSetting - 阅读器设置
+     * 渲染侧边栏
      * @return 当前实例
      */
-    public render(readerSetting: ReaderSetting) {
-        this.renderFontSize(readerSetting.fontSize);
-        this.renderPageWidth(readerSetting.pageWidth);
-        this.renderPagePadding(readerSetting.pagePadding);
-        this.renderLineHeight(readerSetting.lineHeight);
-        this.renderFontColor(readerSetting.fontColor);
-        this.renderReaderBackgroundColor(readerSetting.readerBackgroundColor);
-        this.renderBackgroundColor(readerSetting.backgroundColor);
+    public renderAside() {
+        const rootUis = this.buildTree();
+        rootUis.forEach((rootUi) => {
+            this.asideElement.appendChild(this.createNode(rootUi, true));
+        });
+        return this;
+    }
+
+    public highlightActiveNode(nodeElement: HTMLDivElement) {
+        this.asideElement.querySelector(".node.active")?.classList.remove("active");
+        nodeElement.classList.add("active");
+        // 只有父节点才切换展开收起状态
+        if (nodeElement.classList.contains("parent")) nodeElement.classList.toggle("collapsed");
         return this;
     }
 
@@ -100,8 +111,8 @@ export default class SettingUi {
      * @return 当前实例
      */
     public bindCloseSettingPanel() {
-        EventUtil.bind(this.closeSettingPanelElement, "click", () => {
-            this.settingPanelElement.hidden = true;
+        EventUtil.bind(this.closeElement, "click", () => {
+            this.root.classList.remove("open");
         });
         return this;
     }
@@ -112,187 +123,137 @@ export default class SettingUi {
      * @return 当前实例
      */
     public bindResetSetting(handler: () => Promise<void>) {
-        EventUtil.bind(this.resetSettingPanelElement, "click", handler);
+        EventUtil.bind(this.resetElement, "click", async () => {
+            // 先执行重置操作再重置样式
+            await handler();
+            this.uisMap.forEach((ui) => ui.resetStyle());
+        });
         return this;
     }
 
-    /**
-     * 绑定字体大小变更事件
-     * @param  handler - 事件处理函数
-     * @return  当前实例
-     */
-    public bindFontSizeChange(handler: (fontSize: number) => Promise<void>) {
-        EventUtil.bind(this.fontSizeElement, "input", async (_, target) => {
-            const fontSize = target.value;
-            this.renderFontSize(Number(fontSize));
-            await handler(Number(fontSize));
+    public bindNodeClick() {
+        EventUtil.delegate(this.asideElement, ".node > .title", "click", (_, title) => {
+            const node = assertExists(title.parentElement);
+            this.highlightActiveNode(node as HTMLDivElement);
+            // 当前被设置的ui
+            const id = assertExists(node.dataset["id"]);
+            const ui = assertExists(this.uisMap.get(id));
+            this.itemsContainerElement.dataset["id"] = id;
+
+            // 显示对应ui的设置项并更新值
+            const style = StyleEngine.getComputedStyle(ui.root);
+            this.items.forEach(({ item, property, control, display }) => {
+                if (ui.configurableStyleProperties.has(property)) {
+                    let value = StyleEngine.getProperty(style, property);
+                    if (
+                        property === ConfigurableStyleProperty.COLOR ||
+                        property === ConfigurableStyleProperty.BACKGROUND_COLOR
+                    ) {
+                        value = StyleEngine.rgbToHex(value);
+                    }
+                    item.style.display = "flex";
+                    control.value = value.replace(/px$/, "");
+                    display.textContent = value;
+                } else {
+                    item.style.display = "none";
+                }
+            });
         });
         return this;
     }
 
     /**
-     * 绑定页面宽度变更事件
-     * @param  handler - 事件处理函数
-     * @return 当前实例
-     */
-    public bindWidthChange(handler: (width: number) => Promise<void>) {
-        EventUtil.bind(this.widthElement, "input", async (_, target) => {
-            // 计算应用的新宽度,取屏幕可见宽度和新宽度的较小值
-            const pageWidth = Math.min(Math.round(Number(target.value)), window.innerWidth);
-            this.renderPageWidth(pageWidth);
-            await handler(pageWidth);
-        });
-        return this;
-    }
-
-    /**
-     * 绑定内边距变更事件
-     * @param  handler - 事件处理函数
-     * @return  当前实例
-     */
-    public bindPaddingChange(handler: (padding: number) => Promise<void>) {
-        EventUtil.bind(this.paddingElement, "input", async (_, target) => {
-            const pagePadding = Number(target.value);
-            this.renderPagePadding(pagePadding);
-            await handler(pagePadding);
-        });
-        return this;
-    }
-
-    /**
-     * 绑定行高变更事件
+     * 绑定设置项变化事件
      * @param  handler - 事件处理函数
      * @return 当前实例
      */
-    public bindLineHeightChange(handler: (lineHeight: number) => Promise<void>) {
-        EventUtil.bind(this.lineHeightElement, "input", async (_, target) => {
-            const lineHeight = Number(target.value);
-            this.renderLineHeight(lineHeight);
-            await handler(lineHeight);
+    public bindSettingChange(
+        handler: (ui: Ui & StyleConfigurable, property: ConfigurableStyleProperty, value: string) => Promise<void>
+    ) {
+        this.items.forEach(({ property, unit, control, display }) => {
+            EventUtil.bind(control, "input", (_, target) => {
+                Optional.of(this.itemsContainerElement.dataset["id"])
+                    .map((id) => this.uisMap.get(id))
+                    .ifPresent((ui) => {
+                        const value = StyleEngine.toUnit(target.value, unit);
+                        display.textContent = value;
+                        StyleEngine.setProperty(ui.root, property, value);
+                        void handler(ui, property, value);
+                    });
+            });
         });
-        return this;
     }
 
     /**
-     * 绑定字体颜色变更事件
-     * @param handler - 事件处理函数
-     * @return 当前实例
+     * 构建ui组件树形结构
+     * @return 树形结构数组
      */
-    public bindFontColorChange(handler: (fontColor: string) => Promise<void>) {
-        EventUtil.bind(this.fontColorElement, "input", async (_, target) => {
-            const fontColor = target.value;
-            this.renderFontColor(fontColor);
-            await handler(fontColor);
+    private buildTree() {
+        const uiArray = Array.from(this.uisMap.values());
+        // 根节点(没有父Ui)
+        const rootUis: Ui[] = [];
+        uiArray.forEach((ui) => {
+            const parentUi = this.findParentUi(ui.root, uiArray);
+            if (parentUi) {
+                parentUi.children.push(ui);
+            } else {
+                // 如果没有父Ui,说明这是根Ui
+                rootUis.push(ui);
+            }
         });
-        return this;
+        return rootUis;
     }
 
     /**
-     * 绑定阅读器背景色变更事件
-     * @param handler - 事件处理函数
-     * @return 当前实例
+     * 递归查找父Ui组件
+     * @param element - 当前元素
+     * @param uiArray - Ui组件数组
+     * @return 父Ui组件或null
      */
-    public bindReaderBackgroundColorChange(handler: (backgroundColor: string) => Promise<void>) {
-        EventUtil.bind(this.readerBackgroundColorElement, "input", async (_, target) => {
-            const readerBackgroundColor = target.value;
-            this.renderReaderBackgroundColor(readerBackgroundColor);
-            await handler(readerBackgroundColor);
-        });
-        return this;
+    private findParentUi(element: HTMLElement, uiArray: Ui[]): Ui | null {
+        if (element.parentElement) {
+            return (
+                uiArray.find((ui) => ui.root === element.parentElement) ??
+                this.findParentUi(element.parentElement, uiArray)
+            );
+        }
+        return null;
     }
 
     /**
-     * 绑定页面背景色变更事件
-     * @param handler - 事件处理函数
-     * @return 当前实例
+     * 创建节点元素
+     * @param ui - ui组件实例
+     * @param isRoot - 是否为根节点
+     * @return 节点元素
      */
-    public bindBackgroundColorChange(handler: (backgroundColor: string) => Promise<void>) {
-        EventUtil.bind(this.backgroundColorElement, "input", async (_, target) => {
-            const backgroundColor = target.value;
-            this.renderBackgroundColor(backgroundColor);
-            await handler(backgroundColor);
-        });
-        return this;
-    }
+    private createNode(ui: Ui, isRoot: boolean) {
+        // 创建节点元素
+        const node = document.createElement("div");
+        const hasChildren = ui.hasChildren();
+        node.classList.add("node");
+        if (isRoot) node.classList.add("root");
+        if (hasChildren) node.classList.add("parent", "collapsed");
+        node.setAttribute("data-id", ui.id);
 
-    /**
-     * 渲染字体大小
-     * @param fontSize - 字体大小
-     * @return 当前实例
-     */
-    private renderFontSize(fontSize: number) {
-        const fontSizeStr = String(fontSize);
-        this.fontSizeElement.value = fontSizeStr;
-        this.fontSizeValueElement.textContent = fontSizeStr + "px";
-        return this;
-    }
+        // 创建标题元素
+        const title = document.createElement("span");
+        title.classList.add("title");
+        title.textContent = ui.displayName;
 
-    /**
-     * 渲染页面宽度
-     * @param  pageWidth - 页面宽度
-     * @return 当前实例
-     */
-    private renderPageWidth(pageWidth: number) {
-        const pageWidthStr = String(pageWidth);
-        this.widthElement.min = String(window.innerWidth > 768 ? 768 : 320);
-        this.widthElement.max = String(window.innerWidth);
-        this.widthElement.value = pageWidthStr;
-        this.widthValueElement.textContent = pageWidthStr + "px";
-        return this;
-    }
+        // 组装标题
+        node.appendChild(title);
 
-    /**
-     * 渲染页面内边距
-     * @param pagePadding - 页面内边距
-     * @return 当前实例
-     */
-    private renderPagePadding(pagePadding: number) {
-        const pagePaddingStr = String(pagePadding);
-        this.paddingValueElement.textContent = pagePaddingStr + "px";
-        return this;
-    }
-
-    /**
-     * 渲染行高
-     * @param lineHeight - 行高
-     * @return 当前实例
-     */
-    private renderLineHeight(lineHeight: number) {
-        this.lineHeightElement.value = String(lineHeight);
-        this.lineHeightValueElement.textContent = String(lineHeight);
-        return this;
-    }
-
-    /**
-     * 渲染字体颜色
-     * @param  fontColor - 字体颜色
-     * @return 当前实例
-     */
-    private renderFontColor(fontColor: string) {
-        this.fontColorElement.value = fontColor;
-        this.fontColorValueElement.textContent = fontColor;
-        return this;
-    }
-
-    /**
-     * 渲染阅读器背景颜色
-     * @param  readerBackgroundColor - 阅读器背景颜色
-     * @return 当前实例
-     */
-    private renderReaderBackgroundColor(readerBackgroundColor: string) {
-        this.readerBackgroundColorElement.value = readerBackgroundColor;
-        this.readerBackgroundColorValueElement.textContent = readerBackgroundColor;
-        return this;
-    }
-
-    /**
-     * 渲染页面背景颜色
-     * @param backgroundColor - 页面背景颜色
-     * @return 当前实例
-     */
-    private renderBackgroundColor(backgroundColor: string) {
-        this.backgroundColorElement.value = backgroundColor;
-        this.backgroundColorValueElement.textContent = backgroundColor;
-        return this;
+        // 递归创建子节点
+        if (hasChildren) {
+            const children = document.createElement("div");
+            children.classList.add("children");
+            ui.children.forEach((childUi) => {
+                const childNode = this.createNode(childUi, false);
+                if (!childUi.hasChildren()) childNode.classList.add("leaf");
+                children.appendChild(childNode);
+            });
+            node.appendChild(children);
+        }
+        return node;
     }
 }

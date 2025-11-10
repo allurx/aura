@@ -26,7 +26,6 @@ export default class Book extends BaseModel {
     public readonly fileId!: string;
     public readonly fileName!: string;
     public readonly categoryId!: string;
-    public readonly createdTime!: number;
 
     public constructor(data: ClassFields<Book>) {
         super();

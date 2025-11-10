@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import Ui from "../../../core/component/ui";
 import { assertExists } from "../../../core/util/assert.util";
 import EventUtil from "../../../core/util/event.util";
 
@@ -21,28 +22,18 @@ import EventUtil from "../../../core/util/event.util";
  * 阅读器头部界面
  * @author allurx
  */
-export default class HeaderUi {
-    private readonly headerElement: HTMLElement;
+export default class HeaderUi extends Ui {
     private readonly toggleTocPanelElement: HTMLImageElement;
     private readonly toggleFullscreenElement: HTMLImageElement;
     private readonly toggleSettingPanelElement: HTMLImageElement;
 
-    public constructor() {
-        this.headerElement = assertExists(document.querySelector<HTMLElement>("#header"));
-        this.toggleTocPanelElement = assertExists(
-            this.headerElement.querySelector<HTMLImageElement>("#toggle-toc-panel")
-        );
-        this.toggleFullscreenElement = assertExists(
-            this.headerElement.querySelector<HTMLImageElement>("#toggle-fullscreen")
-        );
+    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
+        super(args);
+        this.toggleTocPanelElement = assertExists(this.root.querySelector<HTMLImageElement>("#toggle-toc-panel"));
+        this.toggleFullscreenElement = assertExists(this.root.querySelector<HTMLImageElement>("#toggle-fullscreen"));
         this.toggleSettingPanelElement = assertExists(
-            this.headerElement.querySelector<HTMLImageElement>("#toggle-setting-panel")
+            this.root.querySelector<HTMLImageElement>("#toggle-setting-panel")
         );
-    }
-
-    public renderPadding(padding: number) {
-        this.headerElement.style.padding = `0 ${String(padding)}px`;
-        return this;
     }
 
     /**

@@ -14,12 +14,26 @@
  * limitations under the License.
  */
 
+import { ConfigurableStyleProperty } from "./constant/configurable.style.property";
+
 /**
- * Chapter switching directions.
+ * 可配置样式接口
  * @author allurx
  */
-export enum SwitchChapterDirectionEnum {
-    PREV = "prev",
-    NEXT = "next",
-    INVALID = "invalid",
+export default interface StyleConfigurable {
+    /**
+     *  可配置样式集合
+     */
+    readonly configurableStyleProperties: Set<ConfigurableStyleProperty>;
+
+    /**
+     * 应用可配置样式
+     * @param style - 可配置样式
+     */
+    applyStyle(style: Partial<Record<ConfigurableStyleProperty, string>>): this;
+
+    /**
+     * 重置可配置样式
+     */
+    resetStyle(): this;
 }

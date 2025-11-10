@@ -18,7 +18,7 @@ import { defineConfig } from "vite";
 import obfuscatorPlugin from "vite-plugin-javascript-obfuscator";
 import { createHtmlPlugin } from "vite-plugin-html";
 import { join, dirname } from "path";
-import { writeFileSync, mkdirSync } from "fs";
+import { readFileSync, writeFileSync, mkdirSync } from "fs";
 
 /**
  * vite配置
@@ -26,6 +26,12 @@ import { writeFileSync, mkdirSync } from "fs";
  */
 export default defineConfig({
     root: "src",
+    server: {
+        https: {
+            key: readFileSync("../localhost-key.pem"),
+            cert: readFileSync("../localhost.pem"),
+        },
+    },
     build: {
         target: "ESNext",
         outDir: "../dist",

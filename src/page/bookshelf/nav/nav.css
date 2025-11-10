@@ -17,49 +17,52 @@
  */
 
 nav {
-  width: 6rem;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #666 transparent;
-  background-color: #1f2937;
-  transition: transform 0.3s ease;
+    width: 6rem;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #666 transparent;
+    background-color: #1f2937;
+    transition: transform 0.3s ease;
 }
 
 nav.hidden {
-  position: fixed;
-  transform: translateX(-100%);
+    position: fixed;
+    transform: translateX(-100%);
 }
 
 nav button {
-  width: 75%;
-  background: none;
-  border: none;
-  border-radius: 0.4rem;
-  margin: 0.75rem 0;
-  padding: 0.4rem 0.8rem;
-  font-size: 0.9rem;
-  color: #ffffff;
-  word-break: keep-all;
-  text-align: center;
-  cursor: pointer;
-  transition: background-color 0.3s, border-color 0.3s;
-  box-shadow: 0 0 0.625rem rgba(0, 0, 0, 1);
+    width: 75%;
+    background: none;
+    border: none;
+    border-radius: 0.4rem;
+    margin: 0.75rem 0;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    color: #ffffff;
+    word-break: keep-all;
+    text-align: center;
+    cursor: pointer;
+    transition:
+        background-color 0.3s,
+        border-color 0.3s;
+    box-shadow: 0 0 0.625rem rgba(0, 0, 0, 1);
 }
 
 nav button.active {
-  background-color: #374151;
-  color: #ffd04b;
+    background-color: #374151;
+    color: #ffd04b;
 }
 
 /* 仅桌面端悬停生效 */
 @media (hover: hover) and (pointer: fine) {
-  nav button:hover {
-    background-color: #374151;
-    color: #ffd04b;
-  }
+    nav button:hover {
+        background-color: #374151;
+        color: #ffd04b;
+    }
 }
+

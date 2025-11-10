@@ -46,19 +46,17 @@ export default class EventUtil {
 
     /**
      * 委托绑定 - 动态生成的元素
-     * @template E - 事件类型
-     * @template N - 目标元素类型
      * @param delegatorElement - 事件委托的目标元素
      * @param targetSelector - 事件目标元素选择器
      * @param eventType - 事件类型
      * @param handler - 事件处理函数
      * @param options - 事件选项
      */
-    public static delegate<N extends Node | Element>(
-        delegatorElement: N,
+    public static delegate(
+        delegatorElement: HTMLElement,
         targetSelector: string,
         eventType: string,
-        handler: (event: Event, targetElement: N) => Promise<void> | void,
+        handler: (event: Event, targetElement: HTMLElement) => Promise<void> | void,
         options: AddEventListenerOptions = {}
     ): void {
         delegatorElement.addEventListener(
@@ -66,7 +64,7 @@ export default class EventUtil {
             (event) =>
                 void (async () => {
                     const targetElement = (event.target as HTMLElement).closest(targetSelector);
-                    if (targetElement) await handler(event, targetElement as N);
+                    if (targetElement) await handler(event, targetElement as HTMLElement);
                 })(),
             options
         );

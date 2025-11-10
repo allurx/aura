@@ -24,6 +24,7 @@ import ObjectUtil from "../../core/util/object.util";
  */
 export default class Category extends BaseModel {
     public readonly name!: string;
+    public readonly order!: number;
 
     public constructor(data: ClassFields<Category>) {
         super();
