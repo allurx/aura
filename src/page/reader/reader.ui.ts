@@ -47,7 +47,7 @@ export default class ReaderUi extends Ui {
                             const entry = assertExists(entries[0]);
                             const width = entry.contentRect.width;
                             console.log("检测到页面宽度变化：", width);
-                            await handler(String(width));
+                            await handler(String(width) + "px");
                         })();
                     }, 300);
                 };
