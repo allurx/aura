@@ -44,9 +44,9 @@ export default class BookshelfController {
     }
 
     public async init() {
-        await this.bookshelfService.seedDatabase();
-        const categories = await this.bookshelfService.getCategories();
-        this.categoryId = assertExists(categories.find((category) => category.order === 1)).id;
+        const categories = await this.bookshelfService.seedDatabase();
+        const defaultCategory = assertExists(categories.find((category) => category.order === 1));
+        this.categoryId = defaultCategory.id;
         this.nav.renderNav(categories);
         this.bindEvent();
         this.nav.clickNavItem(this.categoryId);
@@ -75,7 +75,10 @@ export default class BookshelfController {
                     return isTextFile;
                 });
                 await this.bookshelfService
-                    .addBook(validFiles, this.categoryId)
+                    .addBook(
+                        validFiles.map((file) => ({ file })),
+                        this.categoryId
+                    )
                     .then((books) => this.main.renderBookElements(books));
             })
             .finally(() => this.main.clearBookInput());
@@ -114,8 +117,7 @@ export default class BookshelfController {
         this.nav.delegateNavItemClick(async (categoryId) => {
             this.categoryId = categoryId;
             const books = await this.bookshelfService.getBooksByCategoryId(categoryId);
-            this.main.removeBookElements();
-            books.forEach((book, index) => this.main.renderBookElement(book, index));
+            this.main.removeBookElements().renderBookElements(books);
         });
 
         // 绑定书籍主体事件

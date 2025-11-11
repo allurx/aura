@@ -46,8 +46,8 @@ export default class FooterUi extends Ui {
      * @param numberOfLines - 总行数
      * @return 当前实例
      */
-    public renderReadingProgress(currentLineNumber: number, numberOfLines: number) {
-        const rate = ((currentLineNumber / numberOfLines) * 100).toFixed(2);
+    public renderProgress(currentLineNumber: number, numberOfLines: number) {
+        const rate = numberOfLines === 0 ? "0.00" : ((currentLineNumber / numberOfLines) * 100).toFixed(2);
         this.progressRateElement.textContent = `${rate}%`;
         return this;
     }

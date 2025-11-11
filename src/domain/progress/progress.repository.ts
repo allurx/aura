@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import ReadingProgressRepository from "./reading-progress.repository";
-import ReadingProgress from "./reading-progress.model";
-import BaseService from "../base.service";
+import Progress from "./progress.model";
+import BaseRepository from "../base.repository";
+import { progressStore } from "../../core/database/database-definition";
 
 /**
- * 阅读进度服务
+ * 阅读进度数据访问对象
  * @author allurx
  */
-export default class ReadingProgressService extends BaseService<ReadingProgress> {
+export default class ProgressRepository extends BaseRepository<Progress> {
     public constructor() {
-        super(new ReadingProgressRepository());
+        super(progressStore, Progress);
     }
 }

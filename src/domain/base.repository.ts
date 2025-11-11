@@ -93,9 +93,9 @@ export default abstract class BaseRepository<T extends BaseModel> {
         await this.deleteAllByIndexRequestPromise(store, indexName, indexValue);
     }
 
-    public async count(transaction: IDBTransaction) {
+    public async count(transaction: IDBTransaction, query?: IDBValidKey | IDBKeyRange) {
         const store = transaction.objectStore(this.storeName());
-        return await this.requestPromise(store.count());
+        return await this.requestPromise(store.count(query));
     }
 
     public async countByIndex(indexName: string, indexValue: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {

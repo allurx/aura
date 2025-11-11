@@ -21,6 +21,7 @@ import StyleConfigurable from "../../../core/component/style-configurable";
 import { ConfigurableStyleProperty } from "../../../core/component/constant/configurable.style.property";
 import { assertExists } from "../../../core/util/assert.util";
 import Optional from "../../../core/optional";
+import { SettingName } from "../constant/setting.name";
 
 /**
  * 阅读器设置面板
@@ -49,14 +50,18 @@ export default class SettingUi extends Ui {
      */
     public constructor({
         canBootstrap = true,
-        args,
+        container,
         uis,
     }: {
         canBootstrap?: boolean;
-        args: ConstructorParameters<typeof Ui>[0];
+        container: HTMLElement;
         uis: (Ui & StyleConfigurable)[];
     }) {
-        super(args);
+        super({
+            root: { container, template: SettingUi.template },
+            settingName: SettingName.SETTING,
+            displayName: "设置",
+        });
         this.asideElement = assertExists(this.root.querySelector<HTMLElement>("aside"));
         this.closeElement = assertExists(this.root.querySelector<HTMLElement>(".close"));
         this.resetElement = assertExists(this.root.querySelector<HTMLElement>(".reset"));
@@ -256,4 +261,64 @@ export default class SettingUi extends Ui {
         }
         return node;
     }
+
+    private static template = `
+        <div class="setting">
+            <aside></aside>
+            <div class="main">
+                <header>
+                    <span class="reset" title="重置">↺</span>
+                    <span class="close" title="关闭">✖</span>
+                </header>
+                <section>
+                    <div class="item" data-property="font-size" data-unit="px">
+                        <span class="name">字号</span>
+                        <input class="control" min="12" max="100" step="1" type="range" />
+                        <span class="display"></span>
+                    </div>
+                    <div class="item" data-property="width" data-unit="px">
+                        <span class="name">宽度</span>
+                        <input class="control" type="range" step="1" min="800" max="800" />
+                        <span class="display"></span>
+                    </div>
+                    <div class="item" data-property="padding-top" data-unit="px">
+                        <span class="name">上内边距</span>
+                        <input type="range" class="control" min="0" max="100" step="1" />
+                        <span class="display"></span>
+                    </div>
+                    <div class="item" data-property="padding-bottom" data-unit="px">
+                        <span class="name">下内边距</span>
+                        <input type="range" class="control" min="0" max="100" step="1" />
+                        <span class="display"></span>
+                    </div>
+                    <div class="item" data-property="padding-left" data-unit="px">
+                        <span class="name">左内边距</span>
+                        <input type="range" class="control" min="0" max="100" step="1" />
+                        <span class="display"></span>
+                    </div>
+                    <div class="item" data-property="padding-right" data-unit="px">
+                        <span class="name">右内边距</span>
+                        <input type="range" class="control" min="0" max="100" step="1" />
+                        <span class="display"></span>
+                    </div>
+                    <div class="item" data-property="line-height" data-unit="px">
+                        <span class="name">行高</span>
+                        <input class="control" min="16" max="48" step="1" type="range" />
+                        <span class="display"></span>
+                    </div>
+                    <div class="item" data-property="color">
+                        <span class="name">文本颜色</span>
+                        <input class="control" type="color" />
+                        <span class="display"></span>
+                    </div>
+                    <div class="item" data-property="background-color">
+                        <span class="name">背景颜色</span>
+                        <input class="control" type="color" />
+                        <span class="display"></span>
+                    </div>
+                </section>
+                <footer class="footer"></footer>
+            </div>
+        </div>
+        `;
 }

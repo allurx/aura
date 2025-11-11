@@ -88,8 +88,8 @@ export default class BaseService<T extends BaseModel> {
         await this.repository.clear(transaction);
     }
 
-    public async count(transaction: IDBTransaction): Promise<number> {
-        return await this.repository.count(transaction);
+    public async count(transaction: IDBTransaction, query?: IDBValidKey | IDBKeyRange): Promise<number> {
+        return await this.repository.count(transaction, query);
     }
 
     public async countByIndex(

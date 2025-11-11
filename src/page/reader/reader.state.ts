@@ -17,9 +17,9 @@ import Book from "../../domain/book/book.model";
 import Chapter from "../../domain/chapter/chapter.model";
 import Toc from "../../domain/toc/toc.model";
 import ReaderSetting from "../../domain/setting/reader-setting.model";
-import ReadingProgress from "../../domain/reading-progress/reading-progress.model";
+import Progress from "../../domain/progress/progress.model";
 import ObjectUtil from "../../core/util/object.util";
-import { SettingName } from "../../core/constant/setting.name";
+import { SettingName } from "../../core/component/constant/setting.name";
 
 /**
  * 阅读器状态
@@ -29,7 +29,7 @@ export default class ReaderState {
     public readonly book!: Book;
     public readonly toc!: Toc;
     public readonly settings!: Map<SettingName, ReaderSetting>;
-    public readonly readingProgress!: ReadingProgress;
+    public readonly progress!: Progress;
     public chapter!: Chapter;
 
     public constructor(data: Required<ReaderState>) {

@@ -50,7 +50,7 @@ export default class NavUi {
      * @returns 返回当前实例
      */
     public toggleVisibility() {
-        this.navElement.classList.toggle("hidden");
+        this.navElement.classList.toggle("flag-visible");
         return this;
     }
 

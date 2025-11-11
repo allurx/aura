@@ -20,7 +20,8 @@ import Overlayable from "./overlay/overlayable";
 import Dialogable from "./dialog/dalogable";
 import StyleEngine from "./style.engine";
 import StyleConfigurable from "./style-configurable";
-import { SettingName } from "../constant/setting.name";
+import { assertExists } from "../util/assert.util";
+import { SettingName } from "./constant/setting.name";
 import { ConfigurableStyleProperty } from "./constant/configurable.style.property";
 
 /**
@@ -41,11 +42,11 @@ export default abstract class Ui implements StyleConfigurable, Dialogable, Overl
         root,
         settingName,
         displayName,
-        dialog = new Dialog({ containerElement: root }),
-        overlay = new Overlay({ containerElement: root }),
+        dialog,
+        overlay,
         configurableStyleProperties = new Set<ConfigurableStyleProperty>([]),
     }: {
-        root: HTMLElement;
+        root: HTMLElement | { container: HTMLElement; template: string };
         settingName: SettingName;
         displayName: string;
         dialog?: Dialog;
@@ -53,11 +54,11 @@ export default abstract class Ui implements StyleConfigurable, Dialogable, Overl
         configurableStyleProperties?: Set<ConfigurableStyleProperty>;
     }) {
         this.id = crypto.randomUUID();
-        this.root = root;
+        this.root = root instanceof HTMLElement ? root : this.renderTemplate(root);
         this.settingName = settingName;
         this.displayName = displayName;
-        this.dialog = dialog;
-        this.overlay = overlay;
+        this.dialog = dialog ?? new Dialog({ containerElement: this.root });
+        this.overlay = overlay ?? new Overlay({ containerElement: this.root });
         this.configurableStyleProperties = configurableStyleProperties;
     }
 
@@ -122,5 +123,15 @@ export default abstract class Ui implements StyleConfigurable, Dialogable, Overl
      */
     public hasChildren(): boolean {
         return this.children.length > 0;
+    }
+
+    /**
+     * 渲染模板
+     */
+    public renderTemplate({ container, template }: { container: HTMLElement; template: string }): HTMLElement {
+        const templateElement = document.createElement("template");
+        templateElement.innerHTML = template.trim();
+        const node = assertExists(templateElement.content.firstElementChild);
+        return container.appendChild(node) as HTMLElement;
     }
 }
