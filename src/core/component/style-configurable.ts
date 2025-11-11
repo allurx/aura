@@ -36,4 +36,5 @@ export default interface StyleConfigurable {
      * 重置可配置样式
      */
     resetStyle(): this;
+
 }

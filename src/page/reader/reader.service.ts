@@ -14,21 +14,21 @@
  * limitations under the License.
  */
 
-import ReadingProgress from "../../domain/reading-progress/reading-progress.model";
+import Progress from "../../domain/progress/progress.model";
 import ReaderSetting from "../../domain/setting/reader-setting.model";
 import BookService from "../../domain/book/book.service";
 import ChapterService from "../../domain/chapter/chapter.service";
-import ReadingProgressService from "../../domain/reading-progress/reading-progress.service";
+import ProgressService from "../../domain/progress/progress.service";
 import TocService from "../../domain/toc/toc.service";
 import SettingService from "../../domain/setting/setting.service";
 import TransactionManager from "../../core/database/transaction-manager";
-import { SettingName } from "../../core/constant/setting.name";
+import { SettingName } from "../../core/component/constant/setting.name";
 import { DatabaseMode } from "../../core/constant/database-mode";
 import {
     bookStore,
     tocStore,
     chapterStore,
-    readingProgressStore,
+    progressStore,
     settingStore,
 } from "../../core/database/database-definition";
 import ReaderState from "./reader.state";
@@ -41,12 +41,12 @@ import { assertExists } from "../../core/util/assert.util";
 export default class ReaderService {
     private readonly bookService: BookService;
     private readonly chapterService: ChapterService;
-    private readonly readingProgressService: ReadingProgressService;
+    private readonly progressService: ProgressService;
     private readonly tocService: TocService;
     private readonly settingService: SettingService;
 
     public constructor() {
-        this.readingProgressService = new ReadingProgressService();
+        this.progressService = new ProgressService();
         this.bookService = new BookService();
         this.chapterService = new ChapterService();
         this.tocService = new TocService();
@@ -60,7 +60,7 @@ export default class ReaderService {
     public async init(bookId: string) {
         // 加载数据
         return await TransactionManager.runTransaction(
-            [bookStore.name, tocStore.name, chapterStore.name, readingProgressStore.name, settingStore.name],
+            [bookStore.name, tocStore.name, chapterStore.name, progressStore.name, settingStore.name],
             DatabaseMode.READ_ONLY,
             async (transaction) => {
                 const book = assertExists(
@@ -77,7 +77,7 @@ export default class ReaderService {
                     readerFooterSetting,
                     readerDocSetting,
                     readerTocSetting,
-                    { readingProgress, chapter },
+                    { progress, chapter },
                 ] = await Promise.all([
                     this.tocService
                         .getByIndex(tocStore.indexes.ukFileId.name, book.fileId, transaction)
@@ -89,23 +89,23 @@ export default class ReaderService {
                     this.settingService.getReaderSetting(SettingName.READER_DOC, transaction),
                     this.settingService.getReaderSetting(SettingName.READER_TOC, transaction),
                     (async () => {
-                        const readingProgress = assertExists(
-                            await this.readingProgressService.getByIndex(
-                                readingProgressStore.indexes.ukBookId.name,
+                        const progress = assertExists(
+                            await this.progressService.getByIndex(
+                                progressStore.indexes.ukBookId.name,
                                 bookId,
                                 transaction
                             ),
-                            `ReadingProgress[bookId=${bookId}] not found`
+                            `Progress[bookId=${bookId}] not found`
                         );
                         const chapter = assertExists(
                             await this.chapterService.getByIndex(
                                 chapterStore.indexes.ukFileIdIndex.name,
-                                [book.fileId, readingProgress.chapterIndex],
+                                [book.fileId, progress.chapterIndex],
                                 transaction
                             ),
-                            `Chapter[fileId=${book.fileId}, index=${String(readingProgress.chapterIndex)}] not found`
+                            `Chapter[fileId=${book.fileId}, index=${String(progress.chapterIndex)}] not found`
                         );
-                        return { readingProgress, chapter };
+                        return { progress, chapter };
                     })(),
                 ]);
 
@@ -125,7 +125,7 @@ export default class ReaderService {
                             map.set(setting.name, setting);
                             return map;
                         }, new Map<SettingName, ReaderSetting>()),
-                    readingProgress,
+                    progress: progress,
                     chapter,
                 });
             }
@@ -134,16 +134,12 @@ export default class ReaderService {
 
     /**
      * 更新阅读进度
-     * @param readingProgress - 阅读进度对象
+     * @param progress - 阅读进度对象
      */
-    public async updateReadingProgress(readingProgress: ReadingProgress) {
-        await TransactionManager.runTransaction(
-            readingProgressStore.name,
-            DatabaseMode.READ_WRITE,
-            async (transaction) => {
-                await this.readingProgressService.update(readingProgress, transaction);
-            }
-        );
+    public async updateProgress(progress: Progress) {
+        await TransactionManager.runTransaction(progressStore.name, DatabaseMode.READ_WRITE, async (transaction) => {
+            await this.progressService.update(progress, transaction);
+        });
     }
 
     /**

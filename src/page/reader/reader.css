@@ -21,13 +21,15 @@
 @import "./body/body.css";
 @import "./footer/footer.css";
 @import "./toc/toc.css";
-@import "./setting/setting.css";
+@import "../../core/component/setting/setting.css";
 @import "../../core/component/dialog/dialog.css";
 @import "../../core/component/overlay/overlay.css";
 
 /* 阅读器整体容器 */
 #reader {
     width: 800px;
+    min-width: 800px;
+    max-width: 100%;
     height: 100%;
     margin: 0 auto;
     display: flex;
@@ -47,6 +49,7 @@
 /* 平板及以下 */
 @media (max-width: 768px) {
     #reader {
-        width: 100%;
+        width: 100% !important;
+        min-width: 100% !important;
     }
 }

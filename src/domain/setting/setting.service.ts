@@ -17,7 +17,7 @@
 import { settingStore } from "../../core/database/database-definition";
 import SettingRepository from "./setting.repository";
 import BaseService from "../base.service";
-import { SettingName } from "../../core/constant/setting.name";
+import { SettingName } from "../../core/component/constant/setting.name";
 import ReaderSetting from "./reader-setting.model";
 
 /**

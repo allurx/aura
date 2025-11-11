@@ -14,16 +14,24 @@
  * limitations under the License.
  */
 
-import ReadingProgress from "./reading-progress.model";
-import BaseRepository from "../base.repository";
-import { readingProgressStore } from "../../core/database/database-definition";
+import BaseModel from "../base.model";
+import { ClassFields } from "../../core/type/common.type";
+import ObjectUtil from "../../core/util/object.util";
 
 /**
- * 阅读进度数据访问对象
+ * 阅读进度
  * @author allurx
  */
-export default class ReadingProgressRepository extends BaseRepository<ReadingProgress> {
-    public constructor() {
-        super(readingProgressStore, ReadingProgress);
+export default class Progress extends BaseModel {
+    public readonly bookId!: string;
+    public readonly chapterIndex!: number;
+    public readonly lineIndex!: number;
+
+    // 行元素可见比例 (0 ~ 1),用于恢复阅读时滚动到精确位置
+    public readonly lineVisibleRatio!: number;
+
+    public constructor(data: ClassFields<Progress>) {
+        super();
+        ObjectUtil.assignOwnProperties<Progress>(this, data);
     }
 }

@@ -27,12 +27,11 @@ nav {
     scrollbar-width: thin;
     scrollbar-color: #666 transparent;
     background-color: #1f2937;
-    transition: transform 0.3s ease;
+    transition: width 0.3s ease;
 }
 
-nav.hidden {
-    position: fixed;
-    transform: translateX(-100%);
+nav.flag-visible {
+    width: 0;
 }
 
 nav button {
@@ -66,3 +65,12 @@ nav button.active {
     }
 }
 
+/* 平板及以下 */
+@media (max-width: 768px) {
+    nav {
+        width: 0;
+    }
+    nav.flag-visible {
+        width: 6rem;
+    }
+}

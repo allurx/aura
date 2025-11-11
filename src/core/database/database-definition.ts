@@ -23,7 +23,7 @@ export default class DatabaseDefinition {
     public static readonly name = "aura";
 
     // 数据库版本
-    public static readonly version = 3;
+    public static readonly version = 4;
 
     // 数据库对象存储定义
     public static readonly stores = {
@@ -73,8 +73,8 @@ export default class DatabaseDefinition {
             },
             description: "书籍章节",
         },
-        readingProgress: {
-            name: "reading_progress",
+        progress: {
+            name: "progress",
             keyPath: "id",
             autoIncrement: false,
             indexes: {
@@ -109,7 +109,7 @@ export const fileStore = DatabaseDefinition.stores.file;
 export const bookStore = DatabaseDefinition.stores.book;
 export const tocStore = DatabaseDefinition.stores.toc;
 export const chapterStore = DatabaseDefinition.stores.chapter;
-export const readingProgressStore = DatabaseDefinition.stores.readingProgress;
+export const progressStore = DatabaseDefinition.stores.progress;
 export const settingStore = DatabaseDefinition.stores.setting;
 export const themeStore = DatabaseDefinition.stores.theme;
 

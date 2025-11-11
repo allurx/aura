@@ -16,7 +16,7 @@
 
 import { ClassFields } from "../../core/type/common.type";
 import ObjectUtil from "../../core/util/object.util";
-import { SettingName } from "../../core/constant/setting.name";
+import { SettingName } from "../../core/component/constant/setting.name";
 import { ConfigurableStyleProperty } from "../../core/component/constant/configurable.style.property";
 import BaseModel from "../base.model";
 

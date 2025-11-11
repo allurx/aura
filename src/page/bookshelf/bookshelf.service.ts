@@ -17,12 +17,12 @@
 import Book from "../../domain/book/book.model";
 import BookFile from "../../domain/file/file.model";
 import Toc from "../../domain/toc/toc.model";
-import ReadingProgress from "../../domain/reading-progress/reading-progress.model";
+import Progress from "../../domain/progress/progress.model";
 import CategoryService from "../../domain/category/category.service";
 import BookService from "../../domain/book/book.service";
 import ChapterService from "../../domain/chapter/chapter.service";
 import ThemeService from "../../domain/theme/theme.service";
-import ReadingProgressService from "../../domain/reading-progress/reading-progress.service";
+import ProgressService from "../../domain/progress/progress.service";
 import TocService from "../../domain/toc/toc.service";
 import FileService from "../../domain/file/file.service";
 import FileUtil from "../../core/util/file.util";
@@ -30,6 +30,7 @@ import { assertExists } from "../../core/util/assert.util";
 import TransactionManager from "../../core/database/transaction-manager";
 import CategorySeed from "../../core/database/seed/category.seed";
 import ThemeSeed from "../../core/database/seed/theme.seed";
+import FileSeed from "../../core/database/seed/file.seed";
 import { DatabaseMode } from "../../core/constant/database-mode";
 import {
     categoryStore,
@@ -39,7 +40,7 @@ import {
     chapterStore,
     settingStore,
     themeStore,
-    readingProgressStore,
+    progressStore,
 } from "../../core/database/database-definition";
 
 /**
@@ -52,7 +53,7 @@ export default class BookshelfService {
     private readonly bookService: BookService;
     private readonly chapterService: ChapterService;
     private readonly themeService: ThemeService;
-    private readonly readingProgressService: ReadingProgressService;
+    private readonly progressService: ProgressService;
     private readonly tocService: TocService;
 
     public constructor() {
@@ -61,7 +62,7 @@ export default class BookshelfService {
         this.bookService = new BookService();
         this.chapterService = new ChapterService();
         this.themeService = new ThemeService();
-        this.readingProgressService = new ReadingProgressService();
+        this.progressService = new ProgressService();
         this.tocService = new TocService();
     }
 
@@ -71,7 +72,7 @@ export default class BookshelfService {
      * @param categoryId - 书籍分类id
      * @returns  添加的书籍列表
      */
-    public async addBook(files: File[], categoryId: string): Promise<Book[]> {
+    public async addBook(files: { id?: string; file: File }[], categoryId: string): Promise<Book[]> {
         // 在事务外部执行异步函数汇总数据以避免事务被浏览器提前提交
         const groupedHashFilesData = await this.groupFileByHash(files, categoryId);
 
@@ -82,7 +83,7 @@ export default class BookshelfService {
                 bookStore.name,
                 chapterStore.name,
                 tocStore.name,
-                readingProgressStore.name,
+                progressStore.name,
             ],
             DatabaseMode.READ_WRITE,
             async (transaction) => {
@@ -94,15 +95,15 @@ export default class BookshelfService {
                         groupPromises.push(
                             this.fileService.add(bookData.bookFile, transaction),
                             this.chapterService.addAll(bookData.chapters, transaction),
-                            this.tocService.update(bookData.toc, transaction)
+                            this.tocService.add(bookData.toc, transaction)
                         );
                     }
 
                     // 保存分组下的所有书籍和阅读进度
-                    books.forEach(({ book, readingProgress }) => {
+                    books.forEach(({ book, progress }) => {
                         groupPromises.push(
                             this.bookService.add(book, transaction),
-                            this.readingProgressService.add(readingProgress, transaction)
+                            this.progressService.add(progress, transaction)
                         );
                     });
                     return Promise.all(groupPromises);
@@ -120,7 +121,7 @@ export default class BookshelfService {
      */
     public async deleteBook(bookId: string) {
         await TransactionManager.runTransaction(
-            [fileStore.name, bookStore.name, chapterStore.name, tocStore.name, readingProgressStore.name],
+            [fileStore.name, bookStore.name, chapterStore.name, tocStore.name, progressStore.name],
             DatabaseMode.READ_WRITE,
             async (transaction) => {
                 // 如果该文件没有其他书籍则删除对应的file, chapter和toc
@@ -149,11 +150,7 @@ export default class BookshelfService {
 
                 await Promise.all([
                     this.bookService.deleteByKey(bookId, transaction),
-                    this.readingProgressService.deleteByIndex(
-                        readingProgressStore.indexes.ukBookId.name,
-                        bookId,
-                        transaction
-                    ),
+                    this.progressService.deleteByIndex(progressStore.indexes.ukBookId.name, bookId, transaction),
                 ]);
             }
         );
@@ -164,7 +161,7 @@ export default class BookshelfService {
      */
     public async clearBookshelf() {
         await TransactionManager.runTransaction(
-            [fileStore.name, bookStore.name, chapterStore.name, tocStore.name, readingProgressStore.name],
+            [fileStore.name, bookStore.name, chapterStore.name, tocStore.name, progressStore.name],
             DatabaseMode.READ_WRITE,
             async (transaction) =>
                 await Promise.all([
@@ -172,7 +169,7 @@ export default class BookshelfService {
                     this.bookService.clear(transaction),
                     this.chapterService.clear(transaction),
                     this.tocService.clear(transaction),
-                    this.readingProgressService.clear(transaction),
+                    this.progressService.clear(transaction),
                 ])
         );
     }
@@ -189,32 +186,37 @@ export default class BookshelfService {
     }
 
     /**
-     * 获取所有分类
-     */
-    public async getCategories() {
-        return await TransactionManager.runTransaction(
-            [categoryStore.name],
-            DatabaseMode.READ_ONLY,
-            async (transaction) => {
-                return await this.categoryService.getAll(transaction);
-            }
-        );
-    }
-
-    /**
      * 初始化种子数据
      */
     public async seedDatabase() {
-        await TransactionManager.runTransaction(
+        // 初始化分类和主题
+        const categories = await TransactionManager.runTransaction(
             [categoryStore.name, settingStore.name, themeStore.name],
             DatabaseMode.READ_WRITE,
             async (transaction) => {
-                if ((await this.categoryService.count(transaction)) === 0) {
+                let categories = await this.categoryService.getAll(transaction);
+                if (categories.length === 0) {
                     await this.categoryService.addAll(CategorySeed.categories, transaction);
                     await this.themeService.addAll(ThemeSeed.themes, transaction);
+                    categories = CategorySeed.categories;
                 }
+                return categories;
             }
         );
+
+        // 添加示例书籍
+        const existingFile = await TransactionManager.runTransaction(
+            [fileStore.name],
+            DatabaseMode.READ_WRITE,
+            async (transaction) => await this.fileService.getByKey(FileSeed.id, transaction)
+        );
+        if (!existingFile) {
+            await this.addBook(
+                [{ id: FileSeed.id, file: FileSeed.file }],
+                assertExists(categories.find((category) => category.order === 1)).id
+            );
+        }
+        return categories;
     }
 
     /**
@@ -223,11 +225,12 @@ export default class BookshelfService {
      * @param categoryId - 书籍分类id
      * @returns  分组的书籍文件数据
      */
-    private async groupFileByHash(files: File[], categoryId: string) {
+    private async groupFileByHash(files: { id?: string; file: File }[], categoryId: string) {
         // 计算所有文件的hash
-        const hashedFilesPromises = files.map(async (file) => ({
-            file: file,
-            hash: await FileUtil.computeHash(file),
+        const hashedFilesPromises = files.map(async (item) => ({
+            id: item.id,
+            file: item.file,
+            hash: await FileUtil.computeHash(item.file),
         }));
 
         // 根据hash分组
@@ -238,14 +241,17 @@ export default class BookshelfService {
         // 为每个分组生成数据
         const groupedHashFilesDataPromises = groupedHashFiles.entries().map(async ([hash, groupedHashedFiles]) => {
             // 将同一hash的文件视为同一书籍,只解析第一个文件的章节和目录
-            const file = assertExists(groupedHashedFiles[0]).file;
+            const firstGroupedHashedFile = assertExists(groupedHashedFiles[0]);
+            const file = firstGroupedHashedFile.file;
 
             // 检查文件是否已存在
             const existingFile = await TransactionManager.runTransaction(
                 [fileStore.name],
                 DatabaseMode.READ_ONLY,
                 async (transaction) =>
-                    await this.fileService.getByIndex(fileStore.indexes.ukHash.name, hash, transaction)
+                    firstGroupedHashedFile.id
+                        ? await this.fileService.getByKey(firstGroupedHashedFile.id, transaction)
+                        : await this.fileService.getByIndex(fileStore.indexes.ukHash.name, hash, transaction)
             );
 
             // 如果文件不存在则解析章节和目录
@@ -253,7 +259,7 @@ export default class BookshelfService {
             if (!existingFile) {
                 console.log(`Parsing new file with hash: ${hash}`);
                 const bookFile = new BookFile({
-                    id: crypto.randomUUID(),
+                    id: firstGroupedHashedFile.id ?? crypto.randomUUID(),
                     file: file,
                     hash: hash,
                     createdTime: Date.now(),
@@ -279,20 +285,20 @@ export default class BookshelfService {
                 bookData,
                 books: groupedHashedFiles.map((hashFile) => {
                     // 已存在的文件或新解析的文件
-                    const bookfile = existingFile ?? assertExists(bookData).bookFile;
+                    const bookFile = existingFile ?? assertExists(bookData).bookFile;
 
                     // 书籍
                     const book = new Book({
                         id: crypto.randomUUID(),
                         categoryId: categoryId,
-                        fileId: bookfile.id,
+                        fileId: bookFile.id,
                         fileName: hashFile.file.name,
                         createdTime: Date.now(),
                         updatedTime: Date.now(),
                     });
 
                     // 阅读进度
-                    const readingProgress = new ReadingProgress({
+                    const progress = new Progress({
                         id: crypto.randomUUID(),
                         bookId: book.id,
                         chapterIndex: 1,
@@ -301,7 +307,7 @@ export default class BookshelfService {
                         createdTime: Date.now(),
                         updatedTime: Date.now(),
                     });
-                    return { book, readingProgress };
+                    return { book, progress };
                 }),
             };
         });

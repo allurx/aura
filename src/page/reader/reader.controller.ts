@@ -16,16 +16,16 @@
 
 import DocUi from "./doc/doc.ui";
 import ReaderUi from "./reader.ui";
-import ReadingProgress from "../../domain/reading-progress/reading-progress.model";
+import Progress from "../../domain/progress/progress.model";
 import ReaderService from "./reader.service";
 import HeaderUi from "./header/header.ui";
 import BodyUi from "./body/body.ui";
 import FooterUi from "./footer/footer.ui";
-import SettingUi from "./setting/setting.ui";
+import SettingUi from "../../core/component/setting/setting.ui";
 import TocUi from "./toc/toc.ui";
 import { SwitchChapterDirection } from "../../core/constant/switch-chapter-direction";
 import ReaderState from "./reader.state";
-import { SettingName } from "../../core/constant/setting.name";
+import { SettingName } from "../../core/component/constant/setting.name";
 import { ConfigurableStyleProperty } from "../../core/component/constant/configurable.style.property";
 import ReaderSetting from "../../domain/setting/reader-setting.model";
 import { assertExists } from "../../core/util/assert.util";
@@ -64,7 +64,6 @@ export default class ReaderController {
             configurableStyleProperties: new Set<ConfigurableStyleProperty>([
                 ConfigurableStyleProperty.FONT_SIZE,
                 ConfigurableStyleProperty.COLOR,
-                ConfigurableStyleProperty.WIDTH,
                 ConfigurableStyleProperty.LINE_HEIGHT,
                 ConfigurableStyleProperty.BACKGROUND_COLOR,
             ]),
@@ -132,11 +131,7 @@ export default class ReaderController {
         });
         this.settingUi = new SettingUi({
             canBootstrap: false,
-            args: {
-                settingName: SettingName.SETTING,
-                displayName: "设置",
-                root: assertExists(document.querySelector<HTMLDivElement>(".setting")),
-            },
+            container: this.docUi.root,
             uis: [this.docUi, this.readerUi, this.headerUi, this.bodyUi, this.footerUi, this.tocUi],
         });
     }
@@ -152,7 +147,7 @@ export default class ReaderController {
         // 注意这里虽然是先渲染界面然后再绑定事件，但是由于浏览器的渲染机制，
         // render函数内部修改ui导致的ContentScroll和ReaderResize事件会在未来的某一刻被触发，这个时刻无法确定，由浏览器自己决定。
         // 从而导致bindContentScroll和observeReaderResize对应的事件处理函数会在页面首次加载之后某一时刻被调用，
-        // 也就是saveReadingProgress和saveReaderSetting被调用一次，这个无副作用的调用是可以接受的，因为只是重复保存了一下。
+        // 也就是saveProgress和saveReaderSetting被调用一次，这个无副作用的调用是可以接受的，因为只是重复保存了一下。
         // 目前还没有发现可以避免这种情况的好办法
 
         this.docUi.applyStyle(this.state.settings.get(SettingName.READER_DOC)?.style ?? {});
@@ -166,12 +161,12 @@ export default class ReaderController {
         this.bodyUi
             .renderChapter(this.state.chapter.lines)
             .applyStyle(this.state.settings.get(SettingName.READER_CONTENT)?.style ?? {})
-            .restoreReadingProgress(this.state.readingProgress.lineIndex, this.state.readingProgress.lineVisibleRatio);
+            .restoreProgress(this.state.progress.lineIndex, this.state.progress.lineVisibleRatio);
 
         this.footerUi
             .renderChapterTitle(this.state.chapter.title)
-            .renderReadingProgress(
-                this.state.chapter.startLineNumber + this.state.readingProgress.lineIndex,
+            .renderProgress(
+                this.state.chapter.startLineNumber + this.state.progress.lineIndex,
                 this.state.toc.numberOfLines()
             )
             .applyStyle(this.state.settings.get(SettingName.READER_FOOTER)?.style ?? {});
@@ -194,33 +189,33 @@ export default class ReaderController {
         // 获取章节数据
         this.state.chapter = await this.readerService.getChapter(
             this.state.book.fileId,
-            this.state.readingProgress.chapterIndex
+            this.state.progress.chapterIndex
         );
 
         // 渲染正文
         this.bodyUi
             .renderChapter(this.state.chapter.lines)
-            .restoreReadingProgress(this.state.readingProgress.lineIndex, this.state.readingProgress.lineVisibleRatio);
+            .restoreProgress(this.state.progress.lineIndex, this.state.progress.lineVisibleRatio);
 
         // 渲染底部信息
         this.footerUi
             .renderChapterTitle(this.state.chapter.title)
-            .renderReadingProgress(
-                this.state.chapter.startLineNumber + this.state.readingProgress.lineIndex,
+            .renderProgress(
+                this.state.chapter.startLineNumber + this.state.progress.lineIndex,
                 this.state.toc.numberOfLines()
             );
 
         // 高亮当前章节
-        this.tocUi.highlightCurrentChapter(this.state.readingProgress.chapterIndex);
+        this.tocUi.highlightCurrentChapter(this.state.progress.chapterIndex);
     }
 
     /**
      * 更新阅读进度
-     * @param readingProgress - 阅读进度对象
+     * @param progress - 阅读进度对象
      */
-    private async updateReadingProgress(readingProgress: Partial<ReadingProgress>) {
-        this.state.readingProgress.update(readingProgress);
-        await this.readerService.updateReadingProgress(this.state.readingProgress);
+    private async updateProgress(progress: Partial<Progress>) {
+        this.state.progress.update(progress);
+        await this.readerService.updateProgress(this.state.progress);
     }
 
     /**
@@ -256,12 +251,12 @@ export default class ReaderController {
      */
     private async switchChapter(direction: SwitchChapterDirection) {
         if (direction === SwitchChapterDirection.PREV) {
-            if (this.state.readingProgress.chapterIndex === 1) {
+            if (this.state.progress.chapterIndex === 1) {
                 await this.docUi.alertDialog("已经是第一章了");
             } else {
                 await this.readerUi.showOverlayWhile(async () => {
-                    await this.updateReadingProgress({
-                        chapterIndex: this.state.readingProgress.chapterIndex - 1,
+                    await this.updateProgress({
+                        chapterIndex: this.state.progress.chapterIndex - 1,
                         lineIndex: 1,
                         lineVisibleRatio: 1,
                         updatedTime: Date.now(),
@@ -270,12 +265,12 @@ export default class ReaderController {
                 });
             }
         } else if (direction === SwitchChapterDirection.NEXT) {
-            if (this.state.readingProgress.chapterIndex === this.state.toc.numberOfChapters()) {
+            if (this.state.progress.chapterIndex === this.state.toc.numberOfChapters()) {
                 await this.docUi.alertDialog("已经是最后一章了");
             } else {
                 await this.readerUi.showOverlayWhile(async () => {
-                    await this.updateReadingProgress({
-                        chapterIndex: this.state.readingProgress.chapterIndex + 1,
+                    await this.updateProgress({
+                        chapterIndex: this.state.progress.chapterIndex + 1,
                         lineIndex: 1,
                         lineVisibleRatio: 1,
                         updatedTime: Date.now(),
@@ -301,7 +296,7 @@ export default class ReaderController {
         // header ui事件
         this.headerUi
             .bindToggleTocPanel(() => {
-                this.tocUi.toggleToc().highlightCurrentChapter(this.state.readingProgress.chapterIndex);
+                this.tocUi.toggleToc().highlightCurrentChapter(this.state.progress.chapterIndex);
             })
             .bindToggleSettingPanel(() => this.settingUi.toggleSetting())
             .bindToggleFullscreen(() => {
@@ -313,8 +308,8 @@ export default class ReaderController {
 
         // body ui事件
         this.bodyUi.bindContentScroll(async (lineIndex, lineVisibleRatio) => {
-            await this.updateReadingProgress({ lineIndex, lineVisibleRatio, updatedTime: Date.now() });
-            this.footerUi.renderReadingProgress(
+            await this.updateProgress({ lineIndex, lineVisibleRatio, updatedTime: Date.now() });
+            this.footerUi.renderProgress(
                 this.state.chapter.startLineNumber + lineIndex,
                 this.state.toc.numberOfLines()
             );
@@ -324,7 +319,7 @@ export default class ReaderController {
         this.tocUi
             .delegateTocItemClick(async (chapterIndex) => {
                 await this.readerUi.showOverlayWhile(async () => {
-                    await this.updateReadingProgress({
+                    await this.updateProgress({
                         chapterIndex,
                         lineIndex: 1,
                         lineVisibleRatio: 1,

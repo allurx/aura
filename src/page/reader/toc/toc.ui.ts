@@ -24,6 +24,7 @@ import Toc from "../../../domain/toc/toc.model";
  * @author allurx
  */
 export default class TocUi extends Ui {
+
     private readonly tocContentElement: HTMLElement;
     private readonly closeTocElement: HTMLElement;
 

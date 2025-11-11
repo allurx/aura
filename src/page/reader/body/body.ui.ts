@@ -16,7 +16,6 @@
 
 import Ui from "../../../core/component/ui";
 import EventUtil from "../../../core/util/event.util";
-import { assertExists } from "../../../core/util/assert.util";
 
 /**
  * 阅读器正文界面
@@ -51,15 +50,16 @@ export default class BodyUi extends Ui {
      * @param lineVisibleRatio - 行可见比例
      * @return  当前实例
      */
-    public restoreReadingProgress(lineIndex: number, lineVisibleRatio: number) {
-        const p = assertExists(this.root.querySelector<HTMLParagraphElement>(`p[data-index="${String(lineIndex)}"]`));
+    public restoreProgress(lineIndex: number, lineVisibleRatio: number) {
+        const p = this.root.querySelector<HTMLParagraphElement>(`p[data-index="${String(lineIndex)}"]`);
+        if (p) {
+            // 先定位到大概位置
+            p.scrollIntoView({ block: "start", behavior: "auto" });
 
-        // 先定位到大概位置
-        p.scrollIntoView({ block: "start", behavior: "auto" });
-
-        // 然后微调到精确位置
-        const offset = p.offsetHeight * (1 - lineVisibleRatio);
-        this.root.scrollTop += offset;
+            // 然后微调到精确位置
+            const offset = p.offsetHeight * (1 - lineVisibleRatio);
+            this.root.scrollTop += offset;
+        }
         return this;
     }
 
