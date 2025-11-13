@@ -14,8 +14,21 @@
  * limitations under the License.
  */
 
+import Category from "../../domain/category/category.model";
+import ObjectUtil from "../../core/util/object.util";
+import Metadata from "../../domain/metadata/metadata.model";
+
 /**
  * 书架状态
  * @author allurx
  */
-export default class BookshelfState {}
+export default class BookshelfState {
+    public readonly metadata!: Metadata;
+    public readonly categories!: Category[];
+    // 当前选中的书籍分类id
+    public categoryId!: string;
+
+    public constructor(data: Required<BookshelfState>) {
+        ObjectUtil.assignOwnProperties<BookshelfState>(this, data);
+    }
+}

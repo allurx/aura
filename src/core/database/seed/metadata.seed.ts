@@ -14,22 +14,21 @@
  * limitations under the License.
  */
 
-import BaseModel from "../base.model";
-import { ClassFields } from "../../core/type/common.type";
-import ObjectUtil from "../../core/util/object.util";
+import Metadata from "../../../domain/metadata/metadata.model";
 
 /**
- * 阅主题
+ * 元数据数据种子
  * @author allurx
  */
-export default class Theme extends BaseModel {
-    public readonly name!: string;
-    public readonly color!: string;
-    public readonly readerBackgroundColor!: string;
-    public readonly backgroundColor!: string;
-
-    public constructor(data: ClassFields<Theme>) {
-        super();
-        ObjectUtil.assignOwnProperties<Theme>(this, data);
+export default class MetadataSeed {
+    public static metadata(handbookId: string): Metadata {
+        return new Metadata({
+            id: crypto.randomUUID(),
+            appName: "aura",
+            handbookId: handbookId,
+            version: 1,
+            createdTime: Date.now(),
+            updatedTime: Date.now(),
+        });
     }
 }

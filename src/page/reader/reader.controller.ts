@@ -29,6 +29,7 @@ import { SettingName } from "../../core/component/constant/setting.name";
 import { ConfigurableStyleProperty } from "../../core/component/constant/configurable.style.property";
 import ReaderSetting from "../../domain/setting/reader-setting.model";
 import { assertExists } from "../../core/util/assert.util";
+import { PageName } from "../../core/constant/page-name";
 
 /**
  * 阅读器控制器
@@ -227,6 +228,7 @@ export default class ReaderController {
             new ReaderSetting({
                 id: crypto.randomUUID(),
                 name: settingName,
+                pageName: PageName.READER,
                 style: {},
                 createdTime: Date.now(),
                 updatedTime: Date.now(),

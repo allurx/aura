@@ -14,22 +14,11 @@
  * limitations under the License.
  */
 
-import BaseModel from "../base.model";
-import { ClassFields } from "../../core/type/common.type";
-import ObjectUtil from "../../core/util/object.util";
-
 /**
- * 阅主题
+ * Page names used in the application.
  * @author allurx
  */
-export default class Theme extends BaseModel {
-    public readonly name!: string;
-    public readonly color!: string;
-    public readonly readerBackgroundColor!: string;
-    public readonly backgroundColor!: string;
-
-    public constructor(data: ClassFields<Theme>) {
-        super();
-        ObjectUtil.assignOwnProperties<Theme>(this, data);
-    }
+export enum PageName {
+    BOOKSHELF = "bookshelf",
+    READER = "reader",
 }

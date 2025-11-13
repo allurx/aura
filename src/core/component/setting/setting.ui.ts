@@ -18,9 +18,9 @@ import Ui from "../../../core/component/ui";
 import EventUtil from "../../../core/util/event.util";
 import StyleEngine from "../../../core/component/style.engine";
 import StyleConfigurable from "../../../core/component/style-configurable";
+import Optional from "../../../core/optional";
 import { ConfigurableStyleProperty } from "../../../core/component/constant/configurable.style.property";
 import { assertExists } from "../../../core/util/assert.util";
-import Optional from "../../../core/optional";
 import { SettingName } from "../constant/setting.name";
 
 /**

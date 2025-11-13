@@ -52,6 +52,14 @@ export default class BaseService<T extends BaseModel> {
         return await this.repository.getByIndex(indexName, indexKey, transaction);
     }
 
+    public async getByField<K extends keyof T>(
+        fieldName: K,
+        fieldValue: T[K],
+        transaction: IDBTransaction
+    ): Promise<T | null> {
+        return await this.repository.getByField(fieldName, fieldValue, transaction);
+    }
+
     public async getAll(transaction: IDBTransaction): Promise<T[]> {
         return await this.repository.getAll(transaction);
     }

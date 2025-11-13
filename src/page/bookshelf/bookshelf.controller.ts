@@ -19,37 +19,34 @@ import NavUi from "./nav/nav.ui";
 import MainUi from "./body/body.ui";
 import BookshelfUi from "./bookshelf.ui";
 import BookshelfService from "./bookshelf.service";
-import { assertExists } from "../../core/util/assert.util";
+import BookshelfState from "./bookshelf.state";
+import ArrayUtil from "../../core/util/array.util";
 
 /**
  * 书架控制器
  * @author allurx
  */
 export default class BookshelfController {
-    private readonly header: HeaderUi;
-    private readonly nav: NavUi;
-    private readonly main: MainUi;
-    private readonly bookshelf: BookshelfUi;
+    private readonly headerUi: HeaderUi;
+    private readonly navUi: NavUi;
+    private readonly mainUi: MainUi;
+    private readonly bookshelfUi: BookshelfUi;
     private readonly bookshelfService: BookshelfService;
-
-    // 当前选中的书籍分类id
-    private categoryId!: string;
+    private state!: BookshelfState;
 
     public constructor() {
-        this.header = new HeaderUi();
-        this.nav = new NavUi();
-        this.main = new MainUi();
-        this.bookshelf = new BookshelfUi();
+        this.headerUi = new HeaderUi();
+        this.navUi = new NavUi();
+        this.mainUi = new MainUi();
+        this.bookshelfUi = new BookshelfUi();
         this.bookshelfService = new BookshelfService();
     }
 
     public async init() {
-        const categories = await this.bookshelfService.seedDatabase();
-        const defaultCategory = assertExists(categories.find((category) => category.order === 1));
-        this.categoryId = defaultCategory.id;
-        this.nav.renderNav(categories);
+        this.state = await this.bookshelfService.init();
+        this.navUi.renderNav(this.state.categories);
         this.bindEvent();
-        this.nav.clickNavItem(this.categoryId);
+        this.navUi.clickNavItem(this.state.categoryId);
     }
 
     /**
@@ -65,23 +62,27 @@ export default class BookshelfController {
      * 添加书籍
      * @param files - 书籍文件列表
      */
-    private async addBook(files: FileList) {
-        await this.bookshelf
+    private async addBook(files: File[]) {
+        await this.bookshelfUi
             .showOverlayWhile(async () => {
                 // 只处理文本文件
                 const validFiles = Array.from(files).filter((file) => {
                     const isTextFile = file.type === "text/plain";
-                    if (!isTextFile) void this.bookshelf.alertDialog(`${file.name}不是文本文件`);
+                    if (!isTextFile) void this.bookshelfUi.alertDialog(`${file.name}不是文本文件`);
                     return isTextFile;
                 });
                 await this.bookshelfService
-                    .addBook(
-                        validFiles.map((file) => ({ file })),
-                        this.categoryId
-                    )
-                    .then((books) => this.main.renderBookElements(books));
+                    .addBook(validFiles, this.state.categoryId, true)
+                    .then(async ({ books, duplicateFiles }) => {
+                        this.mainUi.renderBookElements(books);
+                        if (ArrayUtil.isNotEmpty(duplicateFiles)) {
+                            await this.bookshelfUi.alertDialog(
+                                `${duplicateFiles.map((file) => file.name).join(", ")}已存在`
+                            );
+                        }
+                    });
             })
-            .finally(() => this.main.clearBookInput());
+            .finally(() => this.mainUi.clearBookInput());
     }
 
     /**
@@ -89,9 +90,9 @@ export default class BookshelfController {
      * @param bookId - 书籍id
      */
     private async deleteBook(bookId: string) {
-        if (await this.bookshelf.confirmDialog("确定要删除这本书吗?")) {
-            await this.bookshelf.showOverlayWhile(async () => {
-                await this.bookshelfService.deleteBook(bookId).then(() => this.main.removeBookElement(bookId));
+        if (await this.bookshelfUi.confirmDialog("确定要删除这本书吗?")) {
+            await this.bookshelfUi.showOverlayWhile(async () => {
+                await this.bookshelfService.deleteBook(bookId).then(() => this.mainUi.removeBookElement(bookId));
             });
         }
     }
@@ -100,28 +101,28 @@ export default class BookshelfController {
      * 清空书架
      */
     private async clearBookshelf() {
-        if (await this.bookshelf.confirmDialog("确定要清空书架中的所有书籍吗?")) {
-            await this.bookshelf.showOverlayWhile(async () => {
-                await this.bookshelfService.clearBookshelf().then(() => this.main.removeBookElements());
+        if (await this.bookshelfUi.confirmDialog("确定要清空书架中的所有书籍吗?")) {
+            await this.bookshelfUi.showOverlayWhile(async () => {
+                await this.bookshelfService.clearBookshelf().then(() => this.mainUi.removeBookElements());
             });
         }
     }
 
     private bindEvent() {
         // 绑定头部事件
-        this.header
+        this.headerUi
             .bindClearBookshelfClick(() => this.clearBookshelf())
-            .bindHeaderTitleClick(() => this.nav.toggleVisibility());
+            .bindHeaderTitleClick(() => this.navUi.toggleVisibility());
 
         // 绑定导航栏事件
-        this.nav.delegateNavItemClick(async (categoryId) => {
-            this.categoryId = categoryId;
+        this.navUi.delegateNavItemClick(async (categoryId) => {
+            this.state.categoryId = categoryId;
             const books = await this.bookshelfService.getBooksByCategoryId(categoryId);
-            this.main.removeBookElements().renderBookElements(books);
+            this.mainUi.removeBookElements().renderBookElements(books);
         });
 
         // 绑定书籍主体事件
-        this.main
+        this.mainUi
             .bindBookInputChange((files) => this.addBook(files))
             .bindBookBodyClick((bookId) => {
                 this.readBook(bookId);

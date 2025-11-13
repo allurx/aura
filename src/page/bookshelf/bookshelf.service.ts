@@ -14,32 +14,38 @@
  * limitations under the License.
  */
 
+import Aura from "../../core/aura";
 import Book from "../../domain/book/book.model";
 import BookFile from "../../domain/file/file.model";
+import Chapter from "../../domain/chapter/chapter.model";
 import Toc from "../../domain/toc/toc.model";
+import Category from "../../domain/category/category.model";
 import Progress from "../../domain/progress/progress.model";
+import Metadata from "../../domain/metadata/metadata.model";
+import MetadataService from "../../domain/metadata/metadata.service";
 import CategoryService from "../../domain/category/category.service";
 import BookService from "../../domain/book/book.service";
 import ChapterService from "../../domain/chapter/chapter.service";
-import ThemeService from "../../domain/theme/theme.service";
 import ProgressService from "../../domain/progress/progress.service";
 import TocService from "../../domain/toc/toc.service";
 import FileService from "../../domain/file/file.service";
 import FileUtil from "../../core/util/file.util";
-import { assertExists } from "../../core/util/assert.util";
+import ObjectUtil from "../../core/util/object.util";
+import ArrayUtil from "../../core/util/array.util";
 import TransactionManager from "../../core/database/transaction-manager";
-import CategorySeed from "../../core/database/seed/category.seed";
-import ThemeSeed from "../../core/database/seed/theme.seed";
+import MetadataSeed from "../../core/database/seed/metadata.seed";
 import FileSeed from "../../core/database/seed/file.seed";
+import CategorySeed from "../../core/database/seed/category.seed";
+import BookshelfState from "./bookshelf.state";
+import { assertExists } from "../../core/util/assert.util";
 import { DatabaseMode } from "../../core/constant/database-mode";
 import {
+    metadataStore,
     categoryStore,
     fileStore,
     bookStore,
     tocStore,
     chapterStore,
-    settingStore,
-    themeStore,
     progressStore,
 } from "../../core/database/database-definition";
 
@@ -48,33 +54,67 @@ import {
  * @author allurx
  */
 export default class BookshelfService {
+    private readonly metadataService: MetadataService;
     private readonly categoryService: CategoryService;
     private readonly fileService: FileService;
     private readonly bookService: BookService;
     private readonly chapterService: ChapterService;
-    private readonly themeService: ThemeService;
     private readonly progressService: ProgressService;
     private readonly tocService: TocService;
 
     public constructor() {
+        this.metadataService = new MetadataService();
         this.categoryService = new CategoryService();
         this.fileService = new FileService();
         this.bookService = new BookService();
         this.chapterService = new ChapterService();
-        this.themeService = new ThemeService();
         this.progressService = new ProgressService();
         this.tocService = new TocService();
+    }
+
+    public async init() {
+        const seeds = await this.seedDatabase();
+        const metadata = seeds.metadata;
+        const categories =
+            seeds.categories ??
+            (await TransactionManager.runTransaction(
+                [categoryStore.name],
+                DatabaseMode.READ_ONLY,
+                async (transaction) => await this.categoryService.getAll(transaction)
+            ));
+        const defaultCategory = assertExists(
+            categories.find((category) => category.order === 1),
+            "Default category not found"
+        );
+
+        // 检查元数据
+        await this.checkMetadata(metadata, defaultCategory);
+
+        return new BookshelfState({
+            metadata: metadata,
+            categoryId: defaultCategory.id,
+            categories: categories,
+        });
     }
 
     /**
      * 添加书籍
      * @param files - 书籍文件列表
      * @param categoryId - 书籍分类id
+     * @param allowDuplicate - 相同hash文件是否允许重复添加
      * @returns  添加的书籍列表
      */
-    public async addBook(files: { id?: string; file: File }[], categoryId: string): Promise<Book[]> {
+    public async addBook(
+        files: File[],
+        categoryId: string,
+        allowDuplicate: boolean
+    ): Promise<{ books: Book[]; duplicateFiles: File[] }> {
         // 在事务外部执行异步函数汇总数据以避免事务被浏览器提前提交
-        const groupedHashFilesData = await this.groupFileByHash(files, categoryId);
+        const groupedHashFilesData = await this.groupFileByHash(files, categoryId, allowDuplicate);
+
+        // 全部文件均为重复文件则直接返回
+        if (groupedHashFilesData.every((item) => ArrayUtil.isEmpty(item.books)))
+            return { books: [], duplicateFiles: files };
 
         await TransactionManager.runTransaction(
             [
@@ -89,7 +129,7 @@ export default class BookshelfService {
             async (transaction) => {
                 const groupsPromises = groupedHashFilesData.map(({ hash, bookData, books }) => {
                     // 保存分组下的书籍文件、章节和目录
-                    const groupPromises = [];
+                    const groupPromises: Promise<void>[] = [];
                     if (bookData) {
                         console.log(`Processing file with hash: ${hash}`);
                         groupPromises.push(
@@ -106,13 +146,16 @@ export default class BookshelfService {
                             this.progressService.add(progress, transaction)
                         );
                     });
-                    return Promise.all(groupPromises);
+                    return groupPromises;
                 });
-                await Promise.all(groupsPromises);
+                await Promise.all(groupsPromises.flat());
             }
         );
 
-        return groupedHashFilesData.flatMap(({ books }) => books).flatMap(({ book }) => book);
+        return {
+            books: groupedHashFilesData.flatMap(({ books }) => books).map(({ book }) => book),
+            duplicateFiles: groupedHashFilesData.flatMap(({ duplicateFiles }) => duplicateFiles),
+        };
     }
 
     /**
@@ -124,7 +167,6 @@ export default class BookshelfService {
             [fileStore.name, bookStore.name, chapterStore.name, tocStore.name, progressStore.name],
             DatabaseMode.READ_WRITE,
             async (transaction) => {
-                // 如果该文件没有其他书籍则删除对应的file, chapter和toc
                 const book = assertExists(
                     await this.bookService.getByKey(bookId, transaction),
                     `Book[${bookId}] not found`
@@ -137,6 +179,7 @@ export default class BookshelfService {
                     transaction
                 );
 
+                // 如果该文件没有其他书籍则删除对应的file, chapter和toc
                 if (count <= 1)
                     await Promise.all([
                         this.fileService.deleteByKey(book.fileId, transaction),
@@ -188,49 +231,51 @@ export default class BookshelfService {
     /**
      * 初始化种子数据
      */
-    public async seedDatabase() {
-        // 初始化分类和主题
-        const categories = await TransactionManager.runTransaction(
-            [categoryStore.name, settingStore.name, themeStore.name],
-            DatabaseMode.READ_WRITE,
-            async (transaction) => {
-                let categories = await this.categoryService.getAll(transaction);
-                if (categories.length === 0) {
-                    await this.categoryService.addAll(CategorySeed.categories, transaction);
-                    await this.themeService.addAll(ThemeSeed.themes, transaction);
-                    categories = CategorySeed.categories;
-                }
-                return categories;
-            }
+    private async seedDatabase() {
+        // addBook是async函数,需要在事务外部调用以避免事务被浏览器提前提交
+        const metadata = await TransactionManager.runTransaction(
+            [metadataStore.name],
+            DatabaseMode.READ_ONLY,
+            async (transaction) => await this.metadataService.getByField("appName", Aura.NAME, transaction)
         );
-
-        // 添加示例书籍
-        const existingFile = await TransactionManager.runTransaction(
-            [fileStore.name],
-            DatabaseMode.READ_WRITE,
-            async (transaction) => await this.fileService.getByKey(FileSeed.id, transaction)
-        );
-        if (!existingFile) {
-            await this.addBook(
-                [{ id: FileSeed.id, file: FileSeed.file }],
-                assertExists(categories.find((category) => category.order === 1)).id
-            );
+        if (!metadata) {
+            return await this.addBook([FileSeed.file], assertExists(CategorySeed.categories[0]).id, false)
+                .then(({ books }) => assertExists(books[0], "Handbook book not found"))
+                .then(async (handbook) => {
+                    return await TransactionManager.runTransaction(
+                        [metadataStore.name, categoryStore.name],
+                        DatabaseMode.READ_WRITE,
+                        async (transaction) => {
+                            const metadata = MetadataSeed.metadata(handbook.id);
+                            await Promise.all([
+                                this.metadataService.add(metadata, transaction),
+                                this.categoryService.addAll(CategorySeed.categories, transaction),
+                            ]);
+                            return {
+                                metadata,
+                                categories: CategorySeed.categories,
+                            };
+                        }
+                    );
+                });
         }
-        return categories;
+        return {
+            metadata,
+            categories: null,
+        };
     }
 
     /**
      * 根据文件hash分组书籍文件
      * @param  files - 书籍文件列表
      * @param categoryId - 书籍分类id
-     * @returns  分组的书籍文件数据
+     * @param allowDuplicate - 相同hash文件是否允许重复添加
      */
-    private async groupFileByHash(files: { id?: string; file: File }[], categoryId: string) {
+    private async groupFileByHash(files: File[], categoryId: string, allowDuplicate: boolean) {
         // 计算所有文件的hash
         const hashedFilesPromises = files.map(async (item) => ({
-            id: item.id,
-            file: item.file,
-            hash: await FileUtil.computeHash(item.file),
+            file: item,
+            hash: await FileUtil.computeHash(item),
         }));
 
         // 根据hash分组
@@ -239,27 +284,29 @@ export default class BookshelfService {
         );
 
         // 为每个分组生成数据
-        const groupedHashFilesDataPromises = groupedHashFiles.entries().map(async ([hash, groupedHashedFiles]) => {
-            // 将同一hash的文件视为同一书籍,只解析第一个文件的章节和目录
+        const groupedHashFilesDataPromises = groupedHashFiles.values().map(async (groupedHashedFiles) => {
             const firstGroupedHashedFile = assertExists(groupedHashedFiles[0]);
             const file = firstGroupedHashedFile.file;
+            const hash = firstGroupedHashedFile.hash;
+            // 存储当前分组下的重复文件
+            const duplicateFiles: File[] = [];
 
             // 检查文件是否已存在
-            const existingFile = await TransactionManager.runTransaction(
+            let bookFile = await TransactionManager.runTransaction(
                 [fileStore.name],
                 DatabaseMode.READ_ONLY,
                 async (transaction) =>
-                    firstGroupedHashedFile.id
-                        ? await this.fileService.getByKey(firstGroupedHashedFile.id, transaction)
-                        : await this.fileService.getByIndex(fileStore.indexes.ukHash.name, hash, transaction)
+                    await this.fileService.getByIndex(fileStore.indexes.ukHash.name, hash, transaction)
             );
 
-            // 如果文件不存在则解析章节和目录
-            let bookData = null;
+            const existingFile = !ObjectUtil.isNull(bookFile);
+            let bookData: { bookFile: BookFile; chapters: Chapter[]; toc: Toc } | null = null;
+            let books: { book: Book; progress: Progress }[] = [];
+            // 文件不存在则解析第一个文件生成书籍数据
             if (!existingFile) {
                 console.log(`Parsing new file with hash: ${hash}`);
-                const bookFile = new BookFile({
-                    id: firstGroupedHashedFile.id ?? crypto.randomUUID(),
+                bookFile = new BookFile({
+                    id: crypto.randomUUID(),
                     file: file,
                     hash: hash,
                     createdTime: Date.now(),
@@ -280,24 +327,19 @@ export default class BookshelfService {
                 };
             }
 
-            return {
-                hash,
-                bookData,
-                books: groupedHashedFiles.map((hashFile) => {
-                    // 已存在的文件或新解析的文件
-                    const bookFile = existingFile ?? assertExists(bookData).bookFile;
-
-                    // 书籍
+            // 为分组下的文件生成书籍和阅读进度
+            // 如果允许重复则全部生成
+            // 如果不允许重复则仅当前分组的文件不存在时生成第一个文件的书籍
+            books = (allowDuplicate ? groupedHashedFiles : existingFile ? [] : [firstGroupedHashedFile]).map(
+                (hashFile) => {
                     const book = new Book({
                         id: crypto.randomUUID(),
                         categoryId: categoryId,
-                        fileId: bookFile.id,
+                        fileId: assertExists(bookFile).id,
                         fileName: hashFile.file.name,
                         createdTime: Date.now(),
                         updatedTime: Date.now(),
                     });
-
-                    // 阅读进度
                     const progress = new Progress({
                         id: crypto.randomUUID(),
                         bookId: book.id,
@@ -308,9 +350,66 @@ export default class BookshelfService {
                         updatedTime: Date.now(),
                     });
                     return { book, progress };
-                }),
+                }
+            );
+
+            // 处理重复文件
+            if (!allowDuplicate) {
+                // 如果当前分组的文件已存在则全部为重复文件
+                if (existingFile) {
+                    groupedHashedFiles.forEach((item) => duplicateFiles.push(item.file));
+                    //  否则除了第一个文件外其余均为重复文件
+                } else {
+                    groupedHashedFiles.shift();
+                    groupedHashedFiles.forEach((item) => duplicateFiles.push(item.file));
+                }
+            }
+
+            // 每个hash分组的数据
+            return {
+                hash,
+                bookData,
+                books: books,
+                duplicateFiles,
             };
         });
         return await Promise.all(groupedHashFilesDataPromises);
+    }
+
+    /**
+     * 检查并处理版本变更,手册不存在或者版本不匹配则重新添加手册并更新元数据
+     * @param metadata - 元数据
+     * @param defaultCategory - 默认分类
+     * @see Aura.VERSION 当前应用版本
+     */
+    private async checkMetadata(metadata: Metadata, defaultCategory: Category): Promise<void> {
+        const handbook = await TransactionManager.runTransaction(
+            [bookStore.name],
+            DatabaseMode.READ_ONLY,
+            async (transaction) => await this.bookService.getByKey(metadata.handbookId, transaction)
+        );
+        const isVersionChanged = Aura.isVersionChanged(metadata.version);
+        const existsHandbook = ObjectUtil.exists(handbook);
+        if (isVersionChanged || !existsHandbook) {
+            if (isVersionChanged && existsHandbook) await this.deleteBook(metadata.handbookId);
+            await this.addBook([FileSeed.file], defaultCategory.id, true)
+                .then(({ books }) => assertExists(books[0], "Handbook book not found"))
+                .then(async (newHandbook) => {
+                    await TransactionManager.runTransaction(
+                        [metadataStore.name],
+                        DatabaseMode.READ_WRITE,
+                        async (transaction) => {
+                            await this.metadataService.update(
+                                metadata.update({
+                                    handbookId: newHandbook.id,
+                                    version: Aura.VERSION,
+                                    updatedTime: Date.now(),
+                                }),
+                                transaction
+                            );
+                        }
+                    );
+                });
+        }
     }
 }

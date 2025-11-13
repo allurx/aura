@@ -83,9 +83,9 @@ export default class MainUi {
      * @param  handler - 处理函数
      * @returns 返回当前实例
      */
-    public bindBookInputChange(handler: (files: FileList) => Promise<void>) {
+    public bindBookInputChange(handler: (files: File[]) => Promise<void>) {
         EventUtil.bind(this.bookInputElement, "change", async () => {
-            await handler(assertExists(this.bookInputElement.files));
+            await handler(Array.from(assertExists(this.bookInputElement.files)));
         });
         return this;
     }

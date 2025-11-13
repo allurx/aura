@@ -14,22 +14,20 @@
  * limitations under the License.
  */
 
-import BaseModel from "../base.model";
-import { ClassFields } from "../../core/type/common.type";
-import ObjectUtil from "../../core/util/object.util";
-
 /**
- * 阅主题
+ * 数组工具类
  * @author allurx
  */
-export default class Theme extends BaseModel {
-    public readonly name!: string;
-    public readonly color!: string;
-    public readonly readerBackgroundColor!: string;
-    public readonly backgroundColor!: string;
+export default class ArrayUtil {
+    private constructor() {
+        throw new Error(`${ArrayUtil.name} is a static class and cannot be instantiated.`);
+    }
 
-    public constructor(data: ClassFields<Theme>) {
-        super();
-        ObjectUtil.assignOwnProperties<Theme>(this, data);
+    public static isEmpty<T>(array: T[]): boolean {
+        return array.length === 0;
+    }
+    
+    public static isNotEmpty<T>(array: T[]): boolean {
+        return array.length > 0;
     }
 }

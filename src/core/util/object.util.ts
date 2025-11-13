@@ -19,6 +19,9 @@
  * @author allurx
  */
 export default class ObjectUtil {
+    private constructor() {
+        throw new Error(`${ObjectUtil.name} is a static class and cannot be instantiated.`);
+    }
     /**
      * 赋值对象自身属性
      * @param target - 目标对象
@@ -32,16 +35,28 @@ export default class ObjectUtil {
         return target;
     }
 
-    public static isNull<T>(value: T): boolean {
+    public static isNull<T>(value: T | null): boolean {
         return value === null;
     }
 
-    public static isUndefined<T>(value: T): boolean {
+    public static isNotNull<T>(value: T | null): boolean {
+        return value !== null;
+    }
+
+    public static isUndefined<T>(value: T | undefined): boolean {
         return value === undefined;
     }
 
-    public static isNullOrUndefined<T>(value: T): boolean {
+    public static isNotUndefined<T>(value: T | undefined): boolean {
+        return value !== undefined;
+    }
+
+    public static isNullOrUndefined<T>(value: T | null | undefined): boolean {
         return value === null || value === undefined;
+    }
+
+    public static exists<T>(value: T | null | undefined): boolean {
+        return value !== null && value !== undefined;
     }
 }
 

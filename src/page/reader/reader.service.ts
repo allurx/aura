@@ -33,6 +33,7 @@ import {
 } from "../../core/database/database-definition";
 import ReaderState from "./reader.state";
 import { assertExists } from "../../core/util/assert.util";
+import { PageName } from "../../core/constant/page-name";
 
 /**
  * 阅读器服务
@@ -67,66 +68,33 @@ export default class ReaderService {
                     await this.bookService.getByKey(bookId, transaction),
                     `Book[${bookId}] not found`
                 );
+                const progress = assertExists(
+                    await this.progressService.getByIndex(progressStore.indexes.ukBookId.name, bookId, transaction),
+                    `Progress[bookId=${bookId}] not found`
+                );
 
                 // 并行加载数据
-                const [
-                    toc,
-                    readerSetting,
-                    readerHeaderSetting,
-                    readerContentSetting,
-                    readerFooterSetting,
-                    readerDocSetting,
-                    readerTocSetting,
-                    { progress, chapter },
-                ] = await Promise.all([
-                    this.tocService
-                        .getByIndex(tocStore.indexes.ukFileId.name, book.fileId, transaction)
-                        .then((result) => assertExists(result, `Toc[fileId=${book.fileId}] not found`)),
-                    this.settingService.getReaderSetting(SettingName.READER, transaction),
-                    this.settingService.getReaderSetting(SettingName.READER_HEADER, transaction),
-                    this.settingService.getReaderSetting(SettingName.READER_CONTENT, transaction),
-                    this.settingService.getReaderSetting(SettingName.READER_FOOTER, transaction),
-                    this.settingService.getReaderSetting(SettingName.READER_DOC, transaction),
-                    this.settingService.getReaderSetting(SettingName.READER_TOC, transaction),
-                    (async () => {
-                        const progress = assertExists(
-                            await this.progressService.getByIndex(
-                                progressStore.indexes.ukBookId.name,
-                                bookId,
-                                transaction
-                            ),
-                            `Progress[bookId=${bookId}] not found`
-                        );
-                        const chapter = assertExists(
-                            await this.chapterService.getByIndex(
-                                chapterStore.indexes.ukFileIdIndex.name,
-                                [book.fileId, progress.chapterIndex],
-                                transaction
-                            ),
-                            `Chapter[fileId=${book.fileId}, index=${String(progress.chapterIndex)}] not found`
-                        );
-                        return { progress, chapter };
-                    })(),
+                const [toc, readerSettings, chapter] = await Promise.all([
+                    this.tocService.getByIndex(tocStore.indexes.ukFileId.name, book.fileId, transaction),
+                    this.settingService.getReaderSettings(PageName.READER, transaction),
+                    this.chapterService.getByIndex(
+                        chapterStore.indexes.ukFileIdIndex.name,
+                        [book.fileId, progress.chapterIndex],
+                        transaction
+                    ),
                 ]);
 
                 return new ReaderState({
                     book,
-                    toc,
-                    settings: [
-                        readerSetting,
-                        readerHeaderSetting,
-                        readerContentSetting,
-                        readerFooterSetting,
-                        readerDocSetting,
-                        readerTocSetting,
-                    ]
-                        .filter((setting) => setting !== null)
-                        .reduce((map, setting) => {
-                            map.set(setting.name, setting);
-                            return map;
-                        }, new Map<SettingName, ReaderSetting>()),
+                    toc: assertExists(toc, `Toc[fileId=${book.fileId}] not found`),
+                    settings: new Map<SettingName, ReaderSetting>(
+                        readerSettings.map((setting) => [setting.name, setting])
+                    ),
                     progress: progress,
-                    chapter,
+                    chapter: assertExists(
+                        chapter,
+                        `Chapter[fileId=${book.fileId}, index=${String(progress.chapterIndex)}] not found`
+                    ),
                 });
             }
         );

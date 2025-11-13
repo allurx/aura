@@ -14,22 +14,16 @@
  * limitations under the License.
  */
 
-import BaseModel from "../base.model";
-import { ClassFields } from "../../core/type/common.type";
-import ObjectUtil from "../../core/util/object.util";
+import MetadataRepository from "./metadata.repository";
+import Metadata from "./metadata.model";
+import BaseService from "../base.service";
 
 /**
- * 阅主题
+ * 元数据服务
  * @author allurx
  */
-export default class Theme extends BaseModel {
-    public readonly name!: string;
-    public readonly color!: string;
-    public readonly readerBackgroundColor!: string;
-    public readonly backgroundColor!: string;
-
-    public constructor(data: ClassFields<Theme>) {
-        super();
-        ObjectUtil.assignOwnProperties<Theme>(this, data);
+export default class MetadataService extends BaseService<Metadata> {
+    public constructor() {
+        super(new MetadataRepository());
     }
 }

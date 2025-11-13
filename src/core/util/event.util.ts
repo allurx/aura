@@ -19,6 +19,9 @@
  * @author allurx
  */
 export default class EventUtil {
+    private constructor() {
+        throw new Error(`${EventUtil.name} is a static class and cannot be instantiated.`);
+    }
     /**
      * 直接绑定 - 已存在元素
      * @template E - 事件类型

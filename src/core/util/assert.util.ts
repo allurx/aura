@@ -14,11 +14,16 @@
  * limitations under the License.
  */
 
+import { NonEmptyArray } from "../type/common.type";
+
 /**
  * 断言工具类
  * @author allurx
  */
 export default class AssertUtil {
+    private constructor() {
+        throw new Error(`${AssertUtil.name} is a static class and cannot be instantiated.`);
+    }
     /**
      * 确保值非null/undefined,否则抛出错误
      * @param value 需要检查的值
@@ -31,7 +36,20 @@ export default class AssertUtil {
         }
         return value;
     }
-    
+
+    /**
+     * 确保数组非空,否则抛出错误
+     * @param value 需要检查的数组
+     * @param message 错误提示,可选
+     * @returns value
+     */
+    public static assertNonEmptyArray<T>(value: T[], message?: string): NonEmptyArray<T> {
+        if (!Array.isArray(value) || value.length === 0) {
+            throw new Error(message ?? "Value must be a non-empty array");
+        }
+        return value as NonEmptyArray<T>;
+    }
 }
 
 export const assertExists = AssertUtil.assertExists.bind(AssertUtil);
+export const assertNonEmptyArray = AssertUtil.assertNonEmptyArray.bind(AssertUtil);

@@ -61,6 +61,41 @@ export default abstract class BaseRepository<T extends BaseModel> {
         return result ? this.createModel(result as Required<T>) : null;
     }
 
+    /**
+     * 遍历整个store,直到找到第一条满足指定字段值的记录为止(未建立索引时使用)
+     * 适用于小数据量场景,大数据量请勿使用此方法
+     * @param fieldName - 字段名称
+     * @param fieldValue - 字段值
+     * @param transaction - 事务
+     */
+    public async getByField<K extends keyof T>(
+        fieldName: K,
+        fieldValue: T[K],
+        transaction: IDBTransaction
+    ): Promise<T | null> {
+        const store = transaction.objectStore(this.storeName());
+
+        return new Promise<T | null>((resolve, reject) => {
+            const request = store.openCursor();
+            request.onsuccess = () => {
+                const cursor = request.result;
+                if (cursor) {
+                    const record = cursor.value as Required<T>;
+                    if (record[fieldName] === fieldValue) {
+                        resolve(this.createModel(record));
+                        return;
+                    }
+                    cursor.continue();
+                } else {
+                    resolve(null);
+                }
+            };
+            request.onerror = () => {
+                reject(request.error ?? new Error("Failed to get record by field"));
+            };
+        });
+    }
+
     public async getAll(transaction: IDBTransaction) {
         const store = transaction.objectStore(this.storeName());
         const result = await this.requestPromise<unknown[]>(store.getAll());

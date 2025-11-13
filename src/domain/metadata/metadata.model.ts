@@ -14,24 +14,21 @@
  * limitations under the License.
  */
 
+import BaseModel from "../base.model";
 import { ClassFields } from "../../core/type/common.type";
 import ObjectUtil from "../../core/util/object.util";
-import { SettingName } from "../../core/component/constant/setting.name";
-import { ConfigurableStyleProperty } from "../../core/component/constant/configurable.style.property";
-import BaseModel from "../base.model";
-import { PageName } from "../../core/constant/page-name";
 
 /**
- * 阅读器设置
+ * 元数据
  * @author allurx
  */
-export default class ReaderSetting extends BaseModel {
-    public readonly name!: SettingName;
-    public readonly pageName!: PageName;
-    public style!: Partial<Record<ConfigurableStyleProperty, string>>;
+export default class Metadata extends BaseModel {
+    public readonly appName!: string;
+    public readonly handbookId!: string;
+    public readonly version!: number;
 
-    public constructor(data: ClassFields<ReaderSetting>) {
+    public constructor(data: ClassFields<Metadata>) {
         super();
-        ObjectUtil.assignOwnProperties<ReaderSetting>(this, data);
+        ObjectUtil.assignOwnProperties<Metadata>(this, data);
     }
 }

@@ -14,22 +14,23 @@
  * limitations under the License.
  */
 
-import BaseModel from "../base.model";
-import { ClassFields } from "../../core/type/common.type";
-import ObjectUtil from "../../core/util/object.util";
-
 /**
- * 阅主题
+ * Aura核心类
  * @author allurx
  */
-export default class Theme extends BaseModel {
-    public readonly name!: string;
-    public readonly color!: string;
-    public readonly readerBackgroundColor!: string;
-    public readonly backgroundColor!: string;
+export default class Aura {
+    public static readonly NAME = "aura";
+    public static readonly VERSION = 1;
 
-    public constructor(data: ClassFields<Theme>) {
-        super();
-        ObjectUtil.assignOwnProperties<Theme>(this, data);
+    public static isVersionChanged(oldVersion: number): boolean {
+        return oldVersion !== this.VERSION;
+    }
+
+    public static isVersionBefore(version: number): boolean {
+        return this.VERSION < version;
+    }
+
+    public static isVersionAfter(version: number): boolean {
+        return this.VERSION > version;
     }
 }

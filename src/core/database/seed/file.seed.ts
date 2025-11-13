@@ -23,16 +23,13 @@ export default class FileSeed {
         1. Aura是什么
         Aura是一个轻量级、原生实现的阅读器网页应用,支持书籍和文档在线阅读,界面简洁、交互流畅。
         📖 支持多种文本格式的阅读
-        ⚡ 原生 HTML、CSS、TypeScript 实现,无框架依赖
-        🎨 简洁、现代化 UI,支持自定义主题
+        ⚡ 原生HTML、CSS、TypeScript实现
+        🎨 简洁、现代化UI,支持自定义主题
         🔍 支持快速搜索、目录导航
         🛠 可扩展,易于集成到其他网页或应用
-        2. 限制
-        上传文件目前只支持txt格式,并且编码必须是UTF-8
-        目前aura还处于开发阶段,很多功能还不完善,甚至还有很多bug,等我有空了会慢慢完善的
+        📁 上传文件目前只支持txt格式,并且编码必须是UTF-8
+        🔒 目前Aura还处于早期开发阶段,很多功能还不完善,甚至还有很多bug,等我有空了会慢慢完善的
     `;
-
-    public static readonly id = "9e1ecb6e-2317-4c5a-a098-6785785e0349";
 
     public static readonly file = new File([this.text], "Aura.txt", { type: "text/plain" });
 }

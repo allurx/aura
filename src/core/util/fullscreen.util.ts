@@ -19,6 +19,9 @@
  * @author allurx
  */
 export default class FullscreenUtil {
+    private constructor() {
+        throw new Error(`${FullscreenUtil.name} is a static class and cannot be instantiated.`);
+    }
     /**
      * 检查浏览器是否支持全屏api
      * @return  是否支持全屏

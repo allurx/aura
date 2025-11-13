@@ -17,7 +17,7 @@
 import { settingStore } from "../../core/database/database-definition";
 import SettingRepository from "./setting.repository";
 import BaseService from "../base.service";
-import { SettingName } from "../../core/component/constant/setting.name";
+import { PageName } from "../../core/constant/page-name";
 import ReaderSetting from "./reader-setting.model";
 
 /**
@@ -30,14 +30,12 @@ export default class SettingService extends BaseService<ReaderSetting> {
     }
 
     /**
-     * 获取设置
-     * @param names - 设置名称
+     * 获取阅读器设置
+     * @param pageName - 页面名称
      * @param  transaction - 事务对象
-     * @param constructor - 设置构造函数
-     * @return  设置
+     * @return  阅读器设置列表
      */
-    public async getReaderSetting(name: SettingName, transaction: IDBTransaction): Promise<ReaderSetting | null> {
-        const setting = await this.getByIndex(settingStore.indexes.ukName.name, name, transaction);
-        return setting ? new ReaderSetting(setting) : null;
+    public async getReaderSettings(pageName: PageName, transaction: IDBTransaction): Promise<ReaderSetting[]> {
+        return await this.getAllByIndex(settingStore.indexes.idxPageName.name, pageName, transaction);
     }
 }
