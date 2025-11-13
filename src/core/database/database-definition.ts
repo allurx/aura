@@ -23,11 +23,11 @@ export default class DatabaseDefinition {
     public static readonly name = "aura";
 
     // 数据库版本
-    public static readonly version = 4;
+    public static readonly version = 1;
 
     // 数据库对象存储定义
     public static readonly stores = {
-        metadata:{
+        metadata: {
             name: "metadata",
             keyPath: "id",
             autoIncrement: false,

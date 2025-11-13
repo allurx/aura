@@ -29,6 +29,8 @@ export default class FileSeed {
         🛠 可扩展,易于集成到其他网页或应用
         📁 上传文件目前只支持txt格式,并且编码必须是UTF-8
         🔒 目前Aura还处于早期开发阶段,很多功能还不完善,甚至还有很多bug,等我有空了会慢慢完善的
+        2. QQ交流群
+        欢迎加入Aura交流群讨论和交流: 1038423789
     `;
 
     public static readonly file = new File([this.text], "Aura.txt", { type: "text/plain" });

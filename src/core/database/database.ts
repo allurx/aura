@@ -49,20 +49,13 @@ export default class Database {
             const request = indexedDB.open(this.name, this.version);
             request.onupgradeneeded = () => {
                 const db = request.result;
-
-                // 开发阶段方便调试,删除旧的对象存储
-                Array.from(db.objectStoreNames).forEach((storeName) => {
-                    db.deleteObjectStore(storeName);
-                });
-                
-                Object.values(this.stores).forEach((storeProperty) => {
-                    // 创建新的对象存储
-                    if (!db.objectStoreNames.contains(storeProperty.name)) {
-                        const store = db.createObjectStore(storeProperty.name, {
-                            autoIncrement: storeProperty.autoIncrement,
-                            keyPath: storeProperty.keyPath,
+                Object.values(this.stores).forEach((storeDefinition) => {
+                    if (!db.objectStoreNames.contains(storeDefinition.name)) {
+                        const store = db.createObjectStore(storeDefinition.name, {
+                            keyPath: storeDefinition.keyPath,
+                            autoIncrement: storeDefinition.autoIncrement,
                         });
-                        Object.values(storeProperty.indexes).forEach((index) => {
+                        Object.values(storeDefinition.indexes).forEach((index) => {
                             store.createIndex(index.name, index.path, { unique: index.unique });
                         });
                     }
