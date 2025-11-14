@@ -22,22 +22,20 @@
         <title>Aura</title>
         <link rel="icon" href="../../asset/image/favicon.svg" type="image/svg+xml" />
         <link rel="stylesheet" href="bookshelf.css" />
-        <script src="app.ts" type="module"></script>
+        <script src="bookshelf.ts" type="module"></script>
     </head>
 
     <body>
-        <div id="bookshelf">
-            <header>
-                <span id="title">Aura</span>
-                <img id="clear-btn" src="../../asset/image/bookshelf-clear.svg" width="26" height="26" />
-            </header>
-            <main>
-                <nav></nav>
-                <div id="book-list">
-                    <label id="book-input-label" for="book-input">+</label>
-                    <input id="book-input" type="file" accept=".txt" multiple />
-                </div>
-            </main>
-        </div>
+        <header>
+            <span id="title">Aura</span>
+            <img id="clear-btn" src="../../asset/image/bookshelf-clear.svg" width="26" height="26" />
+        </header>
+        <main>
+            <nav></nav>
+            <section id="book-list">
+                <label id="book-input-label" for="book-input">+</label>
+                <input id="book-input" type="file" accept=".txt" multiple />
+            </section>
+        </main>
     </body>
 </html>

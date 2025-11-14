@@ -29,6 +29,7 @@
     transition: left 0.28s ease;
     -webkit-user-select: none;
     user-select: none;
+    font-size: 1rem;
 }
 
 .setting.open {
@@ -130,7 +131,6 @@
     width: 100%;
     height: 3rem;
     padding-right: 1rem;
-    font-size: 1.1rem;
 }
 .setting > .main > header > span {
     cursor: pointer;
@@ -154,7 +154,6 @@
 .setting > .main > section > .item {
     padding: 1rem;
     display: flex;
-    font-size: 1rem;
     line-height: 2;
     gap: 10px;
     justify-content: center;
@@ -183,6 +182,7 @@
 /* 平板及以下 */
 @media (max-width: 768px) {
     .setting {
+        font-size: 1.4rem;
         width: 100%;
     }
 
@@ -194,17 +194,5 @@
     .setting > aside {
         min-width: 10rem;
         max-width: 12rem;
-    }
-
-    .setting > aside .node .title {
-        font-size: 1.2rem;
-    }
-
-    .setting > .main > header {
-        font-size: 1.4rem;
-    }
-
-    .setting > .main > section > .item {
-        font-size: 1.2rem;
     }
 }

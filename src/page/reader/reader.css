@@ -15,41 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 @import "../../core/style/base.css";
-@import "./doc/doc.css";
-@import "./header/header.css";
-@import "./body/body.css";
-@import "./footer/footer.css";
-@import "./toc/toc.css";
+@import "./doc/doc-ui.css";
+@import "./body/body-ui.css";
+@import "./header/header-ui.css";
+@import "./content/content-ui.css";
+@import "./footer/footer-ui.css";
+@import "./toc/toc-ui.css";
 @import "../../core/component/setting/setting.css";
 @import "../../core/component/dialog/dialog.css";
 @import "../../core/component/overlay/overlay.css";
-
-/* 阅读器整体容器 */
-#reader {
-    width: 800px;
-    min-width: 800px;
-    max-width: 100%;
-    height: 100%;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    background-color: #f2e8c8;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
-    position: relative;
-    outline: none;
-    overflow: hidden;
-    transition: opacity 0.3s ease;
-    resize: horizontal;
-    font-size: 18px;
-    color: #000000;
-    line-height: 2;
-}
-
-/* 平板及以下 */
-@media (max-width: 768px) {
-    #reader {
-        width: 100% !important;
-        min-width: 100% !important;
-    }
-}

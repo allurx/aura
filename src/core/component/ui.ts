@@ -14,87 +14,40 @@
  * limitations under the License.
  */
 
-import Dialog from "./dialog/dialog";
-import Overlay from "./overlay/overlay";
-import Overlayable from "./overlay/overlayable";
-import Dialogable from "./dialog/dalogable";
-import StyleEngine from "./style.engine";
+import StyleEngine from "./style-engine";
 import StyleConfigurable from "./style-configurable";
-import { assertExists } from "../util/assert.util";
-import { SettingName } from "./constant/setting.name";
-import { ConfigurableStyleProperty } from "./constant/configurable.style.property";
+import { assertExists } from "../util/assert-util";
+import { SettingName } from "./constant/setting-name";
+import { ConfigurableStyleProperty } from "./constant/configurable-style-property";
 
 /**
  * 界面基类
  * @author allurx
  */
-export default abstract class Ui implements StyleConfigurable, Dialogable, Overlayable {
+export default abstract class Ui implements StyleConfigurable {
     public readonly id: string;
     public readonly root: HTMLElement;
     public readonly settingName: SettingName;
     public readonly displayName: string;
     public readonly children: Ui[] = [];
-    public readonly dialog: Dialog;
-    public readonly overlay: Overlay;
     public readonly configurableStyleProperties: Set<ConfigurableStyleProperty>;
 
     public constructor({
         root,
         settingName,
         displayName,
-        dialog,
-        overlay,
         configurableStyleProperties = new Set<ConfigurableStyleProperty>([]),
     }: {
         root: HTMLElement | { container: HTMLElement; template: string };
         settingName: SettingName;
         displayName: string;
-        dialog?: Dialog;
-        overlay?: Overlay;
         configurableStyleProperties?: Set<ConfigurableStyleProperty>;
     }) {
         this.id = crypto.randomUUID();
         this.root = root instanceof HTMLElement ? root : this.renderTemplate(root);
         this.settingName = settingName;
         this.displayName = displayName;
-        this.dialog = dialog ?? new Dialog({ containerElement: this.root });
-        this.overlay = overlay ?? new Overlay({ containerElement: this.root });
         this.configurableStyleProperties = configurableStyleProperties;
-    }
-
-    /**
-     * @see Overlayable.show
-     */
-    public showOverlay(): Promise<void> {
-        return this.overlay.show();
-    }
-
-    /**
-     * @see Overlayable.hide
-     */
-    public hideOverlay(): Promise<void> {
-        return this.overlay.hide();
-    }
-
-    /**
-     * @see Overlayable.showOverlayWhile
-     */
-    public showOverlayWhile(handler: () => Promise<void>): Promise<void> {
-        return this.overlay.showWhile(handler);
-    }
-
-    /**
-     * @see Dialogable.confirmDialog
-     */
-    public async confirmDialog(content: Node | string, options: object = {}): Promise<boolean> {
-        return await this.dialog.confirm(content, options);
-    }
-
-    /**
-     * @see Dialogable.confirmDialog
-     */
-    public async alertDialog(content: Node | string, options: object = {}): Promise<boolean> {
-        return await this.dialog.alert(content, options);
     }
 
     /**
