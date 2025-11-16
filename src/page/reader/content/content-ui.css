@@ -16,12 +16,20 @@
  * limitations under the License.
  */
 
-@import "../../core/style/base.css";
-@import "./doc/doc-ui.css";
-@import "./body/body-ui.css";
-@import "./header/header-ui.css";
-@import "./main/main-ui.css";
-@import "./nav/nav-ui.css";
-@import "./book-list/book-list-ui.css";
-@import "../../core/component/dialog/dialog.css";
-@import "../../core/component/overlay/overlay.css";
+#content {
+    height: calc(100% - 120px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: auto;
+    scrollbar-color: #666666 transparent;
+    word-break: break-word;
+    outline: none;
+    padding: 0 30px;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+    #content {
+        font-size: 1.5rem;
+    }
+}

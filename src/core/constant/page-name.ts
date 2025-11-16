@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,12 +14,11 @@
  * limitations under the License.
  */
 
-@import "../../core/style/base.css";
-@import "./doc/doc-ui.css";
-@import "./body/body-ui.css";
-@import "./header/header-ui.css";
-@import "./main/main-ui.css";
-@import "./nav/nav-ui.css";
-@import "./book-list/book-list-ui.css";
-@import "../../core/component/dialog/dialog.css";
-@import "../../core/component/overlay/overlay.css";
+/**
+ * Page names used in the application.
+ * @author allurx
+ */
+export enum PageName {
+    BOOKSHELF = "bookshelf",
+    READER = "reader",
+}

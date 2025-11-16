@@ -1,0 +1,55 @@
+@charset "UTF-8";
+
+/*
+ * Copyright 2025 allurx
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#footer {
+    display: flex;
+    height: 60px;
+    justify-content: center;
+    align-items: center;
+    -webkit-user-select: none;
+    user-select: none;
+    overflow: hidden;
+    padding: 0 30px;
+    font-size: 0.9rem;
+}
+
+/* 阅读进度 */
+#progress-rate {
+    font-weight: bold;
+    text-align: right;
+    flex: 1;
+}
+
+/* 章节标题 */
+#chapter-title {
+    font-weight: bold;
+    text-align: left;
+    flex: 1;
+    /* 不换行 */
+    white-space: nowrap;
+    /* 超出隐藏 */
+    overflow: hidden;
+    /* 超出用省略号替代 */
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 768px) {
+    #footer {
+        font-size: 1rem;
+    }
+}

@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,12 +14,23 @@
  * limitations under the License.
  */
 
-@import "../../core/style/base.css";
-@import "./doc/doc-ui.css";
-@import "./body/body-ui.css";
-@import "./header/header-ui.css";
-@import "./main/main-ui.css";
-@import "./nav/nav-ui.css";
-@import "./book-list/book-list-ui.css";
-@import "../../core/component/dialog/dialog.css";
-@import "../../core/component/overlay/overlay.css";
+/**
+ * Aura核心类
+ * @author allurx
+ */
+export default class Aura {
+    public static readonly NAME = "aura";
+    public static readonly VERSION = 1;
+
+    public static isVersionChanged(oldVersion: number): boolean {
+        return oldVersion !== this.VERSION;
+    }
+
+    public static isVersionBefore(version: number): boolean {
+        return this.VERSION < version;
+    }
+
+    public static isVersionAfter(version: number): boolean {
+        return this.VERSION > version;
+    }
+}

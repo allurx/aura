@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,12 +14,21 @@
  * limitations under the License.
  */
 
-@import "../../core/style/base.css";
-@import "./doc/doc-ui.css";
-@import "./body/body-ui.css";
-@import "./header/header-ui.css";
-@import "./main/main-ui.css";
-@import "./nav/nav-ui.css";
-@import "./book-list/book-list-ui.css";
-@import "../../core/component/dialog/dialog.css";
-@import "../../core/component/overlay/overlay.css";
+import BaseModel from "../base-model";
+import { ClassFields } from "../../core/type/common-type";
+import ObjectUtil from "../../core/util/object-util";
+
+/**
+ * 元数据
+ * @author allurx
+ */
+export default class Metadata extends BaseModel {
+    public readonly appName!: string;
+    public readonly handbookId!: string;
+    public readonly version!: number;
+
+    public constructor(data: ClassFields<Metadata>) {
+        super();
+        ObjectUtil.assignOwnProperties<Metadata>(this, data);
+    }
+}

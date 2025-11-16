@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,12 +14,21 @@
  * limitations under the License.
  */
 
-@import "../../core/style/base.css";
-@import "./doc/doc-ui.css";
-@import "./body/body-ui.css";
-@import "./header/header-ui.css";
-@import "./main/main-ui.css";
-@import "./nav/nav-ui.css";
-@import "./book-list/book-list-ui.css";
-@import "../../core/component/dialog/dialog.css";
-@import "../../core/component/overlay/overlay.css";
+import Category from "../../domain/category/category-model";
+import ObjectUtil from "../../core/util/object-util";
+import Metadata from "../../domain/metadata/metadata-model";
+
+/**
+ * 书架状态
+ * @author allurx
+ */
+export default class BookshelfState {
+    public readonly metadata!: Metadata;
+    public readonly categories!: Category[];
+    // 当前选中的书籍分类id
+    public categoryId!: string;
+
+    public constructor(data: Required<BookshelfState>) {
+        ObjectUtil.assignOwnProperties<BookshelfState>(this, data);
+    }
+}

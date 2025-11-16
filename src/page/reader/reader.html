@@ -22,32 +22,31 @@
         <title>Aura</title>
         <link rel="icon" href="../../asset/image/favicon.svg" type="image/svg+xml" />
         <link rel="stylesheet" href="reader.css" />
-        <script src="app.ts" type="module"></script>
+        <script src="reader.ts" type="module"></script>
     </head>
 
     <body>
-        <div id="reader">
-            <!-- 头部 -->
-            <header id="header">
-                <div id="header-action-left" class="header-action">
-                    <img id="toggle-toc-panel" src="../../asset/image/table-of-contents.svg" width="22" height="22" />
-                </div>
-                <div id="header-action-right" class="header-action">
-                    <img id="toggle-fullscreen" src="../../asset/image/fullscreen.svg" width="22" height="22" />
-                    <img id="toggle-setting-panel" src="../../asset/image/setting.svg" width="22" height="22" />
-                </div>
-            </header>
+        <!-- 头部 -->
+        <header id="header">
+            <div id="header-action-left" class="header-action">
+                <img id="toggle-toc-panel" src="../../asset/image/table-of-contents.svg" width="22" height="22" />
+            </div>
+            <div id="header-action-right" class="header-action">
+                <img id="toggle-fullscreen" src="../../asset/image/fullscreen.svg" width="22" height="22" />
+                <img id="toggle-setting-panel" src="../../asset/image/setting.svg" width="22" height="22" />
+            </div>
+        </header>
 
-            <!-- 正文 -->
-            <main id="content"></main>
+        <!-- 正文 -->
+        <main id="content"></main>
 
-            <!-- 底部 -->
-            <footer id="footer">
-                <div id="chapter-title"></div>
-                <div id="progress-rate"></div>
-            </footer>
-        </div>
-        
+        <!-- 底部 -->
+        <footer id="footer">
+            <div id="chapter-title"></div>
+            <div id="progress-rate"></div>
+        </footer>
+
+        <!-- 目录 -->
         <section id="toc">
             <header>
                 <h2>目录</h2>
@@ -58,6 +57,5 @@
             <section class="main"></section>
             <footer class="footer"></footer>
         </section>
-
     </body>
 </html>

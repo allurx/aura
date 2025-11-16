@@ -13,27 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import ObjectUtil from "../core/util/object-util";
 
-import { ConfigurableStyleProperty } from "./constant/configurable-style-property";
+import { ClassFields } from "../core/type/common-type";
 
 /**
- * 可配置样式接口
+ * 基础模型类
  * @author allurx
  */
-export default interface StyleConfigurable {
-    /**
-     *  可配置样式集合
-     */
-    readonly configurableStyleProperties: Set<ConfigurableStyleProperty>;
+export default abstract class BaseModel {
+    // 模型唯一标识符(uuid)
+    public id!: string;
+    public createdTime!: number;
+    public updatedTime!: number;
 
     /**
-     * 应用可配置样式
-     * @param style - 可配置样式
+     * 更新模型属性
+     * @param data - 包含要更新的属性的对象
+     * @return {this} 返回更新后的模型实例
      */
-    applyStyle(style: Partial<Record<ConfigurableStyleProperty, string>>): this;
-
-    /**
-     * 重置可配置样式
-     */
-    resetStyle(): this;
+    update(data: Partial<ClassFields<this>>): this {
+        ObjectUtil.assignOwnProperties(this, data);
+        return this;
+    }
 }

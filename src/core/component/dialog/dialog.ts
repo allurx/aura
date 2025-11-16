@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import EventUtil from "../../util/event.util";
-import { assertExists } from "../../util/assert.util";
+import EventUtil from "../../util/event-util";
+import { assertExists } from "../../util/assert-util";
 
 /**
  * 对话框组件

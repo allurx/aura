@@ -14,26 +14,24 @@
  * limitations under the License.
  */
 
-import { ConfigurableStyleProperty } from "./constant/configurable-style-property";
+import BaseModel from "../base-model";
+import { ClassFields } from "../../core/type/common-type";
+import ObjectUtil from "../../core/util/object-util";
 
 /**
- * 可配置样式接口
+ * 阅读进度
  * @author allurx
  */
-export default interface StyleConfigurable {
-    /**
-     *  可配置样式集合
-     */
-    readonly configurableStyleProperties: Set<ConfigurableStyleProperty>;
+export default class Progress extends BaseModel {
+    public readonly bookId!: string;
+    public readonly chapterIndex!: number;
+    public readonly lineIndex!: number;
 
-    /**
-     * 应用可配置样式
-     * @param style - 可配置样式
-     */
-    applyStyle(style: Partial<Record<ConfigurableStyleProperty, string>>): this;
+    // 行元素可见比例 (0 ~ 1),用于恢复阅读时滚动到精确位置
+    public readonly lineVisibleRatio!: number;
 
-    /**
-     * 重置可配置样式
-     */
-    resetStyle(): this;
+    public constructor(data: ClassFields<Progress>) {
+        super();
+        ObjectUtil.assignOwnProperties<Progress>(this, data);
+    }
 }

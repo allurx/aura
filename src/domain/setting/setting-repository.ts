@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,12 +14,16 @@
  * limitations under the License.
  */
 
-@import "../../core/style/base.css";
-@import "./doc/doc-ui.css";
-@import "./body/body-ui.css";
-@import "./header/header-ui.css";
-@import "./main/main-ui.css";
-@import "./nav/nav-ui.css";
-@import "./book-list/book-list-ui.css";
-@import "../../core/component/dialog/dialog.css";
-@import "../../core/component/overlay/overlay.css";
+import ReaderSetting from "./reader-setting-model";
+import { settingStore } from "../../core/database/database-definition";
+import BaseRepository from "../base-repository";
+
+/**
+ * 设置数据访问对象
+ * @author allurx
+ */
+export default class SettingRepository extends BaseRepository<ReaderSetting> {
+    public constructor() {
+        super(settingStore, ReaderSetting);
+    }
+}
