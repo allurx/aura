@@ -14,18 +14,13 @@
  * limitations under the License.
  */
 
+import Ui from "../ui";
+
 /**
- * 可配置的样式属性枚举
+ * Setting state class
  * @author allurx
  */
-export enum ConfigurableStyleProperty {
-    FONT_SIZE = "font-size",
-    COLOR = "color",
-    WIDTH = "width",
-    PADDING_TOP = "padding-top",
-    PADDING_BOTTOM = "padding-bottom",
-    PADDING_LEFT = "padding-left",
-    PADDING_RIGHT = "padding-right",
-    LINE_HEIGHT = "line-height",
-    BACKGROUND_COLOR = "background-color",
+export default class SettingState {
+    // 当前设置的Ui
+    public ui!: Ui;
 }

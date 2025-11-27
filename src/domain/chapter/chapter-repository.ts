@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Chapter from "./chapter-model";
+import Chapter from "./chapter";
 import BaseRepository from "../base-repository";
 import { chapterStore } from "../../core/database/database-definition";
 

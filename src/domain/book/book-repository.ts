@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Book from "./book-model";
+import Book from "./book";
 import BaseRepository from "../base-repository";
 import { bookStore } from "../../core/database/database-definition";
 

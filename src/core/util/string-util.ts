@@ -14,26 +14,20 @@
  * limitations under the License.
  */
 
-import { ConfigurableStyleProperty } from "./constant/configurable-style-property";
-
 /**
- * 可配置样式接口
+ * 字符串工具类
  * @author allurx
  */
-export default interface StyleConfigurable {
-    /**
-     *  可配置样式集合
-     */
-    readonly configurableStyleProperties: Set<ConfigurableStyleProperty>;
+export default class StringUtil {
+    private constructor() {
+        throw new Error(`${StringUtil.name} is a static class and cannot be instantiated.`);
+    }
 
-    /**
-     * 应用可配置样式
-     * @param style - 可配置样式
-     */
-    applyStyle(style: Partial<Record<ConfigurableStyleProperty, string>>): this;
+    public static isEmpty(value: string): boolean {
+        return value.length === 0;
+    }
 
-    /**
-     * 重置可配置样式
-     */
-    resetStyle(): this;
+    public static isNotEmpty(value: string): boolean {
+        return value.length > 0;
+    }
 }

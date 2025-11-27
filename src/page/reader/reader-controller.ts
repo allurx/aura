@@ -16,18 +16,31 @@
 
 import DocUi from "./doc/doc-ui";
 import BodyUi from "./body/body-ui";
-import Progress from "../../domain/progress/progress-model";
+import Progress from "../../domain/progress/progress";
 import ReaderService from "./reader-service";
 import HeaderUi from "./header/header-ui";
 import ContentUi from "./content/content-ui";
 import FooterUi from "./footer/footer-ui";
 import SettingUi from "../../core/component/setting/setting-ui";
 import TocUi from "./toc/toc-ui";
-import { SwitchChapterDirection } from "../../core/constant/switch-chapter-direction";
 import ReaderState from "./reader-state";
-import { SettingName } from "../../core/component/constant/setting-name";
-import { ConfigurableStyleProperty } from "../../core/component/constant/configurable-style-property";
-import ReaderSetting from "../../domain/setting/reader-setting-model";
+import Setting from "../../domain/setting/setting";
+import BackgroundColorSettingItem from "../../core/component/setting/item/background-color-setting-item";
+import ColorSettingItem from "../../core/component/setting/item/color-setting-item";
+import WidthSettingItem from "../../core/component/setting/item/width-setting-item";
+import PaddingTopSettingItem from "../../core/component/setting/item/padding-top-setting-item";
+import PaddingLeftSettingItem from "../../core/component/setting/item/padding-left-setting-item";
+import PaddingBottomSettingItem from "../../core/component/setting/item/padding-bottom-setting-item";
+import PaddingRightSettingItem from "../../core/component/setting/item/padding-right-setting-item";
+import FontSizeSettingItem from "../../core/component/setting/item/font-size-setting-item";
+import LineHeightSettingItem from "../../core/component/setting/item/line-height-setting-item";
+import ThemeSettingItem from "../../core/component/setting/item/theme-setting-item";
+import Ui from "../../core/component/ui";
+import SettingItem from "../../core/component/setting/setting-item";
+import SettingState from "../../core/component/setting/setting-state";
+import { UiId } from "../../core/component/ui-id";
+import { SwitchChapterDirection } from "../../core/constant/switch-chapter-direction";
+import { StyleProperty } from "../../core/component/setting/style-property";
 import { assertExists } from "../../core/util/assert-util";
 import { PageName } from "../../core/constant/page-name";
 
@@ -51,79 +64,69 @@ export default class ReaderController {
 
         this.docUi = new DocUi({
             root: document.documentElement,
-            settingName: SettingName.READER_DOC,
             displayName: "网页",
-            configurableStyleProperties: new Set<ConfigurableStyleProperty>([
-                ConfigurableStyleProperty.BACKGROUND_COLOR,
-            ]),
         });
         this.bodyUi = new BodyUi({
             root: document.body,
-            settingName: SettingName.READER,
             displayName: "阅读器",
-            configurableStyleProperties: new Set<ConfigurableStyleProperty>([
-                ConfigurableStyleProperty.COLOR,
-                ConfigurableStyleProperty.WIDTH,
-                ConfigurableStyleProperty.BACKGROUND_COLOR,
-            ]),
         });
         this.headerUi = new HeaderUi({
             root: assertExists(document.querySelector<HTMLElement>("#header")),
-            settingName: SettingName.READER_HEADER,
             displayName: "页眉",
-            configurableStyleProperties: new Set<ConfigurableStyleProperty>([
-                ConfigurableStyleProperty.PADDING_TOP,
-                ConfigurableStyleProperty.PADDING_BOTTOM,
-                ConfigurableStyleProperty.PADDING_LEFT,
-                ConfigurableStyleProperty.PADDING_RIGHT,
-                ConfigurableStyleProperty.BACKGROUND_COLOR,
-            ]),
         });
         this.contentUi = new ContentUi({
             root: assertExists(document.querySelector<HTMLElement>("#content")),
-            settingName: SettingName.READER_CONTENT,
             displayName: "正文",
-            configurableStyleProperties: new Set<ConfigurableStyleProperty>([
-                ConfigurableStyleProperty.FONT_SIZE,
-                ConfigurableStyleProperty.COLOR,
-                ConfigurableStyleProperty.PADDING_LEFT,
-                ConfigurableStyleProperty.PADDING_RIGHT,
-                ConfigurableStyleProperty.LINE_HEIGHT,
-                ConfigurableStyleProperty.BACKGROUND_COLOR,
-            ]),
         });
         this.footerUi = new FooterUi({
             root: assertExists(document.querySelector<HTMLElement>("#footer")),
-            settingName: SettingName.READER_FOOTER,
             displayName: "页脚",
-            configurableStyleProperties: new Set<ConfigurableStyleProperty>([
-                ConfigurableStyleProperty.FONT_SIZE,
-                ConfigurableStyleProperty.COLOR,
-                ConfigurableStyleProperty.PADDING_TOP,
-                ConfigurableStyleProperty.PADDING_BOTTOM,
-                ConfigurableStyleProperty.PADDING_LEFT,
-                ConfigurableStyleProperty.PADDING_RIGHT,
-                ConfigurableStyleProperty.BACKGROUND_COLOR,
-            ]),
         });
         this.tocUi = new TocUi({
             root: assertExists(document.querySelector<HTMLDivElement>("#toc")),
-            settingName: SettingName.READER_TOC,
             displayName: "目录",
-            configurableStyleProperties: new Set<ConfigurableStyleProperty>([
-                ConfigurableStyleProperty.FONT_SIZE,
-                ConfigurableStyleProperty.COLOR,
-                ConfigurableStyleProperty.PADDING_TOP,
-                ConfigurableStyleProperty.PADDING_BOTTOM,
-                ConfigurableStyleProperty.PADDING_LEFT,
-                ConfigurableStyleProperty.PADDING_RIGHT,
-                ConfigurableStyleProperty.BACKGROUND_COLOR,
-            ]),
         });
+
         this.settingUi = new SettingUi({
-            canBootstrap: false,
             container: this.bodyUi.root,
-            uis: [this.docUi, this.bodyUi, this.headerUi, this.contentUi, this.footerUi, this.tocUi],
+            uiSettingItemMap: new Map<Ui, (new (settingState: SettingState) => SettingItem)[]>([
+                [this.docUi, [BackgroundColorSettingItem, ThemeSettingItem]],
+                [this.bodyUi, [ColorSettingItem, WidthSettingItem, BackgroundColorSettingItem]],
+                [
+                    this.headerUi,
+                    [
+                        PaddingTopSettingItem,
+                        PaddingLeftSettingItem,
+                        PaddingBottomSettingItem,
+                        PaddingRightSettingItem,
+                        BackgroundColorSettingItem,
+                    ],
+                ],
+                [
+                    this.contentUi,
+                    [
+                        FontSizeSettingItem,
+                        ColorSettingItem,
+                        PaddingLeftSettingItem,
+                        PaddingRightSettingItem,
+                        BackgroundColorSettingItem,
+                        LineHeightSettingItem,
+                    ],
+                ],
+                [
+                    this.footerUi,
+                    [
+                        FontSizeSettingItem,
+                        ColorSettingItem,
+                        PaddingTopSettingItem,
+                        PaddingBottomSettingItem,
+                        PaddingLeftSettingItem,
+                        PaddingRightSettingItem,
+                        BackgroundColorSettingItem,
+                    ],
+                ],
+                [this.tocUi, [FontSizeSettingItem, ColorSettingItem, BackgroundColorSettingItem]],
+            ]),
         });
     }
 
@@ -138,20 +141,12 @@ export default class ReaderController {
         // 注意这里虽然是先渲染界面然后再绑定事件，但是由于浏览器的渲染机制，
         // render函数内部修改ui导致的ContentScroll和ReaderResize事件会在未来的某一刻被触发，这个时刻无法确定，由浏览器自己决定。
         // 从而导致bindContentScroll和observeReaderResize对应的事件处理函数会在页面首次加载之后某一时刻被调用，
-        // 也就是saveProgress和saveReaderSetting被调用一次，这个无副作用的调用是可以接受的，因为只是重复保存了一下。
-        // 目前还没有发现可以避免这种情况的好办法
+        // 这个无副作用的调用是可以接受的，因为只是重复保存了一下。目前还没有发现可以避免这种情况的好办法
 
-        this.docUi.applyStyle(this.state.settings.get(SettingName.READER_DOC)?.style ?? {});
-
-        this.bodyUi.applyStyle(this.state.settings.get(SettingName.READER)?.style ?? {});
-
-        this.tocUi
-            .renderContents(this.state.toc.contents)
-            .applyStyle(this.state.settings.get(SettingName.READER_TOC)?.style ?? {});
+        this.tocUi.renderContents(this.state.toc.contents);
 
         this.contentUi
             .renderChapter(this.state.chapter.lines)
-            .applyStyle(this.state.settings.get(SettingName.READER_CONTENT)?.style ?? {})
             .restoreProgress(this.state.progress.lineIndex, this.state.progress.lineVisibleRatio);
 
         this.footerUi
@@ -159,12 +154,9 @@ export default class ReaderController {
             .renderProgress(
                 this.state.chapter.startLineNumber + this.state.progress.lineIndex,
                 this.state.toc.numberOfLines()
-            )
-            .applyStyle(this.state.settings.get(SettingName.READER_FOOTER)?.style ?? {});
+            );
 
-        this.headerUi.applyStyle(this.state.settings.get(SettingName.READER_HEADER)?.style ?? {});
-
-        this.settingUi.renderAside().applyStyle(this.state.settings.get(SettingName.SETTING)?.style ?? {});
+        this.settingUi.renderAside().applySetting(this.state.settings);
 
         // 显示document
         this.docUi.show();
@@ -212,29 +204,27 @@ export default class ReaderController {
     /**
      * 更新设置并保存
      */
-    private async updateSetting(settingName: SettingName, style: Partial<Record<ConfigurableStyleProperty, string>>) {
+    private async updateSetting(uiId: UiId, mergedSetting: Record<string, unknown>) {
         const setting =
-            this.state.settings.get(settingName) ??
-            new ReaderSetting({
+            this.state.settings.get(uiId) ??
+            new Setting({
                 id: crypto.randomUUID(),
-                name: settingName,
+                uiId: uiId,
                 pageName: PageName.READER,
-                style: {},
                 createdTime: Date.now(),
                 updatedTime: Date.now(),
             });
-        // style合并覆盖setting.style
-        setting.style = { ...setting.style, ...style };
+        Object.assign(setting, mergedSetting);
         setting.updatedTime = Date.now();
-        this.state.settings.set(settingName, setting);
+        this.state.settings.set(uiId, setting);
         await this.readerService.updateSetting(setting);
     }
 
     /**
      * 删除阅读器设置
      */
-    private async deleteSettings(settingNames: SettingName[]) {
-        await this.readerService.deleteSettings(settingNames);
+    private async deleteSettings() {
+        await this.readerService.deleteSettings();
     }
 
     /**
@@ -281,9 +271,7 @@ export default class ReaderController {
         this.docUi.bindChapterNavigation(this.contentUi.root, (direction) => this.switchChapter(direction));
 
         // reader ui事件
-        this.bodyUi.observeReaderResize((width) =>
-            this.updateSetting(SettingName.READER, { [ConfigurableStyleProperty.WIDTH]: width })
-        );
+        this.bodyUi.observeReaderResize((width) => this.updateSetting(UiId.READER, { [StyleProperty.WIDTH]: width }));
 
         // header ui事件
         this.headerUi
@@ -324,13 +312,14 @@ export default class ReaderController {
 
         // setting ui事件
         this.settingUi
-            .bindNodeClick()
-            .bindCloseSettingPanel()
+            .bindNodeClick(this.state.settings)
+            .bindCloseSetting()
             .bindResetSetting(async () => {
-                await this.deleteSettings(Array.from(this.state.settings.keys()));
+                this.state.settings.clear();
+                await this.deleteSettings();
             })
-            .bindSettingChange(async (ui, property, value) => {
-                await this.updateSetting(ui.settingName, { [property]: value });
+            .bindSettingItemChange(async (ui, settingItem) => {
+                await this.updateSetting(ui.id, settingItem);
             });
     }
 }

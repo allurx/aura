@@ -95,18 +95,9 @@ export default class DatabaseDefinition {
             autoIncrement: false,
             indexes: {
                 idxPageName: { name: "idx_page_name", path: "pageName", unique: false },
-                ukName: { name: "uk_name", path: "name", unique: true },
+                ukPageNameUiId: { name: "uk_page_name_ui_id", path: ["pageName", "uiId"], unique: true },
             },
             description: "设置",
-        },
-        theme: {
-            name: "theme",
-            keyPath: "id",
-            autoIncrement: false,
-            indexes: {
-                ukName: { name: "uk_name", path: "name", unique: true },
-            },
-            description: "主题",
         },
     };
 }
@@ -120,6 +111,5 @@ export const tocStore = DatabaseDefinition.stores.toc;
 export const chapterStore = DatabaseDefinition.stores.chapter;
 export const progressStore = DatabaseDefinition.stores.progress;
 export const settingStore = DatabaseDefinition.stores.setting;
-export const themeStore = DatabaseDefinition.stores.theme;
 
 export type StoreDefinition = (typeof DatabaseDefinition.stores)[keyof typeof DatabaseDefinition.stores];

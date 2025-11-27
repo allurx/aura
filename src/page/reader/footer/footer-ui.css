@@ -26,30 +26,31 @@
     overflow: hidden;
     padding: 0 30px;
     font-size: 0.9rem;
-}
+    background-color: inherit;
 
-/* 阅读进度 */
-#progress-rate {
-    font-weight: bold;
-    text-align: right;
-    flex: 1;
-}
+    @media (max-width: 768px) {
+        & {
+            font-size: 1rem;
+        }
+    }
 
-/* 章节标题 */
-#chapter-title {
-    font-weight: bold;
-    text-align: left;
-    flex: 1;
-    /* 不换行 */
-    white-space: nowrap;
-    /* 超出隐藏 */
-    overflow: hidden;
-    /* 超出用省略号替代 */
-    text-overflow: ellipsis;
-}
+    /* 阅读进度 */
+    #progress-rate {
+        font-weight: bold;
+        text-align: right;
+        flex: 1;
+    }
 
-@media (max-width: 768px) {
-    #footer {
-        font-size: 1rem;
+    /* 章节标题 */
+    #chapter-title {
+        font-weight: bold;
+        text-align: left;
+        flex: 1;
+        /* 不换行 */
+        white-space: nowrap;
+        /* 超出隐藏 */
+        overflow: hidden;
+        /* 超出用省略号替代 */
+        text-overflow: ellipsis;
     }
 }

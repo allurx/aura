@@ -16,7 +16,7 @@
 
 import BaseService from "../base-service";
 import CategoryRepository from "./category-repository";
-import Category from "./category-model";
+import Category from "./category";
 
 /**
  * 分类服务

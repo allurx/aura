@@ -15,15 +15,17 @@
  */
 
 /**
- * Application setting names.
+ * 可配置的样式属性枚举
  * @author allurx
  */
-export enum SettingName {
-    SETTING = "setting",
-    READER = "readerSetting",
-    READER_HEADER = "readerHeaderSetting",
-    READER_CONTENT = "readerContentSetting",
-    READER_FOOTER = "readerFooterSetting",
-    READER_DOC = "readerDocSetting",
-    READER_TOC = "readerTocSetting",
+export enum StyleProperty {
+    FONT_SIZE = "font-size",
+    COLOR = "color",
+    WIDTH = "width",
+    PADDING_TOP = "padding-top",
+    PADDING_BOTTOM = "padding-bottom",
+    PADDING_LEFT = "padding-left",
+    PADDING_RIGHT = "padding-right",
+    LINE_HEIGHT = "line-height",
+    BACKGROUND_COLOR = "background-color",
 }

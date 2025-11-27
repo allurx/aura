@@ -14,60 +14,32 @@
  * limitations under the License.
  */
 
-import StyleEngine from "./style-engine";
-import StyleConfigurable from "./style-configurable";
-import { assertExists } from "../util/assert-util";
-import { SettingName } from "./constant/setting-name";
-import { ConfigurableStyleProperty } from "./constant/configurable-style-property";
+import { UiId } from "../component/ui-id";
+import { assertExists, assertNonEmptyString } from "../util/assert-util";
 
 /**
  * 界面基类
  * @author allurx
  */
-export default abstract class Ui implements StyleConfigurable {
-    public readonly id: string;
+export default abstract class Ui {
     public readonly root: HTMLElement;
-    public readonly settingName: SettingName;
+    public readonly id: UiId;
     public readonly displayName: string;
     public readonly children: Ui[] = [];
-    public readonly configurableStyleProperties: Set<ConfigurableStyleProperty>;
 
     public constructor({
         root,
-        settingName,
         displayName,
-        configurableStyleProperties = new Set<ConfigurableStyleProperty>([]),
     }: {
         root: HTMLElement | { container: HTMLElement; template: string };
-        settingName: SettingName;
         displayName: string;
-        configurableStyleProperties?: Set<ConfigurableStyleProperty>;
     }) {
-        this.id = crypto.randomUUID();
         this.root = root instanceof HTMLElement ? root : this.renderTemplate(root);
-        this.settingName = settingName;
+        this.id = assertNonEmptyString(
+            this.root.id,
+            `${this.constructor.name} Ui must have a non-empty id attribute`
+        ) as UiId;
         this.displayName = displayName;
-        this.configurableStyleProperties = configurableStyleProperties;
-    }
-
-    /**
-     * @see StyleConfigurable.applyStyle
-     */
-    public applyStyle(style: Partial<Record<ConfigurableStyleProperty, string>>) {
-        Object.entries(style).forEach(([property, value]) => {
-            StyleEngine.setProperty(this.root, property as ConfigurableStyleProperty, value);
-        });
-        return this;
-    }
-
-    /**
-     * @see StyleConfigurable.resetStyle
-     */
-    public resetStyle() {
-        this.configurableStyleProperties.forEach((property) => {
-            StyleEngine.removeProperty(this.root, property);
-        });
-        return this;
     }
 
     /**

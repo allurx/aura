@@ -25,26 +25,29 @@
     user-select: none;
     overflow: hidden;
     padding: 0 30px;
-}
+    background-color: inherit;
 
-/* 顶部操作icon */
-.header-action {
-    display: flex;
-    align-items: center;
-    flex: 1;
-}
+    /* 顶部操作icon */
+    .action {
+        display: flex;
+        align-items: center;
+        flex: 1;
 
-.header-action img {
-    cursor: pointer;
-}
+        img {
+            cursor: pointer;
+            width: 22px;
+            height: 22px;
+        }
+    }
 
-/* 顶部左侧操作区域 */
-#header-action-left {
-    justify-content: left;
-}
+    /* 顶部左侧操作区域 */
+    .action-left {
+        justify-content: left;
+    }
 
-/* 顶部右侧操作区域 */
-#header-action-right {
-    gap: 20px;
-    justify-content: right;
+    /* 顶部右侧操作区域 */
+    .action-right {
+        gap: 20px;
+        justify-content: right;
+    }
 }

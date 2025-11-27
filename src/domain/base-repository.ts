@@ -182,10 +182,11 @@ export default abstract class BaseRepository<T extends BaseModel> {
     ): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             const request = store.index(indexName).openCursor(indexValue);
-            request.onsuccess = async () => {
+            request.onsuccess = () => {
                 const cursor = request.result;
                 if (cursor) {
-                    await this.requestPromise(cursor.delete());
+                    cursor.delete();
+                    //await this.requestPromise(cursor.delete());
                     cursor.continue();
                 } else {
                     // 没有更多记录,完成删除

@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-import Progress from "../../domain/progress/progress-model";
-import ReaderSetting from "../../domain/setting/reader-setting-model";
+import Progress from "../../domain/progress/progress";
+import Setting from "../../domain/setting/setting";
 import BookService from "../../domain/book/book-service";
 import ChapterService from "../../domain/chapter/chapter-service";
 import ProgressService from "../../domain/progress/progress-service";
 import TocService from "../../domain/toc/toc-service";
 import SettingService from "../../domain/setting/setting-service";
 import TransactionManager from "../../core/database/transaction-manager";
-import { SettingName } from "../../core/component/constant/setting-name";
 import { DatabaseMode } from "../../core/constant/database-mode";
 import {
     bookStore,
@@ -33,6 +32,7 @@ import {
 } from "../../core/database/database-definition";
 import ReaderState from "./reader-state";
 import { assertExists } from "../../core/util/assert-util";
+import { UiId } from "../../core/component/ui-id";
 import { PageName } from "../../core/constant/page-name";
 
 /**
@@ -74,9 +74,13 @@ export default class ReaderService {
                 );
 
                 // 并行加载数据
-                const [toc, readerSettings, chapter] = await Promise.all([
+                const [toc, settings, chapter] = await Promise.all([
                     this.tocService.getByIndex(tocStore.indexes.ukFileId.name, book.fileId, transaction),
-                    this.settingService.getReaderSettings(PageName.READER, transaction),
+                    this.settingService.getAllByIndex(
+                        settingStore.indexes.idxPageName.name,
+                        PageName.READER,
+                        transaction
+                    ),
                     this.chapterService.getByIndex(
                         chapterStore.indexes.ukFileIdIndex.name,
                         [book.fileId, progress.chapterIndex],
@@ -87,14 +91,12 @@ export default class ReaderService {
                 return new ReaderState({
                     book,
                     toc: assertExists(toc, `Toc[fileId=${book.fileId}] not found`),
-                    settings: new Map<SettingName, ReaderSetting>(
-                        readerSettings.map((setting) => [setting.name, setting])
-                    ),
-                    progress: progress,
+                    progress: assertExists(progress, `Progress[bookId=${bookId}] not found`),
                     chapter: assertExists(
                         chapter,
                         `Chapter[fileId=${book.fileId}, index=${String(progress.chapterIndex)}] not found`
                     ),
+                    settings: new Map<UiId, Setting>(settings.map((setting) => [setting.uiId, setting])),
                 });
             }
         );
@@ -112,23 +114,20 @@ export default class ReaderService {
 
     /**
      * 更新阅读器设置并保存
-     * @param readerSetting - 阅读器设置对象
+     * @param setting - 阅读器设置对象
      */
-    public async updateSetting(readerSetting: ReaderSetting) {
+    public async updateSetting(setting: Setting) {
         await TransactionManager.runTransaction(settingStore.name, DatabaseMode.READ_WRITE, async (transaction) => {
-            await this.settingService.update(readerSetting, transaction);
+            await this.settingService.update(setting, transaction);
         });
     }
 
     /**
      * 删除阅读器设置
      */
-    public async deleteSettings(settingNames: SettingName[]) {
+    public async deleteSettings() {
         await TransactionManager.runTransaction(settingStore.name, DatabaseMode.READ_WRITE, async (transaction) => {
-            const deletePromises = settingNames.map((name) =>
-                this.settingService.deleteByIndex(settingStore.indexes.ukName.name, name, transaction)
-            );
-            await Promise.all(deletePromises);
+            await this.settingService.deleteAllByIndex(settingStore.indexes.idxPageName.name, PageName.READER, transaction);
         });
     }
 

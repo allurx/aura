@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-import { assertExists } from "../util/assert-util";
-import { ConfigurableStyleProperty } from "./constant/configurable-style-property";
+import { assertExists } from "../../util/assert-util";
+import { StyleProperty } from "./style-property";
 
 /**
  * 样式引擎
  * @author allurx
  */
 export default class StyleEngine {
-    public static getComputedStyle(element: Element) {
+    public static getComputedStyle(element: Element): CSSStyleDeclaration {
         return window.getComputedStyle(element);
     }
 
-    public static toNumber(value: string) {
+    public static toNumber(value: string): number {
         return parseFloat(value);
     }
 
@@ -34,15 +34,15 @@ export default class StyleEngine {
         return value + (unit ?? "");
     }
 
-    public static getProperty(computedStyle: CSSStyleDeclaration, property: ConfigurableStyleProperty) {
+    public static getProperty(computedStyle: CSSStyleDeclaration, property: StyleProperty) {
         return computedStyle.getPropertyValue(property);
     }
 
-    public static setProperty(element: HTMLElement, property: ConfigurableStyleProperty, value: string) {
+    public static setProperty(element: HTMLElement, property: StyleProperty, value: string) {
         element.style.setProperty(property, value);
     }
 
-    public static removeProperty(element: HTMLElement, property: ConfigurableStyleProperty) {
+    public static removeProperty(element: HTMLElement, property: StyleProperty) {
         element.style.removeProperty(property);
     }
 
@@ -53,7 +53,7 @@ export default class StyleEngine {
      */
     public static rgbToHex(rgb: string): string {
         const match = /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)$/.exec(rgb);
-        if (!match) return "#000000";
+        if (!match) return rgb;
         return (
             "#" +
             [match[1], match[2], match[3]].map((x) => parseInt(assertExists(x)).toString(16).padStart(2, "0")).join("")

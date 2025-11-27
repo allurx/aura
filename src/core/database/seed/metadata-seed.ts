@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Metadata from "../../../domain/metadata/metadata-model";
+import Metadata from "../../../domain/metadata/metadata";
 
 /**
  * 元数据数据种子

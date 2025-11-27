@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
-import ThemeRepository from "./theme-repository";
-import Theme from "./theme-model";
-import BaseService from "../base-service";
+import BaseModel from "../base-model";
+import ObjectUtil from "../../core/util/object-util";
+import { ClassFields } from "../../core/type/common-type";
 
 /**
- * 主题服务
+ * 书籍文件
  * @author allurx
  */
-export default class ThemeService extends BaseService<Theme> {
-    public constructor() {
-        super(new ThemeRepository());
+export default class BookFile extends BaseModel {
+    public readonly file!: File;
+    public readonly hash!: string;
+
+    public constructor(data: ClassFields<BookFile>) {
+        super();
+        ObjectUtil.assignOwnProperties<BookFile>(this, data);
     }
 }

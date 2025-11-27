@@ -49,7 +49,15 @@ export default class AssertUtil {
         }
         return value as NonEmptyArray<T>;
     }
+
+    public static assertNonEmptyString(value: string, message?: string): string {
+        if (typeof value !== "string" || value.length === 0) {
+            throw new Error(message ?? "Value must be a non-empty string");
+        }
+        return value;
+    }
 }
 
 export const assertExists = AssertUtil.assertExists.bind(AssertUtil);
 export const assertNonEmptyArray = AssertUtil.assertNonEmptyArray.bind(AssertUtil);
+export const assertNonEmptyString = AssertUtil.assertNonEmptyString.bind(AssertUtil);

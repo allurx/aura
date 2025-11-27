@@ -16,7 +16,7 @@
 
 import BaseRepository from "../base-repository";
 import { metadataStore } from "../../core/database/database-definition";
-import Metadata from "./metadata-model";
+import Metadata from "./metadata";
 
 /**
  * 元数据数据访问对象

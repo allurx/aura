@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import ReaderSetting from "./reader-setting-model";
+import Setting from "./setting";
 import { settingStore } from "../../core/database/database-definition";
 import BaseRepository from "../base-repository";
 
@@ -22,8 +22,8 @@ import BaseRepository from "../base-repository";
  * 设置数据访问对象
  * @author allurx
  */
-export default class SettingRepository extends BaseRepository<ReaderSetting> {
+export default class SettingRepository extends BaseRepository<Setting> {
     public constructor() {
-        super(settingStore, ReaderSetting);
+        super(settingStore, Setting);
     }
 }

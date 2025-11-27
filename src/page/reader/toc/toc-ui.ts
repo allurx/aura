@@ -17,7 +17,7 @@
 import Ui from "../../../core/component/ui";
 import { assertExists } from "../../../core/util/assert-util";
 import EventUtil from "../../../core/util/event-util";
-import Toc from "../../../domain/toc/toc-model";
+import Toc from "../../../domain/toc/toc";
 
 /**
  * 目录面板

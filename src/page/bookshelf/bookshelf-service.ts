@@ -15,13 +15,13 @@
  */
 
 import Aura from "../../core/aura";
-import Book from "../../domain/book/book-model";
-import BookFile from "../../domain/file/file-model";
-import Chapter from "../../domain/chapter/chapter-model";
-import Toc from "../../domain/toc/toc-model";
-import Category from "../../domain/category/category-model";
-import Progress from "../../domain/progress/progress-model";
-import Metadata from "../../domain/metadata/metadata-model";
+import Book from "../../domain/book/book";
+import BookFile from "../../domain/file/file";
+import Chapter from "../../domain/chapter/chapter";
+import Toc from "../../domain/toc/toc";
+import Category from "../../domain/category/category";
+import Progress from "../../domain/progress/progress";
+import Metadata from "../../domain/metadata/metadata";
 import MetadataService from "../../domain/metadata/metadata-service";
 import CategoryService from "../../domain/category/category-service";
 import BookService from "../../domain/book/book-service";
@@ -273,9 +273,9 @@ export default class BookshelfService {
      */
     private async groupFileByHash(files: File[], categoryId: string, allowDuplicate: boolean) {
         // 计算所有文件的hash
-        const hashedFilesPromises = files.map(async (item) => ({
-            file: item,
-            hash: await FileUtil.computeHash(item),
+        const hashedFilesPromises = files.map(async (file) => ({
+            file: file,
+            hash: await FileUtil.computeHash(file),
         }));
 
         // 根据hash分组

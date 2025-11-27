@@ -14,20 +14,16 @@
  * limitations under the License.
  */
 
-import BaseModel from "../base-model";
-import { ClassFields } from "../../core/type/common-type";
-import ObjectUtil from "../../core/util/object-util";
-
 /**
- * 书籍文件
+ * ui id枚举
  * @author allurx
  */
-export default class BookFile extends BaseModel {
-    public readonly file!: File;
-    public readonly hash!: string;
-
-    public constructor(data: ClassFields<BookFile>) {
-        super();
-        ObjectUtil.assignOwnProperties<BookFile>(this, data);
-    }
+export enum UiId {
+    DOC = "doc",
+    READER = "reader",
+    HEADER = "header",
+    CONTENT = "content",
+    FOOTER = "footer",
+    TOC = "toc",
+    SETTING = "setting",
 }

@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import Book from "../../domain/book/book-model";
-import Chapter from "../../domain/chapter/chapter-model";
-import Toc from "../../domain/toc/toc-model";
-import ReaderSetting from "../../domain/setting/reader-setting-model";
-import Progress from "../../domain/progress/progress-model";
+import Book from "../../domain/book/book";
+import Chapter from "../../domain/chapter/chapter";
+import Toc from "../../domain/toc/toc";
+import Setting from "../../domain/setting/setting";
+import Progress from "../../domain/progress/progress";
 import ObjectUtil from "../../core/util/object-util";
-import { SettingName } from "../../core/component/constant/setting-name";
+import { UiId } from "../../core/component/ui-id";
 
 /**
  * 阅读器状态
@@ -28,7 +28,7 @@ import { SettingName } from "../../core/component/constant/setting-name";
 export default class ReaderState {
     public readonly book!: Book;
     public readonly toc!: Toc;
-    public readonly settings!: Map<SettingName, ReaderSetting>;
+    public readonly settings!: Map<UiId, Setting>;
     public readonly progress!: Progress;
     public chapter!: Chapter;
 
