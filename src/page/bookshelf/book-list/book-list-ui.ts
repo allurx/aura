@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Book from "../../../domain/book/book-model";
+import Book from "../../../domain/book/book";
 import EventUtil from "../../../core/util/event-util";
 import { assertExists } from "../../../core/util/assert-util";
 

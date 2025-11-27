@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import Category from "../../domain/category/category-model";
+import Category from "../../domain/category/category";
 import ObjectUtil from "../../core/util/object-util";
-import Metadata from "../../domain/metadata/metadata-model";
+import Metadata from "../../domain/metadata/metadata";
 
 /**
  * 书架状态

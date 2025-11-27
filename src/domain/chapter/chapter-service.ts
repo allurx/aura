@@ -15,7 +15,7 @@
  */
 
 import BaseService from "../base-service";
-import Chapter from "./chapter-model";
+import Chapter from "./chapter";
 import ChapterRepository from "./chapter-repository";
 import { assertExists } from "../../core/util/assert-util";
 

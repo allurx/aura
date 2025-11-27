@@ -19,9 +19,9 @@
 html {
     background-color: #be966e;
     opacity: 0;
-}
 
-/* 防止页面频繁加载时元素闪烁 */
-html.visible {
-    opacity: 1;
+    /* 防止页面频繁加载时元素闪烁 */
+    &.visible {
+        opacity: 1;
+    }
 }

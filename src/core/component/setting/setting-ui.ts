@@ -15,13 +15,15 @@
  */
 
 import Ui from "../../../core/component/ui";
+import { UiId } from "../../../core/component/ui-id";
 import EventUtil from "../../util/event-util";
-import StyleEngine from "../style-engine";
-import StyleConfigurable from "../../../core/component/style-configurable";
-import Optional from "../../../core/optional";
-import { ConfigurableStyleProperty } from "../constant/configurable-style-property";
 import { assertExists } from "../../util/assert-util";
-import { SettingName } from "../constant/setting-name";
+import SettingItem from "./setting-item";
+import Setting from "../../../domain/setting/setting";
+import SettingState from "./setting-state";
+import FontSizeSettingItem from "./item/font-size-setting-item";
+import ColorSettingItem from "./item/color-setting-item";
+import BackgroundColorSettingItem from "./item/background-color-setting-item";
 
 /**
  * 阅读器设置面板
@@ -32,50 +34,42 @@ export default class SettingUi extends Ui {
     private readonly closeElement: HTMLElement;
     private readonly resetElement: HTMLElement;
     private readonly itemsContainerElement: HTMLElement;
-    private readonly items: {
-        item: HTMLDivElement;
-        property: ConfigurableStyleProperty;
-        unit: string | null;
-        control: HTMLInputElement;
-        display: HTMLSpanElement;
-    }[];
 
-    // Mapping of setting target IDs to their corresponding UI instances
-    private readonly uisMap: Map<string, Ui>;
+    // All setting items
+    private readonly settingItems: Set<SettingItem> = new Set<SettingItem>();
+
+    // Mapping of Uis to their SettingItems
+    private readonly uiSettingItemMap: Map<Ui, SettingItem[]> = new Map<Ui, SettingItem[]>();
+
+    // Mapping of UiId to Ui
+    private readonly uiIdMap: Map<UiId, Ui> = new Map<UiId, Ui>();
+
+    private readonly state: SettingState = new SettingState();
 
     /**
      * 构造函数
-     * @param  canBootstrap - 是否可以自我引导
-     * @param  uis - 可配置样式的UI组件列表
+     * @param  container - 容器元素
+     * @param  uiSettingItemMap - UI组件与其可配置设置项类的映射
      */
     public constructor({
-        canBootstrap = true,
         container,
-        uis,
+        uiSettingItemMap,
     }: {
-        canBootstrap?: boolean;
         container: HTMLElement;
-        uis: Ui[];
+        uiSettingItemMap: Map<Ui, (new (settingState: SettingState) => SettingItem)[]>;
     }) {
         super({
             root: { container, template: SettingUi.template },
-            settingName: SettingName.SETTING,
             displayName: "设置",
         });
+
         this.asideElement = assertExists(this.root.querySelector<HTMLElement>("aside"));
         this.closeElement = assertExists(this.root.querySelector<HTMLElement>(".close"));
         this.resetElement = assertExists(this.root.querySelector<HTMLElement>(".reset"));
         this.itemsContainerElement = assertExists(this.root.querySelector<HTMLElement>("section"));
-        this.items = Array.from(this.itemsContainerElement.querySelectorAll<HTMLDivElement>(".item")).map((item) => ({
-            item,
-            property: assertExists(item.getAttribute("data-property")) as ConfigurableStyleProperty,
-            unit: item.getAttribute("data-unit"),
-            control: assertExists(item.querySelector<HTMLInputElement>(".control")),
-            display: assertExists(item.querySelector<HTMLSpanElement>(".display")),
-        }));
 
-        this.uisMap = new Map(uis.map((ui) => [ui.id, ui]));
-        if (canBootstrap) this.uisMap.set(this.id, this);
+        uiSettingItemMap.set(this, [FontSizeSettingItem, ColorSettingItem, BackgroundColorSettingItem]);
+        this.createMappedUiSettingItems(uiSettingItemMap).createSettingItemElements();
     }
 
     /**
@@ -103,19 +97,28 @@ export default class SettingUi extends Ui {
         return this;
     }
 
-    public highlightActiveNode(nodeElement: HTMLDivElement) {
-        this.asideElement.querySelector(".node.active")?.classList.remove("active");
-        nodeElement.classList.add("active");
-        // 只有父节点才切换展开收起状态
-        if (nodeElement.classList.contains("parent")) nodeElement.classList.toggle("collapsed");
-        return this;
+    /**
+     * 应用设置到各个UI组件
+     * @param  settings - 设置映射
+     */
+    public applySetting(settings: Map<UiId, Setting>) {
+        this.uiSettingItemMap.forEach((uiSettingItems, ui) => {
+            const uiSetting = settings.get(ui.id);
+            uiSettingItems
+                .sort((a, b) => a.applyOrder() - b.applyOrder())
+                .forEach((uiSettingItem) => {
+                    if (uiSetting?.[uiSettingItem.id]) {
+                        uiSettingItem.apply(ui, uiSetting[uiSettingItem.id]);
+                    }
+                });
+        });
     }
 
     /**
      * 绑定设置面板关闭事件
      * @return 当前实例
      */
-    public bindCloseSettingPanel() {
+    public bindCloseSetting() {
         EventUtil.bind(this.closeElement, "click", () => {
             this.root.classList.remove("open");
         });
@@ -129,38 +132,51 @@ export default class SettingUi extends Ui {
      */
     public bindResetSetting(handler: () => Promise<void>) {
         EventUtil.bind(this.resetElement, "click", async () => {
-            // 先执行重置操作再重置样式
+            // 重置所有ui的设置项
+            this.uiSettingItemMap.forEach((settingItems, ui) => {
+                settingItems.forEach((settingItem) => {
+                    settingItem.reset(ui);
+                });
+            });
+            // 重置当前ui的设置项显示和控制值
+            this.uiSettingItemMap.get(this.state.ui)?.forEach((settingItem) => {
+                settingItem.setControlValue(this.state.ui, undefined);
+                settingItem.setDisplayValue(this.state.ui, undefined);
+            });
             await handler();
-            this.uisMap.forEach((ui) => ui.resetStyle());
         });
         return this;
     }
 
-    public bindNodeClick() {
-        EventUtil.delegate(this.asideElement, ".node > .title", "click", (_, title) => {
+    public bindNodeClick(settings: Map<UiId, Setting>): this {
+        EventUtil.delegate(this.asideElement, ".node > .title", "click", (event, title) => {
             const node = assertExists(title.parentElement);
-            this.highlightActiveNode(node as HTMLDivElement);
+
+            // 1.用户触发
+            // 2.节点有子节点
+            // 3.节点处于展开状态
+            // 同时满足以上条件则折叠节点
+            if (event.isTrusted && node.classList.contains("parent") && node.classList.contains("active"))
+                node.classList.toggle("collapsed");
+
+            // 高亮当前节点
+            this.highlightActiveNode(node);
+
             // 当前被设置的ui
             const id = assertExists(node.dataset["id"]);
-            const ui = assertExists(this.uisMap.get(id));
-            this.itemsContainerElement.dataset["id"] = id;
+            const ui = assertExists(this.uiIdMap.get(id as UiId));
+            this.state.ui = ui;
 
-            // 显示对应ui的设置项并更新值
-            const style = StyleEngine.getComputedStyle(ui.root);
-            this.items.forEach(({ item, property, control, display }) => {
-                if (ui.configurableStyleProperties.has(property)) {
-                    let value = StyleEngine.getProperty(style, property);
-                    if (
-                        property === ConfigurableStyleProperty.COLOR ||
-                        property === ConfigurableStyleProperty.BACKGROUND_COLOR
-                    ) {
-                        value = StyleEngine.rgbToHex(value);
-                    }
-                    item.style.display = "flex";
-                    control.value = value.replace(/px$/, "");
-                    display.textContent = value;
+            // 显示ui对应的设置项
+            const uiSettingItems = this.uiSettingItemMap.get(ui) ?? [];
+            const uiSetting = settings.get(ui.id);
+            this.settingItems.forEach((settingItem) => {
+                if (uiSettingItems.includes(settingItem)) {
+                    settingItem.setControlValue(ui, uiSetting?.[settingItem.id]);
+                    settingItem.setDisplayValue(ui, uiSetting?.[settingItem.id]);
+                    settingItem.show();
                 } else {
-                    item.style.display = "none";
+                    settingItem.hide();
                 }
             });
         });
@@ -172,21 +188,18 @@ export default class SettingUi extends Ui {
      * @param  handler - 事件处理函数
      * @return 当前实例
      */
-    public bindSettingChange(
-        handler: (ui: Ui & StyleConfigurable, property: ConfigurableStyleProperty, value: string) => Promise<void>
-    ) {
-        this.items.forEach(({ property, unit, control, display }) => {
-            EventUtil.bind(control, "input", (_, target) => {
-                Optional.of(this.itemsContainerElement.dataset["id"])
-                    .map((id) => this.uisMap.get(id))
-                    .ifPresent((ui) => {
-                        const value = StyleEngine.toUnit(target.value, unit);
-                        display.textContent = value;
-                        StyleEngine.setProperty(ui.root, property, value);
-                        void handler(ui, property, value);
-                    });
+    public bindSettingItemChange(handler: (ui: Ui, settingItem: Record<string, unknown>) => Promise<void>) {
+        this.settingItems.forEach((item) => {
+            item.onInput(async (settingItem) => {
+                await handler(this.state.ui, settingItem);
             });
         });
+    }
+
+    private highlightActiveNode(nodeElement: HTMLElement) {
+        this.asideElement.querySelector(".node.active")?.classList.remove("active");
+        nodeElement.classList.add("active");
+        return this;
     }
 
     /**
@@ -194,7 +207,7 @@ export default class SettingUi extends Ui {
      * @return 树形结构数组
      */
     private buildTree() {
-        const uiArray = Array.from(this.uisMap.values());
+        const uiArray = Array.from(this.uiIdMap.values());
         // 根节点(没有父Ui)
         const rootUis: Ui[] = [];
         uiArray.forEach((ui) => {
@@ -237,7 +250,7 @@ export default class SettingUi extends Ui {
         const hasChildren = ui.hasChildren();
         node.classList.add("node");
         if (isRoot) node.classList.add("root");
-        if (hasChildren) node.classList.add("parent", "collapsed");
+        if (hasChildren) node.classList.add("parent");
         node.setAttribute("data-id", ui.id);
 
         // 创建标题元素
@@ -262,8 +275,41 @@ export default class SettingUi extends Ui {
         return node;
     }
 
+    private createMappedUiSettingItems(uiSettingItemMap: Map<Ui, (new (settingState: SettingState) => SettingItem)[]>) {
+        // 临时Map用于存储每个构造器对应的唯一实例
+        const constructorInstanceMap = new Map<new (...args: never[]) => SettingItem, SettingItem>();
+
+        for (const [ui, settingItemConstructors] of uiSettingItemMap) {
+            const uiSettingItemInstances: SettingItem[] = [];
+            for (const settingItemConstructor of settingItemConstructors) {
+                let settingItem = constructorInstanceMap.get(settingItemConstructor);
+                // 如果这个构造器还没有实例化过,就new一个
+                if (!settingItem) {
+                    settingItem = new settingItemConstructor(this.state);
+                    constructorInstanceMap.set(settingItemConstructor, settingItem);
+                    // 放入全局Set
+                    this.settingItems.add(settingItem);
+                }
+                uiSettingItemInstances.push(settingItem);
+            }
+            // 放入Ui对应的Map
+            this.uiSettingItemMap.set(ui, uiSettingItemInstances);
+            this.uiIdMap.set(ui.id, ui);
+        }
+        return this;
+    }
+
+    private createSettingItemElements() {
+        Array.from(this.settingItems)
+            .sort((a, b) => a.displayOrder() - b.displayOrder())
+            .forEach((settingItem) => {
+                this.itemsContainerElement.appendChild(settingItem.element);
+            });
+        return this;
+    }
+
     private static template = `
-        <div class="setting">
+        <div id="setting">
             <aside></aside>
             <div class="main">
                 <header>
@@ -271,51 +317,6 @@ export default class SettingUi extends Ui {
                     <span class="close" title="关闭">✖</span>
                 </header>
                 <section>
-                    <div class="item" data-property="font-size" data-unit="px">
-                        <span class="name">字号</span>
-                        <input class="control" min="12" max="100" step="1" type="range" />
-                        <span class="display"></span>
-                    </div>
-                    <div class="item" data-property="width" data-unit="px">
-                        <span class="name">宽度</span>
-                        <input class="control" type="range" step="1" min="800" max="800" />
-                        <span class="display"></span>
-                    </div>
-                    <div class="item" data-property="padding-top" data-unit="px">
-                        <span class="name">上内边距</span>
-                        <input type="range" class="control" min="0" max="100" step="1" />
-                        <span class="display"></span>
-                    </div>
-                    <div class="item" data-property="padding-bottom" data-unit="px">
-                        <span class="name">下内边距</span>
-                        <input type="range" class="control" min="0" max="100" step="1" />
-                        <span class="display"></span>
-                    </div>
-                    <div class="item" data-property="padding-left" data-unit="px">
-                        <span class="name">左内边距</span>
-                        <input type="range" class="control" min="0" max="100" step="1" />
-                        <span class="display"></span>
-                    </div>
-                    <div class="item" data-property="padding-right" data-unit="px">
-                        <span class="name">右内边距</span>
-                        <input type="range" class="control" min="0" max="100" step="1" />
-                        <span class="display"></span>
-                    </div>
-                    <div class="item" data-property="line-height" data-unit="px">
-                        <span class="name">行高</span>
-                        <input class="control" min="16" max="48" step="1" type="range" />
-                        <span class="display"></span>
-                    </div>
-                    <div class="item" data-property="color">
-                        <span class="name">文本颜色</span>
-                        <input class="control" type="color" />
-                        <span class="display"></span>
-                    </div>
-                    <div class="item" data-property="background-color">
-                        <span class="name">背景颜色</span>
-                        <input class="control" type="color" />
-                        <span class="display"></span>
-                    </div>
                 </section>
                 <footer class="footer"></footer>
             </div>

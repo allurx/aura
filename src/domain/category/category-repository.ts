@@ -15,7 +15,7 @@
  */
 
 import BaseRepository from "../base-repository";
-import Category from "./category-model";
+import Category from "./category";
 import { categoryStore } from "../../core/database/database-definition";
 
 /**

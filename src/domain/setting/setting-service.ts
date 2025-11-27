@@ -14,28 +14,16 @@
  * limitations under the License.
  */
 
-import { settingStore } from "../../core/database/database-definition";
 import SettingRepository from "./setting-repository";
 import BaseService from "../base-service";
-import { PageName } from "../../core/constant/page-name";
-import ReaderSetting from "./reader-setting-model";
+import Setting from "./setting";
 
 /**
  * 设置服务
  * @author allurx
  */
-export default class SettingService extends BaseService<ReaderSetting> {
+export default class SettingService extends BaseService<Setting> {
     public constructor() {
         super(new SettingRepository());
-    }
-
-    /**
-     * 获取阅读器设置
-     * @param pageName - 页面名称
-     * @param  transaction - 事务对象
-     * @return  阅读器设置列表
-     */
-    public async getReaderSettings(pageName: PageName, transaction: IDBTransaction): Promise<ReaderSetting[]> {
-        return await this.getAllByIndex(settingStore.indexes.idxPageName.name, pageName, transaction);
     }
 }

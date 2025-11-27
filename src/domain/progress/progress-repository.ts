@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Progress from "./progress-model";
+import Progress from "./progress";
 import BaseRepository from "../base-repository";
 import { progressStore } from "../../core/database/database-definition";
 

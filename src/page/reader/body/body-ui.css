@@ -33,11 +33,11 @@ body {
     resize: horizontal;
     color: #000000;
     line-height: 2;
-}
 
-@media (max-width: 768px) {
-    body {
-        width: 100% !important;
-        min-width: 100% !important;
+    @media (max-width: 768px) {
+        & {
+            width: 100% !important;
+            min-width: 100% !important;
+        }
     }
 }

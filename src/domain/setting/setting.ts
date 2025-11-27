@@ -14,12 +14,23 @@
  * limitations under the License.
  */
 
+import { ClassFields } from "../../core/type/common-type";
+import { UiId } from "../../core/component/ui-id";
+import { PageName } from "../../core/constant/page-name";
+import BaseModel from "../base-model";
+
 /**
- * 设置目标接口
+ * 阅读器设置
  * @author allurx
  */
-export default interface SettingTarget {
-    id: string;
-    name: string;
-    description: string;
+export default class Setting extends BaseModel {
+    public readonly uiId!: UiId;
+    public readonly pageName!: PageName;
+    [key: string]: unknown;
+
+    public constructor(data: ClassFields<Setting>) {
+        super();
+        // 设置项是动态的,使用Object.assign赋值
+        Object.assign(this, data);
+    }
 }

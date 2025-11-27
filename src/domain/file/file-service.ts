@@ -15,7 +15,7 @@
  */
 
 import FileRepository from "./file-repository";
-import BookFile from "./file-model";
+import BookFile from "./file";
 import BaseService from "../base-service";
 
 /**

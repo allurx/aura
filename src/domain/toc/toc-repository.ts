@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Toc from "./toc-model";
+import Toc from "./toc";
 import BaseRepository from "../base-repository";
 import { tocStore } from "../../core/database/database-definition";
 

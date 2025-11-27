@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Book from "./book-model";
+import Book from "./book";
 import BookRepository from "./book-repository";
 import BaseService from "../base-service";
 
