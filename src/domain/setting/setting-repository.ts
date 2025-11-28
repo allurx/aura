@@ -15,7 +15,7 @@
  */
 
 import Setting from "./setting";
-import { settingStore } from "../../core/database/database-definition";
+import { settingStore } from "../../database/database-definition";
 import BaseRepository from "../base-repository";
 
 /**

@@ -15,8 +15,8 @@
  */
 
 import Book from "../../../domain/book/book";
-import EventUtil from "../../../core/util/event-util";
-import { assertExists } from "../../../core/util/assert-util";
+import EventUtil from "../../../util/event-util";
+import { assertExists } from "../../../util/assert-util";
 
 /**
  * 书架主界面

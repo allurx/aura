@@ -32,12 +32,12 @@ export default class Dialog {
 
     public constructor({ containerElement }: { containerElement: HTMLElement }) {
         this.dialogElement = containerElement.appendChild(this.renderTemplate());
-        this.titleElement = assertExists(this.dialogElement.querySelector<HTMLDivElement>(".dialog-title"));
-        this.closeBtnElement = assertExists(this.dialogElement.querySelector<HTMLSpanElement>(".dialog-close-btn"));
-        this.bodyElement = assertExists(this.dialogElement.querySelector<HTMLElement>(".dialog-body"));
-        this.cancelBtnElement = assertExists(this.dialogElement.querySelector<HTMLButtonElement>(".dialog-cancel-btn"));
+        this.titleElement = assertExists(this.dialogElement.querySelector<HTMLDivElement>(".title"));
+        this.closeBtnElement = assertExists(this.dialogElement.querySelector<HTMLSpanElement>(".close-btn"));
+        this.bodyElement = assertExists(this.dialogElement.querySelector<HTMLElement>(".body"));
+        this.cancelBtnElement = assertExists(this.dialogElement.querySelector<HTMLButtonElement>(".cancel-btn"));
         this.confirmBtnElement = assertExists(
-            this.dialogElement.querySelector<HTMLButtonElement>(".dialog-confirm-btn")
+            this.dialogElement.querySelector<HTMLButtonElement>(".confirm-btn")
         );
         this.bindEvents();
     }
@@ -151,14 +151,14 @@ export default class Dialog {
     private template() {
         return `
       <dialog class="dialog">
-          <header class="dialog-header">
-            <span class="dialog-title"></span>
-            <span class="dialog-close-btn" title="关闭">✖</span>
+          <header class="header">
+            <span class="title"></span>
+            <span class="close-btn" title="关闭">✖</span>
           </header>
-          <section class="dialog-body"></section>
-          <footer class="dialog-footer">
-            <button type="button" class="dialog-cancel-btn">取消</button>
-            <button type="button" class="dialog-confirm-btn">确定</button>
+          <section class="body"></section>
+          <footer class="footer">
+            <button type="button" class="cancel-btn">取消</button>
+            <button type="button" class="confirm-btn">确定</button>
           </footer>
       </dialog>
     `;

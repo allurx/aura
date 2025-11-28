@@ -16,7 +16,7 @@
 
 import Database from "./database";
 import DatabaseDefinition from "./database-definition";
-import { DatabaseMode } from "../constant/database-mode";
+import { DatabaseMode } from "./database-mode";
 
 /**
  * 事务管理器, 负责事务的创建和管理

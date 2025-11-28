@@ -29,16 +29,16 @@ import ChapterService from "../../domain/chapter/chapter-service";
 import ProgressService from "../../domain/progress/progress-service";
 import TocService from "../../domain/toc/toc-service";
 import FileService from "../../domain/file/file-service";
-import FileUtil from "../../core/util/file-util";
-import ObjectUtil from "../../core/util/object-util";
-import ArrayUtil from "../../core/util/array-util";
-import TransactionManager from "../../core/database/transaction-manager";
-import MetadataSeed from "../../core/database/seed/metadata-seed";
-import FileSeed from "../../core/database/seed/file-seed";
-import CategorySeed from "../../core/database/seed/category-seed";
+import FileUtil from "../../util/file-util";
+import ObjectUtil from "../../util/object-util";
+import ArrayUtil from "../../util/array-util";
+import TransactionManager from "../../database/transaction-manager";
+import MetadataSeed from "../../database/seed/metadata-seed";
+import FileSeed from "../../database/seed/file-seed";
+import CategorySeed from "../../database/seed/category-seed";
 import BookshelfState from "./bookshelf-state";
-import { assertExists } from "../../core/util/assert-util";
-import { DatabaseMode } from "../../core/constant/database-mode";
+import { assertExists } from "../../util/assert-util";
+import { DatabaseMode } from "../../database/database-mode";
 import {
     metadataStore,
     categoryStore,
@@ -47,7 +47,7 @@ import {
     tocStore,
     chapterStore,
     progressStore,
-} from "../../core/database/database-definition";
+} from "../../database/database-definition";
 
 /**
  * 书架服务

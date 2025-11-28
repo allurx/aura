@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import Ui from "../../../core/component/ui";
-import { assertExists } from "../../../core/util/assert-util";
+import Ui from "../../../component/ui";
+import { assertExists } from "../../../util/assert-util";
 
 /**
  * 阅读器页脚界面

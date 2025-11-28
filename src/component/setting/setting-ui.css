@@ -100,8 +100,8 @@
                 }
             }
 
+            /* 折叠效果 */
             &.collapsed {
-                /* 折叠效果 */
                 > .children {
                     max-height: 0;
                 }

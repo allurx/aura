@@ -15,7 +15,7 @@
  */
 
 import BaseRepository from "../base-repository";
-import { metadataStore } from "../../core/database/database-definition";
+import { metadataStore } from "../../database/database-definition";
 import Metadata from "./metadata";
 
 /**

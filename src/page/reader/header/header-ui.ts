@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import Ui from "../../../core/component/ui";
-import { assertExists } from "../../../core/util/assert-util";
-import EventUtil from "../../../core/util/event-util";
+import Ui from "../../../component/ui";
+import { assertExists } from "../../../util/assert-util";
+import EventUtil from "../../../util/event-util";
 
 /**
  * 阅读器头部界面
