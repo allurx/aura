@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { ClassFields } from "../../core/type/common-type";
+import { ClassFields } from "../../type/common-type";
 import BaseModel from "../base-model";
-import ObjectUtil from "../../core/util/object-util";
+import ObjectUtil from "../../util/object-util";
 
 /**
  * 书籍

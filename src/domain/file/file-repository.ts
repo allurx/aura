@@ -16,7 +16,7 @@
 
 import BookFile from "./file";
 import BaseRepository from "../base-repository";
-import { fileStore } from "../../core/database/database-definition";
+import { fileStore } from "../../database/database-definition";
 
 /**
  * 文件数据访问对象

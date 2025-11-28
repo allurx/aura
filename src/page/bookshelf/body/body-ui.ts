@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import Overlay from "../../../core/component/overlay/overlay";
-import Dialog from "../../../core/component/dialog/dialog";
+import Overlay from "../../../component/overlay/overlay";
+import Dialog from "../../../component/dialog/dialog";
 
 /**
  * @author allurx

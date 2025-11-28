@@ -21,23 +21,17 @@ import ChapterService from "../../domain/chapter/chapter-service";
 import ProgressService from "../../domain/progress/progress-service";
 import TocService from "../../domain/toc/toc-service";
 import SettingService from "../../domain/setting/setting-service";
-import TransactionManager from "../../core/database/transaction-manager";
-import { DatabaseMode } from "../../core/constant/database-mode";
-import {
-    bookStore,
-    tocStore,
-    chapterStore,
-    progressStore,
-    settingStore,
-} from "../../core/database/database-definition";
+import TransactionManager from "../../database/transaction-manager";
+import { DatabaseMode } from "../../database/database-mode";
+import { bookStore, tocStore, chapterStore, progressStore, settingStore } from "../../database/database-definition";
 import ReaderState from "./reader-state";
-import { assertExists } from "../../core/util/assert-util";
-import { UiId } from "../../core/component/ui-id";
-import { PageName } from "../../core/constant/page-name";
+import { assertExists } from "../../util/assert-util";
+import { UiId } from "../../component/ui-id";
+import { PageName } from "../../constant/page-name";
 
 /**
  * 阅读器服务
- * @author allurx
+ * @author allurx../../util/assert-util
  */
 export default class ReaderService {
     private readonly bookService: BookService;
@@ -127,7 +121,11 @@ export default class ReaderService {
      */
     public async deleteSettings() {
         await TransactionManager.runTransaction(settingStore.name, DatabaseMode.READ_WRITE, async (transaction) => {
-            await this.settingService.deleteAllByIndex(settingStore.indexes.idxPageName.name, PageName.READER, transaction);
+            await this.settingService.deleteAllByIndex(
+                settingStore.indexes.idxPageName.name,
+                PageName.READER,
+                transaction
+            );
         });
     }
 

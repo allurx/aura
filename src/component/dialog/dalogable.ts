@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Dialog from "../dialog/dialog";
+import Dialog from "./dialog";
 
 /**
  * 可对话接口

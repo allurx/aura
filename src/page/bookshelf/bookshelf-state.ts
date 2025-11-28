@@ -15,7 +15,7 @@
  */
 
 import Category from "../../domain/category/category";
-import ObjectUtil from "../../core/util/object-util";
+import ObjectUtil from "../../util/object-util";
 import Metadata from "../../domain/metadata/metadata";
 
 /**

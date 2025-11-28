@@ -15,7 +15,7 @@
  */
 
 /**
- * Aura核心类
+ * Aura
  * @author allurx
  */
 export default class Aura {

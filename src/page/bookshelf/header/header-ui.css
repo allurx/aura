@@ -17,24 +17,25 @@
  */
 
 header {
-  display: flex;
-  /* 禁止缩放,保持自身的宽高 */
-  flex: 0 0 auto;
-  justify-content: space-between;
-  align-items: center;
-  height: 3.125rem;
-  width: 100%;
-  padding: 0 0.75rem;
-  overflow: hidden;
-}
+    display: flex;
+    /* 禁止缩放,保持自身的宽高 */
+    flex: 0 0 auto;
+    justify-content: space-between;
+    align-items: center;
+    height: 3.125rem;
+    width: 100%;
+    padding: 0 0.75rem;
+    overflow: hidden;
 
-#title {
-  font-size: 2rem;
-  color: #409eff;
-  cursor: pointer;
-}
+    #title {
+        font-size: 2rem;
+        color: #409eff;
+        cursor: pointer;
+    }
 
-/* 清空书籍 */
-#clear-btn {
-  cursor: pointer;
+    #clear-btn {
+        cursor: pointer;
+        width: 1.5rem;
+        height: 1.5rem;
+    }
 }

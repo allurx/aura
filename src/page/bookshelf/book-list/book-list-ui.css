@@ -17,123 +17,129 @@
  */
 
 #book-list {
-  display: flex;
-  flex: 1;
-  flex-wrap: wrap;
-  gap: 1.25rem;
-  align-content: flex-start;
-  background-color: #f2e8c8;
-  padding: 1.25rem;
-  overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-width: auto;
-  scrollbar-color: #666666 transparent;
-  box-shadow: 0 0 1rem rgba(0, 0, 0, 1) inset;
-}
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    align-content: flex-start;
+    background-color: #f2e8c8;
+    padding: 1.25rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: auto;
+    scrollbar-color: #666666 transparent;
+    box-shadow: 0 0 1rem rgba(0, 0, 0, 1) inset;
 
-/* 添加书籍按钮样式 */
-#book-input-label {
-  flex: 0 0 auto;
-  width: 7.5rem;
-  aspect-ratio: 5/6;
-  border: 0.125rem dashed #ccc;
-  border-radius: 0.375rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: #cccccc;
-  font-size: 3rem;
-  cursor: pointer;
-  transition: border-color 0.3s, color 0.3s;
-  -webkit-user-select: none;
-  user-select: none;
-}
+    /* 添加书籍按钮样式 */
+    #book-input-label {
+        flex: 0 0 auto;
+        width: 7.5rem;
+        aspect-ratio: 5/6;
+        border: 0.125rem dashed #ccc;
+        border-radius: 0.375rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #cccccc;
+        font-size: 3rem;
+        cursor: pointer;
+        transition:
+            border-color 0.3s,
+            color 0.3s;
+        -webkit-user-select: none;
+        user-select: none;
 
-input[type="file"] {
-  display: none;
-}
+        @media (hover: hover) and (pointer: fine) {
+            &:hover {
+                border-color: #409eff;
+                color: #409eff;
+            }
+        }
+    }
 
-/* 书籍 */
-.book {
-  display: flex;
-  /* 禁止缩放,保持自身的宽高 */
-  flex: 0 0 auto;
-  width: 7.5rem;
-  /* 宽高比*/
-  aspect-ratio: 5/6;
-  background-color: #144b82;
-  border-radius: 0.375rem;
-  color: #eeeeee;
-  padding: 0.5rem;
-  overflow: hidden;
-  font-size: 0.9rem;
-  flex-direction: column;
-  box-shadow: 0 0.32rem 1rem rgba(0, 0, 0, 0.6);
+    #book-input {
+        display: none;
+    }
 
-  /* 初始透明 */
-  opacity: 0;
-  /* 初始偏移 */
-  transform: translateY(-1rem);
-  /* 动画效果 */
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
+    /* 书籍 */
+    .book {
+        display: flex;
+        /* 禁止缩放,保持自身的宽高 */
+        flex: 0 0 auto;
+        width: 7.5rem;
+        /* 宽高比*/
+        aspect-ratio: 5/6;
+        background-color: #144b82;
+        border-radius: 0.375rem;
+        color: #eeeeee;
+        padding: 0.5rem;
+        overflow: hidden;
+        font-size: 0.9rem;
+        flex-direction: column;
+        box-shadow: 0 0.32rem 1rem rgba(0, 0, 0, 0.6);
 
-/* 激活状态 */
-.book.show {
-  opacity: 1;
-  transform: translateY(0);
-}
+        /* 初始透明 */
+        opacity: 0;
+        /* 初始偏移 */
+        transform: translateY(-1rem);
+        /* 动画效果 */
+        transition:
+            opacity 0.3s ease,
+            transform 0.3s ease;
 
-/* 书籍头部 */
-.book-header {
-  display: flex;
-  width: 100%;
-  height: 10%;
-  /* 主轴末尾对齐 */
-  justify-content: flex-end;
-}
+        &.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
 
-/* 书籍主体 */
-.book-body {
-  display: flex;
-  width: 100%;
-  height: 80%;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-}
+        @media (hover: hover) and (pointer: fine) {
+            &:hover {
+                background-color: #397fc4;
+                transform: translateY(-0.32rem);
+            }
+        }
 
-.book-title {
-  max-width: 100%;
-  max-height: 100%;
-  overflow: hidden;
-  text-align: center;
-}
+        /* 书籍头部 */
+        .book-header {
+            display: flex;
+            width: 100%;
+            height: 10%;
+            /* 主轴末尾对齐 */
+            justify-content: flex-end;
 
-.book-footer {
-  width: 100%;
-  height: 10%;
-}
+            @media (hover: hover) and (pointer: fine) {
+                .book-delete-btn {
+                    opacity: 0;
+                    cursor: pointer;
+                    transition: opacity 0.3s;
 
-/* 仅桌面端悬停生效 */
-@media (hover: hover) and (pointer: fine) {
-  .book-delete-btn {
-    opacity: 0;
-    cursor: pointer;
-    transition: opacity 0.3s;
-  }
+                    .book:hover & {
+                        opacity: 1;
+                    }
+                }
+            }
+        }
 
-  #book-input-label:hover {
-    border-color: #409eff;
-    color: #409eff;
-  }
+        /* 书籍主体 */
+        .book-body {
+            display: flex;
+            width: 100%;
+            height: 80%;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
 
-  .book:hover {
-    background-color: #397fc4;
-    transform: translateY(-0.32rem);
-  }
+            .book-title {
+                max-width: 100%;
+                max-height: 100%;
+                overflow: hidden;
+                text-align: center;
+            }
+        }
 
-  .book:hover .book-delete-btn {
-    opacity: 1;
-  }
+        .book-footer {
+            width: 100%;
+            height: 10%;
+        }
+    }
 }

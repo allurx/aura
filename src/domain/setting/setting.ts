@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { ClassFields } from "../../core/type/common-type";
-import { UiId } from "../../core/component/ui-id";
-import { PageName } from "../../core/constant/page-name";
+import { ClassFields } from "../../type/common-type";
+import { UiId } from "../../component/ui-id";
+import { PageName } from "../../constant/page-name";
 import BaseModel from "../base-model";
 
 /**

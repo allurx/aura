@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import ObjectUtil from "../core/util/object-util";
+import ObjectUtil from "../util/object-util";
 
-import { ClassFields } from "../core/type/common-type";
+import { ClassFields } from "../type/common-type";
 
 /**
  * 基础模型类

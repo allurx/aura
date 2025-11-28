@@ -16,7 +16,7 @@
 
 import Progress from "./progress";
 import BaseRepository from "../base-repository";
-import { progressStore } from "../../core/database/database-definition";
+import { progressStore } from "../../database/database-definition";
 
 /**
  * 阅读进度数据访问对象

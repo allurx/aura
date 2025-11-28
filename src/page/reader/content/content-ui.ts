@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import Ui from "../../../core/component/ui";
-import EventUtil from "../../../core/util/event-util";
+import Ui from "../../../component/ui";
+import EventUtil from "../../../util/event-util";
 
 /**
  * 阅读器正文界面

@@ -16,7 +16,7 @@
 
 import Book from "./book";
 import BaseRepository from "../base-repository";
-import { bookStore } from "../../core/database/database-definition";
+import { bookStore } from "../../database/database-definition";
 
 /**
  * 书籍数据访问对象

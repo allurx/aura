@@ -19,12 +19,12 @@
  * @author allurx
  */
 
-import Overlay from "../../../core/component/overlay/overlay";
-import Dialog from "../../../core/component/dialog/dialog";
-import { assertExists } from "../../../core/util/assert-util";
-import Ui from "../../../core/component/ui";
-import Dialogable from "../../../core/component/dialog/dalogable";
-import Overlayable from "../../../core/component/overlay/overlayable";
+import Overlay from "../../../component/overlay/overlay";
+import Dialog from "../../../component/dialog/dialog";
+import { assertExists } from "../../../util/assert-util";
+import Ui from "../../../component/ui";
+import Dialogable from "../../../component/dialog/dalogable";
+import Overlayable from "../../../component/overlay/overlayable";
 
 /**
  * 阅读器界面

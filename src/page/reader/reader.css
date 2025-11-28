@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-@import "../../core/style/base.css";
+@import "../../style/base.css";
 @import "./doc/doc-ui.css";
 @import "./body/body-ui.css";
 @import "./header/header-ui.css";
 @import "./content/content-ui.css";
 @import "./footer/footer-ui.css";
 @import "./toc/toc-ui.css";
-@import "../../core/component/setting/setting-ui.css";
-@import "../../core/component/dialog/dialog.css";
-@import "../../core/component/overlay/overlay.css";
+@import "../../component/setting/setting-ui.css";
+@import "../../component/dialog/dialog.css";
+@import "../../component/overlay/overlay.css";

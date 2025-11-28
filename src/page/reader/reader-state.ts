@@ -18,8 +18,8 @@ import Chapter from "../../domain/chapter/chapter";
 import Toc from "../../domain/toc/toc";
 import Setting from "../../domain/setting/setting";
 import Progress from "../../domain/progress/progress";
-import ObjectUtil from "../../core/util/object-util";
-import { UiId } from "../../core/component/ui-id";
+import ObjectUtil from "../../util/object-util";
+import { UiId } from "../../component/ui-id";
 
 /**
  * 阅读器状态
