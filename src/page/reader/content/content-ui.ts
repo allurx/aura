@@ -105,8 +105,10 @@ export default class ContentUi extends Ui {
                                     };
                                 })
                                 .filter((item) => item.ratio > 0)
-                                .reduce((prev, current) => (current.top < prev.top ? current : prev));
+                                .sort((a, b) => a.top - b.top)
+                                .at(0);
 
+                            if (!line) return;
                             console.log("当前章节最上方可见的行: ", line);
                             await handler(line.index, line.ratio);
                         });
