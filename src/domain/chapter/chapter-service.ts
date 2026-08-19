@@ -26,7 +26,7 @@ import { assertExists } from "../../util/assert-util";
 export default class ChapterService extends BaseService<Chapter> {
     // 章节正则
     private readonly chapterRegex: RegExp =
-        /(?:第[0-9一二三四五六七八九十百千万两]+[章卷]|卷[0-9一二三四五六七八九十百千万两]+|^\s*\d+\.)[-–—\s]*[^\r\n]*(?:\r?\n)?/gm;
+        /^[\t \u3000]*(?:第[0-9零〇一二三四五六七八九十百千万两]+[章卷]|卷[0-9零〇一二三四五六七八九十百千万两]+|\d+\.(?!\d))[-–—\t \u3000]*[^\r\n]*(?:\r?\n|$)/gm;
 
     // 换行符正则
     private readonly lineBreakRegex: RegExp = /\r?\n/;
