@@ -31,25 +31,4 @@ export default class Book extends BaseModel {
         super();
         ObjectUtil.assignOwnProperties<Book>(this, data);
     }
-
-    /**
-     * @returns 书籍元素的html模板
-     */
-    public template(): string {
-        return `
-            <div data-id="${this.id}" class="book">
-                <div class="book-header">
-                    <span class="book-delete-btn">✖</span>
-                </div>
-                <div class="book-body">
-                    <span class="book-title">${this.extractTitle(this.fileName)}</span>
-                </div>
-                <div class="book-footer"></div>
-            </div>
-            `;
-    }
-
-    private extractTitle(filename: string): string {
-        return filename.substring(0, filename.lastIndexOf("."));
-    }
 }

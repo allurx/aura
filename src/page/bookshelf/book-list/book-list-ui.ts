@@ -17,6 +17,7 @@
 import Book from "../../../domain/book/book";
 import EventUtil from "../../../util/event-util";
 import { assertExists } from "../../../util/assert-util";
+import DomUtil from "../../../util/dom-util";
 
 /**
  * 书架主界面
@@ -38,10 +39,11 @@ export default class BookListUi {
      * @returns  返回当前实例
      */
     public renderBookElement(book: Book, index: number) {
-        this.bookListElement.insertAdjacentHTML("beforeend", book.template());
-        const bookElement = this.bookListElement.lastElementChild;
+        const bookElement = this.bookListElement.appendChild(this.createBookElement(book));
         // 创建顺序延迟,形成"瀑布入场"动画效果
-        window.setTimeout(() => bookElement?.classList.add("show"), index * 20);
+        window.setTimeout(() => {
+            bookElement.classList.add("show");
+        }, index * 20);
         return this;
     }
 
@@ -112,5 +114,30 @@ export default class BookListUi {
             await handler(assertExists(target.closest<HTMLElement>(".book")?.dataset["id"]));
         });
         return this;
+    }
+
+    private createBookElement(book: Book): HTMLDivElement {
+        const bookElement = DomUtil.createElementFromHTML(`
+            <div class="book">
+                <div class="book-header">
+                    <span class="book-delete-btn">✖</span>
+                </div>
+                <div class="book-body">
+                    <span class="book-title"></span>
+                </div>
+                <div class="book-footer"></div>
+            </div>
+        `) as HTMLDivElement;
+
+        bookElement.dataset["id"] = book.id;
+        assertExists(bookElement.querySelector<HTMLElement>(".book-title")).textContent = this.extractTitle(
+            book.fileName
+        );
+        return bookElement;
+    }
+
+    private extractTitle(filename: string): string {
+        const extensionIndex = filename.lastIndexOf(".");
+        return extensionIndex > 0 ? filename.slice(0, extensionIndex) : filename;
     }
 }
