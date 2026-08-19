@@ -46,18 +46,23 @@ export default class TransactionManager {
     ): Promise<T> {
         const transaction = await this.createTransaction(storeNames, mode);
         const transactionPromise = this.transactionPromise(transaction);
+
         try {
-            // 等待用户操作完成
-            return await operation(transaction);
+            const result = await operation(transaction);
+            await transactionPromise;
+            return result;
         } catch (error) {
-            transaction.abort();
+            await Promise.allSettled([
+                // 发起中止
+                Promise.try(() => {
+                    transaction.abort();
+                }),
+
+                // 等待事务真正结束
+                transactionPromise,
+            ]);
+
             throw error;
-        } finally {
-            // 等待事务完成或失败
-            // 注意捕获异常否则会导致try/catch中的error被覆盖
-            await transactionPromise.catch((error: unknown) => {
-                console.error("Transaction failed:", error);
-            });
         }
     }
 
