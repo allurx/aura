@@ -31,7 +31,7 @@ export default class FileSeed {
         🔒 目前Aura还处于早期开发阶段,很多功能还不完善,甚至还有很多bug,等我有空了会慢慢完善的
         2. QQ交流群
         欢迎加入Aura交流群讨论和交流: 1038423789
-    `;
+    `.trim();
 
     public static readonly file = new File([this.text], "Aura.txt", { type: "text/plain" });
 }

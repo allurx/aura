@@ -67,11 +67,14 @@ export default class ChapterService extends BaseService<Chapter> {
                 continue;
             }
 
-            // 遇到新标题时先封存上一段内容;首个标题之前的内容单独作为前言
-            if (chapterTitle === null) {
-                if (chapterLines.length > 0) appendChapter("前言", chapterLines, false);
+            // 已有标题时封存上一章;否则仅在标题前存在正文时生成前言
+            const includesTitle = chapterTitle !== null;
+            const hasContent = chapterLines.some((line) => line.trim().length > 0);
+            if (includesTitle || hasContent) {
+                appendChapter(chapterTitle ?? "前言", chapterLines, includesTitle);
             } else {
-                appendChapter(chapterTitle, chapterLines, true);
+                // 纯空白前缀不生成章节,但仍需计入原文件行号
+                currentLineNumber += chapterLines.length;
             }
             chapterTitle = line.trim();
             chapterLines = [];
