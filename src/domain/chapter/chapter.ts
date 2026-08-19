@@ -45,4 +45,12 @@ export default class Chapter extends BaseModel {
     public content(): string {
         return this.lines.join("\n");
     }
+
+    /**
+     * 获取章节内指定内容行在全书中的行号
+     * @param lineIndex - 章节内行索引
+     */
+    public lineNumber(lineIndex: number) {
+        return this.endLineNumber - this.lines.length + lineIndex;
+    }
 }

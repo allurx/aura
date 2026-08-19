@@ -152,7 +152,7 @@ export default class ReaderController {
         this.footerUi
             .renderChapterTitle(this.state.chapter.title)
             .renderProgress(
-                this.state.chapter.startLineNumber + this.state.progress.lineIndex,
+                this.state.chapter.lineNumber(this.state.progress.lineIndex),
                 this.state.toc.numberOfLines()
             );
 
@@ -184,7 +184,7 @@ export default class ReaderController {
         this.footerUi
             .renderChapterTitle(this.state.chapter.title)
             .renderProgress(
-                this.state.chapter.startLineNumber + this.state.progress.lineIndex,
+                this.state.chapter.lineNumber(this.state.progress.lineIndex),
                 this.state.toc.numberOfLines()
             );
 
@@ -289,10 +289,7 @@ export default class ReaderController {
         // body ui事件
         this.contentUi.bindContentScroll(async (lineIndex, lineVisibleRatio) => {
             await this.updateProgress({ lineIndex, lineVisibleRatio, updatedTime: Date.now() });
-            this.footerUi.renderProgress(
-                this.state.chapter.startLineNumber + lineIndex,
-                this.state.toc.numberOfLines()
-            );
+            this.footerUi.renderProgress(this.state.chapter.lineNumber(lineIndex), this.state.toc.numberOfLines());
         });
 
         // toc ui事件
