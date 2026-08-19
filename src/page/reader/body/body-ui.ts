@@ -23,7 +23,7 @@ import Overlay from "../../../component/overlay/overlay";
 import Dialog from "../../../component/dialog/dialog";
 import { assertExists } from "../../../util/assert-util";
 import Ui from "../../../component/ui";
-import Dialogable from "../../../component/dialog/dalogable";
+import Dialogable from "../../../component/dialog/dialogable";
 import Overlayable from "../../../component/overlay/overlayable";
 import EventUtil from "../../../util/event-util";
 

@@ -25,16 +25,16 @@ export default interface Dialogable {
 
     /**
      * 显示确认对话框
-     * @param  content 内容
-     * @param options 选项
+     * @param content - 内容
+     * @param options - 选项
      * @returns  用户是否确认
      */
     confirmDialog(content: Node | string, options: object): Promise<boolean>;
 
     /**
      * 显示警告对话框
-     * @param  content 内容
-     * @param options 选项
+     * @param content - 内容
+     * @param options - 选项
      */
     alertDialog(content: Node | string, options: object): Promise<boolean>;
 }
