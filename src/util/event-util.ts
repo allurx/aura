@@ -22,6 +22,17 @@ export default class EventUtil {
     private constructor() {
         throw new Error(`${EventUtil.name} is a static class and cannot be instantiated.`);
     }
+
+    /**
+     * 执行事件处理函数, 并将同步或异步异常上报到全局error事件
+     * @param handler - 事件处理函数
+     */
+    public static run(handler: () => Promise<void> | void): void {
+        void Promise.try(handler).catch((error: unknown) => {
+            reportError(error);
+        });
+    }
+
     /**
      * 直接绑定 - 已存在元素
      * @template E - 事件类型
@@ -39,10 +50,9 @@ export default class EventUtil {
     ): void {
         targetElement.addEventListener(
             eventType,
-            (event) =>
-                void (async () => {
-                    await handler(event as E, targetElement);
-                })(),
+            (event) => {
+                EventUtil.run(() => handler(event as E, targetElement));
+            },
             options
         );
     }
@@ -64,11 +74,15 @@ export default class EventUtil {
     ): void {
         delegatorElement.addEventListener(
             eventType,
-            (event) =>
-                void (async () => {
-                    const targetElement = (event.target as HTMLElement).closest(targetSelector);
-                    if (targetElement) await handler(event, targetElement as HTMLElement);
-                })(),
+            (event) => {
+                EventUtil.run(() => {
+                    const eventTarget = event.target;
+                    if (!(eventTarget instanceof Element)) return;
+
+                    const targetElement = eventTarget.closest<HTMLElement>(targetSelector);
+                    if (targetElement) return handler(event, targetElement);
+                });
+            },
             options
         );
     }

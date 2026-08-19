@@ -25,6 +25,7 @@ import { assertExists } from "../../../util/assert-util";
 import Ui from "../../../component/ui";
 import Dialogable from "../../../component/dialog/dalogable";
 import Overlayable from "../../../component/overlay/overlayable";
+import EventUtil from "../../../util/event-util";
 
 /**
  * 阅读器界面
@@ -51,12 +52,12 @@ export default class BodyUi extends Ui implements Dialogable, Overlayable {
                 return (entries) => {
                     if (timer) clearTimeout(timer);
                     timer = window.setTimeout(() => {
-                        void (async () => {
+                        EventUtil.run(async () => {
                             const entry = assertExists(entries[0]);
                             const width = entry.contentRect.width;
                             console.log("检测到页面宽度变化：", width);
                             await handler(String(width) + "px");
-                        })();
+                        });
                     }, 300);
                 };
             })()

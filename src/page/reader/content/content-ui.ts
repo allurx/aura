@@ -86,7 +86,7 @@ export default class ContentUi extends Ui {
                 return (_, target: HTMLElement) => {
                     if (timer) window.clearTimeout(timer);
                     timer = window.setTimeout(() => {
-                        void (async () => {
+                        EventUtil.run(async () => {
                             // 滚动容器可视区域
                             const cRect = target.getBoundingClientRect();
 
@@ -109,7 +109,7 @@ export default class ContentUi extends Ui {
 
                             console.log("当前章节最上方可见的行: ", line);
                             await handler(line.index, line.ratio);
-                        })();
+                        });
                     }, 300);
                 };
             })()
