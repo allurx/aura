@@ -20,10 +20,9 @@
     width: 100%;
     height: 100%;
     background-color: #be966e;
-    opacity: 0;
 
-    /* 防止页面频繁加载时元素闪烁 */
-    &.visible {
+    /* 初始化时仅隐藏内容，保留#doc背景，避免刷新期间透出浏览器白底。 */
+    &.visible > #reader {
         opacity: 1;
     }
 }
