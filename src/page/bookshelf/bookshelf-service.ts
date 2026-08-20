@@ -335,12 +335,13 @@ export default class BookshelfService {
             async (transaction) => {
                 if (bookData) {
                     console.log(`Processing file with hash: ${hash}`);
-                    await this.fileService.add(bookData.bookFile, transaction);
-                    // 顺序写入章节,避免为大文件一次创建大量并发IndexedDB请求
-                    for (const chapter of bookData.chapters) {
-                        await this.chapterService.add(chapter, transaction);
-                    }
-                    await this.tocService.add(bookData.toc, transaction);
+                    // IndexedDB会在同一事务内按提交顺序处理请求。先将请求全部入队可避免逐章
+                    // await 带来的事件循环往返，同时仍保持不同文件依次解析和持久化。
+                    await Promise.all([
+                        this.fileService.add(bookData.bookFile, transaction),
+                        this.chapterService.addAll(bookData.chapters, transaction),
+                        this.tocService.add(bookData.toc, transaction),
+                    ]);
                 }
 
                 for (const { book, progress } of bookEntries) {
