@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import Category from "../../../domain/category/category";
-import EventUtil from "../../../util/event-util";
-import { assertExists } from "../../../util/assert-util";
+import Category from "@/domain/category/category";
+import EventUtil from "@/util/event-util";
+import { assertExists } from "@/util/assert-util";
 
 /**
  * 书架导航界面

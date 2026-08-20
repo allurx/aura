@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import SettingItem from "../setting-item";
-import StyleEngine from "../style-engine";
-import EventUtil from "../../../util/event-util";
-import Ui from "../../ui";
-import SettingState from "../setting-state";
-import { StyleProperty } from "../style-property";
+import SettingItem from "@/component/setting/setting-item";
+import StyleEngine from "@/component/setting/style-engine";
+import EventUtil from "@/util/event-util";
+import Ui from "@/component/ui";
+import SettingState from "@/component/setting/setting-state";
+import { StyleProperty } from "@/component/setting/style-property";
 
 /**
  * Style setting item

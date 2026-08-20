@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import Ui from "../ui";
-import { UiId } from "../ui-id";
-import EventUtil from "../../util/event-util";
-import { assertExists } from "../../util/assert-util";
+import Ui from "@/component/ui";
+import { UiId } from "@/component/ui-id";
+import EventUtil from "@/util/event-util";
+import { assertExists } from "@/util/assert-util";
 import SettingItem from "./setting-item";
-import Setting from "../../domain/setting/setting";
+import Setting from "@/domain/setting/setting";
 import SettingState from "./setting-state";
 import FontSizeSettingItem from "./item/font-size-setting-item";
 import ColorSettingItem from "./item/color-setting-item";

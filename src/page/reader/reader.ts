@@ -16,7 +16,7 @@
 
 import "./reader.css";
 import template from "./reader.html?raw";
-import BasePage from "../base-page";
+import BasePage from "@/page/base-page";
 import ReaderController from "./reader-controller";
 
 /**

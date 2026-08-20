@@ -16,7 +16,7 @@
 
 import "./bookshelf.css";
 import template from "./bookshelf.html?raw";
-import BasePage from "../base-page";
+import BasePage from "@/page/base-page";
 import BookshelfController from "./bookshelf-controller";
 
 /**

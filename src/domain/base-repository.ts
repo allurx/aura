@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { StoreDefinition } from "../database/database-definition";
+import { StoreDefinition } from "@/database/database-definition";
 import BaseModel from "./base-model";
 
 /**

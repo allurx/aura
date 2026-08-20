@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Ui from "../ui";
+import Ui from "@/component/ui";
 
 /**
  * Setting state class

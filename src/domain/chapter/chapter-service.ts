@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import BaseService from "../base-service";
+import BaseService from "@/domain/base-service";
 import Chapter from "./chapter";
 import ChapterRepository from "./chapter-repository";
 

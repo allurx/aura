@@ -16,33 +16,33 @@
 
 import DocUi from "./doc/doc-ui";
 import BodyUi from "./body/body-ui";
-import Progress from "../../domain/progress/progress";
+import Progress from "@/domain/progress/progress";
 import ReaderService from "./reader-service";
 import HeaderUi from "./header/header-ui";
 import ContentUi from "./content/content-ui";
 import FooterUi from "./footer/footer-ui";
-import SettingUi from "../../component/setting/setting-ui";
+import SettingUi from "@/component/setting/setting-ui";
 import TocUi from "./toc/toc-ui";
 import ReaderState from "./reader-state";
-import Setting from "../../domain/setting/setting";
-import BackgroundColorSettingItem from "../../component/setting/item/background-color-setting-item";
-import ColorSettingItem from "../../component/setting/item/color-setting-item";
-import WidthSettingItem from "../../component/setting/item/width-setting-item";
-import PaddingTopSettingItem from "../../component/setting/item/padding-top-setting-item";
-import PaddingLeftSettingItem from "../../component/setting/item/padding-left-setting-item";
-import PaddingBottomSettingItem from "../../component/setting/item/padding-bottom-setting-item";
-import PaddingRightSettingItem from "../../component/setting/item/padding-right-setting-item";
-import FontSizeSettingItem from "../../component/setting/item/font-size-setting-item";
-import LineHeightSettingItem from "../../component/setting/item/line-height-setting-item";
-import ThemeSettingItem from "../../component/setting/item/theme-setting-item";
-import Ui from "../../component/ui";
-import SettingItem from "../../component/setting/setting-item";
-import SettingState from "../../component/setting/setting-state";
-import { UiId } from "../../component/ui-id";
-import { SwitchChapterDirection } from "../../constant/switch-chapter-direction";
-import { StyleProperty } from "../../component/setting/style-property";
-import { assertExists } from "../../util/assert-util";
-import { PageName } from "../../constant/page-name";
+import Setting from "@/domain/setting/setting";
+import BackgroundColorSettingItem from "@/component/setting/item/background-color-setting-item";
+import ColorSettingItem from "@/component/setting/item/color-setting-item";
+import WidthSettingItem from "@/component/setting/item/width-setting-item";
+import PaddingTopSettingItem from "@/component/setting/item/padding-top-setting-item";
+import PaddingLeftSettingItem from "@/component/setting/item/padding-left-setting-item";
+import PaddingBottomSettingItem from "@/component/setting/item/padding-bottom-setting-item";
+import PaddingRightSettingItem from "@/component/setting/item/padding-right-setting-item";
+import FontSizeSettingItem from "@/component/setting/item/font-size-setting-item";
+import LineHeightSettingItem from "@/component/setting/item/line-height-setting-item";
+import ThemeSettingItem from "@/component/setting/item/theme-setting-item";
+import Ui from "@/component/ui";
+import SettingItem from "@/component/setting/setting-item";
+import SettingState from "@/component/setting/setting-state";
+import { UiId } from "@/component/ui-id";
+import { SwitchChapterDirection } from "@/constant/switch-chapter-direction";
+import { StyleProperty } from "@/component/setting/style-property";
+import { assertExists } from "@/util/assert-util";
+import { PageName } from "@/constant/page-name";
 
 /**
  * 阅读器控制器

@@ -14,96 +14,110 @@
  * limitations under the License.
  */
 
-import { defineConfig } from "vite";
+import { readFileSync } from "node:fs";
+import { extname, resolve } from "node:path";
+import { defineConfig, type Plugin } from "vite";
 import obfuscatorPlugin from "vite-plugin-javascript-obfuscator";
-import { createHtmlPlugin } from "vite-plugin-html";
 import { viteSingleFile } from "vite-plugin-singlefile";
-import { join, dirname } from "path";
-import { readFileSync, writeFileSync, mkdirSync, renameSync } from "fs";
+
+const PROJECT_ROOT = import.meta.dirname;
+const SOURCE_ROOT = resolve(PROJECT_ROOT, "src");
+
+const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif"]);
+const FONT_EXTENSIONS = new Set([".woff", ".woff2", ".ttf", ".otf", ".eot"]);
 
 /**
  * vite配置
  * @author allurx
  */
-export default defineConfig(({ mode }) => {
-    const portable = mode === "portable";
+export default defineConfig(({ command, mode, isPreview }) => {
+    const portable = mode === "portable" || mode === "portable-obfuscated";
+    const obfuscated = mode === "obfuscated" || mode === "portable-obfuscated";
+    const developmentServer = command === "serve" && !isPreview;
 
     return {
-        root: "src",
-        base: "./",
-        server: {
-            https: {
-                key: readFileSync("../localhost-key.pem"),
-                cert: readFileSync("../localhost.pem"),
+        root: SOURCE_ROOT,
+        base: portable ? "./" : "/",
+        resolve: {
+            alias: {
+                "@": SOURCE_ROOT,
             },
         },
+        ...(developmentServer
+            ? {
+                  server: {
+                      https: {
+                          key: readFileSync(resolve(PROJECT_ROOT, "../localhost-key.pem")),
+                          cert: readFileSync(resolve(PROJECT_ROOT, "../localhost.pem")),
+                      },
+                  },
+              }
+            : {}),
+        ...(command === "build"
+            ? {
+                  esbuild: {
+                      drop: ["console", "debugger"],
+                  },
+              }
+            : {}),
         build: {
-            target: "ESNext",
-            outDir: portable ? "../dist-portable" : "../dist",
+            outDir: resolve(PROJECT_ROOT, portable ? "dist-portable" : "dist"),
             emptyOutDir: true,
+            ...(portable ? { modulePreload: false } : {}),
             // https://cn.rollupjs.org/configuration-options
             rollupOptions: {
-                input: "src/index.html",
                 output: {
-                    entryFileNames: "asset/js/[hash].js",
-                    chunkFileNames: "asset/js/[hash].js",
+                    entryFileNames: "asset/js/[name]-[hash].js",
+                    chunkFileNames: "asset/js/[name]-[hash].js",
                     assetFileNames: (assetInfo) => {
-                        const name = assetInfo.names[0] ?? "";
-                        const ext = name.slice(name.lastIndexOf(".")).toLowerCase();
-                        if (ext === ".css") return "asset/css/[hash][extname]";
-                        if (/\.(png|jpe?g|gif|svg|webp|avif)$/.test(ext)) return "asset/image/[hash][extname]";
-                        if (/\.(woff2?|ttf|otf|eot)$/.test(ext)) return "asset/font/[hash][extname]";
-                        return "asset/[hash][extname]";
+                        const extension = extname(assetInfo.names[0] ?? "").toLowerCase();
+                        if (extension === ".css") return "asset/css/[name]-[hash][extname]";
+                        if (IMAGE_EXTENSIONS.has(extension)) return "asset/image/[name]-[hash][extname]";
+                        if (FONT_EXTENSIONS.has(extension)) return "asset/font/[name]-[hash][extname]";
+                        return "asset/[name]-[hash][extname]";
                     },
                 },
             },
-            minify: "esbuild",
-            assetsInlineLimit: 0,
         },
         plugins: [
             // https://github.com/elmeet/vite-plugin-javascript-obfuscator
-            obfuscatorPlugin({
-                apply: "build",
-                options: {
-                    compact: true,
-                    disableConsoleOutput: true,
-                    selfDefending: true,
-                    sourceMap: false,
-                    controlFlowFlattening: true,
-                    controlFlowFlatteningThreshold: 0.4,
-                    stringArray: true,
-                    stringArrayThreshold: 0.5,
-                    deadCodeInjection: false,
-                    identifierNamesGenerator: "mangled",
-                    debugProtection: false,
-                    renameGlobals: false,
-                },
-            }),
-            // https://github.com/vbenjs/vite-plugin-html
-            createHtmlPlugin({
-                minify: {
-                    collapseWhitespace: true,
-                    removeComments: true,
-                },
-            }),
-            ...(portable ? [viteSingleFile({ removeViteModuleLoader: true })] : []),
-            {
-                name: "finalize-build",
-                apply: "build",
-                closeBundle() {
-                    if (portable) {
-                        renameSync(
-                            join(__dirname, "dist-portable", "index.html"),
-                            join(__dirname, "dist-portable", "aura.html")
-                        );
-                        return;
-                    }
-
-                    const redirectsPath = join(__dirname, "dist", "_redirects");
-                    mkdirSync(dirname(redirectsPath), { recursive: true });
-                    writeFileSync(redirectsPath, "/    /index.html    200\n");
-                },
-            },
+            obfuscated &&
+                obfuscatorPlugin({
+                    apply: "build",
+                    options: {
+                        compact: true,
+                        identifierNamesGenerator: "mangled",
+                        renameGlobals: false,
+                        // 固定种子使相同源码产生相同内容哈希，保证构建可复现并保留长期缓存。
+                        seed: 0x41555241,
+                        sourceMap: false,
+                        stringArray: true,
+                        stringArrayThreshold: 0.5,
+                    },
+                }),
+            portable && viteSingleFile(),
+            portable && portableEntryPlugin(),
         ],
     };
 });
+
+/**
+ * 在产物仍位于 Rollup 内存模型时重命名便携版入口，避免构建完成后再直接操作文件系统。
+ */
+function portableEntryPlugin(): Plugin {
+    return {
+        name: "aura:portable-entry",
+        apply: "build",
+        generateBundle: {
+            order: "post",
+            handler(_options, bundle) {
+                const entry = bundle["index.html"];
+                if (entry?.type !== "asset") throw new Error("Portable HTML entry was not generated");
+
+                delete bundle["index.html"];
+                entry.fileName = "aura.html";
+                bundle[entry.fileName] = entry;
+            },
+        },
+    };
+}

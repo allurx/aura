@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { NonEmptyArray } from "../type/common-type";
+import { NonEmptyArray } from "@/type/common-type";
 
 /**
  * 断言工具类

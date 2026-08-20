@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import Ui from "../../ui";
-import SettingState from "../setting-state";
-import StyleEngine from "../style-engine";
+import Ui from "@/component/ui";
+import SettingState from "@/component/setting/setting-state";
+import StyleEngine from "@/component/setting/style-engine";
 import StyleSettingItem from "./style-setting-item";
-import { StyleProperty } from "../style-property";
+import { StyleProperty } from "@/component/setting/style-property";
 
 /**
  * Background color setting item

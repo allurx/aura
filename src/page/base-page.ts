@@ -15,7 +15,7 @@
  */
 
 import Page from "./page";
-import DomUtil from "../util/dom-util";
+import DomUtil from "@/util/dom-util";
 
 /**
  * 页面基类，统一管理单个页面实例的挂载和销毁生命周期。

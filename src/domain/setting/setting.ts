@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { ClassFields } from "../../type/common-type";
-import { UiId } from "../../component/ui-id";
-import { PageName } from "../../constant/page-name";
-import BaseModel from "../base-model";
+import { ClassFields } from "@/type/common-type";
+import { UiId } from "@/component/ui-id";
+import { PageName } from "@/constant/page-name";
+import BaseModel from "@/domain/base-model";
 
 /**
  * 阅读器设置

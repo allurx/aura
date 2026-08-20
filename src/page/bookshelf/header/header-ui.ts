@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import EventUtil from "../../../util/event-util";
-import { assertExists } from "../../../util/assert-util";
-import bookshelfClearIcon from "../../../asset/image/bookshelf-clear.svg";
+import EventUtil from "@/util/event-util";
+import { assertExists } from "@/util/assert-util";
+import bookshelfClearIcon from "@/asset/image/bookshelf-clear.svg";
 
 /**
  * 书架头部界面

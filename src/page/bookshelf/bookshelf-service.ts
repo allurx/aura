@@ -14,30 +14,30 @@
  * limitations under the License.
  */
 
-import Aura from "../../core/aura";
-import Book from "../../domain/book/book";
-import BookFile from "../../domain/file/file";
-import Chapter from "../../domain/chapter/chapter";
-import Toc from "../../domain/toc/toc";
-import Category from "../../domain/category/category";
-import Progress from "../../domain/progress/progress";
-import Metadata from "../../domain/metadata/metadata";
-import MetadataService from "../../domain/metadata/metadata-service";
-import CategoryService from "../../domain/category/category-service";
-import BookService from "../../domain/book/book-service";
-import ChapterService from "../../domain/chapter/chapter-service";
-import ProgressService from "../../domain/progress/progress-service";
-import TocService from "../../domain/toc/toc-service";
-import FileService from "../../domain/file/file-service";
-import FileUtil from "../../util/file-util";
-import ObjectUtil from "../../util/object-util";
-import TransactionManager from "../../database/transaction-manager";
-import MetadataSeed from "../../database/seed/metadata-seed";
-import FileSeed from "../../database/seed/file-seed";
-import CategorySeed from "../../database/seed/category-seed";
+import Aura from "@/core/aura";
+import Book from "@/domain/book/book";
+import BookFile from "@/domain/file/file";
+import Chapter from "@/domain/chapter/chapter";
+import Toc from "@/domain/toc/toc";
+import Category from "@/domain/category/category";
+import Progress from "@/domain/progress/progress";
+import Metadata from "@/domain/metadata/metadata";
+import MetadataService from "@/domain/metadata/metadata-service";
+import CategoryService from "@/domain/category/category-service";
+import BookService from "@/domain/book/book-service";
+import ChapterService from "@/domain/chapter/chapter-service";
+import ProgressService from "@/domain/progress/progress-service";
+import TocService from "@/domain/toc/toc-service";
+import FileService from "@/domain/file/file-service";
+import FileUtil from "@/util/file-util";
+import ObjectUtil from "@/util/object-util";
+import TransactionManager from "@/database/transaction-manager";
+import MetadataSeed from "@/database/seed/metadata-seed";
+import FileSeed from "@/database/seed/file-seed";
+import CategorySeed from "@/database/seed/category-seed";
 import BookshelfState from "./bookshelf-state";
-import { assertExists } from "../../util/assert-util";
-import { DatabaseMode } from "../../database/database-mode";
+import { assertExists } from "@/util/assert-util";
+import { DatabaseMode } from "@/database/database-mode";
 import {
     metadataStore,
     categoryStore,
@@ -46,7 +46,7 @@ import {
     tocStore,
     chapterStore,
     progressStore,
-} from "../../database/database-definition";
+} from "@/database/database-definition";
 
 /**
  * 书架服务

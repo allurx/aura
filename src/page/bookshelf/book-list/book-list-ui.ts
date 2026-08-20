@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import Book from "../../../domain/book/book";
-import EventUtil from "../../../util/event-util";
-import { assertExists } from "../../../util/assert-util";
-import DomUtil from "../../../util/dom-util";
+import Book from "@/domain/book/book";
+import EventUtil from "@/util/event-util";
+import { assertExists } from "@/util/assert-util";
+import DomUtil from "@/util/dom-util";
 
 /**
  * 书架主界面

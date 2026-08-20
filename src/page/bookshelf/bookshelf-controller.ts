@@ -20,7 +20,7 @@ import BookListUi from "./book-list/book-list-ui";
 import BodyUi from "./body/body-ui";
 import BookshelfService from "./bookshelf-service";
 import BookshelfState from "./bookshelf-state";
-import ArrayUtil from "../../util/array-util";
+import ArrayUtil from "@/util/array-util";
 
 /**
  * 书架控制器

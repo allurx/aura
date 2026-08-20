@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import BaseRepository from "../base-repository";
+import BaseRepository from "@/domain/base-repository";
 import Category from "./category";
-import { categoryStore } from "../../database/database-definition";
+import { categoryStore } from "@/database/database-definition";
 
 /**
  * 分类Dao

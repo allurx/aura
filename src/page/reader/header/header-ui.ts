@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import Ui from "../../../component/ui";
-import { assertExists } from "../../../util/assert-util";
-import EventUtil from "../../../util/event-util";
-import tableOfContentsIcon from "../../../asset/image/table-of-contents.svg";
-import fullscreenIcon from "../../../asset/image/fullscreen.svg";
-import settingIcon from "../../../asset/image/setting.svg";
+import Ui from "@/component/ui";
+import { assertExists } from "@/util/assert-util";
+import EventUtil from "@/util/event-util";
+import tableOfContentsIcon from "@/asset/image/table-of-contents.svg";
+import fullscreenIcon from "@/asset/image/fullscreen.svg";
+import settingIcon from "@/asset/image/setting.svg";
 
 /**
  * 阅读器头部界面

@@ -15,7 +15,7 @@
  */
 
 import SettingRepository from "./setting-repository";
-import BaseService from "../base-service";
+import BaseService from "@/domain/base-service";
 import Setting from "./setting";
 
 /**

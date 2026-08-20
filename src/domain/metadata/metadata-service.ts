@@ -16,7 +16,7 @@
 
 import MetadataRepository from "./metadata-repository";
 import Metadata from "./metadata";
-import BaseService from "../base-service";
+import BaseService from "@/domain/base-service";
 
 /**
  * 元数据服务

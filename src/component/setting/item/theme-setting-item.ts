@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import Ui from "../../ui";
-import EventUtil from "../../../util/event-util";
-import SettingItem from "../setting-item";
-import StyleEngine from "../style-engine";
-import SettingState from "../setting-state";
-import { UiId } from "../../ui-id";
-import { StyleProperty } from "../style-property";
-import { assertExists } from "../../../util/assert-util";
+import Ui from "@/component/ui";
+import EventUtil from "@/util/event-util";
+import SettingItem from "@/component/setting/setting-item";
+import StyleEngine from "@/component/setting/style-engine";
+import SettingState from "@/component/setting/setting-state";
+import { UiId } from "@/component/ui-id";
+import { StyleProperty } from "@/component/setting/style-property";
+import { assertExists } from "@/util/assert-util";
 
 /**
  * Theme setting item

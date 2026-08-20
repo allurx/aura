@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { PageName } from "../constant/page-name";
-import EventUtil from "../util/event-util";
+import { PageName } from "@/constant/page-name";
+import EventUtil from "@/util/event-util";
 
 export type AppRoute =
     | { readonly pageName: PageName.BOOKSHELF }
@@ -69,8 +69,14 @@ export default class Router {
             return;
         }
 
-        if (replace) window.location.replace(hash);
-        else window.location.hash = hash;
+        if (replace) {
+            // replaceState 不触发 hashchange；主动分发可同时避免 file: 下的文档级重新导航。
+            window.history.replaceState(null, "", hash);
+            this.handleHashChange();
+            return;
+        }
+
+        window.location.hash = hash;
     }
 
     private handleHashChange(): void {

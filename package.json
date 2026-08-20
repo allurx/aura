@@ -2,13 +2,19 @@
     "name": "aura",
     "private": true,
     "type": "module",
+    "engines": {
+        "node": "^20.19.0 || >=22.12.0"
+    },
     "scripts": {
-        "lint": "eslint src",
+        "lint": "eslint src vite.config.ts",
         "type-check": "tsc --noEmit",
-        "build": "npm run lint && npm run type-check && vite build",
-        "build:portable": "npm run lint && npm run type-check && vite build --mode portable",
-        "dev": "npm run lint && npm run type-check && vite --host --open index.html",
-        "preview": "npm run build && vite preview --host --open index.html"
+        "check": "npm run lint && npm run type-check",
+        "build": "npm run check && vite build",
+        "build:obfuscated": "npm run check && vite build --mode obfuscated",
+        "build:portable": "npm run check && vite build --mode portable",
+        "build:portable:obfuscated": "npm run check && vite build --mode portable-obfuscated",
+        "dev": "vite --open",
+        "preview": "vite preview --open"
     },
     "devDependencies": {
         "@types/node": "^24.9.2",
@@ -16,7 +22,6 @@
         "typescript": "5.9.3",
         "typescript-eslint": "8.46.2",
         "vite": "7.3.6",
-        "vite-plugin-html": "3.2.2",
         "vite-plugin-javascript-obfuscator": "3.1.0",
         "vite-plugin-singlefile": "^2.3.3"
     },

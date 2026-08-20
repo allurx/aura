@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import Ui from "../../../component/ui";
-import { assertExists } from "../../../util/assert-util";
-import EventUtil from "../../../util/event-util";
-import Toc from "../../../domain/toc/toc";
+import Ui from "@/component/ui";
+import { assertExists } from "@/util/assert-util";
+import EventUtil from "@/util/event-util";
+import Toc from "@/domain/toc/toc";
 
 /**
  * 目录面板

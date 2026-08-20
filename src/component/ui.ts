@@ -15,7 +15,7 @@
  */
 
 import { UiId } from "./ui-id";
-import { assertExists, assertNonEmptyString } from "../util/assert-util";
+import { assertExists, assertNonEmptyString } from "@/util/assert-util";
 
 /**
  * 界面基类

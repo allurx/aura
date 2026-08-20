@@ -16,7 +16,7 @@
 
 import Book from "./book";
 import BookRepository from "./book-repository";
-import BaseService from "../base-service";
+import BaseService from "@/domain/base-service";
 
 /**
  * 书籍服务
