@@ -55,14 +55,15 @@ export default abstract class StyleSettingItem extends SettingItem {
     }
 
     public override setControlValue(ui: Ui, value: string | undefined): this {
-        const controlValue = value ?? StyleEngine.getComputedStyle(ui.root).getPropertyValue(this.styleProperty);
-        this.control.value = controlValue.replace(new RegExp(`${this.unit()}$`), "");
+        this.control.value = (value ?? StyleEngine.getComputedStyle(ui.root).getPropertyValue(this.styleProperty)).replace(
+            new RegExp(`${this.unit()}$`),
+            ""
+        );
         return this;
     }
 
     public override setDisplayValue(ui: Ui, value: string | undefined): this {
-        const controlValue = value ?? StyleEngine.getComputedStyle(ui.root).getPropertyValue(this.styleProperty);
-        this.display.textContent = controlValue;
+        this.display.textContent = value ?? StyleEngine.getComputedStyle(ui.root).getPropertyValue(this.styleProperty);
         return this;
     }
 

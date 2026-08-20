@@ -32,8 +32,7 @@ export default abstract class BaseRepository<T extends BaseModel> {
     }
 
     public async add(data: T, transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName());
-        return await this.requestPromise(store.add(data));
+        return await this.requestPromise(transaction.objectStore(this.storeName()).add(data));
     }
 
     public async addAll(dataArray: T[], transaction: IDBTransaction) {
@@ -41,8 +40,7 @@ export default abstract class BaseRepository<T extends BaseModel> {
     }
 
     public async put(data: T, transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName());
-        return await this.requestPromise(store.put(data));
+        return await this.requestPromise(transaction.objectStore(this.storeName()).put(data));
     }
 
     public async putAll(dataArray: T[], transaction: IDBTransaction) {
@@ -50,14 +48,14 @@ export default abstract class BaseRepository<T extends BaseModel> {
     }
 
     public async getByKey(key: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName());
-        const result = await this.requestPromise<unknown>(store.get(key));
+        const result = await this.requestPromise<unknown>(transaction.objectStore(this.storeName()).get(key));
         return result ? this.createModel(result as Required<T>) : null;
     }
 
     public async getByIndex(indexName: string, indexValue: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName());
-        const result = await this.requestPromise<unknown>(store.index(indexName).get(indexValue));
+        const result = await this.requestPromise<unknown>(
+            transaction.objectStore(this.storeName()).index(indexName).get(indexValue)
+        );
         return result ? this.createModel(result as Required<T>) : null;
     }
 
@@ -73,10 +71,8 @@ export default abstract class BaseRepository<T extends BaseModel> {
         fieldValue: T[K],
         transaction: IDBTransaction
     ): Promise<T | null> {
-        const store = transaction.objectStore(this.storeName());
-
         return new Promise<T | null>((resolve, reject) => {
-            const request = store.openCursor();
+            const request = transaction.objectStore(this.storeName()).openCursor();
             request.onsuccess = () => {
                 const cursor = request.result;
                 if (cursor) {
@@ -97,20 +93,19 @@ export default abstract class BaseRepository<T extends BaseModel> {
     }
 
     public async getAll(transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName());
-        const result = await this.requestPromise<unknown[]>(store.getAll());
-        return result.map((item) => this.createModel(item as Required<T>));
+        return (await this.requestPromise<unknown[]>(transaction.objectStore(this.storeName()).getAll())).map((item) =>
+            this.createModel(item as Required<T>)
+        );
     }
 
     public async getAllByIndex(indexName: string, indexValue: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName());
-        const result = await this.requestPromise(store.index(indexName).getAll(indexValue));
-        return result.map((item) => this.createModel(item as Required<T>));
+        return (
+            await this.requestPromise(transaction.objectStore(this.storeName()).index(indexName).getAll(indexValue))
+        ).map((item) => this.createModel(item as Required<T>));
     }
 
     public async deleteByKey(key: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName());
-        await this.requestPromise(store.delete(key));
+        await this.requestPromise(transaction.objectStore(this.storeName()).delete(key));
     }
 
     public async deleteByIndex(indexName: string, indexValue: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
@@ -124,23 +119,21 @@ export default abstract class BaseRepository<T extends BaseModel> {
         indexValue: IDBValidKey | IDBKeyRange,
         transaction: IDBTransaction
     ) {
-        const store = transaction.objectStore(this.storeName());
-        await this.deleteAllByIndexRequestPromise(store, indexName, indexValue);
+        await this.deleteAllByIndexRequestPromise(transaction.objectStore(this.storeName()), indexName, indexValue);
     }
 
     public async count(transaction: IDBTransaction, query?: IDBValidKey | IDBKeyRange) {
-        const store = transaction.objectStore(this.storeName());
-        return await this.requestPromise(store.count(query));
+        return await this.requestPromise(transaction.objectStore(this.storeName()).count(query));
     }
 
     public async countByIndex(indexName: string, indexValue: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName());
-        return await this.requestPromise(store.index(indexName).count(indexValue));
+        return await this.requestPromise(
+            transaction.objectStore(this.storeName()).index(indexName).count(indexValue)
+        );
     }
 
     public async clear(transaction: IDBTransaction) {
-        const store = transaction.objectStore(this.storeName());
-        await this.requestPromise(store.clear());
+        await this.requestPromise(transaction.objectStore(this.storeName()).clear());
     }
 
     private storeName() {

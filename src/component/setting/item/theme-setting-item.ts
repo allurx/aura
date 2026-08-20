@@ -45,8 +45,9 @@ export default class ThemeSettingItem extends SettingItem {
 
     public override reset(ui: Ui): this {
         console.log(`${ui.id} reset theme setting`);
-        const theme = assertExists(ThemeSettingItem.THEMES.find((item) => item.value === this.control.value));
-        Object.entries(theme.uiStyle).forEach(([uiId, style]) => {
+        Object.entries(
+            assertExists(ThemeSettingItem.THEMES.find((item) => item.value === this.control.value)).uiStyle
+        ).forEach(([uiId, style]) => {
             const element = document.getElementById(uiId);
             if (element) {
                 Object.entries(style).forEach(([styleProperty]) => {
@@ -59,27 +60,26 @@ export default class ThemeSettingItem extends SettingItem {
 
     public override apply(ui: Ui, setting: string): this {
         console.log(`${ui.id} apply theme setting: ${setting}`);
-        const theme = assertExists(ThemeSettingItem.THEMES.find((item) => item.value === setting));
-        Object.entries(theme.uiStyle).forEach(([uiId, style]) => {
-            const element = document.getElementById(uiId);
-            if (element) {
-                Object.entries(style).forEach(([styleProperty, value]) => {
-                    StyleEngine.setProperty(element, styleProperty as StyleProperty, value);
-                });
+        Object.entries(assertExists(ThemeSettingItem.THEMES.find((item) => item.value === setting)).uiStyle).forEach(
+            ([uiId, style]) => {
+                const element = document.getElementById(uiId);
+                if (element) {
+                    Object.entries(style).forEach(([styleProperty, value]) => {
+                        StyleEngine.setProperty(element, styleProperty as StyleProperty, value);
+                    });
+                }
             }
-        });
+        );
         return this;
     }
 
     public override setControlValue(_: Ui, value: string | undefined): this {
-        const controlValue = value ?? "yellow";
-        this.control.value = controlValue;
+        this.control.value = value ?? "yellow";
         return this;
     }
 
     public override setDisplayValue(_: Ui, value: string | undefined): this {
-        const controlValue = value ?? "yellow";
-        this.display.textContent = controlValue;
+        this.display.textContent = value ?? "yellow";
         return this;
     }
 

@@ -76,10 +76,9 @@ export default class EventUtil {
             eventType,
             (event) => {
                 EventUtil.run(() => {
-                    const eventTarget = event.target;
-                    if (!(eventTarget instanceof Element)) return;
+                    if (!(event.target instanceof Element)) return;
 
-                    const targetElement = eventTarget.closest<HTMLElement>(targetSelector);
+                    const targetElement = event.target.closest<HTMLElement>(targetSelector);
                     if (targetElement) return handler(event, targetElement);
                 });
             },

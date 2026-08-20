@@ -17,6 +17,9 @@
 import Ui from "../../../component/ui";
 import { assertExists } from "../../../util/assert-util";
 import EventUtil from "../../../util/event-util";
+import tableOfContentsIcon from "../../../asset/image/table-of-contents.svg";
+import fullscreenIcon from "../../../asset/image/fullscreen.svg";
+import settingIcon from "../../../asset/image/setting.svg";
 
 /**
  * 阅读器头部界面
@@ -34,6 +37,9 @@ export default class HeaderUi extends Ui {
         this.toggleSettingPanelElement = assertExists(
             this.root.querySelector<HTMLImageElement>("#toggle-setting-panel")
         );
+        this.toggleTocPanelElement.src = tableOfContentsIcon;
+        this.toggleFullscreenElement.src = fullscreenIcon;
+        this.toggleSettingPanelElement.src = settingIcon;
     }
 
     /**
@@ -41,8 +47,8 @@ export default class HeaderUi extends Ui {
      * @param handler - 事件处理函数
      * @return 当前实例
      */
-    public bindToggleTocPanel(handler: () => void) {
-        EventUtil.bind(this.toggleTocPanelElement, "click", handler);
+    public bindToggleTocPanel(handler: () => void, signal: AbortSignal): this {
+        EventUtil.bind(this.toggleTocPanelElement, "click", handler, { signal });
         return this;
     }
     /**
@@ -50,8 +56,8 @@ export default class HeaderUi extends Ui {
      * @param handler - 事件处理函数
      * @return 当前实例
      */
-    public bindToggleFullscreen(handler: () => void) {
-        EventUtil.bind(this.toggleFullscreenElement, "click", handler);
+    public bindToggleFullscreen(handler: () => void, signal: AbortSignal): this {
+        EventUtil.bind(this.toggleFullscreenElement, "click", handler, { signal });
         return this;
     }
 
@@ -60,8 +66,8 @@ export default class HeaderUi extends Ui {
      * @param handler - 事件处理函数
      * @return 当前实例
      */
-    public bindToggleSettingPanel(handler: () => void) {
-        EventUtil.bind(this.toggleSettingPanelElement, "click", handler);
+    public bindToggleSettingPanel(handler: () => void, signal: AbortSignal): this {
+        EventUtil.bind(this.toggleSettingPanelElement, "click", handler, { signal });
         return this;
     }
 }

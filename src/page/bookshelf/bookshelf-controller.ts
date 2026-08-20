@@ -34,16 +34,22 @@ export default class BookshelfController {
     private readonly bookshelfService: BookshelfService;
     private state!: BookshelfState;
 
-    public constructor() {
-        this.headerUi = new HeaderUi();
-        this.navUi = new NavUi();
-        this.bookListUi = new BookListUi();
-        this.bookshelfUi = new BodyUi();
+    public constructor(
+        root: HTMLElement,
+        private readonly onReadBook: (bookId: string) => void
+    ) {
+        this.headerUi = new HeaderUi(root);
+        this.navUi = new NavUi(root);
+        this.bookListUi = new BookListUi(root);
+        this.bookshelfUi = new BodyUi(root);
         this.bookshelfService = new BookshelfService();
     }
 
-    public async init() {
-        this.state = await this.bookshelfService.init();
+    public async init(signal: AbortSignal): Promise<void> {
+        const state = await this.bookshelfService.init();
+        if (signal.aborted) return;
+
+        this.state = state;
         this.navUi.renderNav(this.state.categories);
         this.bindEvent();
         this.navUi.clickNavItem(this.state.categoryId);
@@ -53,9 +59,8 @@ export default class BookshelfController {
      * 阅读书籍
      * @param bookId - 书籍id
      */
-    private readBook(bookId: string) {
-        window.location.href = "../reader/reader.html";
-        window.sessionStorage.setItem("bookId", bookId);
+    private readBook(bookId: string): void {
+        this.onReadBook(bookId);
     }
 
     /**
@@ -66,13 +71,16 @@ export default class BookshelfController {
         await this.bookshelfUi
             .showOverlayWhile(async () => {
                 // 只处理文本文件
-                const validFiles = Array.from(files).filter((file) => {
-                    const isTextFile = file.type === "text/plain";
-                    if (!isTextFile) void this.bookshelfUi.alertDialog(`${file.name}不是文本文件`);
-                    return isTextFile;
-                });
                 await this.bookshelfService
-                    .addBook(validFiles, this.state.categoryId, true)
+                    .addBook(
+                        files.filter((file) => {
+                            if (file.type === "text/plain") return true;
+                            void this.bookshelfUi.alertDialog(`${file.name}不是文本文件`);
+                            return false;
+                        }),
+                        this.state.categoryId,
+                        true
+                    )
                     .then(async ({ books, duplicateFiles }) => {
                         this.bookListUi.renderBookElements(books);
                         if (ArrayUtil.isNotEmpty(duplicateFiles)) {
@@ -108,7 +116,7 @@ export default class BookshelfController {
         }
     }
 
-    private bindEvent() {
+    private bindEvent(): void {
         // 绑定头部事件
         this.headerUi
             .bindClearBookshelfClick(() => this.clearBookshelf())
@@ -117,8 +125,9 @@ export default class BookshelfController {
         // 绑定导航栏事件
         this.navUi.delegateNavItemClick(async (categoryId) => {
             this.state.categoryId = categoryId;
-            const books = await this.bookshelfService.getBooksByCategoryId(categoryId);
-            this.bookListUi.removeBookElements().renderBookElements(books);
+            await this.bookshelfService
+                .getBooksByCategoryId(categoryId)
+                .then((books) => this.bookListUi.removeBookElements().renderBookElements(books));
         });
 
         // 绑定书籍主体事件

@@ -1,4 +1,4 @@
-<!-- 
+<!--
     Copyright 2025 allurx
 
     Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,39 +14,25 @@
     limitations under the License.
 -->
 
-<!doctype html>
-<html lang="zh-CN" id="doc">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Aura</title>
-        <link rel="icon" href="../../asset/image/favicon.svg" type="image/svg+xml" />
-        <link rel="stylesheet" href="reader.css" />
-        <script src="reader.ts" type="module"></script>
-    </head>
-
-    <body id="reader">
-        <!-- 头部 -->
+<div id="doc">
+    <div id="reader">
         <header id="header">
             <div class="action action-left">
-                <img id="toggle-toc-panel" src="../../asset/image/table-of-contents.svg" />
+                <img id="toggle-toc-panel" alt="目录" />
             </div>
             <div class="action action-right">
-                <img id="toggle-fullscreen" src="../../asset/image/fullscreen.svg" />
-                <img id="toggle-setting-panel" src="../../asset/image/setting.svg" />
+                <img id="toggle-fullscreen" alt="全屏" />
+                <img id="toggle-setting-panel" alt="设置" />
             </div>
         </header>
 
-        <!-- 正文 -->
         <main id="content"></main>
 
-        <!-- 底部 -->
         <footer id="footer">
             <div id="chapter-title"></div>
             <div id="progress-rate"></div>
         </footer>
 
-        <!-- 目录 -->
         <section id="toc">
             <header>
                 <h2>目录</h2>
@@ -57,5 +43,5 @@
             <section class="main"></section>
             <footer class="footer"></footer>
         </section>
-    </body>
-</html>
+    </div>
+</div>

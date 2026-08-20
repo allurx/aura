@@ -6,8 +6,9 @@
         "lint": "eslint src",
         "type-check": "tsc --noEmit",
         "build": "npm run lint && npm run type-check && vite build",
-        "dev": "npm run lint && npm run type-check && vite --host --open page/bookshelf/bookshelf.html",
-        "preview": "npm run build && vite preview --host --open page/bookshelf/bookshelf.html"
+        "build:portable": "npm run lint && npm run type-check && vite build --mode portable",
+        "dev": "npm run lint && npm run type-check && vite --host --open index.html",
+        "preview": "npm run build && vite preview --host --open index.html"
     },
     "devDependencies": {
         "@types/node": "^24.9.2",
@@ -16,7 +17,8 @@
         "typescript-eslint": "8.46.2",
         "vite": "7.3.6",
         "vite-plugin-html": "3.2.2",
-        "vite-plugin-javascript-obfuscator": "3.1.0"
+        "vite-plugin-javascript-obfuscator": "3.1.0",
+        "vite-plugin-singlefile": "^2.3.3"
     },
     "prettier": {
         "tabWidth": 4,

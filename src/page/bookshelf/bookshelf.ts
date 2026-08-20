@@ -14,22 +14,21 @@
  * limitations under the License.
  */
 
+import "./bookshelf.css";
+import template from "./bookshelf.html?raw";
+import BasePage from "../base-page";
 import BookshelfController from "./bookshelf-controller";
 
 /**
- * 书架
+ * 书架页面。
  * @author allurx
  */
-class Bookshelf {
-    private readonly controller: BookshelfController;
-
-    public constructor() {
-        this.controller = new BookshelfController();
+export default class Bookshelf extends BasePage {
+    public constructor(private readonly onReadBook: (bookId: string) => void) {
+        super(template);
     }
 
-    public async init() {
-        await this.controller.init();
+    protected override async init(root: HTMLElement): Promise<void> {
+        await new BookshelfController(root, this.onReadBook).init(this.lifecycleController.signal);
     }
 }
-
-await new Bookshelf().init();

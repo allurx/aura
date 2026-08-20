@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#setting {
+#reader > #setting {
     display: flex;
     flex-direction: row;
     position: fixed;

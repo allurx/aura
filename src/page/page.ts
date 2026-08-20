@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,22 +14,19 @@
  * limitations under the License.
  */
 
-#reader > #content {
-    height: calc(100% - 120px);
-    overflow-x: hidden;
-    overflow-y: auto;
-    scrollbar-width: auto;
-    scrollbar-color: #666666 transparent;
-    word-break: break-word;
-    outline: none;
-    padding: 0 30px;
-    font-size: 1.1rem;
-    line-height: 2;
-    background-color: inherit;
+/**
+ * SPA页面生命周期。
+ * @author allurx
+ */
+export default interface Page {
+    /**
+     * 将页面挂载到指定容器。
+     * @param root - 页面挂载容器
+     */
+    mount(root: HTMLElement): Promise<void>;
 
-    @media (max-width: 768px) {
-        & {
-            font-size: 1.5rem;
-        }
-    }
+    /**
+     * 释放页面持有的事件、观察器和DOM资源。
+     */
+    dispose(): void;
 }

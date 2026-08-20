@@ -45,23 +45,29 @@ export default class BodyUi extends Ui implements Dialogable, Overlayable {
      * @param  handler - 事件处理函数
      * @return 当前实例
      */
-    public observeReaderResize(handler: (width: string) => Promise<void>) {
-        new ResizeObserver(
-            (() => {
-                let timer: number;
-                return (entries) => {
-                    if (timer) clearTimeout(timer);
-                    timer = window.setTimeout(() => {
-                        EventUtil.run(async () => {
-                            const entry = assertExists(entries[0]);
-                            const width = entry.contentRect.width;
-                            console.log("检测到页面宽度变化：", width);
-                            await handler(String(width) + "px");
-                        });
-                    }, 300);
-                };
-            })()
-        ).observe(this.root);
+    public observeReaderResize(handler: (width: string) => Promise<void>, signal: AbortSignal): this {
+        let timer: number | undefined;
+        const observer = new ResizeObserver((entries) => {
+            if (timer !== undefined) window.clearTimeout(timer);
+            timer = window.setTimeout(() => {
+                EventUtil.run(async () => {
+                    if (signal.aborted) return;
+                    const width = assertExists(entries[0]).contentRect.width;
+                    console.log("检测到页面宽度变化：", width);
+                    await handler(`${String(width)}px`);
+                });
+            }, 300);
+        });
+
+        signal.addEventListener(
+            "abort",
+            () => {
+                observer.disconnect();
+                if (timer !== undefined) window.clearTimeout(timer);
+            },
+            { once: true }
+        );
+        observer.observe(this.root);
         return this;
     }
 

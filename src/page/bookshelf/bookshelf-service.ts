@@ -73,7 +73,6 @@ export default class BookshelfService {
 
     public async init() {
         const seeds = await this.seedDatabase();
-        const metadata = seeds.metadata;
         const categories =
             seeds.categories ??
             (await TransactionManager.runTransaction(
@@ -87,10 +86,10 @@ export default class BookshelfService {
         );
 
         // 检查元数据
-        await this.checkMetadata(metadata, defaultCategory);
+        await this.checkMetadata(seeds.metadata, defaultCategory);
 
         return new BookshelfState({
-            metadata: metadata,
+            metadata: seeds.metadata,
             categoryId: defaultCategory.id,
             categories: categories,
         });
@@ -108,12 +107,11 @@ export default class BookshelfService {
         categoryId: string,
         allowDuplicate: boolean
     ): Promise<{ books: Book[]; duplicateFiles: File[] }> {
-        const fileGroups = await this.groupFilesByHash(files);
         const books: Book[] = [];
         const duplicateFiles: File[] = [];
 
         // 同一hash只解析一次;不同hash组依次持久化,避免所有文件的章节数据同时驻留内存
-        for (const [hash, groupedFiles] of fileGroups) {
+        for (const [hash, groupedFiles] of await this.groupFilesByHash(files)) {
             const result = await this.addBookGroup(hash, groupedFiles, categoryId, allowDuplicate);
             books.push(...result.books);
             duplicateFiles.push(...result.duplicateFiles);
@@ -140,14 +138,14 @@ export default class BookshelfService {
                 );
 
                 // 计算相同hash的书籍数量
-                const count = await this.bookService.countByIndex(
-                    bookStore.indexes.idxFileId.name,
-                    book.fileId,
-                    transaction
-                );
-
                 // 如果该文件没有其他书籍则删除对应的file, chapter和toc
-                if (count <= 1)
+                if (
+                    (await this.bookService.countByIndex(
+                        bookStore.indexes.idxFileId.name,
+                        book.fileId,
+                        transaction
+                    )) <= 1
+                )
                     await Promise.all([
                         this.fileService.deleteByKey(book.fileId, transaction),
                         this.chapterService.deleteAllByIndex(
@@ -364,13 +362,14 @@ export default class BookshelfService {
      * @see Aura.VERSION 当前应用版本
      */
     private async checkMetadata(metadata: Metadata, defaultCategory: Category): Promise<void> {
-        const handbook = await TransactionManager.runTransaction(
-            [bookStore.name],
-            DatabaseMode.READ_ONLY,
-            async (transaction) => await this.bookService.getByKey(metadata.handbookId, transaction)
+        const existsHandbook = ObjectUtil.exists(
+            await TransactionManager.runTransaction(
+                [bookStore.name],
+                DatabaseMode.READ_ONLY,
+                async (transaction) => await this.bookService.getByKey(metadata.handbookId, transaction)
+            )
         );
         const isVersionChanged = Aura.isVersionChanged(metadata.version);
-        const existsHandbook = ObjectUtil.exists(handbook);
         if (isVersionChanged || !existsHandbook) {
             if (isVersionChanged && existsHandbook) await this.deleteBook(metadata.handbookId);
             await this.addBook([FileSeed.file], defaultCategory.id, true)

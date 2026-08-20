@@ -16,12 +16,9 @@
  * limitations under the License.
  */
 
-@import "../../style/base.css";
 @import "./doc/doc-ui.css";
 @import "./body/body-ui.css";
 @import "./header/header-ui.css";
 @import "./main/main-ui.css";
 @import "./nav/nav-ui.css";
 @import "./book-list/book-list-ui.css";
-@import "../../component/dialog/dialog.css";
-@import "../../component/overlay/overlay.css";

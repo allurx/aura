@@ -30,14 +30,16 @@ export default class BackgroundColorSettingItem extends StyleSettingItem {
     }
 
     public override setControlValue(ui: Ui, value: string | undefined): this {
-        const controlValue = value ?? StyleEngine.getComputedStyle(ui.root).getPropertyValue(this.styleProperty);
-        this.control.value = StyleEngine.rgbToHex(controlValue);
+        this.control.value = StyleEngine.rgbToHex(
+            value ?? StyleEngine.getComputedStyle(ui.root).getPropertyValue(this.styleProperty)
+        );
         return this;
     }
 
     public override setDisplayValue(ui: Ui, value: string | undefined): this {
-        const controlValue = value ?? StyleEngine.getComputedStyle(ui.root).getPropertyValue(this.styleProperty);
-        this.display.textContent = StyleEngine.rgbToHex(controlValue);
+        this.display.textContent = StyleEngine.rgbToHex(
+            value ?? StyleEngine.getComputedStyle(ui.root).getPropertyValue(this.styleProperty)
+        );
         return this;
     }
 

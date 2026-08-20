@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-nav {
+#bookshelf > main > nav {
     width: 6rem;
     height: 100%;
     display: flex;

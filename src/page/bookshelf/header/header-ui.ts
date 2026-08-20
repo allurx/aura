@@ -16,6 +16,7 @@
 
 import EventUtil from "../../../util/event-util";
 import { assertExists } from "../../../util/assert-util";
+import bookshelfClearIcon from "../../../asset/image/bookshelf-clear.svg";
 
 /**
  * 书架头部界面
@@ -23,11 +24,12 @@ import { assertExists } from "../../../util/assert-util";
  */
 export default class HeaderUi {
     private readonly headerTitleElement: HTMLSpanElement;
-    private readonly clearBookshelfElement: HTMLSpanElement;
+    private readonly clearBookshelfElement: HTMLImageElement;
 
-    public constructor() {
-        this.headerTitleElement = assertExists(document.querySelector<HTMLSpanElement>("#title"));
-        this.clearBookshelfElement = assertExists(document.querySelector<HTMLSpanElement>("#clear-btn"));
+    public constructor(root: HTMLElement) {
+        this.headerTitleElement = assertExists(root.querySelector<HTMLSpanElement>("#title"));
+        this.clearBookshelfElement = assertExists(root.querySelector<HTMLImageElement>("#clear-btn"));
+        this.clearBookshelfElement.src = bookshelfClearIcon;
     }
 
     /**

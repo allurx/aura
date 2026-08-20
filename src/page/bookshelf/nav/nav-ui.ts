@@ -25,8 +25,8 @@ import { assertExists } from "../../../util/assert-util";
 export default class NavUi {
     public readonly navElement: HTMLElement;
 
-    public constructor() {
-        this.navElement = assertExists(document.querySelector("nav"));
+    public constructor(root: HTMLElement) {
+        this.navElement = assertExists(root.querySelector<HTMLElement>(":scope > main > nav"));
     }
 
     /**
@@ -68,11 +68,12 @@ export default class NavUi {
     /**
      * 点击导航栏项目
      * @param categoryId - 书籍分类id
-     * @returns 返回当前实例
+    * @returns 返回当前实例
      */
     public clickNavItem(categoryId: string) {
-        const navItem = this.navElement.querySelector(`button[data-id="${categoryId}"]`);
-        navItem?.dispatchEvent(new Event("click", { bubbles: true }));
+        this.navElement
+            .querySelector(`button[data-id="${categoryId}"]`)
+            ?.dispatchEvent(new Event("click", { bubbles: true }));
         return this;
     }
 

@@ -27,9 +27,9 @@ export default class BookListUi {
     private readonly bookListElement: HTMLDivElement;
     private readonly bookInputElement: HTMLInputElement;
 
-    public constructor() {
-        this.bookListElement = assertExists(document.querySelector<HTMLDivElement>("#book-list"));
-        this.bookInputElement = assertExists(document.querySelector<HTMLInputElement>("#book-input"));
+    public constructor(root: HTMLElement) {
+        this.bookListElement = assertExists(root.querySelector<HTMLDivElement>("#book-list"));
+        this.bookInputElement = assertExists(root.querySelector<HTMLInputElement>("#book-input"));
     }
 
     /**
@@ -55,8 +55,7 @@ export default class BookListUi {
     }
 
     public removeBookElement(bookId: string) {
-        const bookElement = this.bookListElement.querySelector<HTMLElement>(`.book[data-id="${bookId}"]`);
-        bookElement?.remove();
+        this.bookListElement.querySelector<HTMLElement>(`.book[data-id="${bookId}"]`)?.remove();
         return this;
     }
 

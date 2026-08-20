@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-body {
+#doc > #reader {
     width: 800px;
     min-width: 800px;
     max-width: 100%;

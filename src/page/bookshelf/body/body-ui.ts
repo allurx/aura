@@ -24,9 +24,9 @@ export default class BodyUi {
     private readonly overlay: Overlay;
     private readonly dialog: Dialog;
 
-    public constructor() {
-        this.overlay = new Overlay({ containerElement: document.body });
-        this.dialog = new Dialog({ containerElement: document.body });
+    public constructor(root: HTMLElement) {
+        this.overlay = new Overlay({ containerElement: root });
+        this.dialog = new Dialog({ containerElement: root });
     }
 
     /**

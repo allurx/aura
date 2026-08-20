@@ -73,8 +73,7 @@ export default class TransactionManager {
      * @returns 解析为IDBTransaction的Promise
      */
     private static async createTransaction(storeName: string | string[], mode: DatabaseMode): Promise<IDBTransaction> {
-        const database = await TransactionManager.DATABASE.instance();
-        return database.transaction(storeName, mode);
+        return (await TransactionManager.DATABASE.instance()).transaction(storeName, mode);
     }
 
     /**

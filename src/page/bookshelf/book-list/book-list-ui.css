@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#book-list {
+#bookshelf #book-list {
     display: flex;
     flex: 1;
     flex-wrap: wrap;

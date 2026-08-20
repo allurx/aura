@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#toc {
+#reader > #toc {
     position: fixed;
     top: 0;
     right: 100%;

@@ -48,10 +48,9 @@ export default class Database {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(this.name, this.version);
             request.onupgradeneeded = () => {
-                const db = request.result;
                 Object.values(this.stores).forEach((storeDefinition) => {
-                    if (!db.objectStoreNames.contains(storeDefinition.name)) {
-                        const store = db.createObjectStore(storeDefinition.name, {
+                    if (!request.result.objectStoreNames.contains(storeDefinition.name)) {
+                        const store = request.result.createObjectStore(storeDefinition.name, {
                             keyPath: storeDefinition.keyPath,
                             autoIncrement: storeDefinition.autoIncrement,
                         });

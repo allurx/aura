@@ -59,31 +59,31 @@ export default class ReaderController {
     private readonly readerService: ReaderService;
     private state!: ReaderState;
 
-    public constructor() {
+    public constructor(root: HTMLElement) {
         this.readerService = new ReaderService();
 
         this.docUi = new DocUi({
-            root: document.documentElement,
+            root,
             displayName: "网页",
         });
         this.bodyUi = new BodyUi({
-            root: document.body,
+            root: assertExists(root.querySelector<HTMLElement>("#reader")),
             displayName: "阅读器",
         });
         this.headerUi = new HeaderUi({
-            root: assertExists(document.querySelector<HTMLElement>("#header")),
+            root: assertExists(root.querySelector<HTMLElement>("#header")),
             displayName: "页眉",
         });
         this.contentUi = new ContentUi({
-            root: assertExists(document.querySelector<HTMLElement>("#content")),
+            root: assertExists(root.querySelector<HTMLElement>("#content")),
             displayName: "正文",
         });
         this.footerUi = new FooterUi({
-            root: assertExists(document.querySelector<HTMLElement>("#footer")),
+            root: assertExists(root.querySelector<HTMLElement>("#footer")),
             displayName: "页脚",
         });
         this.tocUi = new TocUi({
-            root: assertExists(document.querySelector<HTMLDivElement>("#toc")),
+            root: assertExists(root.querySelector<HTMLElement>("#toc")),
             displayName: "目录",
         });
 
@@ -134,8 +134,11 @@ export default class ReaderController {
      * 初始化阅读器
      * @param bookId - 书籍id
      */
-    public async init(bookId: string) {
-        this.state = await this.readerService.init(bookId);
+    public async init(bookId: string, signal: AbortSignal): Promise<void> {
+        const state = await this.readerService.init(bookId);
+        if (signal.aborted) return;
+
+        this.state = state;
 
         // 渲染界面
         // 注意这里虽然是先渲染界面然后再绑定事件，但是由于浏览器的渲染机制，
@@ -162,7 +165,7 @@ export default class ReaderController {
         this.docUi.show();
 
         // 绑定事件
-        this.bindEvent();
+        this.bindEvent(signal);
     }
 
     /**
@@ -266,31 +269,34 @@ export default class ReaderController {
     /**
      * 绑定ui事件
      */
-    private bindEvent() {
+    private bindEvent(signal: AbortSignal): void {
         // doc ui事件
-        this.docUi.bindChapterNavigation(this.contentUi.root, (direction) => this.switchChapter(direction));
+        this.docUi.bindChapterNavigation(this.contentUi.root, (direction) => this.switchChapter(direction), signal);
 
         // reader ui事件
-        this.bodyUi.observeReaderResize((width) => this.updateSetting(UiId.READER, { [StyleProperty.WIDTH]: width }));
+        this.bodyUi.observeReaderResize(
+            (width) => this.updateSetting(UiId.READER, { [StyleProperty.WIDTH]: width }),
+            signal
+        );
 
         // header ui事件
         this.headerUi
             .bindToggleTocPanel(() => {
                 this.tocUi.toggleToc().highlightCurrentChapter(this.state.progress.chapterIndex);
-            })
-            .bindToggleSettingPanel(() => this.settingUi.toggleSetting())
+            }, signal)
+            .bindToggleSettingPanel(() => this.settingUi.toggleSetting(), signal)
             .bindToggleFullscreen(() => {
                 this.docUi
                     .toggleFullscreen()
                     .then(() => this.contentUi.dispatchContentScroll())
                     .catch(async () => await this.bodyUi.alertDialog("当前浏览器不支持全屏功能"));
-            });
+            }, signal);
 
         // body ui事件
         this.contentUi.bindContentScroll(async (lineIndex, lineVisibleRatio) => {
             await this.updateProgress({ lineIndex, lineVisibleRatio, updatedTime: Date.now() });
             this.footerUi.renderProgress(this.state.chapter.lineNumber(lineIndex), this.state.toc.numberOfLines());
-        });
+        }, signal);
 
         // toc ui事件
         this.tocUi
@@ -304,17 +310,17 @@ export default class ReaderController {
                     });
                     await this.loadChapter();
                 });
-            })
-            .bindTocClose();
+            }, signal)
+            .bindTocClose(signal);
 
         // setting ui事件
         this.settingUi
-            .bindNodeClick(this.state.settings)
-            .bindCloseSetting()
+            .bindNodeClick(this.state.settings, signal)
+            .bindCloseSetting(signal)
             .bindResetSetting(async () => {
                 this.state.settings.clear();
                 await this.deleteSettings();
-            })
+            }, signal)
             .bindSettingItemChange(async (ui, settingItem) => {
                 await this.updateSetting(ui.id, settingItem);
             });

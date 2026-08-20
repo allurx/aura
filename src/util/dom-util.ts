@@ -30,10 +30,8 @@ export default class DomUtil {
         const template = document.createElement("template");
         template.innerHTML = html.trim();
 
-        const fragment = template.content;
-
-        if (fragment.children.length === 1) {
-            return fragment.firstElementChild as HTMLElement;
+        if (template.content.children.length === 1) {
+            return template.content.firstElementChild as HTMLElement;
         }
         throw new Error("HTML string must contain exactly one root element.");
     }

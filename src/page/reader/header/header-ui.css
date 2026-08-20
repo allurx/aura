@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#header {
+#reader > #header {
     display: flex;
     height: 60px;
     justify-content: center;
