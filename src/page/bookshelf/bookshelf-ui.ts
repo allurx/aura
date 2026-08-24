@@ -16,43 +16,53 @@
 
 import Overlay from "@/component/overlay/overlay";
 import Dialog from "@/component/dialog/dialog";
+import Dialogable from "@/component/dialog/dialogable";
+import Overlayable from "@/component/overlay/overlayable";
 
 /**
  * 书架页面界面
  */
-export default class BookshelfUi {
-    private readonly overlay: Overlay;
-    private readonly dialog: Dialog;
+export default class BookshelfUi implements Dialogable, Overlayable {
+    public readonly dialog: Dialog;
+    public readonly overlay: Overlay;
 
     public constructor(bookshelfRoot: HTMLElement) {
-        this.overlay = new Overlay({ containerElement: bookshelfRoot });
         this.dialog = new Dialog({ containerElement: bookshelfRoot });
+        this.overlay = new Overlay({ containerElement: bookshelfRoot });
     }
 
     /**
-     * 在执行处理函数时显示遮罩
-     * @param  handler - 处理函数
+     * @see Overlayable.showOverlay
      */
-    public async showOverlayWhile(handler: () => Promise<void>) {
-        await this.overlay.showWhile(handler);
+    public showOverlay(): Promise<void> {
+        return this.overlay.show();
     }
 
     /**
-     * 显示确认对话框
-     * @param  content 正文内容
-     * @param options 选项
-     * @returns  用户是否确认
+     * @see Overlayable.hideOverlay
      */
-    public async confirmDialog(content: Node | string, options: object = {}): Promise<boolean> {
-        return await this.dialog.confirm(content, options);
+    public hideOverlay(): Promise<void> {
+        return this.overlay.hide();
     }
 
     /**
-     * 显示警告对话框
-     * @param  content 正文内容
-     * @param options 选项
+     * @see Overlayable.showOverlayWhile
      */
-    public async alertDialog(content: Node | string, options: object = {}): Promise<void> {
-        await this.dialog.alert(content, options);
+    public showOverlayWhile(handler: () => Promise<void>): Promise<void> {
+        return this.overlay.showWhile(handler);
+    }
+
+    /**
+     * @see Dialogable.confirmDialog
+     */
+    public confirmDialog(content: Node | string, options: object = {}): Promise<boolean> {
+        return this.dialog.confirm(content, options);
+    }
+
+    /**
+     * @see Dialogable.alertDialog
+     */
+    public alertDialog(content: Node | string, options: object = {}): Promise<boolean> {
+        return this.dialog.alert(content, options);
     }
 }

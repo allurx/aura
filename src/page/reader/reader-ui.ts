@@ -19,12 +19,14 @@ import Dialog from "@/component/dialog/dialog";
 import { assertExists } from "@/util/assert-util";
 import Ui from "@/component/ui";
 import EventUtil from "@/util/event-util";
+import Dialogable from "@/component/dialog/dialogable";
+import Overlayable from "@/component/overlay/overlayable";
 
 /**
  * 阅读器界面
  * @author allurx
  */
-export default class ReaderUi extends Ui {
+export default class ReaderUi extends Ui implements Dialogable, Overlayable {
     public readonly dialog: Dialog;
     public readonly overlay: Overlay;
     public constructor(args: ConstructorParameters<typeof Ui>[0]) {
@@ -72,23 +74,38 @@ export default class ReaderUi extends Ui {
         return this;
     }
 
+    /**
+     * @see Overlayable.showOverlay
+     */
     public showOverlay(): Promise<void> {
         return this.overlay.show();
     }
 
+    /**
+     * @see Overlayable.hideOverlay
+     */
     public hideOverlay(): Promise<void> {
         return this.overlay.hide();
     }
 
+    /**
+     * @see Overlayable.showOverlayWhile
+     */
     public showOverlayWhile(handler: () => Promise<void>): Promise<void> {
         return this.overlay.showWhile(handler);
     }
 
-    public async confirmDialog(content: Node | string, options: object = {}): Promise<boolean> {
-        return await this.dialog.confirm(content, options);
+    /**
+     * @see Dialogable.confirmDialog
+     */
+    public confirmDialog(content: Node | string, options: object = {}): Promise<boolean> {
+        return this.dialog.confirm(content, options);
     }
 
-    public async alertDialog(content: Node | string, options: object = {}): Promise<boolean> {
-        return await this.dialog.alert(content, options);
+    /**
+     * @see Dialogable.alertDialog
+     */
+    public alertDialog(content: Node | string, options: object = {}): Promise<boolean> {
+        return this.dialog.alert(content, options);
     }
 }
