@@ -18,18 +18,18 @@ import Book from "@/domain/book/book";
 import EventUtil from "@/util/event-util";
 import { assertExists } from "@/util/assert-util";
 import DomUtil from "@/util/dom-util";
+import Ui from "@/component/ui";
 
 /**
  * 书籍列表界面
  * @author allurx
  */
-export default class BookListUi {
-    private readonly bookListElement: HTMLDivElement;
+export default class BookListUi extends Ui {
     private readonly bookInputElement: HTMLInputElement;
 
-    public constructor(root: HTMLElement) {
-        this.bookListElement = assertExists(root.querySelector<HTMLDivElement>("#book-list"));
-        this.bookInputElement = assertExists(root.querySelector<HTMLInputElement>("#book-input"));
+    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
+        super(args);
+        this.bookInputElement = assertExists(this.root.querySelector<HTMLInputElement>("#book-input"));
     }
 
     /**
@@ -38,8 +38,8 @@ export default class BookListUi {
      * @param index - 书籍索引
      * @returns  返回当前实例
      */
-    public renderBookElement(book: Book, index: number) {
-        const bookElement = this.bookListElement.appendChild(this.createBookElement(book));
+    public renderBookElement(book: Book, index: number): this {
+        const bookElement = this.root.appendChild(this.createBookElement(book));
         // 创建顺序延迟,形成"瀑布入场"动画效果
         window.setTimeout(() => {
             bookElement.classList.add("show");
@@ -47,15 +47,15 @@ export default class BookListUi {
         return this;
     }
 
-    public renderBookElements(books: Book[]) {
+    public renderBookElements(books: Book[]): this {
         books
             .sort((a, b) => a.createdTime - b.createdTime)
             .forEach((book, index) => this.renderBookElement(book, index + 1));
         return this;
     }
 
-    public removeBookElement(bookId: string) {
-        this.bookListElement.querySelector<HTMLElement>(`.book[data-id="${bookId}"]`)?.remove();
+    public removeBookElement(bookId: string): this {
+        this.root.querySelector<HTMLElement>(`.book[data-id="${bookId}"]`)?.remove();
         return this;
     }
 
@@ -63,8 +63,8 @@ export default class BookListUi {
      * 清空书籍列表元素
      * @returns 返回当前实例
      */
-    public removeBookElements() {
-        this.bookListElement.querySelectorAll(".book").forEach((element) => {
+    public removeBookElements(): this {
+        this.root.querySelectorAll(".book").forEach((element) => {
             element.remove();
         });
         return this;
@@ -74,7 +74,7 @@ export default class BookListUi {
      * 清空书籍输入框, 以支持重复上传同一文件
      * @returns 返回当前实例
      */
-    public clearBookInput() {
+    public clearBookInput(): this {
         this.bookInputElement.value = "";
         return this;
     }
@@ -85,7 +85,7 @@ export default class BookListUi {
      * @returns 返回当前实例
      * @param signal - 页面生命周期信号
      */
-    public bindBookInputChange(handler: (files: File[]) => Promise<void>, signal: AbortSignal) {
+    public bindBookInputChange(handler: (files: File[]) => Promise<void>, signal: AbortSignal): this {
         EventUtil.bind(
             this.bookInputElement,
             "change",
@@ -103,9 +103,9 @@ export default class BookListUi {
      * @returns 返回当前实例
      * @param signal - 页面生命周期信号
      */
-    public bindBookBodyClick(handler: (bookId: string) => void, signal: AbortSignal) {
+    public bindBookBodyClick(handler: (bookId: string) => void, signal: AbortSignal): this {
         EventUtil.delegate(
-            this.bookListElement,
+            this.root,
             ".book-body",
             "click",
             (_, target) => {
@@ -122,9 +122,9 @@ export default class BookListUi {
      * @returns 返回当前实例
      * @param signal - 页面生命周期信号
      */
-    public bindDeleteBookClick(handler: (bookId: string) => Promise<void>, signal: AbortSignal) {
+    public bindDeleteBookClick(handler: (bookId: string) => Promise<void>, signal: AbortSignal): this {
         EventUtil.delegate(
-            this.bookListElement,
+            this.root,
             ".book-delete-btn",
             "click",
             async (_, target) => {

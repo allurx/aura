@@ -20,8 +20,11 @@
  */
 export enum UiId {
     APP = "app",
+    BOOKSHELF = "bookshelf",
     READER = "reader",
     HEADER = "header",
+    NAV = "nav",
+    BOOK_LIST = "book-list",
     CONTENT = "content",
     FOOTER = "footer",
     TOC = "toc",

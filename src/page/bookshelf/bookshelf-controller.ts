@@ -20,6 +20,7 @@ import BookListUi from "./book-list/book-list-ui";
 import BookshelfUi from "./bookshelf-ui";
 import BookshelfService from "./bookshelf-service";
 import BookshelfState from "./bookshelf-state";
+import { assertExists } from "@/util/assert-util";
 
 /**
  * 书架控制器
@@ -37,9 +38,18 @@ export default class BookshelfController {
         bookshelfRoot: HTMLElement,
         private readonly onReadBook: (bookId: string) => void
     ) {
-        this.headerUi = new HeaderUi(bookshelfRoot);
-        this.navUi = new NavUi(bookshelfRoot);
-        this.bookListUi = new BookListUi(bookshelfRoot);
+        this.headerUi = new HeaderUi({
+            root: assertExists(bookshelfRoot.querySelector<HTMLElement>("#header")),
+            displayName: "页眉",
+        });
+        this.navUi = new NavUi({
+            root: assertExists(bookshelfRoot.querySelector<HTMLElement>("#nav")),
+            displayName: "导航",
+        });
+        this.bookListUi = new BookListUi({
+            root: assertExists(bookshelfRoot.querySelector<HTMLElement>("#book-list")),
+            displayName: "书籍列表",
+        });
         this.bookshelfUi = new BookshelfUi({
             root: bookshelfRoot,
             displayName: "书架",

@@ -22,10 +22,6 @@ import EventUtil from "@/util/event-util";
  * @author allurx
  */
 export default class ContentUi extends Ui {
-    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
-        super(args);
-    }
-
     /**
      * 渲染章节
      * @param  lines - 章节内容行数组

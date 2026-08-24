@@ -17,18 +17,20 @@
 import EventUtil from "@/util/event-util";
 import { assertExists } from "@/util/assert-util";
 import bookshelfClearIcon from "@/asset/image/bookshelf-clear.svg";
+import Ui from "@/component/ui";
 
 /**
  * 书架头部界面
  * @author allurx
  */
-export default class HeaderUi {
+export default class HeaderUi extends Ui {
     private readonly headerTitleElement: HTMLSpanElement;
     private readonly clearBookshelfElement: HTMLImageElement;
 
-    public constructor(root: HTMLElement) {
-        this.headerTitleElement = assertExists(root.querySelector<HTMLSpanElement>("#title"));
-        this.clearBookshelfElement = assertExists(root.querySelector<HTMLImageElement>("#clear-btn"));
+    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
+        super(args);
+        this.headerTitleElement = assertExists(this.root.querySelector<HTMLSpanElement>("#title"));
+        this.clearBookshelfElement = assertExists(this.root.querySelector<HTMLImageElement>("#clear-btn"));
         this.clearBookshelfElement.src = bookshelfClearIcon;
     }
 
@@ -38,7 +40,7 @@ export default class HeaderUi {
      * @returns  返回当前实例
      * @param signal - 页面生命周期信号
      */
-    public bindClearBookshelfClick(handler: () => Promise<void>, signal: AbortSignal) {
+    public bindClearBookshelfClick(handler: () => Promise<void>, signal: AbortSignal): this {
         EventUtil.bind(this.clearBookshelfElement, "click", handler, { signal });
         return this;
     }
@@ -49,7 +51,7 @@ export default class HeaderUi {
      * @param handler - 处理函数
      * @param signal - 页面生命周期信号
      */
-    public bindHeaderTitleClick(handler: () => void, signal: AbortSignal) {
+    public bindHeaderTitleClick(handler: () => void, signal: AbortSignal): this {
         EventUtil.bind(this.headerTitleElement, "click", handler, { signal });
         return this;
     }

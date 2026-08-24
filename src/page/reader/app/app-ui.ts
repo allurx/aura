@@ -24,10 +24,6 @@ import FullscreenUtil from "@/util/fullscreen-util";
  * @author allurx
  */
 export default class AppUi extends Ui {
-    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
-        super(args);
-    }
-
     // 追踪指针信息
     private readonly pointer = {
         // 指针移动轨迹相对于x轴的角度
