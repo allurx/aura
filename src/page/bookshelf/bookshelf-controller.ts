@@ -40,7 +40,10 @@ export default class BookshelfController {
         this.headerUi = new HeaderUi(bookshelfRoot);
         this.navUi = new NavUi(bookshelfRoot);
         this.bookListUi = new BookListUi(bookshelfRoot);
-        this.bookshelfUi = new BookshelfUi(bookshelfRoot);
+        this.bookshelfUi = new BookshelfUi({
+            root: bookshelfRoot,
+            displayName: "书架",
+        });
         this.bookshelfService = new BookshelfService();
     }
 

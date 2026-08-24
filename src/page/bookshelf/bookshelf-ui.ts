@@ -14,55 +14,10 @@
  * limitations under the License.
  */
 
-import Overlay from "@/component/overlay/overlay";
-import Dialog from "@/component/dialog/dialog";
-import Dialogable from "@/component/dialog/dialogable";
-import Overlayable from "@/component/overlay/overlayable";
+import PageUi from "@/page/page-ui";
 
 /**
  * 书架页面界面
+ * @author allurx
  */
-export default class BookshelfUi implements Dialogable, Overlayable {
-    public readonly dialog: Dialog;
-    public readonly overlay: Overlay;
-
-    public constructor(bookshelfRoot: HTMLElement) {
-        this.dialog = new Dialog({ containerElement: bookshelfRoot });
-        this.overlay = new Overlay({ containerElement: bookshelfRoot });
-    }
-
-    /**
-     * @see Overlayable.showOverlay
-     */
-    public showOverlay(): Promise<void> {
-        return this.overlay.show();
-    }
-
-    /**
-     * @see Overlayable.hideOverlay
-     */
-    public hideOverlay(): Promise<void> {
-        return this.overlay.hide();
-    }
-
-    /**
-     * @see Overlayable.showOverlayWhile
-     */
-    public showOverlayWhile(handler: () => Promise<void>): Promise<void> {
-        return this.overlay.showWhile(handler);
-    }
-
-    /**
-     * @see Dialogable.confirmDialog
-     */
-    public confirmDialog(content: Node | string, options: object = {}): Promise<boolean> {
-        return this.dialog.confirm(content, options);
-    }
-
-    /**
-     * @see Dialogable.alertDialog
-     */
-    public alertDialog(content: Node | string, options: object = {}): Promise<boolean> {
-        return this.dialog.alert(content, options);
-    }
-}
+export default class BookshelfUi extends PageUi {}

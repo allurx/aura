@@ -14,27 +14,15 @@
  * limitations under the License.
  */
 
-import Overlay from "@/component/overlay/overlay";
-import Dialog from "@/component/dialog/dialog";
 import { assertExists } from "@/util/assert-util";
-import Ui from "@/component/ui";
 import EventUtil from "@/util/event-util";
-import Dialogable from "@/component/dialog/dialogable";
-import Overlayable from "@/component/overlay/overlayable";
+import PageUi from "@/page/page-ui";
 
 /**
  * 阅读器界面
  * @author allurx
  */
-export default class ReaderUi extends Ui implements Dialogable, Overlayable {
-    public readonly dialog: Dialog;
-    public readonly overlay: Overlay;
-    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
-        super(args);
-        this.dialog = new Dialog({ containerElement: this.root });
-        this.overlay = new Overlay({ containerElement: this.root });
-    }
-
+export default class ReaderUi extends PageUi {
     /**
      * 显示已经完成初始化的阅读器内容。
      */
@@ -72,40 +60,5 @@ export default class ReaderUi extends Ui implements Dialogable, Overlayable {
         );
         observer.observe(this.root);
         return this;
-    }
-
-    /**
-     * @see Overlayable.showOverlay
-     */
-    public showOverlay(): Promise<void> {
-        return this.overlay.show();
-    }
-
-    /**
-     * @see Overlayable.hideOverlay
-     */
-    public hideOverlay(): Promise<void> {
-        return this.overlay.hide();
-    }
-
-    /**
-     * @see Overlayable.showOverlayWhile
-     */
-    public showOverlayWhile(handler: () => Promise<void>): Promise<void> {
-        return this.overlay.showWhile(handler);
-    }
-
-    /**
-     * @see Dialogable.confirmDialog
-     */
-    public confirmDialog(content: Node | string, options: object = {}): Promise<boolean> {
-        return this.dialog.confirm(content, options);
-    }
-
-    /**
-     * @see Dialogable.alertDialog
-     */
-    public alertDialog(content: Node | string, options: object = {}): Promise<boolean> {
-        return this.dialog.alert(content, options);
     }
 }
