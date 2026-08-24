@@ -20,10 +20,10 @@
  */
 export default interface Page {
     /**
-     * 将页面挂载到指定容器。
-     * @param root - 页面挂载容器
+     * 将页面挂载到应用根节点。
+     * @param appRoot - 应用根节点
      */
-    mount(root: HTMLElement): Promise<void>;
+    mount(appRoot: HTMLElement): Promise<void>;
 
     /**
      * 释放页面持有的事件、观察器和DOM资源。

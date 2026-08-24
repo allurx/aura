@@ -16,8 +16,7 @@
  * limitations under the License.
  */
 
-@import "./doc/doc-ui.css";
-@import "./body/body-ui.css";
+@import "./bookshelf-ui.css";
 @import "./header/header-ui.css";
 @import "./main/main-ui.css";
 @import "./nav/nav-ui.css";

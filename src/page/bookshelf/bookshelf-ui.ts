@@ -18,15 +18,15 @@ import Overlay from "@/component/overlay/overlay";
 import Dialog from "@/component/dialog/dialog";
 
 /**
- * @author allurx
+ * 书架页面界面
  */
-export default class BodyUi {
+export default class BookshelfUi {
     private readonly overlay: Overlay;
     private readonly dialog: Dialog;
 
-    public constructor(root: HTMLElement) {
-        this.overlay = new Overlay({ containerElement: root });
-        this.dialog = new Dialog({ containerElement: root });
+    public constructor(bookshelfRoot: HTMLElement) {
+        this.overlay = new Overlay({ containerElement: bookshelfRoot });
+        this.dialog = new Dialog({ containerElement: bookshelfRoot });
     }
 
     /**

@@ -14,34 +14,32 @@
     limitations under the License.
 -->
 
-<div id="doc">
-    <div id="reader">
-        <header id="header">
-            <div class="action action-left">
-                <img id="toggle-toc-panel" alt="目录" />
-            </div>
-            <div class="action action-right">
-                <img id="toggle-fullscreen" alt="全屏" />
-                <img id="toggle-setting-panel" alt="设置" />
+<div id="reader">
+    <header id="header">
+        <div class="action action-left">
+            <img id="toggle-toc-panel" alt="目录" />
+        </div>
+        <div class="action action-right">
+            <img id="toggle-fullscreen" alt="全屏" />
+            <img id="toggle-setting-panel" alt="设置" />
+        </div>
+    </header>
+
+    <main id="content"></main>
+
+    <footer id="footer">
+        <div id="chapter-title"></div>
+        <div id="progress-rate"></div>
+    </footer>
+
+    <section id="toc">
+        <header>
+            <h2>目录</h2>
+            <div class="action">
+                <span class="close" title="关闭">✖</span>
             </div>
         </header>
-
-        <main id="content"></main>
-
-        <footer id="footer">
-            <div id="chapter-title"></div>
-            <div id="progress-rate"></div>
-        </footer>
-
-        <section id="toc">
-            <header>
-                <h2>目录</h2>
-                <div class="action">
-                    <span class="close" title="关闭">✖</span>
-                </div>
-            </header>
-            <section class="main"></section>
-            <footer class="footer"></footer>
-        </section>
-    </div>
+        <section class="main"></section>
+        <footer class="footer"></footer>
+    </section>
 </div>

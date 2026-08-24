@@ -30,13 +30,13 @@ import favicon from "./asset/image/favicon.svg";
  * @author allurx
  */
 class Main {
-    private readonly root: HTMLElement;
+    private readonly appRoot: HTMLElement;
     private readonly router: Router;
     private currentPage: Page | null = null;
 
     public constructor() {
         assertExists(document.querySelector<HTMLLinkElement>("#favicon")).href = favicon;
-        this.root = assertExists(document.querySelector<HTMLElement>("#app"));
+        this.appRoot = assertExists(document.querySelector<HTMLElement>("#app"));
         this.router = new Router((route) => this.render(route));
     }
 
@@ -47,7 +47,7 @@ class Main {
     private async render(route: AppRoute): Promise<void> {
         this.currentPage?.dispose();
         this.currentPage = this.createPage(route);
-        await this.currentPage.mount(this.root);
+        await this.currentPage.mount(this.appRoot);
     }
 
     private createPage(route: AppRoute): Page {

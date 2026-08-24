@@ -28,7 +28,7 @@ export default class Bookshelf extends BasePage {
         super(template);
     }
 
-    protected override async init(root: HTMLElement): Promise<void> {
-        await new BookshelfController(root, this.onReadBook).init(this.lifecycleController.signal);
+    protected override async init(bookshelfRoot: HTMLElement): Promise<void> {
+        await new BookshelfController(bookshelfRoot, this.onReadBook).init(this.lifecycleController.signal);
     }
 }

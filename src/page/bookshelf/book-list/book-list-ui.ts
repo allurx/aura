@@ -20,7 +20,7 @@ import { assertExists } from "@/util/assert-util";
 import DomUtil from "@/util/dom-util";
 
 /**
- * 书架主界面
+ * 书籍列表界面
  * @author allurx
  */
 export default class BookListUi {
@@ -83,11 +83,17 @@ export default class BookListUi {
      * 绑定书籍输入框变化事件
      * @param  handler - 处理函数
      * @returns 返回当前实例
+     * @param signal - 页面生命周期信号
      */
-    public bindBookInputChange(handler: (files: File[]) => Promise<void>) {
-        EventUtil.bind(this.bookInputElement, "change", async () => {
-            await handler(Array.from(assertExists(this.bookInputElement.files)));
-        });
+    public bindBookInputChange(handler: (files: File[]) => Promise<void>, signal: AbortSignal) {
+        EventUtil.bind(
+            this.bookInputElement,
+            "change",
+            async () => {
+                await handler(Array.from(assertExists(this.bookInputElement.files)));
+            },
+            { signal }
+        );
         return this;
     }
 
@@ -95,11 +101,18 @@ export default class BookListUi {
      * 绑定书籍主体点击事件
      * @param handler - 处理函数
      * @returns 返回当前实例
+     * @param signal - 页面生命周期信号
      */
-    public bindBookBodyClick(handler: (bookId: string) => void) {
-        EventUtil.delegate(this.bookListElement, ".book-body", "click", (_, target) => {
-            handler(assertExists(target.parentElement?.dataset["id"]));
-        });
+    public bindBookBodyClick(handler: (bookId: string) => void, signal: AbortSignal) {
+        EventUtil.delegate(
+            this.bookListElement,
+            ".book-body",
+            "click",
+            (_, target) => {
+                handler(assertExists(target.parentElement?.dataset["id"]));
+            },
+            { signal }
+        );
         return this;
     }
 
@@ -107,11 +120,18 @@ export default class BookListUi {
      * 绑定删除书籍点击事件
      * @param handler - 处理函数
      * @returns 返回当前实例
+     * @param signal - 页面生命周期信号
      */
-    public bindDeleteBookClick(handler: (bookId: string) => Promise<void>) {
-        EventUtil.delegate(this.bookListElement, ".book-delete-btn", "click", async (_, target) => {
-            await handler(assertExists(target.closest<HTMLElement>(".book")?.dataset["id"]));
-        });
+    public bindDeleteBookClick(handler: (bookId: string) => Promise<void>, signal: AbortSignal) {
+        EventUtil.delegate(
+            this.bookListElement,
+            ".book-delete-btn",
+            "click",
+            async (_, target) => {
+                await handler(assertExists(target.closest<HTMLElement>(".book")?.dataset["id"]));
+            },
+            { signal }
+        );
         return this;
     }
 

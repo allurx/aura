@@ -16,6 +16,6 @@
  * limitations under the License.
  */
 
-#bookshelf {
-    background-color: #1f2937;
+#app:has(> #reader) {
+    background-color: #be966e;
 }

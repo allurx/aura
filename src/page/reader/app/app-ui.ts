@@ -20,10 +20,10 @@ import { SwitchChapterDirection } from "@/constant/switch-chapter-direction";
 import FullscreenUtil from "@/util/fullscreen-util";
 
 /**
- * 阅读器文档界面
+ * Reader 使用的应用根界面
  * @author allurx
  */
-export default class DocUi extends Ui {
+export default class AppUi extends Ui {
     public constructor(args: ConstructorParameters<typeof Ui>[0]) {
         super(args);
     }
@@ -55,11 +55,14 @@ export default class DocUi extends Ui {
     };
 
     /**
-     * 显示阅读器
+     * 清理 Reader 写入持久应用根节点的临时状态。
      */
-    public show() {
-        this.root.classList.add("visible");
-        return this;
+    public cleanup(): void {
+        this.root.style.removeProperty("background-color");
+
+        if (FullscreenUtil.getElement() === this.root) {
+            EventUtil.run(() => FullscreenUtil.exit());
+        }
     }
 
     public async toggleFullscreen(): Promise<void> {

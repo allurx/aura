@@ -14,11 +14,6 @@
  * limitations under the License.
  */
 
-/**
- * 阅读器界面
- * @author allurx
- */
-
 import Overlay from "@/component/overlay/overlay";
 import Dialog from "@/component/dialog/dialog";
 import { assertExists } from "@/util/assert-util";
@@ -31,13 +26,21 @@ import EventUtil from "@/util/event-util";
  * 阅读器界面
  * @author allurx
  */
-export default class BodyUi extends Ui implements Dialogable, Overlayable {
+export default class ReaderUi extends Ui implements Dialogable, Overlayable {
     public readonly dialog: Dialog;
     public readonly overlay: Overlay;
     public constructor(args: ConstructorParameters<typeof Ui>[0]) {
         super(args);
         this.dialog = new Dialog({ containerElement: this.root });
         this.overlay = new Overlay({ containerElement: this.root });
+    }
+
+    /**
+     * 显示已经完成初始化的阅读器内容。
+     */
+    public show(): this {
+        this.root.classList.add("visible");
+        return this;
     }
 
     /**

@@ -113,7 +113,7 @@ export default class ThemeSettingItem extends SettingItem {
             name: "浅色",
             value: "light",
             uiStyle: {
-                [UiId.DOC]: {
+                [UiId.APP]: {
                     [StyleProperty.BACKGROUND_COLOR]: "#ffffff",
                 },
 
@@ -133,7 +133,7 @@ export default class ThemeSettingItem extends SettingItem {
             name: "昏暗",
             value: "dim",
             uiStyle: {
-                [UiId.DOC]: {
+                [UiId.APP]: {
                     [StyleProperty.BACKGROUND_COLOR]: "#111a2e",
                 },
                 [UiId.READER]: {
@@ -152,7 +152,7 @@ export default class ThemeSettingItem extends SettingItem {
             name: "深色",
             value: "dark",
             uiStyle: {
-                [UiId.DOC]: {
+                [UiId.APP]: {
                     [StyleProperty.BACKGROUND_COLOR]: "#202124",
                 },
                 [UiId.READER]: {
@@ -171,7 +171,7 @@ export default class ThemeSettingItem extends SettingItem {
             name: "黄色",
             value: "yellow",
             uiStyle: {
-                [UiId.DOC]: {
+                [UiId.APP]: {
                     [StyleProperty.BACKGROUND_COLOR]: "#be966e",
                 },
                 [UiId.READER]: {
@@ -190,7 +190,7 @@ export default class ThemeSettingItem extends SettingItem {
             name: "蓝色",
             value: "blue",
             uiStyle: {
-                [UiId.DOC]: {
+                [UiId.APP]: {
                     [StyleProperty.BACKGROUND_COLOR]: "#d2e3fc",
                 },
 
@@ -210,7 +210,7 @@ export default class ThemeSettingItem extends SettingItem {
             name: "灰色",
             value: "gray",
             uiStyle: {
-                [UiId.DOC]: {
+                [UiId.APP]: {
                     [StyleProperty.BACKGROUND_COLOR]: "#3c3c3c",
                 },
                 [UiId.READER]: {

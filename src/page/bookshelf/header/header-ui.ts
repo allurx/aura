@@ -36,18 +36,21 @@ export default class HeaderUi {
      * 绑定清空书架点击事件
      * @param  handler - 处理函数
      * @returns  返回当前实例
+     * @param signal - 页面生命周期信号
      */
-    public bindClearBookshelfClick(handler: () => Promise<void>) {
-        EventUtil.bind(this.clearBookshelfElement, "click", handler);
+    public bindClearBookshelfClick(handler: () => Promise<void>, signal: AbortSignal) {
+        EventUtil.bind(this.clearBookshelfElement, "click", handler, { signal });
         return this;
     }
 
     /**
      * 绑定头部标题点击事件
      * @returns 返回当前实例
+     * @param handler - 处理函数
+     * @param signal - 页面生命周期信号
      */
-    public bindHeaderTitleClick(handler: () => void) {
-        EventUtil.bind(this.headerTitleElement, "click", handler);
+    public bindHeaderTitleClick(handler: () => void, signal: AbortSignal) {
+        EventUtil.bind(this.headerTitleElement, "click", handler, { signal });
         return this;
     }
 }

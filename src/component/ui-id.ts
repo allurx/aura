@@ -19,7 +19,7 @@
  * @author allurx
  */
 export enum UiId {
-    DOC = "doc",
+    APP = "app",
     READER = "reader",
     HEADER = "header",
     CONTENT = "content",

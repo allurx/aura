@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-#doc {
-    width: 100%;
+#bookshelf {
+    position: relative;
+    background-color: #1f2937;
+    display: flex;
+    flex-direction: column;
     height: 100%;
-    background-color: #be966e;
-
-    /* 初始化时仅隐藏内容，保留#doc背景，避免刷新期间透出浏览器白底。 */
-    &.visible > #reader {
-        opacity: 1;
-    }
+    width: 100%;
+    -webkit-user-select: none;
+    user-select: none;
 }

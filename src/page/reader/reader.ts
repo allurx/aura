@@ -29,7 +29,7 @@ export default class Reader extends BasePage {
         if (!bookId) throw new Error("bookId must not be empty");
     }
 
-    protected override async init(root: HTMLElement): Promise<void> {
-        await new ReaderController(root).init(this.bookId, this.lifecycleController.signal);
+    protected override async init(readerRoot: HTMLElement, appRoot: HTMLElement): Promise<void> {
+        await new ReaderController(appRoot, readerRoot).init(this.bookId, this.lifecycleController.signal);
     }
 }

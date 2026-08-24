@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-@import "./doc/doc-ui.css";
-@import "./body/body-ui.css";
+@import "./app/app-ui.css";
+@import "./reader-ui.css";
 @import "./header/header-ui.css";
 @import "./content/content-ui.css";
 @import "./footer/footer-ui.css";

@@ -68,7 +68,7 @@ export default class NavUi {
     /**
      * 点击导航栏项目
      * @param categoryId - 书籍分类id
-    * @returns 返回当前实例
+     * @returns 返回当前实例
      */
     public clickNavItem(categoryId: string) {
         this.navElement
@@ -81,12 +81,19 @@ export default class NavUi {
      * 绑定导航栏点击事件
      * @param  handler - 处理函数
      * @returns 返回当前实例
+     * @param signal - 页面生命周期信号
      */
-    public delegateNavItemClick(handler: (categoryId: string) => Promise<void>) {
-        EventUtil.delegate(this.navElement, "button", "click", async (_, target) => {
-            this.highlightActiveNavItem(target);
-            await handler(assertExists(target.dataset["id"]));
-        });
+    public delegateNavItemClick(handler: (categoryId: string) => Promise<void>, signal: AbortSignal) {
+        EventUtil.delegate(
+            this.navElement,
+            "button",
+            "click",
+            async (_, target) => {
+                this.highlightActiveNavItem(target);
+                await handler(assertExists(target.dataset["id"]));
+            },
+            { signal }
+        );
         return this;
     }
 }

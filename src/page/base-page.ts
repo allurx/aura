@@ -27,12 +27,12 @@ export default abstract class BasePage implements Page {
 
     protected constructor(private readonly template: string) {}
 
-    public async mount(root: HTMLElement): Promise<void> {
+    public async mount(appRoot: HTMLElement): Promise<void> {
         if (this.lifecycleController.signal.aborted) return;
         if (this.pageElement) throw new Error(`${this.constructor.name} is already mounted`);
 
-        this.pageElement = root.appendChild(DomUtil.createElementFromHTML(this.template));
-        await this.init(this.pageElement);
+        this.pageElement = appRoot.appendChild(DomUtil.createElementFromHTML(this.template));
+        await this.init(this.pageElement, appRoot);
     }
 
     public dispose(): void {
@@ -43,6 +43,8 @@ export default abstract class BasePage implements Page {
 
     /**
      * 初始化页面特有的状态、内容和事件。
+     * @param pageRoot - 页面根节点
+     * @param appRoot - SPA 应用挂载节点
      */
-    protected abstract init(root: HTMLElement): Promise<void>;
+    protected abstract init(pageRoot: HTMLElement, appRoot: HTMLElement): Promise<void>;
 }

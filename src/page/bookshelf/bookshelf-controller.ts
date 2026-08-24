@@ -17,7 +17,7 @@
 import HeaderUi from "./header/header-ui";
 import NavUi from "./nav/nav-ui";
 import BookListUi from "./book-list/book-list-ui";
-import BodyUi from "./body/body-ui";
+import BookshelfUi from "./bookshelf-ui";
 import BookshelfService from "./bookshelf-service";
 import BookshelfState from "./bookshelf-state";
 import ArrayUtil from "@/util/array-util";
@@ -30,18 +30,18 @@ export default class BookshelfController {
     private readonly headerUi: HeaderUi;
     private readonly navUi: NavUi;
     private readonly bookListUi: BookListUi;
-    private readonly bookshelfUi: BodyUi;
+    private readonly bookshelfUi: BookshelfUi;
     private readonly bookshelfService: BookshelfService;
     private state!: BookshelfState;
 
     public constructor(
-        root: HTMLElement,
+        bookshelfRoot: HTMLElement,
         private readonly onReadBook: (bookId: string) => void
     ) {
-        this.headerUi = new HeaderUi(root);
-        this.navUi = new NavUi(root);
-        this.bookListUi = new BookListUi(root);
-        this.bookshelfUi = new BodyUi(root);
+        this.headerUi = new HeaderUi(bookshelfRoot);
+        this.navUi = new NavUi(bookshelfRoot);
+        this.bookListUi = new BookListUi(bookshelfRoot);
+        this.bookshelfUi = new BookshelfUi(bookshelfRoot);
         this.bookshelfService = new BookshelfService();
     }
 
@@ -51,7 +51,7 @@ export default class BookshelfController {
 
         this.state = state;
         this.navUi.renderNav(this.state.categories);
-        this.bindEvent();
+        this.bindEvent(signal);
         this.navUi.clickNavItem(this.state.categoryId);
     }
 
@@ -116,11 +116,11 @@ export default class BookshelfController {
         }
     }
 
-    private bindEvent(): void {
+    private bindEvent(signal: AbortSignal): void {
         // 绑定头部事件
         this.headerUi
-            .bindClearBookshelfClick(() => this.clearBookshelf())
-            .bindHeaderTitleClick(() => this.navUi.toggleVisibility());
+            .bindClearBookshelfClick(() => this.clearBookshelf(), signal)
+            .bindHeaderTitleClick(() => this.navUi.toggleVisibility(), signal);
 
         // 绑定导航栏事件
         this.navUi.delegateNavItemClick(async (categoryId) => {
@@ -128,14 +128,14 @@ export default class BookshelfController {
             await this.bookshelfService
                 .getBooksByCategoryId(categoryId)
                 .then((books) => this.bookListUi.removeBookElements().renderBookElements(books));
-        });
+        }, signal);
 
         // 绑定书籍主体事件
         this.bookListUi
-            .bindBookInputChange((files) => this.addBook(files))
+            .bindBookInputChange((files) => this.addBook(files), signal)
             .bindBookBodyClick((bookId) => {
                 this.readBook(bookId);
-            })
-            .bindDeleteBookClick((bookId) => this.deleteBook(bookId));
+            }, signal)
+            .bindDeleteBookClick((bookId) => this.deleteBook(bookId), signal);
     }
 }
