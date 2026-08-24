@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import BaseModel from "../base-model";
-import { ClassFields } from "../../type/common-type";
-import ObjectUtil from "../../util/object-util";
+import BaseModel from "@/domain/base-model";
+import { ClassFields } from "@/type/common-type";
+import ObjectUtil from "@/util/object-util";
 
 /**
  * 阅读进度

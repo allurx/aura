@@ -15,8 +15,8 @@
  */
 
 import Setting from "./setting";
-import { settingStore } from "../../database/database-definition";
-import BaseRepository from "../base-repository";
+import { settingStore } from "@/database/database-definition";
+import BaseRepository from "@/domain/base-repository";
 
 /**
  * 设置数据访问对象

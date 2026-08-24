@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { ClassFields } from "../../type/common-type";
-import BaseModel from "../base-model";
-import ObjectUtil from "../../util/object-util";
+import { ClassFields } from "@/type/common-type";
+import BaseModel from "@/domain/base-model";
+import ObjectUtil from "@/util/object-util";
 
 /**
  * 书籍
@@ -30,26 +30,5 @@ export default class Book extends BaseModel {
     public constructor(data: ClassFields<Book>) {
         super();
         ObjectUtil.assignOwnProperties<Book>(this, data);
-    }
-
-    /**
-     * @returns 书籍元素的html模板
-     */
-    public template(): string {
-        return `
-            <div data-id="${this.id}" class="book">
-                <div class="book-header">
-                    <span class="book-delete-btn">✖</span>
-                </div>
-                <div class="book-body">
-                    <span class="book-title">${this.extractTitle(this.fileName)}</span>
-                </div>
-                <div class="book-footer"></div>
-            </div>
-            `;
-    }
-
-    private extractTitle(filename: string): string {
-        return filename.substring(0, filename.lastIndexOf("."));
     }
 }

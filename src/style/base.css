@@ -49,3 +49,8 @@ html {
     -moz-osx-font-smoothing: grayscale;
     overflow: hidden;
 }
+
+#app {
+    width: 100%;
+    height: 100%;
+}

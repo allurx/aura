@@ -14,21 +14,22 @@
  * limitations under the License.
  */
 
-import Book from "../../../domain/book/book";
-import EventUtil from "../../../util/event-util";
-import { assertExists } from "../../../util/assert-util";
+import Book from "@/domain/book/book";
+import EventUtil from "@/util/event-util";
+import { assertExists } from "@/util/assert-util";
+import DomUtil from "@/util/dom-util";
+import Ui from "@/component/ui";
 
 /**
- * 书架主界面
+ * 书籍列表界面
  * @author allurx
  */
-export default class BookListUi {
-    private readonly bookListElement: HTMLDivElement;
+export default class BookListUi extends Ui {
     private readonly bookInputElement: HTMLInputElement;
 
-    public constructor() {
-        this.bookListElement = assertExists(document.querySelector<HTMLDivElement>("#book-list"));
-        this.bookInputElement = assertExists(document.querySelector<HTMLInputElement>("#book-input"));
+    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
+        super(args);
+        this.bookInputElement = assertExists(this.root.querySelector<HTMLInputElement>("#book-input"));
     }
 
     /**
@@ -37,24 +38,24 @@ export default class BookListUi {
      * @param index - 书籍索引
      * @returns  返回当前实例
      */
-    public renderBookElement(book: Book, index: number) {
-        this.bookListElement.insertAdjacentHTML("beforeend", book.template());
-        const bookElement = this.bookListElement.lastElementChild;
+    public renderBookElement(book: Book, index: number): this {
+        const bookElement = this.root.appendChild(this.createBookElement(book));
         // 创建顺序延迟,形成"瀑布入场"动画效果
-        window.setTimeout(() => bookElement?.classList.add("show"), index * 20);
+        window.setTimeout(() => {
+            bookElement.classList.add("show");
+        }, index * 20);
         return this;
     }
 
-    public renderBookElements(books: Book[]) {
+    public renderBookElements(books: Book[]): this {
         books
             .sort((a, b) => a.createdTime - b.createdTime)
             .forEach((book, index) => this.renderBookElement(book, index + 1));
         return this;
     }
 
-    public removeBookElement(bookId: string) {
-        const bookElement = this.bookListElement.querySelector<HTMLElement>(`.book[data-id="${bookId}"]`);
-        bookElement?.remove();
+    public removeBookElement(bookId: string): this {
+        this.root.querySelector<HTMLElement>(`.book[data-id="${bookId}"]`)?.remove();
         return this;
     }
 
@@ -62,8 +63,8 @@ export default class BookListUi {
      * 清空书籍列表元素
      * @returns 返回当前实例
      */
-    public removeBookElements() {
-        this.bookListElement.querySelectorAll(".book").forEach((element) => {
+    public removeBookElements(): this {
+        this.root.querySelectorAll(".book").forEach((element) => {
             element.remove();
         });
         return this;
@@ -73,7 +74,7 @@ export default class BookListUi {
      * 清空书籍输入框, 以支持重复上传同一文件
      * @returns 返回当前实例
      */
-    public clearBookInput() {
+    public clearBookInput(): this {
         this.bookInputElement.value = "";
         return this;
     }
@@ -82,11 +83,17 @@ export default class BookListUi {
      * 绑定书籍输入框变化事件
      * @param  handler - 处理函数
      * @returns 返回当前实例
+     * @param signal - 页面生命周期信号
      */
-    public bindBookInputChange(handler: (files: File[]) => Promise<void>) {
-        EventUtil.bind(this.bookInputElement, "change", async () => {
-            await handler(Array.from(assertExists(this.bookInputElement.files)));
-        });
+    public bindBookInputChange(handler: (files: File[]) => Promise<void>, signal: AbortSignal): this {
+        EventUtil.bind(
+            this.bookInputElement,
+            "change",
+            async () => {
+                await handler(Array.from(assertExists(this.bookInputElement.files)));
+            },
+            { signal }
+        );
         return this;
     }
 
@@ -94,11 +101,18 @@ export default class BookListUi {
      * 绑定书籍主体点击事件
      * @param handler - 处理函数
      * @returns 返回当前实例
+     * @param signal - 页面生命周期信号
      */
-    public bindBookBodyClick(handler: (bookId: string) => void) {
-        EventUtil.delegate(this.bookListElement, ".book-body", "click", (_, target) => {
-            handler(assertExists(target.parentElement?.dataset["id"]));
-        });
+    public bindBookBodyClick(handler: (bookId: string) => void, signal: AbortSignal): this {
+        EventUtil.delegate(
+            this.root,
+            ".book-body",
+            "click",
+            (_, target) => {
+                handler(assertExists(target.parentElement?.dataset["id"]));
+            },
+            { signal }
+        );
         return this;
     }
 
@@ -106,11 +120,43 @@ export default class BookListUi {
      * 绑定删除书籍点击事件
      * @param handler - 处理函数
      * @returns 返回当前实例
+     * @param signal - 页面生命周期信号
      */
-    public bindDeleteBookClick(handler: (bookId: string) => Promise<void>) {
-        EventUtil.delegate(this.bookListElement, ".book-delete-btn", "click", async (_, target) => {
-            await handler(assertExists(target.closest<HTMLElement>(".book")?.dataset["id"]));
-        });
+    public bindDeleteBookClick(handler: (bookId: string) => Promise<void>, signal: AbortSignal): this {
+        EventUtil.delegate(
+            this.root,
+            ".book-delete-btn",
+            "click",
+            async (_, target) => {
+                await handler(assertExists(target.closest<HTMLElement>(".book")?.dataset["id"]));
+            },
+            { signal }
+        );
         return this;
+    }
+
+    private createBookElement(book: Book): HTMLDivElement {
+        const bookElement = DomUtil.createElementFromHTML(`
+            <div class="book">
+                <div class="book-header">
+                    <span class="book-delete-btn">✖</span>
+                </div>
+                <div class="book-body">
+                    <span class="book-title"></span>
+                </div>
+                <div class="book-footer"></div>
+            </div>
+        `) as HTMLDivElement;
+
+        bookElement.dataset["id"] = book.id;
+        assertExists(bookElement.querySelector<HTMLElement>(".book-title")).textContent = this.extractTitle(
+            book.fileName
+        );
+        return bookElement;
+    }
+
+    private extractTitle(filename: string): string {
+        const extensionIndex = filename.lastIndexOf(".");
+        return extensionIndex > 0 ? filename.slice(0, extensionIndex) : filename;
     }
 }

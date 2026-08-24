@@ -23,14 +23,6 @@ export default class FullscreenUtil {
         throw new Error(`${FullscreenUtil.name} is a static class and cannot be instantiated.`);
     }
     /**
-     * 检查浏览器是否支持全屏api
-     * @return  是否支持全屏
-     */
-    public static isSupported(): boolean {
-        return document.fullscreenEnabled;
-    }
-
-    /**
      * 是否有元素处于全屏状态
      * @return 是否有元素处于全屏状态
      */
@@ -70,13 +62,5 @@ export default class FullscreenUtil {
      */
     public static async toggle(element: Element): Promise<void> {
         return FullscreenUtil.isActive() ? FullscreenUtil.exit() : FullscreenUtil.enter(element);
-    }
-
-    /**
-     * 监听全屏状态变化
-     * @param  callback - 回调函数
-     */
-    public static onChange(callback: () => void): void {
-        document.addEventListener("fullscreenchange", callback);
     }
 }

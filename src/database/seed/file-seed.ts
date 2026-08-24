@@ -14,12 +14,7 @@
  * limitations under the License.
  */
 
-/**
- * 文件数据种子
- * @author allurx
- */
-export default class FileSeed {
-    private static readonly text = `
+const handbookText = `
         1. Aura是什么
         Aura是一个轻量级、原生实现的阅读器网页应用,支持书籍和文档在线阅读,界面简洁、交互流畅。
         📖 支持多种文本格式的阅读
@@ -31,7 +26,8 @@ export default class FileSeed {
         🔒 目前Aura还处于早期开发阶段,很多功能还不完善,甚至还有很多bug,等我有空了会慢慢完善的
         2. QQ交流群
         欢迎加入Aura交流群讨论和交流: 1038423789
-    `;
+    `.trim();
 
-    public static readonly file = new File([this.text], "Aura.txt", { type: "text/plain" });
+export function createFileSeed(): File {
+    return new File([handbookText], "Aura.txt", { type: "text/plain" });
 }

@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import Ui from "../../ui";
-import EventUtil from "../../../util/event-util";
-import SettingItem from "../setting-item";
-import StyleEngine from "../style-engine";
-import SettingState from "../setting-state";
-import { UiId } from "../../ui-id";
-import { StyleProperty } from "../style-property";
-import { assertExists } from "../../../util/assert-util";
+import Ui from "@/component/ui";
+import EventUtil from "@/util/event-util";
+import SettingItem from "@/component/setting/setting-item";
+import StyleEngine from "@/component/setting/style-engine";
+import SettingState from "@/component/setting/setting-state";
+import { UiId } from "@/component/ui-id";
+import { StyleProperty } from "@/component/setting/style-property";
+import { assertExists } from "@/util/assert-util";
 
 /**
  * Theme setting item
@@ -45,8 +45,9 @@ export default class ThemeSettingItem extends SettingItem {
 
     public override reset(ui: Ui): this {
         console.log(`${ui.id} reset theme setting`);
-        const theme = assertExists(ThemeSettingItem.THEMES.find((item) => item.value === this.control.value));
-        Object.entries(theme.uiStyle).forEach(([uiId, style]) => {
+        Object.entries(
+            assertExists(ThemeSettingItem.THEMES.find((item) => item.value === this.control.value)).uiStyle
+        ).forEach(([uiId, style]) => {
             const element = document.getElementById(uiId);
             if (element) {
                 Object.entries(style).forEach(([styleProperty]) => {
@@ -59,27 +60,26 @@ export default class ThemeSettingItem extends SettingItem {
 
     public override apply(ui: Ui, setting: string): this {
         console.log(`${ui.id} apply theme setting: ${setting}`);
-        const theme = assertExists(ThemeSettingItem.THEMES.find((item) => item.value === setting));
-        Object.entries(theme.uiStyle).forEach(([uiId, style]) => {
-            const element = document.getElementById(uiId);
-            if (element) {
-                Object.entries(style).forEach(([styleProperty, value]) => {
-                    StyleEngine.setProperty(element, styleProperty as StyleProperty, value);
-                });
+        Object.entries(assertExists(ThemeSettingItem.THEMES.find((item) => item.value === setting)).uiStyle).forEach(
+            ([uiId, style]) => {
+                const element = document.getElementById(uiId);
+                if (element) {
+                    Object.entries(style).forEach(([styleProperty, value]) => {
+                        StyleEngine.setProperty(element, styleProperty as StyleProperty, value);
+                    });
+                }
             }
-        });
+        );
         return this;
     }
 
     public override setControlValue(_: Ui, value: string | undefined): this {
-        const controlValue = value ?? "yellow";
-        this.control.value = controlValue;
+        this.control.value = value ?? "yellow";
         return this;
     }
 
     public override setDisplayValue(_: Ui, value: string | undefined): this {
-        const controlValue = value ?? "yellow";
-        this.display.textContent = controlValue;
+        this.display.textContent = value ?? "yellow";
         return this;
     }
 
@@ -113,7 +113,7 @@ export default class ThemeSettingItem extends SettingItem {
             name: "浅色",
             value: "light",
             uiStyle: {
-                [UiId.DOC]: {
+                [UiId.APP]: {
                     [StyleProperty.BACKGROUND_COLOR]: "#ffffff",
                 },
 
@@ -133,7 +133,7 @@ export default class ThemeSettingItem extends SettingItem {
             name: "昏暗",
             value: "dim",
             uiStyle: {
-                [UiId.DOC]: {
+                [UiId.APP]: {
                     [StyleProperty.BACKGROUND_COLOR]: "#111a2e",
                 },
                 [UiId.READER]: {
@@ -152,7 +152,7 @@ export default class ThemeSettingItem extends SettingItem {
             name: "深色",
             value: "dark",
             uiStyle: {
-                [UiId.DOC]: {
+                [UiId.APP]: {
                     [StyleProperty.BACKGROUND_COLOR]: "#202124",
                 },
                 [UiId.READER]: {
@@ -171,7 +171,7 @@ export default class ThemeSettingItem extends SettingItem {
             name: "黄色",
             value: "yellow",
             uiStyle: {
-                [UiId.DOC]: {
+                [UiId.APP]: {
                     [StyleProperty.BACKGROUND_COLOR]: "#be966e",
                 },
                 [UiId.READER]: {
@@ -190,7 +190,7 @@ export default class ThemeSettingItem extends SettingItem {
             name: "蓝色",
             value: "blue",
             uiStyle: {
-                [UiId.DOC]: {
+                [UiId.APP]: {
                     [StyleProperty.BACKGROUND_COLOR]: "#d2e3fc",
                 },
 
@@ -210,7 +210,7 @@ export default class ThemeSettingItem extends SettingItem {
             name: "灰色",
             value: "gray",
             uiStyle: {
-                [UiId.DOC]: {
+                [UiId.APP]: {
                     [StyleProperty.BACKGROUND_COLOR]: "#3c3c3c",
                 },
                 [UiId.READER]: {

@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import Ui from "../ui";
-import { UiId } from "../ui-id";
-import EventUtil from "../../util/event-util";
-import { assertExists } from "../../util/assert-util";
+import Ui from "@/component/ui";
+import { UiId } from "@/component/ui-id";
+import EventUtil from "@/util/event-util";
+import { assertExists } from "@/util/assert-util";
 import SettingItem from "./setting-item";
-import Setting from "../../domain/setting/setting";
+import Setting from "@/domain/setting/setting";
 import SettingState from "./setting-state";
 import FontSizeSettingItem from "./item/font-size-setting-item";
 import ColorSettingItem from "./item/color-setting-item";
@@ -74,12 +74,11 @@ export default class SettingUi extends Ui {
 
     /**
      * 切换设置面板显示状态
-     * @return 当前实例
+    * @return 当前实例
      */
     public toggleSetting() {
-        const isOpen = this.root.classList.toggle("open");
         // 打开时默认激活第一个node
-        if (isOpen && !this.asideElement.querySelector(".node.active")) {
+        if (this.root.classList.toggle("open") && !this.asideElement.querySelector(".node.active")) {
             this.asideElement.querySelector<HTMLDivElement>(".node > .title")?.click();
         }
         return this;
@@ -90,8 +89,7 @@ export default class SettingUi extends Ui {
      * @return 当前实例
      */
     public renderAside() {
-        const rootUis = this.buildTree();
-        rootUis.forEach((rootUi) => {
+        this.buildTree().forEach((rootUi) => {
             this.asideElement.appendChild(this.createNode(rootUi, true));
         });
         return this;
@@ -118,10 +116,15 @@ export default class SettingUi extends Ui {
      * 绑定设置面板关闭事件
      * @return 当前实例
      */
-    public bindCloseSetting() {
-        EventUtil.bind(this.closeElement, "click", () => {
-            this.root.classList.remove("open");
-        });
+    public bindCloseSetting(signal: AbortSignal): this {
+        EventUtil.bind(
+            this.closeElement,
+            "click",
+            () => {
+                this.root.classList.remove("open");
+            },
+            { signal }
+        );
         return this;
     }
 
@@ -130,56 +133,66 @@ export default class SettingUi extends Ui {
      * @param  handler - 事件处理函数
      * @return 当前实例
      */
-    public bindResetSetting(handler: () => Promise<void>) {
-        EventUtil.bind(this.resetElement, "click", async () => {
-            // 重置所有ui的设置项
-            this.uiSettingItemMap.forEach((settingItems, ui) => {
-                settingItems.forEach((settingItem) => {
-                    settingItem.reset(ui);
+    public bindResetSetting(handler: () => Promise<void>, signal: AbortSignal): this {
+        EventUtil.bind(
+            this.resetElement,
+            "click",
+            async () => {
+                // 重置所有ui的设置项
+                this.uiSettingItemMap.forEach((settingItems, ui) => {
+                    settingItems.forEach((settingItem) => {
+                        settingItem.reset(ui);
+                    });
                 });
-            });
-            // 重置当前ui的设置项显示和控制值
-            this.uiSettingItemMap.get(this.state.ui)?.forEach((settingItem) => {
-                settingItem.setControlValue(this.state.ui, undefined);
-                settingItem.setDisplayValue(this.state.ui, undefined);
-            });
-            await handler();
-        });
+                // 重置当前ui的设置项显示和控制值
+                this.uiSettingItemMap.get(this.state.ui)?.forEach((settingItem) => {
+                    settingItem.setControlValue(this.state.ui, undefined);
+                    settingItem.setDisplayValue(this.state.ui, undefined);
+                });
+                await handler();
+            },
+            { signal }
+        );
         return this;
     }
 
-    public bindNodeClick(settings: Map<UiId, Setting>): this {
-        EventUtil.delegate(this.asideElement, ".node > .title", "click", (event, title) => {
-            const node = assertExists(title.parentElement);
+    public bindNodeClick(settings: Map<UiId, Setting>, signal: AbortSignal): this {
+        EventUtil.delegate(
+            this.asideElement,
+            ".node > .title",
+            "click",
+            (event, title) => {
+                const node = assertExists(title.parentElement);
 
-            // 1.用户触发
-            // 2.节点有子节点
-            // 3.节点处于展开状态
-            // 同时满足以上条件则折叠节点
-            if (event.isTrusted && node.classList.contains("parent") && node.classList.contains("active"))
-                node.classList.toggle("collapsed");
+                // 1.用户触发
+                // 2.节点有子节点
+                // 3.节点处于展开状态
+                // 同时满足以上条件则折叠节点
+                if (event.isTrusted && node.classList.contains("parent") && node.classList.contains("active"))
+                    node.classList.toggle("collapsed");
 
-            // 高亮当前节点
-            this.highlightActiveNode(node);
+                // 高亮当前节点
+                this.highlightActiveNode(node);
 
-            // 当前被设置的ui
-            const id = assertExists(node.dataset["id"]);
-            const ui = assertExists(this.uiIdMap.get(id as UiId));
-            this.state.ui = ui;
+                // 当前被设置的ui
+                const ui = assertExists(this.uiIdMap.get(assertExists(node.dataset["id"]) as UiId));
+                this.state.ui = ui;
 
-            // 显示ui对应的设置项
-            const uiSettingItems = this.uiSettingItemMap.get(ui) ?? [];
-            const uiSetting = settings.get(ui.id);
-            this.settingItems.forEach((settingItem) => {
-                if (uiSettingItems.includes(settingItem)) {
-                    settingItem.setControlValue(ui, uiSetting?.[settingItem.id]);
-                    settingItem.setDisplayValue(ui, uiSetting?.[settingItem.id]);
-                    settingItem.show();
-                } else {
-                    settingItem.hide();
-                }
-            });
-        });
+                // 显示ui对应的设置项
+                const uiSettingItems = this.uiSettingItemMap.get(ui) ?? [];
+                const uiSetting = settings.get(ui.id);
+                this.settingItems.forEach((settingItem) => {
+                    if (uiSettingItems.includes(settingItem)) {
+                        settingItem.setControlValue(ui, uiSetting?.[settingItem.id]);
+                        settingItem.setDisplayValue(ui, uiSetting?.[settingItem.id]);
+                        settingItem.show();
+                    } else {
+                        settingItem.hide();
+                    }
+                });
+            },
+            { signal }
+        );
         return this;
     }
 

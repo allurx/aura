@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,28 +14,19 @@
  * limitations under the License.
  */
 
-body {
-    width: 800px;
-    min-width: 800px;
-    max-width: 100%;
-    height: 100%;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    background-color: #f2e8c8;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
-    position: relative;
-    outline: none;
-    overflow: hidden;
-    transition: opacity 0.3s ease;
-    resize: horizontal;
-    color: #000000;
-    line-height: 2;
+/**
+ * SPA页面生命周期。
+ * @author allurx
+ */
+export default interface Page {
+    /**
+     * 将页面挂载到应用根节点。
+     * @param appRoot - 应用根节点
+     */
+    mount(appRoot: HTMLElement): Promise<void>;
 
-    @media (max-width: 768px) {
-        & {
-            width: 100% !important;
-            min-width: 100% !important;
-        }
-    }
+    /**
+     * 释放页面持有的事件、观察器和DOM资源。
+     */
+    dispose(): void;
 }

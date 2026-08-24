@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import Ui from "../../ui";
-import StyleEngine from "../style-engine";
-import SettingState from "../setting-state";
+import Ui from "@/component/ui";
+import StyleEngine from "@/component/setting/style-engine";
+import SettingState from "@/component/setting/setting-state";
 import StyleSettingItem from "./style-setting-item";
-import { StyleProperty } from "../style-property";
+import { StyleProperty } from "@/component/setting/style-property";
 
 /**
  * Color setting item
@@ -30,14 +30,16 @@ export default class ColorSettingItem extends StyleSettingItem {
     }
 
     public override setControlValue(ui: Ui, value: string | undefined): this {
-        const controlValue = value ?? StyleEngine.getComputedStyle(ui.root).getPropertyValue(this.styleProperty);
-        this.control.value = StyleEngine.rgbToHex(controlValue);
+        this.control.value = StyleEngine.rgbToHex(
+            value ?? StyleEngine.getComputedStyle(ui.root).getPropertyValue(this.styleProperty)
+        );
         return this;
     }
 
     public override setDisplayValue(ui: Ui, value: string | undefined): this {
-        const controlValue = value ?? StyleEngine.getComputedStyle(ui.root).getPropertyValue(this.styleProperty);
-        this.display.textContent = StyleEngine.rgbToHex(controlValue);
+        this.display.textContent = StyleEngine.rgbToHex(
+            value ?? StyleEngine.getComputedStyle(ui.root).getPropertyValue(this.styleProperty)
+        );
         return this;
     }
 

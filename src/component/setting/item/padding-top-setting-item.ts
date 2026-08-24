@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import SettingState from "../setting-state";
+import SettingState from "@/component/setting/setting-state";
 import StyleSettingItem from "./style-setting-item";
-import { StyleProperty } from "../style-property";
+import { StyleProperty } from "@/component/setting/style-property";
 
 /**
  * Padding top setting item

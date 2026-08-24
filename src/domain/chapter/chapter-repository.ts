@@ -15,8 +15,8 @@
  */
 
 import Chapter from "./chapter";
-import BaseRepository from "../base-repository";
-import { chapterStore } from "../../database/database-definition";
+import BaseRepository from "@/domain/base-repository";
+import { chapterStore } from "@/database/database-definition";
 
 /**
  * 章节数据访问对象

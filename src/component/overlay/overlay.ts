@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { assertExists } from "../../util/assert-util";
+import { assertExists } from "@/util/assert-util";
 
 /**
  * 遮罩

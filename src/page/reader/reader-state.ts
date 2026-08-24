@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import Book from "../../domain/book/book";
-import Chapter from "../../domain/chapter/chapter";
-import Toc from "../../domain/toc/toc";
-import Setting from "../../domain/setting/setting";
-import Progress from "../../domain/progress/progress";
-import ObjectUtil from "../../util/object-util";
-import { UiId } from "../../component/ui-id";
+import Book from "@/domain/book/book";
+import Chapter from "@/domain/chapter/chapter";
+import Toc from "@/domain/toc/toc";
+import Setting from "@/domain/setting/setting";
+import Progress from "@/domain/progress/progress";
+import ObjectUtil from "@/util/object-util";
+import { UiId } from "@/component/ui-id";
 
 /**
  * 阅读器状态

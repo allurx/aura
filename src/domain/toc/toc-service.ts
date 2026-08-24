@@ -16,7 +16,7 @@
 
 import TocRepository from "./toc-repository";
 import Toc from "./toc";
-import BaseService from "../base-service";
+import BaseService from "@/domain/base-service";
 
 /**
  * 目录服务

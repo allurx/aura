@@ -15,8 +15,8 @@
  */
 
 import FileRepository from "./file-repository";
-import BookFile from "./file";
-import BaseService from "../base-service";
+import BookFile from "./book-file";
+import BaseService from "@/domain/base-service";
 
 /**
  * 文件服务类

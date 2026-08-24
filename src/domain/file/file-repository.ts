@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import BookFile from "./file";
-import BaseRepository from "../base-repository";
-import { fileStore } from "../../database/database-definition";
+import BookFile from "./book-file";
+import BaseRepository from "@/domain/base-repository";
+import { fileStore } from "@/database/database-definition";
 
 /**
  * 文件数据访问对象

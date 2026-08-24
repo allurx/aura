@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import BaseRepository from "../base-repository";
-import { metadataStore } from "../../database/database-definition";
+import BaseRepository from "@/domain/base-repository";
+import { metadataStore } from "@/database/database-definition";
 import Metadata from "./metadata";
 
 /**

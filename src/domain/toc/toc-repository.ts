@@ -15,8 +15,8 @@
  */
 
 import Toc from "./toc";
-import BaseRepository from "../base-repository";
-import { tocStore } from "../../database/database-definition";
+import BaseRepository from "@/domain/base-repository";
+import { tocStore } from "@/database/database-definition";
 
 /**
  * 目录数据访问对象

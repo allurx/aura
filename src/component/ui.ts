@@ -15,7 +15,7 @@
  */
 
 import { UiId } from "./ui-id";
-import { assertExists, assertNonEmptyString } from "../util/assert-util";
+import { assertExists, assertNonEmptyString } from "@/util/assert-util";
 
 /**
  * 界面基类
@@ -56,7 +56,6 @@ export default abstract class Ui {
     public renderTemplate({ container, template }: { container: HTMLElement; template: string }): HTMLElement {
         const templateElement = document.createElement("template");
         templateElement.innerHTML = template.trim();
-        const node = assertExists(templateElement.content.firstElementChild);
-        return container.appendChild(node) as HTMLElement;
+        return container.appendChild(assertExists(templateElement.content.firstElementChild)) as HTMLElement;
     }
 }

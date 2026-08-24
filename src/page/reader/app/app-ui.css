@@ -16,11 +16,6 @@
  * limitations under the License.
  */
 
-body {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
+#app:has(> #reader) {
+    background-color: #be966e;
 }

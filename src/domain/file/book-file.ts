@@ -1,5 +1,3 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
  *
@@ -16,12 +14,20 @@
  * limitations under the License.
  */
 
-html {
-    background-color: #be966e;
-    opacity: 0;
+import BaseModel from "@/domain/base-model";
+import ObjectUtil from "@/util/object-util";
+import { ClassFields } from "@/type/common-type";
 
-    /* 防止页面频繁加载时元素闪烁 */
-    &.visible {
-        opacity: 1;
+/**
+ * 书籍文件
+ * @author allurx
+ */
+export default class BookFile extends BaseModel {
+    public readonly file!: File;
+    public readonly hash!: string;
+
+    public constructor(data: ClassFields<BookFile>) {
+        super();
+        ObjectUtil.assignOwnProperties<BookFile>(this, data);
     }
 }

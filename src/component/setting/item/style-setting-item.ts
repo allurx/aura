@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import SettingItem from "../setting-item";
-import StyleEngine from "../style-engine";
-import EventUtil from "../../../util/event-util";
-import Ui from "../../ui";
-import SettingState from "../setting-state";
-import { StyleProperty } from "../style-property";
+import SettingItem from "@/component/setting/setting-item";
+import StyleEngine from "@/component/setting/style-engine";
+import EventUtil from "@/util/event-util";
+import Ui from "@/component/ui";
+import SettingState from "@/component/setting/setting-state";
+import { StyleProperty } from "@/component/setting/style-property";
 
 /**
  * Style setting item
@@ -55,14 +55,15 @@ export default abstract class StyleSettingItem extends SettingItem {
     }
 
     public override setControlValue(ui: Ui, value: string | undefined): this {
-        const controlValue = value ?? StyleEngine.getComputedStyle(ui.root).getPropertyValue(this.styleProperty);
-        this.control.value = controlValue.replace(new RegExp(`${this.unit()}$`), "");
+        this.control.value = (value ?? StyleEngine.getComputedStyle(ui.root).getPropertyValue(this.styleProperty)).replace(
+            new RegExp(`${this.unit()}$`),
+            ""
+        );
         return this;
     }
 
     public override setDisplayValue(ui: Ui, value: string | undefined): this {
-        const controlValue = value ?? StyleEngine.getComputedStyle(ui.root).getPropertyValue(this.styleProperty);
-        this.display.textContent = controlValue;
+        this.display.textContent = value ?? StyleEngine.getComputedStyle(ui.root).getPropertyValue(this.styleProperty);
         return this;
     }
 

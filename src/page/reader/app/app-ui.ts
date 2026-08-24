@@ -14,20 +14,16 @@
  * limitations under the License.
  */
 
-import Ui from "../../../component/ui";
-import EventUtil from "../../../util/event-util";
-import { SwitchChapterDirection } from "../../../constant/switch-chapter-direction";
-import FullscreenUtil from "../../../util/fullscreen-util";
+import Ui from "@/component/ui";
+import EventUtil from "@/util/event-util";
+import { SwitchChapterDirection } from "@/constant/switch-chapter-direction";
+import FullscreenUtil from "@/util/fullscreen-util";
 
 /**
- * 阅读器文档界面
+ * Reader 使用的应用根界面
  * @author allurx
  */
-export default class DocUi extends Ui {
-    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
-        super(args);
-    }
-
+export default class AppUi extends Ui {
     // 追踪指针信息
     private readonly pointer = {
         // 指针移动轨迹相对于x轴的角度
@@ -55,15 +51,18 @@ export default class DocUi extends Ui {
     };
 
     /**
-     * 显示阅读器
+     * 清理 Reader 写入持久应用根节点的临时状态。
      */
-    public show() {
-        this.root.classList.add("visible");
-        return this;
+    public cleanup(): void {
+        this.root.style.removeProperty("background-color");
+
+        if (FullscreenUtil.getElement() === this.root) {
+            EventUtil.run(() => FullscreenUtil.exit());
+        }
     }
 
-    public async toggleFullscreen() {
-        return FullscreenUtil.toggle(document.documentElement);
+    public async toggleFullscreen(): Promise<void> {
+        return FullscreenUtil.toggle(this.root);
     }
 
     /**
@@ -74,21 +73,27 @@ export default class DocUi extends Ui {
      */
     public bindChapterNavigation(
         targetElement: HTMLElement,
-        handler: (direction: SwitchChapterDirection) => Promise<void>
-    ) {
+        handler: (direction: SwitchChapterDirection) => Promise<void>,
+        signal: AbortSignal
+    ): void {
         // 记录触摸起始位置
-        EventUtil.bind(document, "pointerdown", (event: PointerEvent) => {
-            this.pointer.type = event.pointerType;
-            this.pointer.startTarget = event.target;
-            this.pointer.endTarget = event.target;
-            this.pointer.startX = event.clientX;
-            this.pointer.startY = event.clientY;
-            this.pointer.lastX = this.pointer.startX;
-            this.pointer.lastY = this.pointer.startY;
-            this.pointer.deltaX = 0;
-            this.pointer.deltaY = 0;
-            if (event.pointerType === "touch") this.pointer.isTouching = true;
-        });
+        EventUtil.bind(
+            document,
+            "pointerdown",
+            (event: PointerEvent) => {
+                this.pointer.type = event.pointerType;
+                this.pointer.startTarget = event.target;
+                this.pointer.endTarget = event.target;
+                this.pointer.startX = event.clientX;
+                this.pointer.startY = event.clientY;
+                this.pointer.lastX = this.pointer.startX;
+                this.pointer.lastY = this.pointer.startY;
+                this.pointer.deltaX = 0;
+                this.pointer.deltaY = 0;
+                if (event.pointerType === "touch") this.pointer.isTouching = true;
+            },
+            { signal }
+        );
 
         // 监听pointermove事件,记录触摸移动位置
         EventUtil.bind(
@@ -99,7 +104,7 @@ export default class DocUi extends Ui {
                 this.pointer.lastX = event.clientX;
                 this.pointer.lastY = event.clientY;
             },
-            { passive: true }
+            { passive: true, signal }
         );
 
         //  监听pointercancel事件,处理触摸取消。在移动设备上pointer事件可能会因为各种情况被取消
@@ -110,14 +115,24 @@ export default class DocUi extends Ui {
         //  5.浏览器认为当前指针不再有效
         //  6.弹出系统手势拦截(长按菜单、拉伸/缩放等)
         //  这个事件监听器就像是一个安全网,确保无论发生什么意外,触摸状态都能被正确重置,保持应用的稳定性！
-        EventUtil.bind(document, "pointercancel", async (event: PointerEvent) => {
-            await handler(this.handlePointerEnd(targetElement, event));
-        });
+        EventUtil.bind(
+            document,
+            "pointercancel",
+            async (event: PointerEvent) => {
+                await handler(this.handlePointerEnd(targetElement, event));
+            },
+            { signal }
+        );
 
         // 监听pointerup事件,处理触摸结束, 注意该事件不一定会被触发,可能因为移动端各种情况被取消,所以要配合pointercancel事件一起使用
-        EventUtil.bind(document, "pointerup", async (event: PointerEvent) => {
-            await handler(this.handlePointerEnd(targetElement, event));
-        });
+        EventUtil.bind(
+            document,
+            "pointerup",
+            async (event: PointerEvent) => {
+                await handler(this.handlePointerEnd(targetElement, event));
+            },
+            { signal }
+        );
     }
 
     /**

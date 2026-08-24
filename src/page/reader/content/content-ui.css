@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#content {
+#reader > #content {
     height: calc(100% - 120px);
     overflow-x: hidden;
     overflow-y: auto;

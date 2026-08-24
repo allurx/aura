@@ -14,22 +14,18 @@
  * limitations under the License.
  */
 
-import BaseService from "../base-service";
+import BaseService from "@/domain/base-service";
 import Chapter from "./chapter";
 import ChapterRepository from "./chapter-repository";
-import { assertExists } from "../../util/assert-util";
 
 /**
  * 章节服务
  * @author allurx
  */
 export default class ChapterService extends BaseService<Chapter> {
-    // 章节正则
+    // 只匹配完整标题行,避免将正文中的章节编号或小数误判为标题
     private readonly chapterRegex: RegExp =
-        /(?:第[0-9一二三四五六七八九十百千万两]+[章卷]|卷[0-9一二三四五六七八九十百千万两]+|^\s*\d+\.)[-–—\s]*[^\r\n]*(?:\r?\n)?/gm;
-
-    // 换行符正则
-    private readonly lineBreakRegex: RegExp = /\r?\n/;
+        /^[\t \u3000]*(?:第[0-9零〇一二三四五六七八九十百千万两]+[章卷]|卷[0-9零〇一二三四五六七八九十百千万两]+|\d+\.(?!\d))[-–—\t \u3000]*[^\r\n]*$/;
 
     public constructor() {
         super(new ChapterRepository());
@@ -42,105 +38,82 @@ export default class ChapterService extends BaseService<Chapter> {
      * @returns 章节列表
      */
     public async parseChapters(file: File, fileId: string): Promise<Chapter[]> {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-                const chapters = [];
-                const text = reader.result as string;
+        const chapters: Chapter[] = [];
+        let chapterTitle: string | null = null;
+        let chapterLines: string[] = [];
+        let currentLineNumber = 1;
 
-                // 匹配常见章节格式,支持多种标题形式
-                const matches = [...text.matchAll(this.chapterRegex)];
+        // 标题行不保存在lines中,但仍需计入章节在全书中的行号;前言和全文则没有标题行
+        const appendChapter = (title: string, lines: string[], includesTitle: boolean) => {
+            const chapter = new Chapter({
+                id: crypto.randomUUID(),
+                fileId,
+                index: chapters.length + 1,
+                title,
+                lines,
+                startLineNumber: currentLineNumber,
+                endLineNumber: currentLineNumber + lines.length + Number(includesTitle) - 1,
+                createdTime: Date.now(),
+                updatedTime: Date.now(),
+            });
+            chapters.push(chapter);
+            currentLineNumber = chapter.endLineNumber + 1;
+        };
 
-                // 当前处理到的行号
-                let currentLineNumber = 1;
+        for await (const line of this.readLines(file)) {
+            // 普通行持续归入当前章节,直到遇到下一个标题
+            if (!this.chapterRegex.test(line)) {
+                chapterLines.push(line);
+                continue;
+            }
 
-                // 没有匹配到章节,则全文件作为一个章节
-                if (matches.length === 0) {
-                    const lines = this.splitToLines(text);
-                    chapters.push(
-                        new Chapter({
-                            id: crypto.randomUUID(),
-                            fileId: fileId,
-                            index: 1,
-                            title: "全文",
-                            lines: lines,
-                            startLineNumber: currentLineNumber,
-                            endLineNumber: currentLineNumber + lines.length - 1,
-                            createdTime: Date.now(),
-                            updatedTime: Date.now(),
-                        })
-                    );
-                    resolve(chapters);
+            // 已有标题时封存上一章;否则仅在标题前存在正文时生成前言
+            const includesTitle = chapterTitle !== null;
+            if (includesTitle || chapterLines.some((line) => line.trim().length > 0)) {
+                appendChapter(chapterTitle ?? "前言", chapterLines, includesTitle);
+            } else {
+                // 纯空白前缀不生成章节,但仍需计入原文件行号
+                currentLineNumber += chapterLines.length;
+            }
+            chapterTitle = line.trim();
+            chapterLines = [];
+        }
 
-                    // 匹配到章节
-                } else {
-                    // 如果开头有介绍文字(第一个章节前有内容)
-                    const firstMatch = assertExists(matches[0]);
-                    if (firstMatch.index > 0) {
-                        const preface = text.slice(0, firstMatch.index);
-                        const lines = this.splitToLines(preface);
-                        chapters.push(
-                            new Chapter({
-                                id: crypto.randomUUID(),
-                                fileId: fileId,
-                                index: 1,
-                                title: "前言",
-                                lines: lines,
-                                startLineNumber: currentLineNumber,
-                                endLineNumber: currentLineNumber + lines.length - 1,
-                                createdTime: Date.now(),
-                                updatedTime: Date.now(),
-                            })
-                        );
-                        currentLineNumber += lines.length;
-                    }
-
-                    // 遍历每个章节匹配
-                    matches.forEach((match, i) => {
-                        const chapterTitle = match[0];
-                        const start = match.index + chapterTitle.length;
-                        const end = i < matches.length - 1 ? matches[i + 1]?.index : text.length;
-                        const content = text.slice(start, end);
-                        const lines = this.splitToLines(content);
-                        chapters.push(
-                            new Chapter({
-                                id: crypto.randomUUID(),
-                                fileId: fileId,
-                                index: chapters.length + 1,
-                                title: chapterTitle.trim(),
-                                lines: lines,
-                                startLineNumber: currentLineNumber,
-                                // 结束行号 = 起始行号 + 标题行数 + 内容行数 - 1
-                                endLineNumber: currentLineNumber + lines.length,
-                                createdTime: Date.now(),
-                                updatedTime: Date.now(),
-                            })
-                        );
-                        currentLineNumber += lines.length + 1;
-                    });
-                    resolve(chapters);
-                }
-            };
-
-            reader.onerror = reject;
-            reader.readAsText(file, "UTF-8");
-        });
+        // 无标题文件整体作为全文;有标题文件则在文件结束时封存最后一章
+        appendChapter(chapterTitle ?? "全文", chapterLines, chapterTitle !== null);
+        return chapters;
     }
 
     /**
-     * 按换行符切分文本,保证行数正确
-     * - 保留中间的空行
-     * - 去掉末尾因为换行导致的无效空行
-     * @param text - 原始文本
-     * @returns 切分后的行数组
+     * 分块读取文件并按行输出,避免一次性将全文解码到内存
+     * @param file - 上传的文件
+     * @returns 异步行迭代器
      */
-    private splitToLines(text: string): string[] {
-        if (!text) return [];
-        const lines = text.split(this.lineBreakRegex);
-        // 如果最后一行是空字符串,说明原文是以换行符结尾,去掉
-        if (lines.length > 1 && lines[lines.length - 1] === "") {
-            lines.pop();
+    private async *readLines(file: File): AsyncGenerator<string> {
+        const reader = file.stream().pipeThrough(new TextDecoderStream("UTF-8")).getReader();
+        let remaining = "";
+        try {
+            for (;;) {
+                const result = await reader.read();
+                if (result.done) break;
+
+                // UTF-8字符或文本行可能横跨两个数据块,先拼接上个数据块的残余内容
+                const text = remaining + result.value;
+                let start = 0;
+                let end = text.indexOf("\n");
+                while (end >= 0) {
+                    const line = text.slice(start, end);
+                    // 以\n分行时去掉CRLF中的\r,但保留正文中的独立\r
+                    yield line.endsWith("\r") ? line.slice(0, -1) : line;
+                    start = end + 1;
+                    end = text.indexOf("\n", start);
+                }
+                remaining = text.slice(start);
+            }
+            // 文件以换行符结束时remaining为空,不会生成一个无效的尾部空行
+            if (remaining.length > 0) yield remaining;
+        } finally {
+            reader.releaseLock();
         }
-        return lines;
     }
 }

@@ -16,7 +16,7 @@
 
 import ProgressRepository from "./progress-repository";
 import Progress from "./progress";
-import BaseService from "../base-service";
+import BaseService from "@/domain/base-service";
 
 /**
  * 阅读进度服务

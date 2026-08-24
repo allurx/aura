@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import Ui from "../../../component/ui";
-import { assertExists } from "../../../util/assert-util";
+import Ui from "@/component/ui";
+import { assertExists } from "@/util/assert-util";
 
 /**
  * 阅读器页脚界面
@@ -47,8 +47,9 @@ export default class FooterUi extends Ui {
      * @return 当前实例
      */
     public renderProgress(currentLineNumber: number, numberOfLines: number) {
-        const rate = numberOfLines === 0 ? "0.00" : ((currentLineNumber / numberOfLines) * 100).toFixed(2);
-        this.progressRateElement.textContent = `${rate}%`;
+        this.progressRateElement.textContent = `${(
+            (numberOfLines === 0 ? 0 : Math.min(Math.max(currentLineNumber / numberOfLines, 0), 1)) * 100
+        ).toFixed(2)}%`;
         return this;
     }
 }

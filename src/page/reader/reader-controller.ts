@@ -14,43 +14,43 @@
  * limitations under the License.
  */
 
-import DocUi from "./doc/doc-ui";
-import BodyUi from "./body/body-ui";
-import Progress from "../../domain/progress/progress";
+import AppUi from "./app/app-ui";
+import ReaderUi from "./reader-ui";
+import Progress from "@/domain/progress/progress";
 import ReaderService from "./reader-service";
 import HeaderUi from "./header/header-ui";
 import ContentUi from "./content/content-ui";
 import FooterUi from "./footer/footer-ui";
-import SettingUi from "../../component/setting/setting-ui";
+import SettingUi from "@/component/setting/setting-ui";
 import TocUi from "./toc/toc-ui";
 import ReaderState from "./reader-state";
-import Setting from "../../domain/setting/setting";
-import BackgroundColorSettingItem from "../../component/setting/item/background-color-setting-item";
-import ColorSettingItem from "../../component/setting/item/color-setting-item";
-import WidthSettingItem from "../../component/setting/item/width-setting-item";
-import PaddingTopSettingItem from "../../component/setting/item/padding-top-setting-item";
-import PaddingLeftSettingItem from "../../component/setting/item/padding-left-setting-item";
-import PaddingBottomSettingItem from "../../component/setting/item/padding-bottom-setting-item";
-import PaddingRightSettingItem from "../../component/setting/item/padding-right-setting-item";
-import FontSizeSettingItem from "../../component/setting/item/font-size-setting-item";
-import LineHeightSettingItem from "../../component/setting/item/line-height-setting-item";
-import ThemeSettingItem from "../../component/setting/item/theme-setting-item";
-import Ui from "../../component/ui";
-import SettingItem from "../../component/setting/setting-item";
-import SettingState from "../../component/setting/setting-state";
-import { UiId } from "../../component/ui-id";
-import { SwitchChapterDirection } from "../../constant/switch-chapter-direction";
-import { StyleProperty } from "../../component/setting/style-property";
-import { assertExists } from "../../util/assert-util";
-import { PageName } from "../../constant/page-name";
+import Setting from "@/domain/setting/setting";
+import BackgroundColorSettingItem from "@/component/setting/item/background-color-setting-item";
+import ColorSettingItem from "@/component/setting/item/color-setting-item";
+import WidthSettingItem from "@/component/setting/item/width-setting-item";
+import PaddingTopSettingItem from "@/component/setting/item/padding-top-setting-item";
+import PaddingLeftSettingItem from "@/component/setting/item/padding-left-setting-item";
+import PaddingBottomSettingItem from "@/component/setting/item/padding-bottom-setting-item";
+import PaddingRightSettingItem from "@/component/setting/item/padding-right-setting-item";
+import FontSizeSettingItem from "@/component/setting/item/font-size-setting-item";
+import LineHeightSettingItem from "@/component/setting/item/line-height-setting-item";
+import ThemeSettingItem from "@/component/setting/item/theme-setting-item";
+import Ui from "@/component/ui";
+import SettingItem from "@/component/setting/setting-item";
+import SettingState from "@/component/setting/setting-state";
+import { UiId } from "@/component/ui-id";
+import { SwitchChapterDirection } from "@/constant/switch-chapter-direction";
+import { StyleProperty } from "@/component/setting/style-property";
+import { assertExists } from "@/util/assert-util";
+import { PageName } from "@/constant/page-name";
 
 /**
  * 阅读器控制器
  * @author allurx
  */
 export default class ReaderController {
-    private readonly docUi: DocUi;
-    private readonly bodyUi: BodyUi;
+    private readonly appUi: AppUi;
+    private readonly readerUi: ReaderUi;
     private readonly headerUi: HeaderUi;
     private readonly contentUi: ContentUi;
     private readonly footerUi: FooterUi;
@@ -59,39 +59,39 @@ export default class ReaderController {
     private readonly readerService: ReaderService;
     private state!: ReaderState;
 
-    public constructor() {
+    public constructor(appRoot: HTMLElement, readerRoot: HTMLElement) {
         this.readerService = new ReaderService();
 
-        this.docUi = new DocUi({
-            root: document.documentElement,
-            displayName: "网页",
+        this.appUi = new AppUi({
+            root: appRoot,
+            displayName: "应用",
         });
-        this.bodyUi = new BodyUi({
-            root: document.body,
+        this.readerUi = new ReaderUi({
+            root: readerRoot,
             displayName: "阅读器",
         });
         this.headerUi = new HeaderUi({
-            root: assertExists(document.querySelector<HTMLElement>("#header")),
+            root: assertExists(readerRoot.querySelector<HTMLElement>("#header")),
             displayName: "页眉",
         });
         this.contentUi = new ContentUi({
-            root: assertExists(document.querySelector<HTMLElement>("#content")),
+            root: assertExists(readerRoot.querySelector<HTMLElement>("#content")),
             displayName: "正文",
         });
         this.footerUi = new FooterUi({
-            root: assertExists(document.querySelector<HTMLElement>("#footer")),
+            root: assertExists(readerRoot.querySelector<HTMLElement>("#footer")),
             displayName: "页脚",
         });
         this.tocUi = new TocUi({
-            root: assertExists(document.querySelector<HTMLDivElement>("#toc")),
+            root: assertExists(readerRoot.querySelector<HTMLElement>("#toc")),
             displayName: "目录",
         });
 
         this.settingUi = new SettingUi({
-            container: this.bodyUi.root,
+            container: this.readerUi.root,
             uiSettingItemMap: new Map<Ui, (new (settingState: SettingState) => SettingItem)[]>([
-                [this.docUi, [BackgroundColorSettingItem, ThemeSettingItem]],
-                [this.bodyUi, [ColorSettingItem, WidthSettingItem, BackgroundColorSettingItem]],
+                [this.appUi, [BackgroundColorSettingItem, ThemeSettingItem]],
+                [this.readerUi, [ColorSettingItem, WidthSettingItem, BackgroundColorSettingItem]],
                 [
                     this.headerUi,
                     [
@@ -134,8 +134,19 @@ export default class ReaderController {
      * 初始化阅读器
      * @param bookId - 书籍id
      */
-    public async init(bookId: string) {
-        this.state = await this.readerService.init(bookId);
+    public async init(bookId: string, signal: AbortSignal): Promise<void> {
+        signal.addEventListener(
+            "abort",
+            () => {
+                this.appUi.cleanup();
+            },
+            { once: true }
+        );
+
+        const state = await this.readerService.init(bookId);
+        if (signal.aborted) return;
+
+        this.state = state;
 
         // 渲染界面
         // 注意这里虽然是先渲染界面然后再绑定事件，但是由于浏览器的渲染机制，
@@ -152,17 +163,17 @@ export default class ReaderController {
         this.footerUi
             .renderChapterTitle(this.state.chapter.title)
             .renderProgress(
-                this.state.chapter.startLineNumber + this.state.progress.lineIndex,
+                this.state.chapter.lineNumber(this.state.progress.lineIndex),
                 this.state.toc.numberOfLines()
             );
 
         this.settingUi.renderAside().applySetting(this.state.settings);
 
-        // 显示document
-        this.docUi.show();
+        // 显示阅读器内容
+        this.readerUi.show();
 
         // 绑定事件
-        this.bindEvent();
+        this.bindEvent(signal);
     }
 
     /**
@@ -184,7 +195,7 @@ export default class ReaderController {
         this.footerUi
             .renderChapterTitle(this.state.chapter.title)
             .renderProgress(
-                this.state.chapter.startLineNumber + this.state.progress.lineIndex,
+                this.state.chapter.lineNumber(this.state.progress.lineIndex),
                 this.state.toc.numberOfLines()
             );
 
@@ -234,9 +245,9 @@ export default class ReaderController {
     private async switchChapter(direction: SwitchChapterDirection) {
         if (direction === SwitchChapterDirection.PREV) {
             if (this.state.progress.chapterIndex === 1) {
-                await this.bodyUi.alertDialog("已经是第一章了");
+                await this.readerUi.alertDialog("已经是第一章了");
             } else {
-                await this.bodyUi.showOverlayWhile(async () => {
+                await this.readerUi.showOverlayWhile(async () => {
                     await this.updateProgress({
                         chapterIndex: this.state.progress.chapterIndex - 1,
                         lineIndex: 1,
@@ -248,9 +259,9 @@ export default class ReaderController {
             }
         } else if (direction === SwitchChapterDirection.NEXT) {
             if (this.state.progress.chapterIndex === this.state.toc.numberOfChapters()) {
-                await this.bodyUi.alertDialog("已经是最后一章了");
+                await this.readerUi.alertDialog("已经是最后一章了");
             } else {
-                await this.bodyUi.showOverlayWhile(async () => {
+                await this.readerUi.showOverlayWhile(async () => {
                     await this.updateProgress({
                         chapterIndex: this.state.progress.chapterIndex + 1,
                         lineIndex: 1,
@@ -266,39 +277,39 @@ export default class ReaderController {
     /**
      * 绑定ui事件
      */
-    private bindEvent() {
-        // doc ui事件
-        this.docUi.bindChapterNavigation(this.contentUi.root, (direction) => this.switchChapter(direction));
+    private bindEvent(signal: AbortSignal): void {
+        // App UI 事件
+        this.appUi.bindChapterNavigation(this.contentUi.root, (direction) => this.switchChapter(direction), signal);
 
-        // reader ui事件
-        this.bodyUi.observeReaderResize((width) => this.updateSetting(UiId.READER, { [StyleProperty.WIDTH]: width }));
+        // Reader UI 事件
+        this.readerUi.observeReaderResize(
+            (width) => this.updateSetting(UiId.READER, { [StyleProperty.WIDTH]: width }),
+            signal
+        );
 
         // header ui事件
         this.headerUi
             .bindToggleTocPanel(() => {
                 this.tocUi.toggleToc().highlightCurrentChapter(this.state.progress.chapterIndex);
-            })
-            .bindToggleSettingPanel(() => this.settingUi.toggleSetting())
+            }, signal)
+            .bindToggleSettingPanel(() => this.settingUi.toggleSetting(), signal)
             .bindToggleFullscreen(() => {
-                this.docUi
+                this.appUi
                     .toggleFullscreen()
                     .then(() => this.contentUi.dispatchContentScroll())
-                    .catch(async () => await this.bodyUi.alertDialog("当前浏览器不支持全屏功能"));
-            });
+                    .catch(async () => await this.readerUi.alertDialog("当前浏览器不支持全屏功能"));
+            }, signal);
 
-        // body ui事件
+        // Reader UI 事件
         this.contentUi.bindContentScroll(async (lineIndex, lineVisibleRatio) => {
             await this.updateProgress({ lineIndex, lineVisibleRatio, updatedTime: Date.now() });
-            this.footerUi.renderProgress(
-                this.state.chapter.startLineNumber + lineIndex,
-                this.state.toc.numberOfLines()
-            );
-        });
+            this.footerUi.renderProgress(this.state.chapter.lineNumber(lineIndex), this.state.toc.numberOfLines());
+        }, signal);
 
         // toc ui事件
         this.tocUi
             .delegateTocItemClick(async (chapterIndex) => {
-                await this.bodyUi.showOverlayWhile(async () => {
+                await this.readerUi.showOverlayWhile(async () => {
                     await this.updateProgress({
                         chapterIndex,
                         lineIndex: 1,
@@ -307,17 +318,17 @@ export default class ReaderController {
                     });
                     await this.loadChapter();
                 });
-            })
-            .bindTocClose();
+            }, signal)
+            .bindTocClose(signal);
 
         // setting ui事件
         this.settingUi
-            .bindNodeClick(this.state.settings)
-            .bindCloseSetting()
+            .bindNodeClick(this.state.settings, signal)
+            .bindCloseSetting(signal)
             .bindResetSetting(async () => {
                 this.state.settings.clear();
                 await this.deleteSettings();
-            })
+            }, signal)
             .bindSettingItemChange(async (ui, settingItem) => {
                 await this.updateSetting(ui.id, settingItem);
             });

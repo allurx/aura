@@ -14,38 +14,45 @@
  * limitations under the License.
  */
 
-import EventUtil from "../../../util/event-util";
-import { assertExists } from "../../../util/assert-util";
+import EventUtil from "@/util/event-util";
+import { assertExists } from "@/util/assert-util";
+import bookshelfClearIcon from "@/asset/image/bookshelf-clear.svg";
+import Ui from "@/component/ui";
 
 /**
  * 书架头部界面
  * @author allurx
  */
-export default class HeaderUi {
+export default class HeaderUi extends Ui {
     private readonly headerTitleElement: HTMLSpanElement;
-    private readonly clearBookshelfElement: HTMLSpanElement;
+    private readonly clearBookshelfElement: HTMLImageElement;
 
-    public constructor() {
-        this.headerTitleElement = assertExists(document.querySelector<HTMLSpanElement>("#title"));
-        this.clearBookshelfElement = assertExists(document.querySelector<HTMLSpanElement>("#clear-btn"));
+    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
+        super(args);
+        this.headerTitleElement = assertExists(this.root.querySelector<HTMLSpanElement>("#title"));
+        this.clearBookshelfElement = assertExists(this.root.querySelector<HTMLImageElement>("#clear-btn"));
+        this.clearBookshelfElement.src = bookshelfClearIcon;
     }
 
     /**
      * 绑定清空书架点击事件
      * @param  handler - 处理函数
      * @returns  返回当前实例
+     * @param signal - 页面生命周期信号
      */
-    public bindClearBookshelfClick(handler: () => Promise<void>) {
-        EventUtil.bind(this.clearBookshelfElement, "click", handler);
+    public bindClearBookshelfClick(handler: () => Promise<void>, signal: AbortSignal): this {
+        EventUtil.bind(this.clearBookshelfElement, "click", handler, { signal });
         return this;
     }
 
     /**
      * 绑定头部标题点击事件
      * @returns 返回当前实例
+     * @param handler - 处理函数
+     * @param signal - 页面生命周期信号
      */
-    public bindHeaderTitleClick(handler: () => void) {
-        EventUtil.bind(this.headerTitleElement, "click", handler);
+    public bindHeaderTitleClick(handler: () => void, signal: AbortSignal): this {
+        EventUtil.bind(this.headerTitleElement, "click", handler, { signal });
         return this;
     }
 }

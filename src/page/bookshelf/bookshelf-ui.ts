@@ -14,20 +14,10 @@
  * limitations under the License.
  */
 
+import PageUi from "@/page/page-ui";
+
 /**
- * 字符串工具类
+ * 书架页面界面
  * @author allurx
  */
-export default class StringUtil {
-    private constructor() {
-        throw new Error(`${StringUtil.name} is a static class and cannot be instantiated.`);
-    }
-
-    public static isEmpty(value: string): boolean {
-        return value.length === 0;
-    }
-
-    public static isNotEmpty(value: string): boolean {
-        return value.length > 0;
-    }
-}
+export default class BookshelfUi extends PageUi {}

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-header {
+#bookshelf > header {
     display: flex;
     /* 禁止缩放,保持自身的宽高 */
     flex: 0 0 auto;

@@ -17,10 +17,10 @@
 import HeaderUi from "./header/header-ui";
 import NavUi from "./nav/nav-ui";
 import BookListUi from "./book-list/book-list-ui";
-import BodyUi from "./body/body-ui";
+import BookshelfUi from "./bookshelf-ui";
 import BookshelfService from "./bookshelf-service";
 import BookshelfState from "./bookshelf-state";
-import ArrayUtil from "../../util/array-util";
+import { assertExists } from "@/util/assert-util";
 
 /**
  * 书架控制器
@@ -30,22 +30,40 @@ export default class BookshelfController {
     private readonly headerUi: HeaderUi;
     private readonly navUi: NavUi;
     private readonly bookListUi: BookListUi;
-    private readonly bookshelfUi: BodyUi;
+    private readonly bookshelfUi: BookshelfUi;
     private readonly bookshelfService: BookshelfService;
     private state!: BookshelfState;
 
-    public constructor() {
-        this.headerUi = new HeaderUi();
-        this.navUi = new NavUi();
-        this.bookListUi = new BookListUi();
-        this.bookshelfUi = new BodyUi();
+    public constructor(
+        bookshelfRoot: HTMLElement,
+        private readonly onReadBook: (bookId: string) => void
+    ) {
+        this.headerUi = new HeaderUi({
+            root: assertExists(bookshelfRoot.querySelector<HTMLElement>("#header")),
+            displayName: "页眉",
+        });
+        this.navUi = new NavUi({
+            root: assertExists(bookshelfRoot.querySelector<HTMLElement>("#nav")),
+            displayName: "导航",
+        });
+        this.bookListUi = new BookListUi({
+            root: assertExists(bookshelfRoot.querySelector<HTMLElement>("#book-list")),
+            displayName: "书籍列表",
+        });
+        this.bookshelfUi = new BookshelfUi({
+            root: bookshelfRoot,
+            displayName: "书架",
+        });
         this.bookshelfService = new BookshelfService();
     }
 
-    public async init() {
-        this.state = await this.bookshelfService.init();
+    public async init(signal: AbortSignal): Promise<void> {
+        const state = await this.bookshelfService.init();
+        if (signal.aborted) return;
+
+        this.state = state;
         this.navUi.renderNav(this.state.categories);
-        this.bindEvent();
+        this.bindEvent(signal);
         this.navUi.clickNavItem(this.state.categoryId);
     }
 
@@ -53,9 +71,8 @@ export default class BookshelfController {
      * 阅读书籍
      * @param bookId - 书籍id
      */
-    private readBook(bookId: string) {
-        window.location.href = "../reader/reader.html";
-        window.sessionStorage.setItem("bookId", bookId);
+    private readBook(bookId: string): void {
+        this.onReadBook(bookId);
     }
 
     /**
@@ -66,16 +83,19 @@ export default class BookshelfController {
         await this.bookshelfUi
             .showOverlayWhile(async () => {
                 // 只处理文本文件
-                const validFiles = Array.from(files).filter((file) => {
-                    const isTextFile = file.type === "text/plain";
-                    if (!isTextFile) void this.bookshelfUi.alertDialog(`${file.name}不是文本文件`);
-                    return isTextFile;
-                });
                 await this.bookshelfService
-                    .addBook(validFiles, this.state.categoryId, true)
+                    .addBook(
+                        files.filter((file) => {
+                            if (file.type === "text/plain") return true;
+                            void this.bookshelfUi.alertDialog(`${file.name}不是文本文件`);
+                            return false;
+                        }),
+                        this.state.categoryId,
+                        true
+                    )
                     .then(async ({ books, duplicateFiles }) => {
                         this.bookListUi.renderBookElements(books);
-                        if (ArrayUtil.isNotEmpty(duplicateFiles)) {
+                        if (duplicateFiles.length > 0) {
                             await this.bookshelfUi.alertDialog(
                                 `${duplicateFiles.map((file) => file.name).join(", ")}已存在`
                             );
@@ -108,25 +128,26 @@ export default class BookshelfController {
         }
     }
 
-    private bindEvent() {
+    private bindEvent(signal: AbortSignal): void {
         // 绑定头部事件
         this.headerUi
-            .bindClearBookshelfClick(() => this.clearBookshelf())
-            .bindHeaderTitleClick(() => this.navUi.toggleVisibility());
+            .bindClearBookshelfClick(() => this.clearBookshelf(), signal)
+            .bindHeaderTitleClick(() => this.navUi.toggleVisibility(), signal);
 
         // 绑定导航栏事件
         this.navUi.delegateNavItemClick(async (categoryId) => {
             this.state.categoryId = categoryId;
-            const books = await this.bookshelfService.getBooksByCategoryId(categoryId);
-            this.bookListUi.removeBookElements().renderBookElements(books);
-        });
+            await this.bookshelfService
+                .getBooksByCategoryId(categoryId)
+                .then((books) => this.bookListUi.removeBookElements().renderBookElements(books));
+        }, signal);
 
         // 绑定书籍主体事件
         this.bookListUi
-            .bindBookInputChange((files) => this.addBook(files))
+            .bindBookInputChange((files) => this.addBook(files), signal)
             .bindBookBodyClick((bookId) => {
                 this.readBook(bookId);
-            })
-            .bindDeleteBookClick((bookId) => this.deleteBook(bookId));
+            }, signal)
+            .bindDeleteBookClick((bookId) => this.deleteBook(bookId), signal);
     }
 }

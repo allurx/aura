@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import Category from "../../domain/category/category";
-import ObjectUtil from "../../util/object-util";
-import Metadata from "../../domain/metadata/metadata";
+import Category from "@/domain/category/category";
+import ObjectUtil from "@/util/object-util";
+import Metadata from "@/domain/metadata/metadata";
 
 /**
  * 书架状态

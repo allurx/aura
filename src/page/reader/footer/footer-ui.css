@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#footer {
+#reader > #footer {
     display: flex;
     height: 60px;
     justify-content: center;

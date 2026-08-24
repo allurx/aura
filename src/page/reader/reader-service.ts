@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-import Progress from "../../domain/progress/progress";
-import Setting from "../../domain/setting/setting";
-import BookService from "../../domain/book/book-service";
-import ChapterService from "../../domain/chapter/chapter-service";
-import ProgressService from "../../domain/progress/progress-service";
-import TocService from "../../domain/toc/toc-service";
-import SettingService from "../../domain/setting/setting-service";
-import TransactionManager from "../../database/transaction-manager";
-import { DatabaseMode } from "../../database/database-mode";
-import { bookStore, tocStore, chapterStore, progressStore, settingStore } from "../../database/database-definition";
+import Progress from "@/domain/progress/progress";
+import Setting from "@/domain/setting/setting";
+import BookService from "@/domain/book/book-service";
+import ChapterService from "@/domain/chapter/chapter-service";
+import ProgressService from "@/domain/progress/progress-service";
+import TocService from "@/domain/toc/toc-service";
+import SettingService from "@/domain/setting/setting-service";
+import TransactionManager from "@/database/transaction-manager";
+import { DatabaseMode } from "@/database/database-mode";
+import { bookStore, tocStore, chapterStore, progressStore, settingStore } from "@/database/database-definition";
 import ReaderState from "./reader-state";
-import { assertExists } from "../../util/assert-util";
-import { UiId } from "../../component/ui-id";
-import { PageName } from "../../constant/page-name";
+import { assertExists } from "@/util/assert-util";
+import { UiId } from "@/component/ui-id";
+import { PageName } from "@/constant/page-name";
 
 /**
  * 阅读器服务

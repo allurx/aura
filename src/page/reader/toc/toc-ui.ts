@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import Ui from "../../../component/ui";
-import { assertExists } from "../../../util/assert-util";
-import EventUtil from "../../../util/event-util";
-import Toc from "../../../domain/toc/toc";
+import Ui from "@/component/ui";
+import { assertExists } from "@/util/assert-util";
+import EventUtil from "@/util/event-util";
+import Toc from "@/domain/toc/toc";
 
 /**
  * 目录面板
@@ -90,10 +90,16 @@ export default class TocUi extends Ui {
      * @param  handler - 事件处理函数
      * @return 当前实例
      */
-    public delegateTocItemClick(handler: (chapterIndex: number) => Promise<void>) {
-        EventUtil.delegate(this.tocContentElement, "p", "click", async (_, target) => {
-            await handler(Number(target.dataset["index"]));
-        });
+    public delegateTocItemClick(handler: (chapterIndex: number) => Promise<void>, signal: AbortSignal): this {
+        EventUtil.delegate(
+            this.tocContentElement,
+            "p",
+            "click",
+            async (_, target) => {
+                await handler(Number(target.dataset["index"]));
+            },
+            { signal }
+        );
         return this;
     }
 
@@ -101,10 +107,15 @@ export default class TocUi extends Ui {
      * 绑定关闭目录面板事件
      * @return 当前实例
      */
-    public bindTocClose() {
-        EventUtil.bind(this.closeTocElement, "click", () => {
-            this.root.classList.remove("open");
-        });
+    public bindTocClose(signal: AbortSignal): this {
+        EventUtil.bind(
+            this.closeTocElement,
+            "click",
+            () => {
+                this.root.classList.remove("open");
+            },
+            { signal }
+        );
         return this;
     }
 }

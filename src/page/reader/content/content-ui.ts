@@ -14,18 +14,14 @@
  * limitations under the License.
  */
 
-import Ui from "../../../component/ui";
-import EventUtil from "../../../util/event-util";
+import Ui from "@/component/ui";
+import EventUtil from "@/util/event-util";
 
 /**
  * 阅读器正文界面
  * @author allurx
  */
 export default class ContentUi extends Ui {
-    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
-        super(args);
-    }
-
     /**
      * 渲染章节
      * @param  lines - 章节内容行数组
@@ -57,8 +53,7 @@ export default class ContentUi extends Ui {
             p.scrollIntoView({ block: "start", behavior: "auto" });
 
             // 然后微调到精确位置
-            const offset = p.offsetHeight * (1 - lineVisibleRatio);
-            this.root.scrollTop += offset;
+            this.root.scrollTop += p.offsetHeight * (1 - lineVisibleRatio);
         }
         return this;
     }
@@ -77,42 +72,58 @@ export default class ContentUi extends Ui {
      * @param handler - 事件处理函数
      * @return 当前实例
      */
-    public bindContentScroll(handler: (lineIndex: number, lineVisibleRatio: number) => Promise<void>) {
+    public bindContentScroll(
+        handler: (lineIndex: number, lineVisibleRatio: number) => Promise<void>,
+        signal: AbortSignal
+    ): this {
+        let timer: number | undefined;
         EventUtil.bind(
             this.root,
             "scroll",
-            (() => {
-                let timer: number;
-                return (_, target: HTMLElement) => {
-                    if (timer) window.clearTimeout(timer);
-                    timer = window.setTimeout(() => {
-                        void (async () => {
-                            // 滚动容器可视区域
-                            const cRect = target.getBoundingClientRect();
+            (_, target: HTMLElement) => {
+                if (timer !== undefined) window.clearTimeout(timer);
+                timer = window.setTimeout(() => {
+                    EventUtil.run(async () => {
+                        if (signal.aborted) return;
 
-                            // 计算当前章节最上方可见的p元素
-                            const line = [...target.querySelectorAll<HTMLParagraphElement>("p")]
-                                .map((p: HTMLParagraphElement) => {
-                                    const rect = p.getBoundingClientRect();
-                                    const visibleHeight =
-                                        Math.min(rect.bottom, cRect.bottom) - Math.max(rect.top, cRect.top);
-                                    const ratio = Math.max(0, visibleHeight) / rect.height;
-                                    return {
-                                        index: Number(p.dataset["index"]),
-                                        ratio: ratio,
-                                        top: rect.top,
-                                        text: p.innerText,
-                                    };
-                                })
-                                .filter((item) => item.ratio > 0)
-                                .reduce((prev, current) => (current.top < prev.top ? current : prev));
+                        // 滚动容器可视区域
+                        const cRect = target.getBoundingClientRect();
 
-                            console.log("当前章节最上方可见的行: ", line);
-                            await handler(line.index, line.ratio);
-                        })();
-                    }, 300);
-                };
-            })()
+                        // 计算当前章节最上方可见的p元素
+                        const line = [...target.querySelectorAll<HTMLParagraphElement>("p")]
+                            .map((p: HTMLParagraphElement) => {
+                                const rect = p.getBoundingClientRect();
+                                const ratio =
+                                    Math.max(
+                                        0,
+                                        Math.min(rect.bottom, cRect.bottom) - Math.max(rect.top, cRect.top)
+                                    ) / rect.height;
+                                return {
+                                    index: Number(p.dataset["index"]),
+                                    ratio,
+                                    top: rect.top,
+                                    text: p.innerText,
+                                };
+                            })
+                            .filter((item) => item.ratio > 0)
+                            .sort((a, b) => a.top - b.top)
+                            .at(0);
+
+                        if (!line) return;
+                        console.log("当前章节最上方可见的行: ", line);
+                        await handler(line.index, line.ratio);
+                    });
+                }, 300);
+            },
+            { signal }
+        );
+
+        signal.addEventListener(
+            "abort",
+            () => {
+                if (timer !== undefined) window.clearTimeout(timer);
+            },
+            { once: true }
         );
         return this;
     }

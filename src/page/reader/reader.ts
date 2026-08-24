@@ -14,24 +14,22 @@
  * limitations under the License.
  */
 
-/**
- * 阅读器
- * @author allurx
- */
+import "./reader.css";
+import template from "./reader.html?raw";
+import BasePage from "@/page/base-page";
 import ReaderController from "./reader-controller";
 
-class Reader {
-    private readonly controller: ReaderController;
-
-    public constructor() {
-        this.controller = new ReaderController();
+/**
+ * 阅读器页面。
+ * @author allurx
+ */
+export default class Reader extends BasePage {
+    public constructor(public readonly bookId: string) {
+        super(template);
+        if (!bookId) throw new Error("bookId must not be empty");
     }
 
-    public async init() {
-        const bookId = sessionStorage.getItem("bookId");
-        if (!bookId) throw new Error("未从sessionStorage读取到bookId");
-        await this.controller.init(bookId);
+    protected override async init(readerRoot: HTMLElement, appRoot: HTMLElement): Promise<void> {
+        await new ReaderController(appRoot, readerRoot).init(this.bookId, this.lifecycleController.signal);
     }
 }
-
-await new Reader().init();

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import Ui from "../ui";
-import DomUtil from "../../util/dom-util";
+import Ui from "@/component/ui";
+import DomUtil from "@/util/dom-util";
 import SettingState from "./setting-state";
-import { assertExists } from "../../util/assert-util";
+import { assertExists } from "@/util/assert-util";
 
 /**
  * Setting item base class
