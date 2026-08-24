@@ -18,15 +18,13 @@ import Overlay from "@/component/overlay/overlay";
 import Dialog from "@/component/dialog/dialog";
 import { assertExists } from "@/util/assert-util";
 import Ui from "@/component/ui";
-import Dialogable from "@/component/dialog/dialogable";
-import Overlayable from "@/component/overlay/overlayable";
 import EventUtil from "@/util/event-util";
 
 /**
  * 阅读器界面
  * @author allurx
  */
-export default class ReaderUi extends Ui implements Dialogable, Overlayable {
+export default class ReaderUi extends Ui {
     public readonly dialog: Dialog;
     public readonly overlay: Overlay;
     public constructor(args: ConstructorParameters<typeof Ui>[0]) {
@@ -74,37 +72,22 @@ export default class ReaderUi extends Ui implements Dialogable, Overlayable {
         return this;
     }
 
-    /**
-     * @see Overlayable.show
-     */
     public showOverlay(): Promise<void> {
         return this.overlay.show();
     }
 
-    /**
-     * @see Overlayable.hide
-     */
     public hideOverlay(): Promise<void> {
         return this.overlay.hide();
     }
 
-    /**
-     * @see Overlayable.showOverlayWhile
-     */
     public showOverlayWhile(handler: () => Promise<void>): Promise<void> {
         return this.overlay.showWhile(handler);
     }
 
-    /**
-     * @see Dialogable.confirmDialog
-     */
     public async confirmDialog(content: Node | string, options: object = {}): Promise<boolean> {
         return await this.dialog.confirm(content, options);
     }
 
-    /**
-     * @see Dialogable.confirmDialog
-     */
     public async alertDialog(content: Node | string, options: object = {}): Promise<boolean> {
         return await this.dialog.alert(content, options);
     }

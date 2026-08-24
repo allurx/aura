@@ -25,12 +25,4 @@ export default class Aura {
     public static isVersionChanged(oldVersion: number): boolean {
         return oldVersion !== this.VERSION;
     }
-
-    public static isVersionBefore(version: number): boolean {
-        return this.VERSION < version;
-    }
-
-    public static isVersionAfter(version: number): boolean {
-        return this.VERSION > version;
-    }
 }

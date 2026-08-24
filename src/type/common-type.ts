@@ -19,9 +19,6 @@
  * @author allurx
  */
 
-// 非空数组类型
-export type NonEmptyArray<T> = [T, ...T[]];
-
 /**
  * ClassFields<T>
  * 提取类T的字段类型(排除方法)

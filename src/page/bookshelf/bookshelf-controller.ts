@@ -20,7 +20,6 @@ import BookListUi from "./book-list/book-list-ui";
 import BookshelfUi from "./bookshelf-ui";
 import BookshelfService from "./bookshelf-service";
 import BookshelfState from "./bookshelf-state";
-import ArrayUtil from "@/util/array-util";
 
 /**
  * 书架控制器
@@ -83,7 +82,7 @@ export default class BookshelfController {
                     )
                     .then(async ({ books, duplicateFiles }) => {
                         this.bookListUi.renderBookElements(books);
-                        if (ArrayUtil.isNotEmpty(duplicateFiles)) {
+                        if (duplicateFiles.length > 0) {
                             await this.bookshelfUi.alertDialog(
                                 `${duplicateFiles.map((file) => file.name).join(", ")}已存在`
                             );

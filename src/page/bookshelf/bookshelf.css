@@ -16,8 +16,18 @@
  * limitations under the License.
  */
 
-@import "./bookshelf-ui.css";
 @import "./header/header-ui.css";
 @import "./main/main-ui.css";
 @import "./nav/nav-ui.css";
 @import "./book-list/book-list-ui.css";
+
+#bookshelf {
+    position: relative;
+    background-color: #1f2937;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    -webkit-user-select: none;
+    user-select: none;
+}
