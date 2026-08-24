@@ -16,7 +16,7 @@
 
 import Aura from "@/core/aura";
 import Book from "@/domain/book/book";
-import BookFile from "@/domain/file/file";
+import BookFile from "@/domain/file/book-file";
 import Chapter from "@/domain/chapter/chapter";
 import Toc from "@/domain/toc/toc";
 import Category from "@/domain/category/category";
@@ -32,9 +32,9 @@ import FileService from "@/domain/file/file-service";
 import FileUtil from "@/util/file-util";
 import ObjectUtil from "@/util/object-util";
 import TransactionManager from "@/database/transaction-manager";
-import MetadataSeed from "@/database/seed/metadata-seed";
-import FileSeed from "@/database/seed/file-seed";
-import CategorySeed from "@/database/seed/category-seed";
+import { createMetadataSeed } from "@/database/seed/metadata-seed";
+import { createFileSeed } from "@/database/seed/file-seed";
+import { createCategorySeeds } from "@/database/seed/category-seed";
 import BookshelfState from "./bookshelf-state";
 import { assertExists } from "@/util/assert-util";
 import { DatabaseMode } from "@/database/database-mode";
@@ -204,21 +204,22 @@ export default class BookshelfService {
             async (transaction) => await this.metadataService.getByField("appName", Aura.NAME, transaction)
         );
         if (!metadata) {
-            return await this.addBook([FileSeed.file], assertExists(CategorySeed.categories[0]).id, false)
+            const categories = createCategorySeeds();
+            return await this.addBook([createFileSeed()], assertExists(categories[0]).id, false)
                 .then(({ books }) => assertExists(books[0], "Handbook book not found"))
                 .then(async (handbook) => {
                     return await TransactionManager.runTransaction(
                         [metadataStore.name, categoryStore.name],
                         DatabaseMode.READ_WRITE,
                         async (transaction) => {
-                            const metadata = MetadataSeed.metadata(handbook.id);
+                            const metadata = createMetadataSeed(handbook.id);
                             await Promise.all([
                                 this.metadataService.add(metadata, transaction),
-                                this.categoryService.addAll(CategorySeed.categories, transaction),
+                                this.categoryService.addAll(categories, transaction),
                             ]);
                             return {
                                 metadata,
-                                categories: CategorySeed.categories,
+                                categories,
                             };
                         }
                     );
@@ -373,7 +374,7 @@ export default class BookshelfService {
         const isVersionChanged = Aura.isVersionChanged(metadata.version);
         if (isVersionChanged || !existsHandbook) {
             if (isVersionChanged && existsHandbook) await this.deleteBook(metadata.handbookId);
-            await this.addBook([FileSeed.file], defaultCategory.id, true)
+            await this.addBook([createFileSeed()], defaultCategory.id, true)
                 .then(({ books }) => assertExists(books[0], "Handbook book not found"))
                 .then(async (newHandbook) => {
                     await TransactionManager.runTransaction(

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import BookFile from "./file";
+import BookFile from "./book-file";
 import BaseRepository from "@/domain/base-repository";
 import { fileStore } from "@/database/database-definition";
 

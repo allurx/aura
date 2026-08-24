@@ -16,19 +16,14 @@
 
 import Metadata from "@/domain/metadata/metadata";
 
-/**
- * 元数据数据种子
- * @author allurx
- */
-export default class MetadataSeed {
-    public static metadata(handbookId: string): Metadata {
-        return new Metadata({
-            id: crypto.randomUUID(),
-            appName: "aura",
-            handbookId: handbookId,
-            version: 1,
-            createdTime: Date.now(),
-            updatedTime: Date.now(),
-        });
-    }
+export function createMetadataSeed(handbookId: string): Metadata {
+    const timestamp = Date.now();
+    return new Metadata({
+        id: crypto.randomUUID(),
+        appName: "aura",
+        handbookId,
+        version: 1,
+        createdTime: timestamp,
+        updatedTime: timestamp,
+    });
 }

@@ -15,7 +15,7 @@
  */
 
 import FileRepository from "./file-repository";
-import BookFile from "./file";
+import BookFile from "./book-file";
 import BaseService from "@/domain/base-service";
 
 /**
