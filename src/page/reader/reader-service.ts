@@ -15,19 +15,15 @@
  */
 
 import Progress from "@/domain/progress/progress";
-import Setting from "@/domain/setting/setting";
 import BookService from "@/domain/book/book-service";
 import ChapterService from "@/domain/chapter/chapter-service";
 import ProgressService from "@/domain/progress/progress-service";
 import TocService from "@/domain/toc/toc-service";
-import SettingService from "@/domain/setting/setting-service";
 import TransactionManager from "@/database/transaction-manager";
 import { DatabaseMode } from "@/database/database-mode";
-import { bookStore, tocStore, chapterStore, progressStore, settingStore } from "@/database/database-definition";
+import { bookStore, tocStore, chapterStore, progressStore } from "@/database/database-definition";
 import ReaderState from "./reader-state";
 import { assertExists } from "@/util/assert-util";
-import { UiId } from "@/component/ui-id";
-import { PageName } from "@/constant/page-name";
 
 /**
  * 阅读器服务
@@ -38,14 +34,12 @@ export default class ReaderService {
     private readonly chapterService: ChapterService;
     private readonly progressService: ProgressService;
     private readonly tocService: TocService;
-    private readonly settingService: SettingService;
 
     public constructor() {
         this.progressService = new ProgressService();
         this.bookService = new BookService();
         this.chapterService = new ChapterService();
         this.tocService = new TocService();
-        this.settingService = new SettingService();
     }
 
     /**
@@ -55,7 +49,7 @@ export default class ReaderService {
     public async init(bookId: string) {
         // 加载数据
         return await TransactionManager.runTransaction(
-            [bookStore.name, tocStore.name, chapterStore.name, progressStore.name, settingStore.name],
+            [bookStore.name, tocStore.name, chapterStore.name, progressStore.name],
             DatabaseMode.READ_ONLY,
             async (transaction) => {
                 const book = assertExists(
@@ -68,13 +62,8 @@ export default class ReaderService {
                 );
 
                 // 并行加载数据
-                const [toc, settings, chapter] = await Promise.all([
+                const [toc, chapter] = await Promise.all([
                     this.tocService.getByIndex(tocStore.indexes.ukFileId.name, book.fileId, transaction),
-                    this.settingService.getAllByIndex(
-                        settingStore.indexes.idxPageName.name,
-                        PageName.READER,
-                        transaction
-                    ),
                     this.chapterService.getByIndex(
                         chapterStore.indexes.ukFileIdIndex.name,
                         [book.fileId, progress.chapterIndex],
@@ -90,7 +79,6 @@ export default class ReaderService {
                         chapter,
                         `Chapter[fileId=${book.fileId}, index=${String(progress.chapterIndex)}] not found`
                     ),
-                    settings: new Map<UiId, Setting>(settings.map((setting) => [setting.uiId, setting])),
                 });
             }
         );
@@ -103,29 +91,6 @@ export default class ReaderService {
     public async updateProgress(progress: Progress) {
         await TransactionManager.runTransaction(progressStore.name, DatabaseMode.READ_WRITE, async (transaction) => {
             await this.progressService.update(progress, transaction);
-        });
-    }
-
-    /**
-     * 更新阅读器设置并保存
-     * @param setting - 阅读器设置对象
-     */
-    public async updateSetting(setting: Setting) {
-        await TransactionManager.runTransaction(settingStore.name, DatabaseMode.READ_WRITE, async (transaction) => {
-            await this.settingService.update(setting, transaction);
-        });
-    }
-
-    /**
-     * 删除阅读器设置
-     */
-    public async deleteSettings() {
-        await TransactionManager.runTransaction(settingStore.name, DatabaseMode.READ_WRITE, async (transaction) => {
-            await this.settingService.deleteAllByIndex(
-                settingStore.indexes.idxPageName.name,
-                PageName.READER,
-                transaction
-            );
         });
     }
 

@@ -18,8 +18,8 @@ import SettingItem from "@/component/setting/setting-item";
 import StyleEngine from "@/component/setting/style-engine";
 import EventUtil from "@/util/event-util";
 import Ui from "@/component/ui";
-import SettingState from "@/component/setting/setting-state";
 import { StyleProperty } from "@/component/setting/style-property";
+import { SettingChangeHandlers } from "@/component/setting/setting-change";
 
 /**
  * Style setting item
@@ -28,20 +28,25 @@ import { StyleProperty } from "@/component/setting/style-property";
 export default abstract class StyleSettingItem extends SettingItem {
     public readonly styleProperty: StyleProperty;
 
-    protected constructor(styleProperty: StyleProperty, settingState: SettingState) {
-        super(styleProperty, settingState);
+    protected constructor(styleProperty: StyleProperty) {
+        super(styleProperty);
         this.styleProperty = styleProperty;
     }
 
-    public override onInput(handler: (settingItem: Record<string, unknown>) => Promise<void>): this {
-        EventUtil.bind(this.control, "input", async (_, control) => {
+    public override bindChange(handlers: SettingChangeHandlers, signal: AbortSignal): this {
+        EventUtil.bind(this.control, "input", (_, control) => {
             const value = String(control.value) + this.unit();
-            const ui = this.settingState.ui;
-            this.setDisplayValue(ui, value);
-            this.apply(ui, value);
-            await handler({ [this.id]: value });
-        });
+            handlers.preview({ key: this.styleProperty, value });
+        }, { signal });
+        EventUtil.bind(this.control, "change", async (_, control) => {
+            const value = String(control.value) + this.unit();
+            await handlers.commit({ key: this.styleProperty, value });
+        }, { signal });
         return this;
+    }
+
+    public override accepts(value: unknown): value is string {
+        return typeof value === "string";
     }
 
     public reset(ui: Ui): this {
@@ -71,7 +76,4 @@ export default abstract class StyleSettingItem extends SettingItem {
         return 2;
     }
 
-    public override applyOrder(): number {
-        return 2;
-    }
 }

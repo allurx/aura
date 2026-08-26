@@ -14,17 +14,48 @@
  * limitations under the License.
  */
 
-import SettingState from "@/component/setting/setting-state";
 import StyleSettingItem from "./style-setting-item";
 import { StyleProperty } from "@/component/setting/style-property";
+import Ui from "@/component/ui";
+import { assertExists } from "@/util/assert-util";
+import EventUtil from "@/util/event-util";
+import { SettingChangeHandlers } from "@/component/setting/setting-change";
 
 /**
  * Width setting item
  * @author allurx
  */
 export default class WidthSettingItem extends StyleSettingItem {
-    public constructor(settingState: SettingState) {
-        super(StyleProperty.WIDTH, settingState);
+    private static readonly MIN_WIDTH = 800;
+
+    private readonly range: HTMLInputElement;
+
+    public constructor() {
+        super(StyleProperty.WIDTH);
+        this.range = assertExists(this.element.querySelector<HTMLInputElement>('input[type="range"]'));
+    }
+
+    public override bindChange(handlers: SettingChangeHandlers, signal: AbortSignal): this {
+        super.bindChange(handlers, signal);
+        EventUtil.bind(this.range, "pointerdown", () => {
+            this.updateRange(this.range.value);
+        }, { signal });
+        EventUtil.bind(this.range, "focus", () => {
+            this.updateRange(this.range.value);
+        }, { signal });
+        return this;
+    }
+
+    public override setControlValue(ui: Ui, value: string | undefined): this {
+        const preferredWidth = this.resolvePreferredWidth(ui, value);
+        this.updateRange(preferredWidth);
+        this.range.value = preferredWidth.replace(new RegExp(`${this.unit()}$`), "");
+        return this;
+    }
+
+    public override setDisplayValue(ui: Ui, value: string | undefined): this {
+        this.display.textContent = this.resolvePreferredWidth(ui, value);
+        return this;
     }
 
     public override unit(): string {
@@ -33,11 +64,26 @@ export default class WidthSettingItem extends StyleSettingItem {
 
     public override template(): string {
         return `
-            <div class="item">
+            <div class="item width-setting">
                 <span class="title">宽度</span>
-                <input class="control" type="range" step="1" min="${String(window.innerWidth > 768 ? 768 : 320)}" max="${String(window.innerWidth)}" />
+                <input class="control" type="range" step="1" min="${String(WidthSettingItem.MIN_WIDTH)}" max="${String(Math.max(WidthSettingItem.MIN_WIDTH, window.innerWidth))}" />
                 <span class="display"></span>
             </div>
         `;
+    }
+
+    private updateRange(preferredWidth: string | undefined): void {
+        const parsedPreferredWidth = Number.parseFloat(preferredWidth ?? "");
+        this.range.max = String(
+            Math.max(
+                WidthSettingItem.MIN_WIDTH,
+                window.innerWidth,
+                Number.isFinite(parsedPreferredWidth) ? parsedPreferredWidth : 0
+            )
+        );
+    }
+
+    private resolvePreferredWidth(ui: Ui, value: string | undefined): string {
+        return value ?? (ui.root.style.width || `${String(WidthSettingItem.MIN_WIDTH)}px`);
     }
 }

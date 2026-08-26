@@ -17,71 +17,56 @@
 import Ui from "@/component/ui";
 import EventUtil from "@/util/event-util";
 import SettingItem from "@/component/setting/setting-item";
-import StyleEngine from "@/component/setting/style-engine";
-import SettingState from "@/component/setting/setting-state";
-import { UiId } from "@/component/ui-id";
-import { StyleProperty } from "@/component/setting/style-property";
 import { assertExists } from "@/util/assert-util";
+import {
+    isTheme,
+    SettingChangeHandlers,
+    Theme,
+    THEME_OPTIONS,
+    THEME_SETTING_KEY,
+} from "@/component/setting/setting-change";
 
 /**
  * Theme setting item
  * @author allurx
  */
 export default class ThemeSettingItem extends SettingItem {
-    public static readonly ID = "theme";
+    public static readonly ID = THEME_SETTING_KEY;
 
-    public constructor(settingState: SettingState) {
-        super(ThemeSettingItem.ID, settingState);
+    public constructor() {
+        super(ThemeSettingItem.ID);
     }
 
-    public override onInput(handler: (settingItem: Record<string, unknown>) => Promise<void>): this {
+    public override bindChange(handlers: SettingChangeHandlers, signal: AbortSignal): this {
         EventUtil.bind(this.control as HTMLSelectElement, "change", async (_, control) => {
-            const theme = assertExists(ThemeSettingItem.THEMES.find((item) => item.value === control.value));
-            const ui = this.settingState.ui;
-            this.setDisplayValue(ui, theme.value);
-            this.apply(ui, theme.value);
-            await handler({ [this.id]: theme.value });
-        });
+            const theme = assertExists(THEME_OPTIONS.find((item) => item.value === control.value));
+            const change = { key: ThemeSettingItem.ID, value: theme.value } as const;
+            await handlers.commit(change);
+        }, { signal });
         return this;
     }
 
+    public override accepts(value: unknown): value is Theme {
+        return isTheme(value);
+    }
+
     public override reset(ui: Ui): this {
-        console.log(`${ui.id} reset theme setting`);
-        Object.entries(
-            assertExists(ThemeSettingItem.THEMES.find((item) => item.value === this.control.value)).uiStyle
-        ).forEach(([uiId, style]) => {
-            const element = document.getElementById(uiId);
-            if (element) {
-                Object.entries(style).forEach(([styleProperty]) => {
-                    StyleEngine.removeProperty(element, styleProperty as StyleProperty);
-                });
-            }
-        });
+        delete ui.root.dataset["theme"];
         return this;
     }
 
     public override apply(ui: Ui, setting: string): this {
-        console.log(`${ui.id} apply theme setting: ${setting}`);
-        Object.entries(assertExists(ThemeSettingItem.THEMES.find((item) => item.value === setting)).uiStyle).forEach(
-            ([uiId, style]) => {
-                const element = document.getElementById(uiId);
-                if (element) {
-                    Object.entries(style).forEach(([styleProperty, value]) => {
-                        StyleEngine.setProperty(element, styleProperty as StyleProperty, value);
-                    });
-                }
-            }
-        );
+        ui.root.dataset["theme"] = this.requireTheme(setting);
         return this;
     }
 
-    public override setControlValue(_: Ui, value: string | undefined): this {
-        this.control.value = value ?? "yellow";
+    public override setControlValue(ui: Ui, value: string | undefined): this {
+        this.control.value = value ?? this.defaultTheme(ui);
         return this;
     }
 
-    public override setDisplayValue(_: Ui, value: string | undefined): this {
-        this.display.textContent = value ?? "yellow";
+    public override setDisplayValue(ui: Ui, value: string | undefined): this {
+        this.display.textContent = value ?? this.defaultTheme(ui);
         return this;
     }
 
@@ -93,139 +78,23 @@ export default class ThemeSettingItem extends SettingItem {
         return 1;
     }
 
-    public override applyOrder(): number {
-        return 1;
-    }
-
     public override template(): string {
         return `
             <div class="item">
                 <span class="title">主题</span>
                 <select class="control">
-                ${ThemeSettingItem.THEMES.map((theme) => `<option value="${theme.value}">${theme.name}</option>`).join(
-                    ""
-                )}</select>
+                ${THEME_OPTIONS.map((theme) => `<option value="${theme.value}">${theme.name}</option>`).join("")}</select>
                 <span class="display"></span>
             </div>
         `;
     }
 
-    private static readonly THEMES = [
-        {
-            name: "浅色",
-            value: "light",
-            uiStyle: {
-                [UiId.APP]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#ffffff",
-                },
+    private defaultTheme(ui: Ui): Theme {
+        return this.requireTheme(ui.root.dataset["defaultTheme"]);
+    }
 
-                [UiId.READER]: {
-                    [StyleProperty.COLOR]: "#000000",
-                    [StyleProperty.BACKGROUND_COLOR]: "#ffffff",
-                },
-                [UiId.SETTING]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#ffffff",
-                },
-                [UiId.TOC]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#ffffff",
-                },
-            },
-        },
-        {
-            name: "昏暗",
-            value: "dim",
-            uiStyle: {
-                [UiId.APP]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#111a2e",
-                },
-                [UiId.READER]: {
-                    [StyleProperty.COLOR]: "#e3e3e3",
-                    [StyleProperty.BACKGROUND_COLOR]: "#111a2e",
-                },
-                [UiId.SETTING]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#111a2e",
-                },
-                [UiId.TOC]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#111a2e",
-                },
-            },
-        },
-        {
-            name: "深色",
-            value: "dark",
-            uiStyle: {
-                [UiId.APP]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#202124",
-                },
-                [UiId.READER]: {
-                    [StyleProperty.COLOR]: "#e3e3e3",
-                    [StyleProperty.BACKGROUND_COLOR]: "#202124",
-                },
-                [UiId.SETTING]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#202124",
-                },
-                [UiId.TOC]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#202124",
-                },
-            },
-        },
-        {
-            name: "黄色",
-            value: "yellow",
-            uiStyle: {
-                [UiId.APP]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#be966e",
-                },
-                [UiId.READER]: {
-                    [StyleProperty.COLOR]: "#000000",
-                    [StyleProperty.BACKGROUND_COLOR]: "#f2e8c8",
-                },
-                [UiId.SETTING]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#f2e8c8",
-                },
-                [UiId.TOC]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#f2e8c8",
-                },
-            },
-        },
-        {
-            name: "蓝色",
-            value: "blue",
-            uiStyle: {
-                [UiId.APP]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#d2e3fc",
-                },
-
-                [UiId.READER]: {
-                    [StyleProperty.COLOR]: "#000000",
-                    [StyleProperty.BACKGROUND_COLOR]: "#d2e3fc",
-                },
-                [UiId.SETTING]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#d2e3fc",
-                },
-                [UiId.TOC]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#d2e3fc",
-                },
-            },
-        },
-        {
-            name: "灰色",
-            value: "gray",
-            uiStyle: {
-                [UiId.APP]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#3c3c3c",
-                },
-                [UiId.READER]: {
-                    [StyleProperty.COLOR]: "#e3e3e3",
-                    [StyleProperty.BACKGROUND_COLOR]: "#3c3c3c",
-                },
-                [UiId.SETTING]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#3c3c3c",
-                },
-                [UiId.TOC]: {
-                    [StyleProperty.BACKGROUND_COLOR]: "#3c3c3c",
-                },
-            },
-        },
-    ];
+    private requireTheme(value: unknown): Theme {
+        if (!isTheme(value)) throw new Error(`Invalid theme: ${String(value)}`);
+        return value;
+    }
 }

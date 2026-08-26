@@ -17,6 +17,7 @@
 import EventUtil from "@/util/event-util";
 import { assertExists } from "@/util/assert-util";
 import bookshelfClearIcon from "@/asset/image/bookshelf-clear.svg";
+import settingIcon from "@/asset/image/setting.svg";
 import Ui from "@/component/ui";
 
 /**
@@ -25,13 +26,29 @@ import Ui from "@/component/ui";
  */
 export default class HeaderUi extends Ui {
     private readonly headerTitleElement: HTMLSpanElement;
+    private readonly toggleSettingPanelElement: HTMLImageElement;
     private readonly clearBookshelfElement: HTMLImageElement;
 
     public constructor(args: ConstructorParameters<typeof Ui>[0]) {
         super(args);
         this.headerTitleElement = assertExists(this.root.querySelector<HTMLSpanElement>("#title"));
+        this.toggleSettingPanelElement = assertExists(
+            this.root.querySelector<HTMLImageElement>("#toggle-setting-panel")
+        );
         this.clearBookshelfElement = assertExists(this.root.querySelector<HTMLImageElement>("#clear-btn"));
+        this.toggleSettingPanelElement.src = settingIcon;
         this.clearBookshelfElement.src = bookshelfClearIcon;
+    }
+
+    /**
+     * 绑定设置面板切换事件
+     * @param handler - 处理函数
+     * @param signal - 页面生命周期信号
+     * @returns 返回当前实例
+     */
+    public bindToggleSettingPanel(handler: () => void, signal: AbortSignal): this {
+        EventUtil.bind(this.toggleSettingPanelElement, "click", handler, { signal });
+        return this;
     }
 
     /**

@@ -21,6 +21,17 @@ import BookshelfUi from "./bookshelf-ui";
 import BookshelfService from "./bookshelf-service";
 import BookshelfState from "./bookshelf-state";
 import { assertExists } from "@/util/assert-util";
+import BackgroundColorSettingItem from "@/component/setting/item/background-color-setting-item";
+import ColorSettingItem from "@/component/setting/item/color-setting-item";
+import FontSizeSettingItem from "@/component/setting/item/font-size-setting-item";
+import PaddingBottomSettingItem from "@/component/setting/item/padding-bottom-setting-item";
+import PaddingLeftSettingItem from "@/component/setting/item/padding-left-setting-item";
+import PaddingRightSettingItem from "@/component/setting/item/padding-right-setting-item";
+import PaddingTopSettingItem from "@/component/setting/item/padding-top-setting-item";
+import ThemeSettingItem from "@/component/setting/item/theme-setting-item";
+import SettingController, { type SettingItemConstructor } from "@/component/setting/setting-controller";
+import Ui from "@/component/ui";
+import { PageName } from "@/constant/page-name";
 
 /**
  * 书架控制器
@@ -31,6 +42,7 @@ export default class BookshelfController {
     private readonly navUi: NavUi;
     private readonly bookListUi: BookListUi;
     private readonly bookshelfUi: BookshelfUi;
+    private readonly settingController: SettingController;
     private readonly bookshelfService: BookshelfService;
     private state!: BookshelfState;
 
@@ -54,17 +66,48 @@ export default class BookshelfController {
             root: bookshelfRoot,
             displayName: "书架",
         });
+        this.settingController = new SettingController({
+            pageName: PageName.BOOKSHELF,
+            container: this.bookshelfUi.root,
+            uiSettingItemMap: new Map<Ui, readonly SettingItemConstructor[]>([
+                [this.bookshelfUi, [ThemeSettingItem, BackgroundColorSettingItem]],
+                [
+                    this.headerUi,
+                    [
+                        FontSizeSettingItem,
+                        ColorSettingItem,
+                        BackgroundColorSettingItem,
+                        PaddingLeftSettingItem,
+                        PaddingRightSettingItem,
+                    ],
+                ],
+                [this.navUi, [FontSizeSettingItem, ColorSettingItem, BackgroundColorSettingItem]],
+                [
+                    this.bookListUi,
+                    [
+                        FontSizeSettingItem,
+                        ColorSettingItem,
+                        BackgroundColorSettingItem,
+                        PaddingTopSettingItem,
+                        PaddingLeftSettingItem,
+                        PaddingBottomSettingItem,
+                        PaddingRightSettingItem,
+                    ],
+                ],
+            ]),
+        });
         this.bookshelfService = new BookshelfService();
     }
 
     public async init(signal: AbortSignal): Promise<void> {
-        const state = await this.bookshelfService.init();
+        const [state] = await Promise.all([this.bookshelfService.init(), this.settingController.init(signal)]);
         if (signal.aborted) return;
 
         this.state = state;
         this.navUi.renderNav(this.state.categories);
         this.bindEvent(signal);
         this.navUi.clickNavItem(this.state.categoryId);
+        this.bookshelfUi.show();
     }
 
     /**
@@ -131,6 +174,7 @@ export default class BookshelfController {
     private bindEvent(signal: AbortSignal): void {
         // 绑定头部事件
         this.headerUi
+            .bindToggleSettingPanel(() => this.settingController.toggle(), signal)
             .bindClearBookshelfClick(() => this.clearBookshelf(), signal)
             .bindHeaderTitleClick(() => this.navUi.toggleVisibility(), signal);
 

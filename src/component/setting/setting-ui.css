@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#reader > #setting {
+:is(#reader, #bookshelf) > #setting {
     display: flex;
     flex-direction: row;
     position: fixed;
@@ -24,7 +24,8 @@
     top: 0;
     width: 40rem;
     height: 100%;
-    background-color: inherit;
+    background-color: var(--setting-background-color, inherit);
+    color: var(--setting-color, inherit);
     overflow: hidden;
     transition: left 0.28s ease;
     -webkit-user-select: none;
@@ -34,6 +35,12 @@
     @media (max-width: 768px) {
         font-size: 1.4rem;
         width: 100%;
+    }
+
+    @media (max-width: 800px) {
+        > .main > section > .width-setting {
+            display: none !important;
+        }
     }
 
     &.open {

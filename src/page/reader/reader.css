@@ -21,7 +21,6 @@
 @import "./content/content-ui.css";
 @import "./footer/footer-ui.css";
 @import "./toc/toc-ui.css";
-@import "../../component/setting/setting-ui.css";
 
 #reader {
     width: 800px;
@@ -31,7 +30,7 @@
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    background-color: #f2e8c8;
+    background-color: var(--reader-surface);
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
     position: relative;
     outline: none;
@@ -39,17 +38,18 @@
     opacity: 0;
     transition: opacity 0.3s ease;
     resize: horizontal;
-    color: #000000;
+    color: var(--reader-color);
     line-height: 2;
 
     &.visible {
         opacity: 1;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 800px) {
         & {
             width: 100% !important;
             min-width: 100% !important;
+            resize: none;
         }
     }
 }

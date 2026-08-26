@@ -17,6 +17,10 @@
 import SettingRepository from "./setting-repository";
 import BaseService from "@/domain/base-service";
 import Setting from "./setting";
+import { PageName } from "@/constant/page-name";
+import TransactionManager from "@/database/transaction-manager";
+import { DatabaseMode } from "@/database/database-mode";
+import { settingStore } from "@/database/database-definition";
 
 /**
  * 设置服务
@@ -25,5 +29,35 @@ import Setting from "./setting";
 export default class SettingService extends BaseService<Setting> {
     public constructor() {
         super(new SettingRepository());
+    }
+
+    /**
+     * 加载指定页面的全部设置。
+     */
+    public async loadPage(pageName: PageName): Promise<Setting[]> {
+        return await TransactionManager.runTransaction(
+            settingStore.name,
+            DatabaseMode.READ_ONLY,
+            async (transaction) =>
+                await this.getAllByIndex(settingStore.indexes.idxPageName.name, pageName, transaction)
+        );
+    }
+
+    /**
+     * 保存一条设置记录。
+     */
+    public async save(setting: Setting): Promise<void> {
+        await TransactionManager.runTransaction(settingStore.name, DatabaseMode.READ_WRITE, async (transaction) => {
+            await this.update(setting, transaction);
+        });
+    }
+
+    /**
+     * 删除指定页面的全部设置。
+     */
+    public async resetPage(pageName: PageName): Promise<void> {
+        await TransactionManager.runTransaction(settingStore.name, DatabaseMode.READ_WRITE, async (transaction) => {
+            await this.deleteAllByIndex(settingStore.indexes.idxPageName.name, pageName, transaction);
+        });
     }
 }

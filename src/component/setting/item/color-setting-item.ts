@@ -16,7 +16,6 @@
 
 import Ui from "@/component/ui";
 import StyleEngine from "@/component/setting/style-engine";
-import SettingState from "@/component/setting/setting-state";
 import StyleSettingItem from "./style-setting-item";
 import { StyleProperty } from "@/component/setting/style-property";
 
@@ -25,8 +24,8 @@ import { StyleProperty } from "@/component/setting/style-property";
  * @author allurx
  */
 export default class ColorSettingItem extends StyleSettingItem {
-    public constructor(settingState: SettingState) {
-        super(StyleProperty.COLOR, settingState);
+    public constructor() {
+        super(StyleProperty.COLOR);
     }
 
     public override setControlValue(ui: Ui, value: string | undefined): this {

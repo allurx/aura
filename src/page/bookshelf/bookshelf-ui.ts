@@ -20,4 +20,9 @@ import PageUi from "@/page/page-ui";
  * 书架页面界面
  * @author allurx
  */
-export default class BookshelfUi extends PageUi {}
+export default class BookshelfUi extends PageUi {
+    public constructor(args: ConstructorParameters<typeof PageUi>[0]) {
+        super(args);
+        this.root.dataset["defaultTheme"] = "yellow";
+    }
+}
