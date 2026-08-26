@@ -28,8 +28,10 @@ import { assertExists } from "@/util/assert-util";
  * @author allurx
  */
 export default class ThemeSettingItem extends SettingItem {
+    public static readonly ID = "theme";
+
     public constructor(settingState: SettingState) {
-        super("theme", settingState);
+        super(ThemeSettingItem.ID, settingState);
     }
 
     public override onInput(handler: (settingItem: Record<string, unknown>) => Promise<void>): this {

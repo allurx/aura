@@ -214,8 +214,16 @@ export default class ReaderController {
 
     /**
      * 更新设置并保存
+     * @param uiId - UI 标识
+     * @param mergedSetting - 待合并的设置
+     * @param options - 更新选项
+     * @param options.reapplySettings - 合并状态后是否重新应用完整设置
      */
-    private async updateSetting(uiId: UiId, mergedSetting: Record<string, unknown>) {
+    private async updateSetting(
+        uiId: UiId,
+        mergedSetting: Record<string, unknown>,
+        { reapplySettings = false }: { reapplySettings?: boolean } = {}
+    ) {
         const setting =
             this.state.settings.get(uiId) ??
             new Setting({
@@ -228,6 +236,9 @@ export default class ReaderController {
         Object.assign(setting, mergedSetting);
         setting.updatedTime = Date.now();
         this.state.settings.set(uiId, setting);
+
+        if (reapplySettings) this.settingUi.applySetting(this.state.settings);
+
         await this.readerService.updateSetting(setting);
     }
 
@@ -330,7 +341,10 @@ export default class ReaderController {
                 await this.deleteSettings();
             }, signal)
             .bindSettingItemChange(async (ui, settingItem) => {
-                await this.updateSetting(ui.id, settingItem);
+                // Theme 是跨 UI 的基础样式，变化后重放完整设置以保留各 UI 的显式覆盖。
+                await this.updateSetting(ui.id, settingItem, {
+                    reapplySettings: Object.hasOwn(settingItem, ThemeSettingItem.ID),
+                });
             });
     }
 }
