@@ -38,11 +38,16 @@ export default class ThemeSettingItem extends SettingItem {
     }
 
     public override bindChange(handlers: SettingChangeHandlers, signal: AbortSignal): this {
-        EventUtil.bind(this.control as HTMLSelectElement, "change", async (_, control) => {
-            const theme = assertExists(THEME_OPTIONS.find((item) => item.value === control.value));
-            const change = { key: ThemeSettingItem.ID, value: theme.value } as const;
-            await handlers.commit(change);
-        }, { signal });
+        EventUtil.bind(
+            this.control as HTMLSelectElement,
+            "change",
+            async (_, control) => {
+                const theme = assertExists(THEME_OPTIONS.find((item) => item.value === control.value));
+                const change = { key: ThemeSettingItem.ID, value: theme.value } as const;
+                await handlers.commit(change);
+            },
+            { signal }
+        );
         return this;
     }
 
@@ -82,7 +87,7 @@ export default class ThemeSettingItem extends SettingItem {
         return `
             <div class="item">
                 <span class="title">主题</span>
-                <select class="control">
+                <select id=${ThemeSettingItem.ID} class="control">
                 ${THEME_OPTIONS.map((theme) => `<option value="${theme.value}">${theme.name}</option>`).join("")}</select>
                 <span class="display"></span>
             </div>
