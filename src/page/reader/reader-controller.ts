@@ -21,10 +21,8 @@ import ReaderService from "./reader-service";
 import HeaderUi from "./header/header-ui";
 import ContentUi from "./content/content-ui";
 import FooterUi from "./footer/footer-ui";
-import SettingUi from "@/component/setting/setting-ui";
 import TocUi from "./toc/toc-ui";
 import ReaderState from "./reader-state";
-import Setting from "@/domain/setting/setting";
 import BackgroundColorSettingItem from "@/component/setting/item/background-color-setting-item";
 import ColorSettingItem from "@/component/setting/item/color-setting-item";
 import WidthSettingItem from "@/component/setting/item/width-setting-item";
@@ -36,13 +34,12 @@ import FontSizeSettingItem from "@/component/setting/item/font-size-setting-item
 import LineHeightSettingItem from "@/component/setting/item/line-height-setting-item";
 import ThemeSettingItem from "@/component/setting/item/theme-setting-item";
 import Ui from "@/component/ui";
-import SettingItem from "@/component/setting/setting-item";
-import SettingState from "@/component/setting/setting-state";
 import { UiId } from "@/component/ui-id";
 import { SwitchChapterDirection } from "@/constant/switch-chapter-direction";
 import { StyleProperty } from "@/component/setting/style-property";
 import { assertExists } from "@/util/assert-util";
 import { PageName } from "@/constant/page-name";
+import SettingController, { type SettingItemConstructor } from "@/component/setting/setting-controller";
 
 /**
  * 阅读器控制器
@@ -55,7 +52,7 @@ export default class ReaderController {
     private readonly contentUi: ContentUi;
     private readonly footerUi: FooterUi;
     private readonly tocUi: TocUi;
-    private readonly settingUi: SettingUi;
+    private readonly settingController: SettingController;
     private readonly readerService: ReaderService;
     private state!: ReaderState;
 
@@ -87,9 +84,10 @@ export default class ReaderController {
             displayName: "目录",
         });
 
-        this.settingUi = new SettingUi({
+        this.settingController = new SettingController({
+            pageName: PageName.READER,
             container: this.readerUi.root,
-            uiSettingItemMap: new Map<Ui, (new (settingState: SettingState) => SettingItem)[]>([
+            uiSettingItemMap: new Map<Ui, readonly SettingItemConstructor[]>([
                 [this.appUi, [BackgroundColorSettingItem, ThemeSettingItem]],
                 [this.readerUi, [ColorSettingItem, WidthSettingItem, BackgroundColorSettingItem]],
                 [
@@ -143,16 +141,12 @@ export default class ReaderController {
             { once: true }
         );
 
-        const state = await this.readerService.init(bookId);
+        const [state] = await Promise.all([this.readerService.init(bookId), this.settingController.init(signal)]);
         if (signal.aborted) return;
 
         this.state = state;
 
-        // 渲染界面
-        // 注意这里虽然是先渲染界面然后再绑定事件，但是由于浏览器的渲染机制，
-        // render函数内部修改ui导致的ContentScroll和ReaderResize事件会在未来的某一刻被触发，这个时刻无法确定，由浏览器自己决定。
-        // 从而导致bindContentScroll和observeReaderResize对应的事件处理函数会在页面首次加载之后某一时刻被调用，
-        // 这个无副作用的调用是可以接受的，因为只是重复保存了一下。目前还没有发现可以避免这种情况的好办法
+        // restoreProgress 触发的 scroll 可能延迟到事件绑定之后，产生一次等值的进度保存。
 
         this.tocUi.renderContents(this.state.toc.contents);
 
@@ -166,8 +160,6 @@ export default class ReaderController {
                 this.state.chapter.lineNumber(this.state.progress.lineIndex),
                 this.state.toc.numberOfLines()
             );
-
-        this.settingUi.renderAside().applySetting(this.state.settings);
 
         // 显示阅读器内容
         this.readerUi.show();
@@ -210,32 +202,6 @@ export default class ReaderController {
     private async updateProgress(progress: Partial<Progress>) {
         this.state.progress.update(progress);
         await this.readerService.updateProgress(this.state.progress);
-    }
-
-    /**
-     * 更新设置并保存
-     */
-    private async updateSetting(uiId: UiId, mergedSetting: Record<string, unknown>) {
-        const setting =
-            this.state.settings.get(uiId) ??
-            new Setting({
-                id: crypto.randomUUID(),
-                uiId: uiId,
-                pageName: PageName.READER,
-                createdTime: Date.now(),
-                updatedTime: Date.now(),
-            });
-        Object.assign(setting, mergedSetting);
-        setting.updatedTime = Date.now();
-        this.state.settings.set(uiId, setting);
-        await this.readerService.updateSetting(setting);
-    }
-
-    /**
-     * 删除阅读器设置
-     */
-    private async deleteSettings() {
-        await this.readerService.deleteSettings();
     }
 
     /**
@@ -282,17 +248,22 @@ export default class ReaderController {
         this.appUi.bindChapterNavigation(this.contentUi.root, (direction) => this.switchChapter(direction), signal);
 
         // Reader UI 事件
-        this.readerUi.observeReaderResize(
-            (width) => this.updateSetting(UiId.READER, { [StyleProperty.WIDTH]: width }),
-            signal
-        );
+        this.readerUi.observePreferredWidth(async (width) => {
+            if (this.settingController.isPreviewing(this.readerUi, StyleProperty.WIDTH)) return;
+            if (this.settingController.getValue(UiId.READER, StyleProperty.WIDTH) === width) return;
+
+            await this.settingController.commitExternal(this.readerUi, {
+                key: StyleProperty.WIDTH,
+                value: width,
+            });
+        }, signal);
 
         // header ui事件
         this.headerUi
             .bindToggleTocPanel(() => {
                 this.tocUi.toggleToc().highlightCurrentChapter(this.state.progress.chapterIndex);
             }, signal)
-            .bindToggleSettingPanel(() => this.settingUi.toggleSetting(), signal)
+            .bindToggleSettingPanel(() => this.settingController.toggle(), signal)
             .bindToggleFullscreen(() => {
                 this.appUi
                     .toggleFullscreen()
@@ -321,16 +292,5 @@ export default class ReaderController {
             }, signal)
             .bindTocClose(signal);
 
-        // setting ui事件
-        this.settingUi
-            .bindNodeClick(this.state.settings, signal)
-            .bindCloseSetting(signal)
-            .bindResetSetting(async () => {
-                this.state.settings.clear();
-                await this.deleteSettings();
-            }, signal)
-            .bindSettingItemChange(async (ui, settingItem) => {
-                await this.updateSetting(ui.id, settingItem);
-            });
     }
 }

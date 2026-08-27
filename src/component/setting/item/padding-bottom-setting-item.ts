@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import SettingState from "@/component/setting/setting-state";
 import StyleSettingItem from "./style-setting-item";
 import { StyleProperty } from "@/component/setting/style-property";
 
@@ -23,8 +22,8 @@ import { StyleProperty } from "@/component/setting/style-property";
  * @author allurx
  */
 export default class PaddingBottomSettingItem extends StyleSettingItem {
-    public constructor(settingState: SettingState) {
-        super(StyleProperty.PADDING_BOTTOM, settingState);
+    public constructor() {
+        super(StyleProperty.PADDING_BOTTOM);
     }
 
     public override unit(): string {

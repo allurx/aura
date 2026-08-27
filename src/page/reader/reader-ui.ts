@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { assertExists } from "@/util/assert-util";
 import EventUtil from "@/util/event-util";
 import PageUi from "@/page/page-ui";
 
@@ -24,28 +23,37 @@ import PageUi from "@/page/page-ui";
  */
 export default class ReaderUi extends PageUi {
     /**
-     * 显示已经完成初始化的阅读器内容。
-     */
-    public show(): this {
-        this.root.classList.add("visible");
-        return this;
-    }
-
-    /**
-     * 绑定阅读器尺寸变化事件
-     * @param  handler - 事件处理函数
+     * 监听阅读器的首选宽度变化。
+     * 响应式布局只改变实际宽度，不改变 inline width，因此不会被保存为用户偏好。
+     * @param handler - 事件处理函数
      * @return 当前实例
      */
-    public observeReaderResize(handler: (width: string) => Promise<void>, signal: AbortSignal): this {
+    public observePreferredWidth(handler: (width: string) => Promise<void>, signal: AbortSignal): this {
+        if (signal.aborted) return this;
+
+        let width = this.root.style.width;
         let timer: number | undefined;
-        const observer = new ResizeObserver((entries) => {
-            if (timer !== undefined) window.clearTimeout(timer);
+
+        const observer = new MutationObserver(() => {
+            if (signal.aborted) return;
+
+            const newWidth = this.root.style.width;
+            if (newWidth === width) return;
+
+            width = newWidth;
+            if (timer !== undefined) {
+                window.clearTimeout(timer);
+                timer = undefined;
+            }
+
+            // Reset 会移除 inline width；此时只取消待保存任务，不创建新的设置记录。
+            if (!newWidth) return;
+
             timer = window.setTimeout(() => {
                 EventUtil.run(async () => {
-                    if (signal.aborted) return;
-                    const width = assertExists(entries[0]).contentRect.width;
-                    console.log("检测到页面宽度变化：", width);
-                    await handler(`${String(width)}px`);
+                    timer = undefined;
+                    if (signal.aborted || this.root.style.width !== newWidth) return;
+                    await handler(newWidth);
                 });
             }, 300);
         });
@@ -58,7 +66,7 @@ export default class ReaderUi extends PageUi {
             },
             { once: true }
         );
-        observer.observe(this.root);
+        observer.observe(this.root, { attributes: true, attributeFilter: ["style"] });
         return this;
     }
 }

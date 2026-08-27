@@ -20,13 +20,16 @@ import EventUtil from "@/util/event-util";
 import { assertExists } from "@/util/assert-util";
 import SettingItem from "./setting-item";
 import Setting from "@/domain/setting/setting";
-import SettingState from "./setting-state";
 import FontSizeSettingItem from "./item/font-size-setting-item";
 import ColorSettingItem from "./item/color-setting-item";
 import BackgroundColorSettingItem from "./item/background-color-setting-item";
+import { SettingItemChange, SettingKey, THEME_SETTING_KEY, UiSettingChange } from "./setting-change";
+
+export type SettingItemConstructor = new () => SettingItem;
+export type UiSettingItemMap = ReadonlyMap<Ui, readonly SettingItemConstructor[]>;
 
 /**
- * 阅读器设置面板
+ * 页面设置面板
  * @author allurx
  */
 export default class SettingUi extends Ui {
@@ -44,7 +47,8 @@ export default class SettingUi extends Ui {
     // Mapping of UiId to Ui
     private readonly uiIdMap: Map<UiId, Ui> = new Map<UiId, Ui>();
 
-    private readonly state: SettingState = new SettingState();
+    private activeUi: Ui | undefined;
+    private readonly previewingUiMap = new Map<SettingKey, Ui>();
 
     /**
      * 构造函数
@@ -56,7 +60,7 @@ export default class SettingUi extends Ui {
         uiSettingItemMap,
     }: {
         container: HTMLElement;
-        uiSettingItemMap: Map<Ui, (new (settingState: SettingState) => SettingItem)[]>;
+        uiSettingItemMap: UiSettingItemMap;
     }) {
         super({
             root: { container, template: SettingUi.template },
@@ -68,13 +72,14 @@ export default class SettingUi extends Ui {
         this.resetElement = assertExists(this.root.querySelector<HTMLElement>(".reset"));
         this.itemsContainerElement = assertExists(this.root.querySelector<HTMLElement>("section"));
 
-        uiSettingItemMap.set(this, [FontSizeSettingItem, ColorSettingItem, BackgroundColorSettingItem]);
-        this.createMappedUiSettingItems(uiSettingItemMap).createSettingItemElements();
+        const completeUiSettingItemMap = new Map(uiSettingItemMap);
+        completeUiSettingItemMap.set(this, [FontSizeSettingItem, ColorSettingItem, BackgroundColorSettingItem]);
+        this.createMappedUiSettingItems(completeUiSettingItemMap).createSettingItemElements();
     }
 
     /**
      * 切换设置面板显示状态
-    * @return 当前实例
+     * @return 当前实例
      */
     public toggleSetting() {
         // 打开时默认激活第一个node
@@ -99,17 +104,15 @@ export default class SettingUi extends Ui {
      * 应用设置到各个UI组件
      * @param  settings - 设置映射
      */
-    public applySetting(settings: Map<UiId, Setting>) {
+    public applySettings(settings: ReadonlyMap<UiId, Setting>): this {
         this.uiSettingItemMap.forEach((uiSettingItems, ui) => {
             const uiSetting = settings.get(ui.id);
-            uiSettingItems
-                .sort((a, b) => a.applyOrder() - b.applyOrder())
-                .forEach((uiSettingItem) => {
-                    if (uiSetting?.[uiSettingItem.id]) {
-                        uiSettingItem.apply(ui, uiSetting[uiSettingItem.id]);
-                    }
-                });
+            uiSettingItems.forEach((settingItem) => {
+                const value = uiSetting?.[settingItem.id];
+                if (settingItem.accepts(value)) settingItem.apply(ui, value);
+            });
         });
+        return this;
     }
 
     /**
@@ -137,26 +140,32 @@ export default class SettingUi extends Ui {
         EventUtil.bind(
             this.resetElement,
             "click",
-            async () => {
-                // 重置所有ui的设置项
-                this.uiSettingItemMap.forEach((settingItems, ui) => {
-                    settingItems.forEach((settingItem) => {
-                        settingItem.reset(ui);
-                    });
-                });
-                // 重置当前ui的设置项显示和控制值
-                this.uiSettingItemMap.get(this.state.ui)?.forEach((settingItem) => {
-                    settingItem.setControlValue(this.state.ui, undefined);
-                    settingItem.setDisplayValue(this.state.ui, undefined);
-                });
-                await handler();
-            },
+            handler,
             { signal }
         );
         return this;
     }
 
-    public bindNodeClick(settings: Map<UiId, Setting>, signal: AbortSignal): this {
+    /**
+     * 重置当前页面中的全部设置效果和控件值。
+     */
+    public resetSettings(): this {
+        this.previewingUiMap.clear();
+        this.uiSettingItemMap.forEach((settingItems, ui) => {
+            settingItems.forEach((settingItem) => settingItem.reset(ui));
+        });
+
+        const activeUi = this.activeUi;
+        if (activeUi) {
+            this.uiSettingItemMap.get(activeUi)?.forEach((settingItem) => {
+                settingItem.setControlValue(activeUi, undefined);
+                settingItem.setDisplayValue(activeUi, undefined);
+            });
+        }
+        return this;
+    }
+
+    public bindNodeClick(settings: ReadonlyMap<UiId, Setting>, signal: AbortSignal): this {
         EventUtil.delegate(
             this.asideElement,
             ".node > .title",
@@ -176,15 +185,17 @@ export default class SettingUi extends Ui {
 
                 // 当前被设置的ui
                 const ui = assertExists(this.uiIdMap.get(assertExists(node.dataset["id"]) as UiId));
-                this.state.ui = ui;
+                this.activeUi = ui;
 
                 // 显示ui对应的设置项
                 const uiSettingItems = this.uiSettingItemMap.get(ui) ?? [];
                 const uiSetting = settings.get(ui.id);
                 this.settingItems.forEach((settingItem) => {
                     if (uiSettingItems.includes(settingItem)) {
-                        settingItem.setControlValue(ui, uiSetting?.[settingItem.id]);
-                        settingItem.setDisplayValue(ui, uiSetting?.[settingItem.id]);
+                        const value = uiSetting?.[settingItem.id];
+                        const acceptedValue = settingItem.accepts(value) ? value : undefined;
+                        settingItem.setControlValue(ui, acceptedValue);
+                        settingItem.setDisplayValue(ui, acceptedValue);
                         settingItem.show();
                     } else {
                         settingItem.hide();
@@ -197,16 +208,74 @@ export default class SettingUi extends Ui {
     }
 
     /**
+     * 预览并同步由设置面板之外的交互产生的设置变化。
+     */
+    public previewExternal(ui: Ui, change: SettingItemChange): this {
+        const settingItem = assertExists(
+            this.uiSettingItemMap.get(ui)?.find((item) => item.id === change.key),
+            `${ui.id} does not support setting ${change.key}`
+        );
+        this.preview(settingItem, ui, change);
+        if (this.activeUi === ui) settingItem.setControlValue(ui, change.value);
+        return this;
+    }
+
+    public isPreviewing(ui: Ui, key: SettingKey): boolean {
+        return this.previewingUiMap.get(key) === ui;
+    }
+
+    /**
      * 绑定设置项变化事件
      * @param  handler - 事件处理函数
      * @return 当前实例
      */
-    public bindSettingItemChange(handler: (ui: Ui, settingItem: Record<string, unknown>) => Promise<void>) {
+    public bindSettingCommit(
+        handler: (change: UiSettingChange) => Promise<void>,
+        signal: AbortSignal
+    ): this {
         this.settingItems.forEach((item) => {
-            item.onInput(async (settingItem) => {
-                await handler(this.state.ui, settingItem);
-            });
+            let previewUi: Ui | undefined;
+            item.bindChange(
+                {
+                    preview: (change) => {
+                        previewUi = this.requireActiveUi();
+                        this.previewingUiMap.set(change.key, previewUi);
+                        this.preview(item, previewUi, change);
+                    },
+                    commit: async (change) => {
+                        const ui = previewUi ?? this.requireActiveUi();
+                        previewUi = undefined;
+                        this.preview(item, ui, change);
+                        this.previewingUiMap.delete(change.key);
+                        await handler({ ...change, ui });
+                    },
+                },
+                signal
+            );
         });
+        return this;
+    }
+
+    private preview(settingItem: SettingItem, ui: Ui, change: SettingItemChange): void {
+        if (settingItem.id !== change.key || !settingItem.accepts(change.value)) {
+            throw new Error(`Invalid ${change.key} setting value: ${change.value}`);
+        }
+        settingItem.setDisplayValue(ui, change.value);
+        settingItem.apply(ui, change.value);
+
+        if (change.key === THEME_SETTING_KEY) {
+            this.uiSettingItemMap
+                .get(ui)
+                ?.filter((item) => item !== settingItem)
+                .forEach((item) => {
+                    item.setControlValue(ui, undefined);
+                    item.setDisplayValue(ui, undefined);
+                });
+        }
+    }
+
+    private requireActiveUi(): Ui {
+        return assertExists(this.activeUi, "No active setting UI");
     }
 
     private highlightActiveNode(nodeElement: HTMLElement) {
@@ -288,9 +357,9 @@ export default class SettingUi extends Ui {
         return node;
     }
 
-    private createMappedUiSettingItems(uiSettingItemMap: Map<Ui, (new (settingState: SettingState) => SettingItem)[]>) {
+    private createMappedUiSettingItems(uiSettingItemMap: UiSettingItemMap) {
         // 临时Map用于存储每个构造器对应的唯一实例
-        const constructorInstanceMap = new Map<new (...args: never[]) => SettingItem, SettingItem>();
+        const constructorInstanceMap = new Map<SettingItemConstructor, SettingItem>();
 
         for (const [ui, settingItemConstructors] of uiSettingItemMap) {
             const uiSettingItemInstances: SettingItem[] = [];
@@ -298,7 +367,7 @@ export default class SettingUi extends Ui {
                 let settingItem = constructorInstanceMap.get(settingItemConstructor);
                 // 如果这个构造器还没有实例化过,就new一个
                 if (!settingItem) {
-                    settingItem = new settingItemConstructor(this.state);
+                    settingItem = new settingItemConstructor();
                     constructorInstanceMap.set(settingItemConstructor, settingItem);
                     // 放入全局Set
                     this.settingItems.add(settingItem);

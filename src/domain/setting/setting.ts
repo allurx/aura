@@ -20,7 +20,7 @@ import { PageName } from "@/constant/page-name";
 import BaseModel from "@/domain/base-model";
 
 /**
- * 阅读器设置
+ * 页面设置
  * @author allurx
  */
 export default class Setting extends BaseModel {

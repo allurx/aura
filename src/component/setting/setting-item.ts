@@ -16,37 +16,35 @@
 
 import Ui from "@/component/ui";
 import DomUtil from "@/util/dom-util";
-import SettingState from "./setting-state";
 import { assertExists } from "@/util/assert-util";
+import { SettingChangeHandlers, SettingKey } from "./setting-change";
 
 /**
  * Setting item base class
  * @author allurx
  */
 export default abstract class SettingItem {
-    public readonly id: string;
+    public readonly id: SettingKey;
     public readonly element: HTMLElement;
     public readonly control: ValueCapableElement;
     public readonly display: HTMLSpanElement;
-    public readonly settingState: SettingState;
 
-    public constructor(id: string, settingState: SettingState) {
+    public constructor(id: SettingKey) {
         this.id = id;
-        this.settingState = settingState;
         this.element = DomUtil.createElementFromHTML(this.template());
         this.control = assertExists(this.element.querySelector<ValueCapableElement>(".control"));
         this.display = assertExists(this.element.querySelector<HTMLSpanElement>(".display"));
     }
 
-    public abstract onInput(handler: (settingItem: Record<string, unknown>) => Promise<void>): this;
-    public abstract setControlValue(ui: Ui, value: unknown): this;
-    public abstract setDisplayValue(ui: Ui, value: unknown): this;
-    public abstract apply(ui: Ui, setting: unknown): this;
+    public abstract bindChange(handlers: SettingChangeHandlers, signal: AbortSignal): this;
+    public abstract accepts(value: unknown): value is string;
+    public abstract setControlValue(ui: Ui, value: string | undefined): this;
+    public abstract setDisplayValue(ui: Ui, value: string | undefined): this;
+    public abstract apply(ui: Ui, setting: string): this;
     public abstract reset(ui: Ui): this;
     public abstract unit(): string;
     public abstract template(): string;
     public abstract displayOrder(): number;
-    public abstract applyOrder(): number;
 
     public show(): this {
         this.element.style.display = "flex";

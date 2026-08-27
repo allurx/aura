@@ -16,10 +16,8 @@
 import Book from "@/domain/book/book";
 import Chapter from "@/domain/chapter/chapter";
 import Toc from "@/domain/toc/toc";
-import Setting from "@/domain/setting/setting";
 import Progress from "@/domain/progress/progress";
 import ObjectUtil from "@/util/object-util";
-import { UiId } from "@/component/ui-id";
 
 /**
  * 阅读器状态
@@ -28,7 +26,6 @@ import { UiId } from "@/component/ui-id";
 export default class ReaderState {
     public readonly book!: Book;
     public readonly toc!: Toc;
-    public readonly settings!: Map<UiId, Setting>;
     public readonly progress!: Progress;
     public chapter!: Chapter;
 
