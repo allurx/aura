@@ -36,9 +36,7 @@ export default class Dialog {
         this.closeBtnElement = assertExists(this.dialogElement.querySelector<HTMLSpanElement>(".close-btn"));
         this.bodyElement = assertExists(this.dialogElement.querySelector<HTMLElement>(".body"));
         this.cancelBtnElement = assertExists(this.dialogElement.querySelector<HTMLButtonElement>(".cancel-btn"));
-        this.confirmBtnElement = assertExists(
-            this.dialogElement.querySelector<HTMLButtonElement>(".confirm-btn")
-        );
+        this.confirmBtnElement = assertExists(this.dialogElement.querySelector<HTMLButtonElement>(".confirm-btn"));
         this.bindEvents();
     }
 

@@ -39,7 +39,7 @@ Aura 是一个轻量、离线优先的 Web 阅读器。变更应持续保护以�
 
 - 修改前检查 `git status`，识别并保留用户已有改动；以最小必要范围完成当前任务。
 - 开发循环先运行最小相关检查；实现稳定后复查实际 diff，非平凡修改进行独立 review。修复确认的问题后只重跑受影响的检查，最终状态再执行完整验证。
-- 使用 `npm` 和 `package-lock.json`；`package.json` 是脚本定义的事实来源。最终静态门禁为 `npm run check`；开发循环或定位单项问题时可分别运行 `npm run lint` 或 `npm run type-check`。
+- 使用 `npm` 和 `package-lock.json`；`package.json` 是脚本定义的事实来源。`npm run format` 会显式改写受管文件；最终只读静态门禁 `npm run check` 依次执行格式、lint 和类型检查，开发循环或定位单项问题时可分别运行对应命令。
 - TypeScript 变更通常至少运行 `npm run check`；影响运行时行为时还应运行对应生产构建，普通 Web 为 `npm run build`。构建脚本已包含静态门禁，最终验证无需紧邻重复运行 `npm run check`。
 - 路由、入口、模板、资源路径、Vite 配置或 portable 相关变更，应同时运行 `npm run build` 和 `npm run build:portable`；混淆流程变更再覆盖 `npm run build:obfuscated` 和 `npm run build:portable:obfuscated`。
 - 构建成功只证明静态构建通过。导航、页面生命周期、移动端交互、持久化和 `file://` portable 行为等浏览器问题，必须在对应运行环境中验证后才能宣称已解决。
