@@ -140,11 +140,8 @@ export default class BookshelfService {
                 // 计算相同hash的书籍数量
                 // 如果该文件没有其他书籍则删除对应的file, chapter和toc
                 if (
-                    (await this.bookService.countByIndex(
-                        bookStore.indexes.idxFileId.name,
-                        book.fileId,
-                        transaction
-                    )) <= 1
+                    (await this.bookService.countByIndex(bookStore.indexes.idxFileId.name, book.fileId, transaction)) <=
+                    1
                 )
                     await Promise.all([
                         this.fileService.deleteByKey(book.fileId, transaction),

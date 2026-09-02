@@ -1,0 +1,2 @@
+# Keep text files consistent across platforms and aligned with Prettier.
+* text=auto eol=lf

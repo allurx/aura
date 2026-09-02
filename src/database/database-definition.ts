@@ -89,16 +89,6 @@ export default class DatabaseDefinition {
             },
             description: "书籍阅读进度",
         },
-        setting: {
-            name: "setting",
-            keyPath: "id",
-            autoIncrement: false,
-            indexes: {
-                idxPageName: { name: "idx_page_name", path: "pageName", unique: false },
-                ukPageNameUiId: { name: "uk_page_name_ui_id", path: ["pageName", "uiId"], unique: true },
-            },
-            description: "设置",
-        },
     };
 }
 
@@ -110,6 +100,4 @@ export const bookStore = DatabaseDefinition.stores.book;
 export const tocStore = DatabaseDefinition.stores.toc;
 export const chapterStore = DatabaseDefinition.stores.chapter;
 export const progressStore = DatabaseDefinition.stores.progress;
-export const settingStore = DatabaseDefinition.stores.setting;
-
 export type StoreDefinition = (typeof DatabaseDefinition.stores)[keyof typeof DatabaseDefinition.stores];

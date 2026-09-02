@@ -13,8 +13,9 @@ Aura 是一个轻量、离线优先的 Web 阅读器。变更应持续保护以�
 
 - 优先使用原生 HTML、CSS、DOM API 和 TypeScript，保持应用轻量；引入前端运行时框架、状态管理库或其他运行时依赖前，先说明必要性、代价和替代方案并征得确认。
 - 同时支持普通 Web 交付和可在本地离线使用的单文件 portable 交付。内部实现可以重构，但不得无意破坏任一交付方式。
-- 保护用户的本地持久化数据。涉及数据库结构、持久化标识、存储语义或兼容迁移的变更，必须先说明影响并获得确认；不得擅自增加迁移、兼容读取或静默转换。
+- 项目处于快速迭代期，每次迭代都视为全新产品并使用全新数据库。实现只面向当前结构，可以直接进行破坏性重构；除非用户明确改变这一阶段约束，否则不要为旧 schema 或旧数据增加迁移、兼容读取、转换或 write-back。
 - Bookshelf 与 Reader 的设置都按页面和 UI 共同隔离；同名 UI 可以跨页面复用，重置只影响当前页面。Theme 只提供页面基础配色，用户对具体 UI 的显式设置始终具有更高优先级。
+- 所有 Appearance 使用 page-scoped `localStorage`，键为 `aura.bookshelf.appearance` 和 `aura.reader.appearance`。Theme 在浏览器首次绘制前同步应用，其余 UI 外观（包括页面画布背景）在页面初始化的首个 `await` 前恢复；IndexedDB 只保存领域数据，不作为 Appearance 的兼容或回退存储。
 - 保持桌面端与移动端的核心阅读体验，并关注大文件导入、解析和持久化的时间与内存开销。
 - 用户导入的文件名、文本内容及其他外部字符串均按不可信数据处理，使用安全的 DOM API 渲染，不得拼接为 HTML、CSS 选择器或可执行内容。
 
@@ -39,7 +40,7 @@ Aura 是一个轻量、离线优先的 Web 阅读器。变更应持续保护以�
 
 - 修改前检查 `git status`，识别并保留用户已有改动；以最小必要范围完成当前任务。
 - 开发循环先运行最小相关检查；实现稳定后复查实际 diff，非平凡修改进行独立 review。修复确认的问题后只重跑受影响的检查，最终状态再执行完整验证。
-- 使用 `npm` 和 `package-lock.json`；`package.json` 是脚本定义的事实来源。最终静态门禁为 `npm run check`；开发循环或定位单项问题时可分别运行 `npm run lint` 或 `npm run type-check`。
+- 使用 `npm` 和 `package-lock.json`；`package.json` 是脚本定义的事实来源。`npm run format` 会显式改写受管文件；最终只读静态门禁 `npm run check` 依次执行格式、lint 和类型检查，开发循环或定位单项问题时可分别运行对应命令。
 - TypeScript 变更通常至少运行 `npm run check`；影响运行时行为时还应运行对应生产构建，普通 Web 为 `npm run build`。构建脚本已包含静态门禁，最终验证无需紧邻重复运行 `npm run check`。
 - 路由、入口、模板、资源路径、Vite 配置或 portable 相关变更，应同时运行 `npm run build` 和 `npm run build:portable`；混淆流程变更再覆盖 `npm run build:obfuscated` 和 `npm run build:portable:obfuscated`。
 - 构建成功只证明静态构建通过。导航、页面生命周期、移动端交互、持久化和 `file://` portable 行为等浏览器问题，必须在对应运行环境中验证后才能宣称已解决。

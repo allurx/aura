@@ -14,23 +14,14 @@
  * limitations under the License.
  */
 
-import { ClassFields } from "@/type/common-type";
-import { UiId } from "@/component/ui-id";
-import { PageName } from "@/constant/page-name";
-import BaseModel from "@/domain/base-model";
+import Setting from "@/component/setting/definition/setting";
 
 /**
- * 页面设置
+ * 设置控件产生的预览和提交事件。
+ *
  * @author allurx
  */
-export default class Setting extends BaseModel {
-    public readonly uiId!: UiId;
-    public readonly pageName!: PageName;
-    [key: string]: unknown;
-
-    public constructor(data: ClassFields<Setting>) {
-        super();
-        // 设置项是动态的,使用Object.assign赋值
-        Object.assign(this, data);
-    }
+export default interface SettingControlListener {
+    preview(setting: Setting, value: string): void;
+    commit(setting: Setting, value: string): void;
 }

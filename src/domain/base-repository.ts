@@ -127,9 +127,7 @@ export default abstract class BaseRepository<T extends BaseModel> {
     }
 
     public async countByIndex(indexName: string, indexValue: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
-        return await this.requestPromise(
-            transaction.objectStore(this.storeName()).index(indexName).count(indexValue)
-        );
+        return await this.requestPromise(transaction.objectStore(this.storeName()).index(indexName).count(indexValue));
     }
 
     public async clear(transaction: IDBTransaction) {

@@ -28,18 +28,18 @@ import settingIcon from "@/asset/image/setting.svg";
 export default class HeaderUi extends Ui {
     private readonly toggleTocPanelElement: HTMLImageElement;
     private readonly toggleFullscreenElement: HTMLImageElement;
-    private readonly toggleSettingPanelElement: HTMLImageElement;
+    private readonly toggleSettingPanelElement: HTMLButtonElement;
 
     public constructor(args: ConstructorParameters<typeof Ui>[0]) {
         super(args);
         this.toggleTocPanelElement = assertExists(this.root.querySelector<HTMLImageElement>("#toggle-toc-panel"));
         this.toggleFullscreenElement = assertExists(this.root.querySelector<HTMLImageElement>("#toggle-fullscreen"));
         this.toggleSettingPanelElement = assertExists(
-            this.root.querySelector<HTMLImageElement>("#toggle-setting-panel")
+            this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel")
         );
         this.toggleTocPanelElement.src = tableOfContentsIcon;
         this.toggleFullscreenElement.src = fullscreenIcon;
-        this.toggleSettingPanelElement.src = settingIcon;
+        assertExists(this.toggleSettingPanelElement.querySelector<HTMLImageElement>("img")).src = settingIcon;
     }
 
     /**
@@ -66,8 +66,15 @@ export default class HeaderUi extends Ui {
      * @param handler - 事件处理函数
      * @return 当前实例
      */
-    public bindToggleSettingPanel(handler: () => void, signal: AbortSignal): this {
-        EventUtil.bind(this.toggleSettingPanelElement, "click", handler, { signal });
+    public bindToggleSettingPanel(handler: (opener: HTMLButtonElement) => void, signal: AbortSignal): this {
+        EventUtil.bind(
+            this.toggleSettingPanelElement,
+            "click",
+            (_, opener) => {
+                handler(opener);
+            },
+            { signal }
+        );
         return this;
     }
 }

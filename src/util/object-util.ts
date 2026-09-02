@@ -18,10 +18,7 @@
  * 对象工具类
  * @author allurx
  */
-export default class ObjectUtil {
-    private constructor() {
-        throw new Error(`${ObjectUtil.name} is a static class and cannot be instantiated.`);
-    }
+export default abstract class ObjectUtil {
     /**
      * 赋值对象自身属性
      * @param target - 目标对象

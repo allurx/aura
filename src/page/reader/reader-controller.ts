@@ -23,23 +23,12 @@ import ContentUi from "./content/content-ui";
 import FooterUi from "./footer/footer-ui";
 import TocUi from "./toc/toc-ui";
 import ReaderState from "./reader-state";
-import BackgroundColorSettingItem from "@/component/setting/item/background-color-setting-item";
-import ColorSettingItem from "@/component/setting/item/color-setting-item";
-import WidthSettingItem from "@/component/setting/item/width-setting-item";
-import PaddingTopSettingItem from "@/component/setting/item/padding-top-setting-item";
-import PaddingLeftSettingItem from "@/component/setting/item/padding-left-setting-item";
-import PaddingBottomSettingItem from "@/component/setting/item/padding-bottom-setting-item";
-import PaddingRightSettingItem from "@/component/setting/item/padding-right-setting-item";
-import FontSizeSettingItem from "@/component/setting/item/font-size-setting-item";
-import LineHeightSettingItem from "@/component/setting/item/line-height-setting-item";
-import ThemeSettingItem from "@/component/setting/item/theme-setting-item";
-import Ui from "@/component/ui";
-import { UiId } from "@/component/ui-id";
+import SettingCatalog from "@/component/setting/definition/setting-catalog";
+import SettingTarget from "@/component/setting/model/setting-target";
+import SettingController from "@/component/setting/setting-controller";
 import { SwitchChapterDirection } from "@/constant/switch-chapter-direction";
-import { StyleProperty } from "@/component/setting/style-property";
 import { assertExists } from "@/util/assert-util";
 import { PageName } from "@/constant/page-name";
-import SettingController, { type SettingItemConstructor } from "@/component/setting/setting-controller";
 
 /**
  * 阅读器控制器
@@ -87,44 +76,43 @@ export default class ReaderController {
         this.settingController = new SettingController({
             pageName: PageName.READER,
             container: this.readerUi.root,
-            uiSettingItemMap: new Map<Ui, readonly SettingItemConstructor[]>([
-                [this.appUi, [BackgroundColorSettingItem, ThemeSettingItem]],
-                [this.readerUi, [ColorSettingItem, WidthSettingItem, BackgroundColorSettingItem]],
-                [
-                    this.headerUi,
-                    [
-                        PaddingTopSettingItem,
-                        PaddingLeftSettingItem,
-                        PaddingBottomSettingItem,
-                        PaddingRightSettingItem,
-                        BackgroundColorSettingItem,
-                    ],
-                ],
-                [
-                    this.contentUi,
-                    [
-                        FontSizeSettingItem,
-                        ColorSettingItem,
-                        PaddingLeftSettingItem,
-                        PaddingRightSettingItem,
-                        BackgroundColorSettingItem,
-                        LineHeightSettingItem,
-                    ],
-                ],
-                [
-                    this.footerUi,
-                    [
-                        FontSizeSettingItem,
-                        ColorSettingItem,
-                        PaddingTopSettingItem,
-                        PaddingBottomSettingItem,
-                        PaddingLeftSettingItem,
-                        PaddingRightSettingItem,
-                        BackgroundColorSettingItem,
-                    ],
-                ],
-                [this.tocUi, [FontSizeSettingItem, ColorSettingItem, BackgroundColorSettingItem]],
-            ]),
+            targets: [
+                new SettingTarget(this.appUi, [SettingCatalog.BACKGROUND_COLOR, SettingCatalog.THEME]),
+                new SettingTarget(this.readerUi, [
+                    SettingCatalog.COLOR,
+                    SettingCatalog.WIDTH,
+                    SettingCatalog.BACKGROUND_COLOR,
+                ]),
+                new SettingTarget(this.headerUi, [
+                    SettingCatalog.PADDING_TOP,
+                    SettingCatalog.PADDING_LEFT,
+                    SettingCatalog.PADDING_BOTTOM,
+                    SettingCatalog.PADDING_RIGHT,
+                    SettingCatalog.BACKGROUND_COLOR,
+                ]),
+                new SettingTarget(this.contentUi, [
+                    SettingCatalog.FONT_SIZE,
+                    SettingCatalog.COLOR,
+                    SettingCatalog.PADDING_LEFT,
+                    SettingCatalog.PADDING_RIGHT,
+                    SettingCatalog.BACKGROUND_COLOR,
+                    SettingCatalog.LINE_HEIGHT,
+                ]),
+                new SettingTarget(this.footerUi, [
+                    SettingCatalog.FONT_SIZE,
+                    SettingCatalog.COLOR,
+                    SettingCatalog.PADDING_TOP,
+                    SettingCatalog.PADDING_BOTTOM,
+                    SettingCatalog.PADDING_LEFT,
+                    SettingCatalog.PADDING_RIGHT,
+                    SettingCatalog.BACKGROUND_COLOR,
+                ]),
+                new SettingTarget(this.tocUi, [
+                    SettingCatalog.FONT_SIZE,
+                    SettingCatalog.COLOR,
+                    SettingCatalog.BACKGROUND_COLOR,
+                ]),
+            ],
         });
     }
 
@@ -141,7 +129,8 @@ export default class ReaderController {
             { once: true }
         );
 
-        const [state] = await Promise.all([this.readerService.init(bookId), this.settingController.init(signal)]);
+        this.settingController.init(signal);
+        const state = await this.readerService.init(bookId);
         if (signal.aborted) return;
 
         this.state = state;
@@ -160,9 +149,6 @@ export default class ReaderController {
                 this.state.chapter.lineNumber(this.state.progress.lineIndex),
                 this.state.toc.numberOfLines()
             );
-
-        // 显示阅读器内容
-        this.readerUi.show();
 
         // 绑定事件
         this.bindEvent(signal);
@@ -247,23 +233,14 @@ export default class ReaderController {
         // App UI 事件
         this.appUi.bindChapterNavigation(this.contentUi.root, (direction) => this.switchChapter(direction), signal);
 
-        // Reader UI 事件
-        this.readerUi.observePreferredWidth(async (width) => {
-            if (this.settingController.isPreviewing(this.readerUi, StyleProperty.WIDTH)) return;
-            if (this.settingController.getValue(UiId.READER, StyleProperty.WIDTH) === width) return;
-
-            await this.settingController.commitExternal(this.readerUi, {
-                key: StyleProperty.WIDTH,
-                value: width,
-            });
-        }, signal);
-
         // header ui事件
         this.headerUi
+            .bindToggleSettingPanel((opener) => {
+                this.settingController.toggle(opener);
+            }, signal)
             .bindToggleTocPanel(() => {
                 this.tocUi.toggleToc().highlightCurrentChapter(this.state.progress.chapterIndex);
             }, signal)
-            .bindToggleSettingPanel(() => this.settingController.toggle(), signal)
             .bindToggleFullscreen(() => {
                 this.appUi
                     .toggleFullscreen()
@@ -291,6 +268,5 @@ export default class ReaderController {
                 });
             }, signal)
             .bindTocClose(signal);
-
     }
 }

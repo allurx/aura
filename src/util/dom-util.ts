@@ -18,11 +18,7 @@
  * DOM utility class
  * @author allurx
  */
-export default class DomUtil {
-    private constructor() {
-        throw new Error(`${DomUtil.name} is a static class and cannot be instantiated.`);
-    }
-
+export default abstract class DomUtil {
     /**
      * Convert HTML string to typed DOM element.
      */

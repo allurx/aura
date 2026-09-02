@@ -18,15 +18,12 @@
  * 书籍工具类
  * @author allurx
  */
-export default class FileUtil {
-    private constructor() {
-        throw new Error(`${FileUtil.name} is a static class and cannot be instantiated.`);
-    }
+export default abstract class FileUtil {
     /**
      * 计算文件的SHA-256哈希值
      * 注意: crypto.subtle需要HTTPS协议或localhost环境
      * @param file - 上传的文件
-    * @returns  文件的SHA-256哈希值
+     * @returns  文件的SHA-256哈希值
      */
     public static async computeHash(file: File): Promise<string> {
         return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer())))

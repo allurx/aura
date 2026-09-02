@@ -94,10 +94,8 @@ export default class ContentUi extends Ui {
                             .map((p: HTMLParagraphElement) => {
                                 const rect = p.getBoundingClientRect();
                                 const ratio =
-                                    Math.max(
-                                        0,
-                                        Math.min(rect.bottom, cRect.bottom) - Math.max(rect.top, cRect.top)
-                                    ) / rect.height;
+                                    Math.max(0, Math.min(rect.bottom, cRect.bottom) - Math.max(rect.top, cRect.top)) /
+                                    rect.height;
                                 return {
                                     index: Number(p.dataset["index"]),
                                     ratio,

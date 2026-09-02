@@ -38,6 +38,17 @@
             width: 22px;
             height: 22px;
         }
+
+        #toggle-setting-panel {
+            appearance: none;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            width: 22px;
+            height: 22px;
+            line-height: 0;
+            cursor: pointer;
+        }
     }
 
     /* 顶部左侧操作区域 */

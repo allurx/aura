@@ -14,18 +14,17 @@
  * limitations under the License.
  */
 
+import Setting from "@/component/setting/definition/setting";
+import SettingInteraction from "@/component/setting/model/setting-interaction";
+import SettingTarget from "@/component/setting/model/setting-target";
+
 /**
- * 可配置的样式属性枚举
+ * 面板外部 Appearance 变化与已提交状态所有者之间的契约。
+ *
  * @author allurx
  */
-export enum StyleProperty {
-    FONT_SIZE = "font-size",
-    COLOR = "color",
-    WIDTH = "width",
-    PADDING_TOP = "padding-top",
-    PADDING_BOTTOM = "padding-bottom",
-    PADDING_LEFT = "padding-left",
-    PADDING_RIGHT = "padding-right",
-    LINE_HEIGHT = "line-height",
-    BACKGROUND_COLOR = "background-color",
+export default interface ExternalSettingListener {
+    getValue(target: SettingTarget, setting: Setting): string | undefined;
+    isPreviewing(target: SettingTarget, setting: Setting): boolean;
+    commitExternal(interaction: SettingInteraction): void;
 }

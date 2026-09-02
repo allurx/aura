@@ -21,16 +21,9 @@ import BookshelfUi from "./bookshelf-ui";
 import BookshelfService from "./bookshelf-service";
 import BookshelfState from "./bookshelf-state";
 import { assertExists } from "@/util/assert-util";
-import BackgroundColorSettingItem from "@/component/setting/item/background-color-setting-item";
-import ColorSettingItem from "@/component/setting/item/color-setting-item";
-import FontSizeSettingItem from "@/component/setting/item/font-size-setting-item";
-import PaddingBottomSettingItem from "@/component/setting/item/padding-bottom-setting-item";
-import PaddingLeftSettingItem from "@/component/setting/item/padding-left-setting-item";
-import PaddingRightSettingItem from "@/component/setting/item/padding-right-setting-item";
-import PaddingTopSettingItem from "@/component/setting/item/padding-top-setting-item";
-import ThemeSettingItem from "@/component/setting/item/theme-setting-item";
-import SettingController, { type SettingItemConstructor } from "@/component/setting/setting-controller";
-import Ui from "@/component/ui";
+import SettingCatalog from "@/component/setting/definition/setting-catalog";
+import SettingTarget from "@/component/setting/model/setting-target";
+import SettingController from "@/component/setting/setting-controller";
 import { PageName } from "@/constant/page-name";
 
 /**
@@ -69,45 +62,42 @@ export default class BookshelfController {
         this.settingController = new SettingController({
             pageName: PageName.BOOKSHELF,
             container: this.bookshelfUi.root,
-            uiSettingItemMap: new Map<Ui, readonly SettingItemConstructor[]>([
-                [this.bookshelfUi, [ThemeSettingItem, BackgroundColorSettingItem]],
-                [
-                    this.headerUi,
-                    [
-                        FontSizeSettingItem,
-                        ColorSettingItem,
-                        BackgroundColorSettingItem,
-                        PaddingLeftSettingItem,
-                        PaddingRightSettingItem,
-                    ],
-                ],
-                [this.navUi, [FontSizeSettingItem, ColorSettingItem, BackgroundColorSettingItem]],
-                [
-                    this.bookListUi,
-                    [
-                        FontSizeSettingItem,
-                        ColorSettingItem,
-                        BackgroundColorSettingItem,
-                        PaddingTopSettingItem,
-                        PaddingLeftSettingItem,
-                        PaddingBottomSettingItem,
-                        PaddingRightSettingItem,
-                    ],
-                ],
-            ]),
+            targets: [
+                new SettingTarget(this.bookshelfUi, [SettingCatalog.THEME, SettingCatalog.BACKGROUND_COLOR]),
+                new SettingTarget(this.headerUi, [
+                    SettingCatalog.FONT_SIZE,
+                    SettingCatalog.COLOR,
+                    SettingCatalog.BACKGROUND_COLOR,
+                    SettingCatalog.PADDING_LEFT,
+                    SettingCatalog.PADDING_RIGHT,
+                ]),
+                new SettingTarget(this.navUi, [
+                    SettingCatalog.FONT_SIZE,
+                    SettingCatalog.COLOR,
+                    SettingCatalog.BACKGROUND_COLOR,
+                ]),
+                new SettingTarget(this.bookListUi, [
+                    SettingCatalog.FONT_SIZE,
+                    SettingCatalog.COLOR,
+                    SettingCatalog.BACKGROUND_COLOR,
+                    SettingCatalog.PADDING_TOP,
+                    SettingCatalog.PADDING_LEFT,
+                    SettingCatalog.PADDING_BOTTOM,
+                    SettingCatalog.PADDING_RIGHT,
+                ]),
+            ],
         });
         this.bookshelfService = new BookshelfService();
     }
 
     public async init(signal: AbortSignal): Promise<void> {
-        const [state] = await Promise.all([this.bookshelfService.init(), this.settingController.init(signal)]);
+        this.settingController.init(signal);
+        const state = await this.bookshelfService.init();
         if (signal.aborted) return;
-
         this.state = state;
         this.navUi.renderNav(this.state.categories);
         this.bindEvent(signal);
         this.navUi.clickNavItem(this.state.categoryId);
-        this.bookshelfUi.show();
     }
 
     /**
@@ -174,7 +164,9 @@ export default class BookshelfController {
     private bindEvent(signal: AbortSignal): void {
         // 绑定头部事件
         this.headerUi
-            .bindToggleSettingPanel(() => this.settingController.toggle(), signal)
+            .bindToggleSettingPanel((opener) => {
+                this.settingController.toggle(opener);
+            }, signal)
             .bindClearBookshelfClick(() => this.clearBookshelf(), signal)
             .bindHeaderTitleClick(() => this.navUi.toggleVisibility(), signal);
 

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import "./reader.css";
 import template from "./reader.html?raw";
 import BasePage from "@/page/base-page";
 import ReaderController from "./reader-controller";
@@ -26,7 +25,6 @@ import ReaderController from "./reader-controller";
 export default class Reader extends BasePage {
     public constructor(public readonly bookId: string) {
         super(template);
-        if (!bookId) throw new Error("bookId must not be empty");
     }
 
     protected override async init(readerRoot: HTMLElement, appRoot: HTMLElement): Promise<void> {

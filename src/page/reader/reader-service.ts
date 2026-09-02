@@ -74,7 +74,7 @@ export default class ReaderService {
                 return new ReaderState({
                     book,
                     toc: assertExists(toc, `Toc[fileId=${book.fileId}] not found`),
-                    progress: assertExists(progress, `Progress[bookId=${bookId}] not found`),
+                    progress,
                     chapter: assertExists(
                         chapter,
                         `Chapter[fileId=${book.fileId}, index=${String(progress.chapterIndex)}] not found`

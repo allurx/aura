@@ -24,11 +24,6 @@ import FullscreenUtil from "@/util/fullscreen-util";
  * @author allurx
  */
 export default class AppUi extends Ui {
-    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
-        super(args);
-        this.root.dataset["defaultTheme"] = "yellow";
-    }
-
     // 追踪指针信息
     private readonly pointer = {
         // 指针移动轨迹相对于x轴的角度
@@ -60,8 +55,6 @@ export default class AppUi extends Ui {
      */
     public cleanup(): void {
         this.root.style.removeProperty("background-color");
-        delete this.root.dataset["theme"];
-        delete this.root.dataset["defaultTheme"];
 
         if (FullscreenUtil.getElement() === this.root) {
             EventUtil.run(() => FullscreenUtil.exit());
@@ -114,24 +107,20 @@ export default class AppUi extends Ui {
             { passive: true, signal }
         );
 
-        //  监听pointercancel事件,处理触摸取消。在移动设备上pointer事件可能会因为各种情况被取消
-        //  1.用户多任务切换频繁
-        //  2.通知、来电等系统事件很多
-        //  3.滑动触发系统滚动或回弹(iOS 橡皮筋)
-        //  4.多指触控导致手势切换(如双指缩放)
-        //  5.浏览器认为当前指针不再有效
-        //  6.弹出系统手势拦截(长按菜单、拉伸/缩放等)
-        //  这个事件监听器就像是一个安全网,确保无论发生什么意外,触摸状态都能被正确重置,保持应用的稳定性！
+        // 浏览器或系统取消手势时只清理状态，不能把取消前的轨迹提交为章节切换。
         EventUtil.bind(
             document,
             "pointercancel",
-            async (event: PointerEvent) => {
-                await handler(this.handlePointerEnd(targetElement, event));
+            (event: PointerEvent) => {
+                this.pointer.endCause = event.type;
+                this.pointer.endTarget = event.target;
+                this.pointer.action = "cancelled";
+                this.pointer.isTouching = false;
             },
             { signal }
         );
 
-        // 监听pointerup事件,处理触摸结束, 注意该事件不一定会被触发,可能因为移动端各种情况被取消,所以要配合pointercancel事件一起使用
+        // 监听pointerup事件，只有正常结束的手势才判定章节切换方向。
         EventUtil.bind(
             document,
             "pointerup",
@@ -143,14 +132,13 @@ export default class AppUi extends Ui {
     }
 
     /**
-     * 处理触摸结束,判断是点击还是滑动,注意event可能是pointerup或者pointercancel
-     * 注意event是pointercancel时event.clientX和event.clientY可能无效,所以不要依赖此刻的坐标
+     * 处理正常结束的指针手势，判断是点击还是滑动。
      * @param targetElement - 目标元素
      * @param event - 指针事件
      * @param options - 配置选项
      * @param options.clickAndSwipeThreshold - 点击和滑动阈值(距离px) - 手指在x/y轴滑动距离同时小于该阈值时才算作点击
      * @param options.minSwipeAngle - 最小滑动角度阈值(度) - 确保是水平滑动
-     * @return 章节切换方向或null
+     * @return 章节切换方向或INVALID
      */
     private handlePointerEnd(
         targetElement: HTMLElement,
