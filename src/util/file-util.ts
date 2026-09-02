@@ -18,10 +18,7 @@
  * 书籍工具类
  * @author allurx
  */
-export default class FileUtil {
-    private constructor() {
-        throw new Error(`${FileUtil.name} is a static class and cannot be instantiated.`);
-    }
+export default abstract class FileUtil {
     /**
      * 计算文件的SHA-256哈希值
      * 注意: crypto.subtle需要HTTPS协议或localhost环境

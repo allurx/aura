@@ -27,7 +27,7 @@ import WidthSetting from "./width-setting";
  *
  * @author allurx
  */
-export default class SettingCatalog {
+export default abstract class SettingCatalog {
     public static readonly THEME = new ThemeSetting(10);
     public static readonly FONT_SIZE = new RangeStyleSetting(StyleProperty.FONT_SIZE, "字号", 12, 100, 1, "px", 20);
     public static readonly COLOR = new ColorStyleSetting(StyleProperty.COLOR, "文本颜色", 30);
@@ -70,8 +70,4 @@ export default class SettingCatalog {
         90
     );
     public static readonly LINE_HEIGHT = new RangeStyleSetting(StyleProperty.LINE_HEIGHT, "行高", 16, 48, 1, "px", 100);
-
-    private constructor() {
-        throw new Error(`${SettingCatalog.name} is a static class and cannot be instantiated`);
-    }
 }

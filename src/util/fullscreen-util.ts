@@ -18,10 +18,7 @@
  * 全屏工具类
  * @author allurx
  */
-export default class FullscreenUtil {
-    private constructor() {
-        throw new Error(`${FullscreenUtil.name} is a static class and cannot be instantiated.`);
-    }
+export default abstract class FullscreenUtil {
     /**
      * 是否有元素处于全屏状态
      * @return 是否有元素处于全屏状态

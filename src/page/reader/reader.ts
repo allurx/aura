@@ -25,7 +25,6 @@ import ReaderController from "./reader-controller";
 export default class Reader extends BasePage {
     public constructor(public readonly bookId: string) {
         super(template);
-        if (!bookId) throw new Error("bookId must not be empty");
     }
 
     protected override async init(readerRoot: HTMLElement, appRoot: HTMLElement): Promise<void> {

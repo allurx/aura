@@ -17,6 +17,21 @@
 import EventUtil from "@/util/event-util";
 import { assertExists } from "@/util/assert-util";
 
+type DialogRequest =
+    | {
+          type: "alert";
+          content: Node | string;
+          title: string;
+          confirmBtnText: string;
+      }
+    | {
+          type: "confirm";
+          content: Node | string;
+          title: string;
+          confirmBtnText: string;
+          cancelBtnText: string;
+      };
+
 /**
  * 对话框组件
  * @author allurx
@@ -60,28 +75,16 @@ export default class Dialog {
     /**
      * 显示对话框
      */
-    private async show({
-        type,
-        content,
-        title = "提示",
-        confirmBtnText = "确定",
-        cancelBtnText = "取消",
-    }: {
-        type: "alert" | "confirm";
-        content: Node | string;
-        title?: string;
-        confirmBtnText?: string;
-        cancelBtnText?: string;
-    }): Promise<boolean> {
-        this.titleElement.textContent = title;
-        this.setBodyContent(content);
-        this.confirmBtnElement.textContent = confirmBtnText || "确定";
+    private async show(request: DialogRequest): Promise<boolean> {
+        this.titleElement.textContent = request.title;
+        this.setBodyContent(request.content);
+        this.confirmBtnElement.textContent = request.confirmBtnText;
 
-        if (type == "alert") {
+        if (request.type === "alert") {
             this.cancelBtnElement.hidden = true;
         } else {
             this.cancelBtnElement.hidden = false;
-            this.cancelBtnElement.textContent = cancelBtnText;
+            this.cancelBtnElement.textContent = request.cancelBtnText;
         }
 
         return new Promise((resolve) => {

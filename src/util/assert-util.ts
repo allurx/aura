@@ -18,10 +18,7 @@
  * 断言工具类
  * @author allurx
  */
-export default class AssertUtil {
-    private constructor() {
-        throw new Error(`${AssertUtil.name} is a static class and cannot be instantiated.`);
-    }
+export default abstract class AssertUtil {
     /**
      * 确保值非null/undefined,否则抛出错误
      * @param value 需要检查的值

@@ -18,11 +18,7 @@
  * 事件工具类,支持委托绑定/直接绑定
  * @author allurx
  */
-export default class EventUtil {
-    private constructor() {
-        throw new Error(`${EventUtil.name} is a static class and cannot be instantiated.`);
-    }
-
+export default abstract class EventUtil {
     /**
      * 执行事件处理函数, 并将同步或异步异常上报到全局error事件
      * @param handler - 事件处理函数
