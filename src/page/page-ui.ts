@@ -35,14 +35,6 @@ export default abstract class PageUi extends Ui implements Dialogable, Overlayab
     }
 
     /**
-     * 显示已经完成初始化的页面内容。
-     */
-    public show(): this {
-        this.root.classList.add("visible");
-        return this;
-    }
-
-    /**
      * @see Overlayable.showOverlay
      */
     public showOverlay(): Promise<void> {

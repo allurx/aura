@@ -26,17 +26,17 @@ import Ui from "@/component/ui";
  */
 export default class HeaderUi extends Ui {
     private readonly headerTitleElement: HTMLSpanElement;
-    private readonly toggleSettingPanelElement: HTMLImageElement;
+    private readonly toggleSettingPanelElement: HTMLButtonElement;
     private readonly clearBookshelfElement: HTMLImageElement;
 
     public constructor(args: ConstructorParameters<typeof Ui>[0]) {
         super(args);
         this.headerTitleElement = assertExists(this.root.querySelector<HTMLSpanElement>("#title"));
         this.toggleSettingPanelElement = assertExists(
-            this.root.querySelector<HTMLImageElement>("#toggle-setting-panel")
+            this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel")
         );
         this.clearBookshelfElement = assertExists(this.root.querySelector<HTMLImageElement>("#clear-btn"));
-        this.toggleSettingPanelElement.src = settingIcon;
+        assertExists(this.toggleSettingPanelElement.querySelector<HTMLImageElement>("img")).src = settingIcon;
         this.clearBookshelfElement.src = bookshelfClearIcon;
     }
 
@@ -46,8 +46,15 @@ export default class HeaderUi extends Ui {
      * @param signal - 页面生命周期信号
      * @returns 返回当前实例
      */
-    public bindToggleSettingPanel(handler: () => void, signal: AbortSignal): this {
-        EventUtil.bind(this.toggleSettingPanelElement, "click", handler, { signal });
+    public bindToggleSettingPanel(handler: (opener: HTMLButtonElement) => void, signal: AbortSignal): this {
+        EventUtil.bind(
+            this.toggleSettingPanelElement,
+            "click",
+            (_, opener) => {
+                handler(opener);
+            },
+            { signal }
+        );
         return this;
     }
 

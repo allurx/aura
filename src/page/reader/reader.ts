@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import "./reader.css";
 import template from "./reader.html?raw";
 import BasePage from "@/page/base-page";
 import ReaderController from "./reader-controller";

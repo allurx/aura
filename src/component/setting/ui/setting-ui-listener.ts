@@ -14,10 +14,19 @@
  * limitations under the License.
  */
 
-import PageUi from "@/page/page-ui";
+import Setting from "@/component/setting/definition/setting";
+import SettingInteraction from "@/component/setting/model/setting-interaction";
+import SettingTarget from "@/component/setting/model/setting-target";
 
 /**
- * 阅读器界面
+ * 设置 UI 与已提交 Appearance 状态所有者之间的契约。
+ *
  * @author allurx
  */
-export default class ReaderUi extends PageUi {}
+export default interface SettingUiListener {
+    getValue(target: SettingTarget, setting: Setting): string | undefined;
+    preview(interaction: SettingInteraction): void;
+    restore(target: SettingTarget, setting: Setting): void;
+    commit(interaction: SettingInteraction): void;
+    reset(): void;
+}

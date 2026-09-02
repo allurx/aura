@@ -21,6 +21,20 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Aura</title>
         <link id="favicon" rel="icon" type="image/svg+xml" />
+        <script>
+            (() => {
+                const page =
+                    window.location.hash === "#/reader" && sessionStorage.getItem("aura.router.reader.bookId")
+                        ? "reader"
+                        : "bookshelf";
+                const appearance = JSON.parse(localStorage.getItem(`aura.${page}.appearance`) ?? "{}");
+                const theme = appearance.theme ?? "yellow";
+                Object.assign(document.documentElement.dataset, { page, theme });
+            })();
+        </script>
+        <link rel="stylesheet" href="./style/appearance-preference.css" />
+        <link rel="stylesheet" href="./page/bookshelf/bookshelf.css" />
+        <link rel="stylesheet" href="./page/reader/reader.css" />
         <script src="./main.ts" type="module"></script>
     </head>
     <body>

@@ -14,16 +14,12 @@
  * limitations under the License.
  */
 
-import Setting from "./setting";
-import { settingStore } from "@/database/database-definition";
-import BaseRepository from "@/domain/base-repository";
-
 /**
- * 设置数据访问对象
+ * Appearance 值的生效范围。
+ *
  * @author allurx
  */
-export default class SettingRepository extends BaseRepository<Setting> {
-    public constructor() {
-        super(settingStore, Setting);
-    }
+export enum SettingScope {
+    PAGE = "page",
+    UI = "ui",
 }

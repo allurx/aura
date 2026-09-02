@@ -14,10 +14,26 @@
  * limitations under the License.
  */
 
-import PageUi from "@/page/page-ui";
-
 /**
- * 阅读器界面
+ * Aura 支持的页面基础配色。
+ *
  * @author allurx
  */
-export default class ReaderUi extends PageUi {}
+export enum Theme {
+    LIGHT = "light",
+    DIM = "dim",
+    DARK = "dark",
+    YELLOW = "yellow",
+    BLUE = "blue",
+    GRAY = "gray",
+}
+
+const THEMES = new Set<string>(Object.values(Theme));
+
+/**
+ * @param value - 需要校验的外部值
+ * @returns `value` 是否为当前产品支持的 Theme
+ */
+export function isTheme(value: unknown): value is Theme {
+    return typeof value === "string" && THEMES.has(value);
+}

@@ -24,11 +24,6 @@ import FullscreenUtil from "@/util/fullscreen-util";
  * @author allurx
  */
 export default class AppUi extends Ui {
-    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
-        super(args);
-        this.root.dataset["defaultTheme"] = "yellow";
-    }
-
     // 追踪指针信息
     private readonly pointer = {
         // 指针移动轨迹相对于x轴的角度
@@ -60,8 +55,6 @@ export default class AppUi extends Ui {
      */
     public cleanup(): void {
         this.root.style.removeProperty("background-color");
-        delete this.root.dataset["theme"];
-        delete this.root.dataset["defaultTheme"];
 
         if (FullscreenUtil.getElement() === this.root) {
             EventUtil.run(() => FullscreenUtil.exit());

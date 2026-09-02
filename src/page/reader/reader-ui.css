@@ -16,13 +16,29 @@
  * limitations under the License.
  */
 
-#bookshelf {
-    position: relative;
-    background-color: var(--bookshelf-background-color);
+#reader {
+    width: 800px;
+    min-width: 800px;
+    max-width: 100%;
+    height: 100%;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
-    height: 100%;
-    width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
+    background-color: var(--reader-surface);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
+    position: relative;
+    outline: none;
+    overflow: hidden;
+    resize: horizontal;
+    color: var(--reader-color);
+    line-height: 2;
+
+    /* 窄屏只限制 effective width；inline preferred width 保留，离开窄屏后可恢复。 */
+    @media (max-width: 800px) {
+        & {
+            width: 100% !important;
+            min-width: 100% !important;
+            resize: none;
+        }
+    }
 }

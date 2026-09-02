@@ -14,10 +14,19 @@
  * limitations under the License.
  */
 
-import PageUi from "@/page/page-ui";
-
 /**
- * 阅读器界面
+ * 允许由 Appearance 写入 UI inline style 的 CSS 属性白名单。
+ *
  * @author allurx
  */
-export default class ReaderUi extends PageUi {}
+export enum StyleProperty {
+    FONT_SIZE = "font-size",
+    COLOR = "color",
+    WIDTH = "width",
+    PADDING_TOP = "padding-top",
+    PADDING_BOTTOM = "padding-bottom",
+    PADDING_LEFT = "padding-left",
+    PADDING_RIGHT = "padding-right",
+    LINE_HEIGHT = "line-height",
+    BACKGROUND_COLOR = "background-color",
+}

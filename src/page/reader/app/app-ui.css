@@ -16,48 +16,6 @@
  * limitations under the License.
  */
 
-#app:has(> #reader) {
-    --reader-backdrop: #be966e;
-    --reader-surface: #f2e8c8;
-    --reader-color: #000000;
-    --setting-background-color: var(--reader-surface);
-    --setting-color: var(--reader-color);
-
+html[data-page="reader"] #app {
     background-color: var(--reader-backdrop);
-}
-
-#app[data-theme="light"]:has(> #reader) {
-    --reader-backdrop: #ffffff;
-    --reader-surface: #ffffff;
-    --reader-color: #000000;
-}
-
-#app[data-theme="dim"]:has(> #reader) {
-    --reader-backdrop: #111a2e;
-    --reader-surface: #111a2e;
-    --reader-color: #e3e3e3;
-}
-
-#app[data-theme="dark"]:has(> #reader) {
-    --reader-backdrop: #202124;
-    --reader-surface: #202124;
-    --reader-color: #e3e3e3;
-}
-
-#app[data-theme="yellow"]:has(> #reader) {
-    --reader-backdrop: #be966e;
-    --reader-surface: #f2e8c8;
-    --reader-color: #000000;
-}
-
-#app[data-theme="blue"]:has(> #reader) {
-    --reader-backdrop: #d2e3fc;
-    --reader-surface: #d2e3fc;
-    --reader-color: #000000;
-}
-
-#app[data-theme="gray"]:has(> #reader) {
-    --reader-backdrop: #3c3c3c;
-    --reader-surface: #3c3c3c;
-    --reader-color: #e3e3e3;
 }

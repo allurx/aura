@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import "./bookshelf.css";
 import template from "./bookshelf.html?raw";
 import BasePage from "@/page/base-page";
 import BookshelfController from "./bookshelf-controller";
