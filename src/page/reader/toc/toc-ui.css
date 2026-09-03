@@ -64,8 +64,18 @@
         > .action {
             display: flex;
             font-size: 1.2rem;
-            cursor: pointer;
             gap: 20px;
+
+            > .close {
+                appearance: none;
+                padding: 0;
+                border: 0;
+                background: transparent;
+                color: inherit;
+                font: inherit;
+                line-height: 1;
+                cursor: pointer;
+            }
         }
     }
 

@@ -112,7 +112,7 @@ export default class SettingController implements SettingUiListener, ExternalSet
         }
     }
 
-    public commitExternal(interaction: SettingInteraction): void {
+    public commitExternalChange(interaction: SettingInteraction): void {
         this.commit(interaction);
         this.settingUi.refresh();
     }

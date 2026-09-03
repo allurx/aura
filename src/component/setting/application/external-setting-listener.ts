@@ -26,5 +26,5 @@ import SettingTarget from "@/component/setting/model/setting-target";
 export default interface ExternalSettingListener {
     getValue(target: SettingTarget, setting: Setting): string | undefined;
     isPreviewing(target: SettingTarget, setting: Setting): boolean;
-    commitExternal(interaction: SettingInteraction): void;
+    commitExternalChange(interaction: SettingInteraction): void;
 }

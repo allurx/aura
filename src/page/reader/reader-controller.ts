@@ -239,7 +239,9 @@ export default class ReaderController {
                 this.settingController.toggle(opener);
             }, signal)
             .bindToggleTocPanel(() => {
-                this.tocUi.toggleToc().highlightCurrentChapter(this.state.progress.chapterNumber);
+                const expanded = this.tocUi.toggleToc();
+                this.headerUi.setTocExpanded(expanded);
+                if (expanded) this.tocUi.highlightCurrentChapter(this.state.progress.chapterNumber);
             }, signal)
             .bindToggleFullscreen(() => {
                 this.appUi
@@ -270,6 +272,8 @@ export default class ReaderController {
                     await this.loadChapter();
                 });
             }, signal)
-            .bindTocClose(signal);
+            .bindTocClose(() => {
+                this.headerUi.setTocExpanded(false).focusTocToggleButton();
+            }, signal);
     }
 }

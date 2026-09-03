@@ -42,21 +42,25 @@
         align-items: center;
         gap: 1rem;
 
-        img {
+        > button {
+            appearance: none;
+            width: 1.5rem;
+            height: 1.5rem;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            line-height: 0;
             cursor: pointer;
+        }
+
+        img {
+            display: block;
             width: 1.5rem;
             height: 1.5rem;
         }
 
         #toggle-setting-panel {
-            appearance: none;
-            padding: 0;
-            border: 0;
-            background: transparent;
-            width: 1.5rem;
-            height: 1.5rem;
-            line-height: 0;
-            cursor: pointer;
             filter: var(--bookshelf-setting-icon-filter);
         }
 

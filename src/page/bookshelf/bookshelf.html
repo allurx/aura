@@ -18,10 +18,19 @@
     <header id="header">
         <span id="title">Aura</span>
         <div class="action">
-            <button id="toggle-setting-panel" type="button">
+            <button
+                id="toggle-setting-panel"
+                type="button"
+                aria-label="设置"
+                aria-controls="setting"
+                aria-expanded="false"
+                title="设置"
+            >
                 <img alt="" />
             </button>
-            <img id="clear-btn" alt="清空书架" />
+            <button id="clear-btn" type="button" aria-label="清空书架" title="清空书架">
+                <img alt="" />
+            </button>
         </div>
     </header>
     <main>

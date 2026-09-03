@@ -58,7 +58,13 @@
         align-items: center;
 
         .close-btn {
+            appearance: none;
+            padding: 0;
+            border: 0;
+            background: transparent;
             color: #f2e8c8;
+            font: inherit;
+            line-height: 1;
             cursor: pointer;
         }
     }

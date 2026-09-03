@@ -25,21 +25,23 @@ import Toc from "@/domain/toc/toc";
  */
 export default class TocUi extends Ui {
     private readonly tocContentElement: HTMLElement;
-    private readonly closeTocElement: HTMLElement;
+    private readonly closeButton: HTMLButtonElement;
 
     public constructor(args: ConstructorParameters<typeof Ui>[0]) {
         super(args);
         this.tocContentElement = assertExists(this.root.querySelector<HTMLElement>(".main"));
-        this.closeTocElement = assertExists(this.root.querySelector<HTMLElement>(".close"));
+        this.closeButton = assertExists(this.root.querySelector<HTMLButtonElement>(".close"));
+        this.setOpen(false);
     }
 
     /**
      * 切换目录面板显示状态
-     * @return 当前实例
+     * @returns 切换后是否展开
      */
-    public toggleToc() {
-        this.root.classList.toggle("open");
-        return this;
+    public toggleToc(): boolean {
+        const open = !this.root.classList.contains("open");
+        this.setOpen(open);
+        return open;
     }
 
     /**
@@ -105,17 +107,26 @@ export default class TocUi extends Ui {
 
     /**
      * 绑定关闭目录面板事件
-     * @return 当前实例
+     * @param handler - 关闭后的处理函数
+     * @param signal - 页面生命周期信号
+     * @returns 当前实例
      */
-    public bindTocClose(signal: AbortSignal): this {
+    public bindTocClose(handler: () => void, signal: AbortSignal): this {
         EventUtil.bind(
-            this.closeTocElement,
+            this.closeButton,
             "click",
             () => {
-                this.root.classList.remove("open");
+                this.setOpen(false);
+                handler();
             },
             { signal }
         );
         return this;
+    }
+
+    private setOpen(open: boolean): void {
+        this.root.classList.toggle("open", open);
+        this.root.inert = !open;
+        this.root.setAttribute("aria-hidden", String(!open));
     }
 }

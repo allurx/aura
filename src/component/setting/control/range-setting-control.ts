@@ -40,7 +40,6 @@ export default class RangeSettingControl extends SettingControl {
         this.inputElement.min = String(rangeSetting.minimum);
         this.inputElement.max = String(rangeSetting.maximum);
         this.inputElement.step = String(rangeSetting.step);
-        if (rangeSetting.synchronizesExternal) this.element.classList.add("width-setting");
         this.attachControl(this.inputElement);
 
         EventUtil.bind(

@@ -29,10 +29,9 @@ export default abstract class StyleSetting extends Setting {
     protected constructor(
         public readonly property: StyleProperty,
         title: string,
-        displayOrder: number,
-        synchronizesExternal = false
+        displayOrder: number
     ) {
-        super(property, title, SettingScope.UI, displayOrder, synchronizesExternal);
+        super(property, title, SettingScope.UI, displayOrder);
     }
 
     public override read(appearance: PageAppearance, target: SettingTarget): string | undefined {

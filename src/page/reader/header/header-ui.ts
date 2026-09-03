@@ -26,49 +26,70 @@ import settingIcon from "@/asset/image/setting.svg";
  * @author allurx
  */
 export default class HeaderUi extends Ui {
-    private readonly toggleTocPanelElement: HTMLImageElement;
-    private readonly toggleFullscreenElement: HTMLImageElement;
-    private readonly toggleSettingPanelElement: HTMLButtonElement;
+    private readonly tocToggleButton: HTMLButtonElement;
+    private readonly fullscreenToggleButton: HTMLButtonElement;
+    private readonly settingToggleButton: HTMLButtonElement;
 
     public constructor(args: ConstructorParameters<typeof Ui>[0]) {
         super(args);
-        this.toggleTocPanelElement = assertExists(this.root.querySelector<HTMLImageElement>("#toggle-toc-panel"));
-        this.toggleFullscreenElement = assertExists(this.root.querySelector<HTMLImageElement>("#toggle-fullscreen"));
-        this.toggleSettingPanelElement = assertExists(
-            this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel")
-        );
-        this.toggleTocPanelElement.src = tableOfContentsIcon;
-        this.toggleFullscreenElement.src = fullscreenIcon;
-        assertExists(this.toggleSettingPanelElement.querySelector<HTMLImageElement>("img")).src = settingIcon;
+        this.tocToggleButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-toc-panel"));
+        this.fullscreenToggleButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-fullscreen"));
+        this.settingToggleButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel"));
+        assertExists(this.tocToggleButton.querySelector<HTMLImageElement>("img")).src = tableOfContentsIcon;
+        assertExists(this.fullscreenToggleButton.querySelector<HTMLImageElement>("img")).src = fullscreenIcon;
+        assertExists(this.settingToggleButton.querySelector<HTMLImageElement>("img")).src = settingIcon;
     }
 
     /**
      * 绑定目录面板切换事件
      * @param handler - 事件处理函数
-     * @return 当前实例
+     * @param signal - 页面生命周期信号
+     * @returns 当前实例
      */
     public bindToggleTocPanel(handler: () => void, signal: AbortSignal): this {
-        EventUtil.bind(this.toggleTocPanelElement, "click", handler, { signal });
+        EventUtil.bind(this.tocToggleButton, "click", handler, { signal });
         return this;
     }
+
+    /**
+     * 同步目录面板的展开状态。
+     * @param expanded - 目录面板是否展开
+     * @returns 当前实例
+     */
+    public setTocExpanded(expanded: boolean): this {
+        this.tocToggleButton.setAttribute("aria-expanded", String(expanded));
+        return this;
+    }
+
+    /**
+     * 将焦点归还给目录切换按钮。
+     * @returns 当前实例
+     */
+    public focusTocToggleButton(): this {
+        this.tocToggleButton.focus();
+        return this;
+    }
+
     /**
      * 绑定全屏切换事件
      * @param handler - 事件处理函数
-     * @return 当前实例
+     * @param signal - 页面生命周期信号
+     * @returns 当前实例
      */
     public bindToggleFullscreen(handler: () => void, signal: AbortSignal): this {
-        EventUtil.bind(this.toggleFullscreenElement, "click", handler, { signal });
+        EventUtil.bind(this.fullscreenToggleButton, "click", handler, { signal });
         return this;
     }
 
     /**
      * 绑定设置面板切换事件
      * @param handler - 事件处理函数
-     * @return 当前实例
+     * @param signal - 页面生命周期信号
+     * @returns 当前实例
      */
     public bindToggleSettingPanel(handler: (opener: HTMLButtonElement) => void, signal: AbortSignal): this {
         EventUtil.bind(
-            this.toggleSettingPanelElement,
+            this.settingToggleButton,
             "click",
             (_, opener) => {
                 handler(opener);

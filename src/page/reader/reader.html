@@ -17,13 +17,31 @@
 <div id="reader">
     <header id="header">
         <div class="action action-left">
-            <img id="toggle-toc-panel" alt="目录" />
-        </div>
-        <div class="action action-right">
-            <button id="toggle-setting-panel" type="button">
+            <button
+                id="toggle-toc-panel"
+                type="button"
+                aria-label="切换目录"
+                aria-controls="toc"
+                aria-expanded="false"
+                title="目录"
+            >
                 <img alt="" />
             </button>
-            <img id="toggle-fullscreen" alt="全屏" />
+        </div>
+        <div class="action action-right">
+            <button
+                id="toggle-setting-panel"
+                type="button"
+                aria-label="设置"
+                aria-controls="setting"
+                aria-expanded="false"
+                title="设置"
+            >
+                <img alt="" />
+            </button>
+            <button id="toggle-fullscreen" type="button" aria-label="切换全屏" title="全屏">
+                <img alt="" />
+            </button>
         </div>
     </header>
 
@@ -34,11 +52,11 @@
         <div id="progress-rate"></div>
     </footer>
 
-    <section id="toc">
+    <section id="toc" aria-hidden="true" inert>
         <header>
             <h2>目录</h2>
             <div class="action">
-                <span class="close" title="关闭">✖</span>
+                <button class="close" type="button" aria-label="关闭目录" title="关闭">✖</button>
             </div>
         </header>
         <section class="main"></section>

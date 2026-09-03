@@ -34,10 +34,9 @@ export default class RangeStyleSetting extends StyleSetting {
         public readonly maximum: number,
         public readonly step: number,
         public readonly unit: string,
-        displayOrder: number,
-        synchronizesExternal = false
+        displayOrder: number
     ) {
-        super(property, title, displayOrder, synchronizesExternal);
+        super(property, title, displayOrder);
         if (minimum > maximum || step <= 0) throw new Error(`Invalid ${property} range`);
     }
 

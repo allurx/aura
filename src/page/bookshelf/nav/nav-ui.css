@@ -31,7 +31,7 @@
     font-size: 0.9rem;
     transition: width 0.3s ease;
 
-    &.flag-visible {
+    &.is-toggled {
         width: 0;
     }
 
@@ -40,7 +40,7 @@
             width: 0;
         }
 
-        &.flag-visible {
+        &.is-toggled {
             width: 6rem;
         }
     }
