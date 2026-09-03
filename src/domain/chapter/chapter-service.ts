@@ -72,7 +72,7 @@ export default class ChapterService extends BaseService<Chapter> {
         let currentBookLineNumber = 1;
 
         // 标题行不保存在lines中，但仍占用一个物理行；前言和全文没有标题行，所以不增加这一行。
-        const appendChapter = (title: string, lines: string[], includesTitle: boolean) => {
+        const appendChapter = (title: string, lines: string[], hasExplicitTitleLine: boolean) => {
             const chapter = new Chapter({
                 id: crypto.randomUUID(),
                 fileId,
@@ -80,7 +80,7 @@ export default class ChapterService extends BaseService<Chapter> {
                 title,
                 lines,
                 startBookLineNumber: currentBookLineNumber,
-                endBookLineNumber: currentBookLineNumber + lines.length + Number(includesTitle) - 1,
+                endBookLineNumber: currentBookLineNumber + lines.length + Number(hasExplicitTitleLine) - 1,
                 createdTime: Date.now(),
                 updatedTime: Date.now(),
             });
@@ -96,9 +96,9 @@ export default class ChapterService extends BaseService<Chapter> {
             }
 
             // 已有标题时封存上一章；首个标题之前只有真实文本才生成前言，纯空白不能制造空章节。
-            const includesTitle = chapterTitle !== null;
-            if (includesTitle || chapterLines.some((contentLine) => contentLine.trim().length > 0)) {
-                appendChapter(chapterTitle ?? "前言", chapterLines, includesTitle);
+            const hasExplicitTitleLine = chapterTitle !== null;
+            if (hasExplicitTitleLine || chapterLines.some((contentLine) => contentLine.trim().length > 0)) {
+                appendChapter(chapterTitle ?? "前言", chapterLines, hasExplicitTitleLine);
             } else {
                 // 即使不生成前言，前置空白仍是原文件中的物理行，必须推进行号以保持定位准确。
                 currentBookLineNumber += chapterLines.length;

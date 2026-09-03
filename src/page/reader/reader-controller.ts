@@ -137,7 +137,7 @@ export default class ReaderController {
 
         // restoreProgress 触发的 scroll 可能延迟到事件绑定之后，产生一次等值的进度保存。
 
-        this.tocUi.renderContents(this.state.toc.contents);
+        this.tocUi.renderEntries(this.state.toc.entries);
 
         this.contentUi
             .renderChapter(this.state.chapter.lines)

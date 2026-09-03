@@ -109,15 +109,15 @@ export default class BookshelfController {
     }
 
     /**
-     * 添加书籍
+     * 导入书籍
      * @param files - 书籍文件列表
      */
-    private async addBook(files: File[]) {
+    private async importBooks(files: File[]) {
         await this.bookshelfUi
             .showOverlayWhile(async () => {
                 // File.type可能为空，按文件选择器约定的.txt后缀过滤。
                 await this.bookshelfService
-                    .addBook(
+                    .importBooks(
                         files.filter((file) => {
                             if (/\.txt$/i.test(file.name)) return true;
                             void this.bookshelfUi.alertDialog(`${file.name}不是文本文件`);
@@ -185,7 +185,7 @@ export default class BookshelfController {
 
         // 绑定书籍主体事件
         this.bookListUi
-            .bindBookInputChange((files) => this.addBook(files), signal)
+            .bindBookInputChange((files) => this.importBooks(files), signal)
             .bindBookBodyClick((bookId) => {
                 this.readBook(bookId);
             }, signal)

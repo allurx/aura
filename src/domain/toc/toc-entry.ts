@@ -14,35 +14,31 @@
  * limitations under the License.
  */
 
-import BaseModel from "@/domain/base-model";
-import { ClassFields } from "@/type/common-type";
+import type { ClassFields } from "@/type/common-type";
 import ObjectUtil from "@/util/object-util";
-import type TocEntry from "./toc-entry";
 
 /**
- * 目录
+ * 目录条目
  * @author allurx
  */
-export default class Toc extends BaseModel {
-    public readonly fileId!: string;
-    public readonly entries!: TocEntry[];
+export default class TocEntry {
+    // 章节序号，从 1 开始
+    public readonly chapterNumber!: number;
 
-    public constructor(data: ClassFields<Toc>) {
-        super();
-        ObjectUtil.assignOwnProperties<Toc>(this, data);
-    }
+    // 目录标题
+    public readonly title!: string;
 
-    /**
-     * 章节数量
-     */
-    public numberOfChapters() {
-        return this.entries.length;
-    }
+    // 章节在整本书中的起始物理行号
+    public readonly startBookLineNumber!: number;
+
+    // 章节在整本书中的结束物理行号
+    public readonly endBookLineNumber!: number;
 
     /**
-     * 全书物理总行数
+     * 创建目录条目
+     * @param data - 目录条目字段
      */
-    public numberOfLines() {
-        return this.entries[this.entries.length - 1]?.endBookLineNumber ?? 0;
+    public constructor(data: ClassFields<TocEntry>) {
+        ObjectUtil.assignOwnProperties<TocEntry>(this, data);
     }
 }

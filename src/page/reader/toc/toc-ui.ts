@@ -17,7 +17,7 @@
 import Ui from "@/component/ui";
 import { assertExists } from "@/util/assert-util";
 import EventUtil from "@/util/event-util";
-import Toc from "@/domain/toc/toc";
+import type TocEntry from "@/domain/toc/toc-entry";
 
 /**
  * 目录面板
@@ -68,17 +68,17 @@ export default class TocUi extends Ui {
 
     /**
      * 渲染目录
-     * @param  contents - 目录内容数组
+     * @param entries - 目录条目数组
      * @return 当前实例
      */
-    public renderContents(contents: InstanceType<typeof Toc.Content>[]) {
+    public renderEntries(entries: TocEntry[]) {
         // 创建文档片段,避免多次dom操作
         const fragment = document.createDocumentFragment();
 
-        contents.forEach((content) => {
+        entries.forEach((entry) => {
             const p = document.createElement("p");
-            p.textContent = content.title;
-            p.dataset["chapterNumber"] = content.chapterNumber.toString();
+            p.textContent = entry.title;
+            p.dataset["chapterNumber"] = entry.chapterNumber.toString();
             fragment.appendChild(p);
         });
 

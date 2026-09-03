@@ -24,13 +24,13 @@ import TextFileReader from "./text-file-reader";
  */
 export default class TextEncodingDetector {
     // 每个采样位置最多读取64 KiB。
-    private static readonly SAMPLE_SEGMENT_SIZE = 64 * 1024;
+    private static readonly SAMPLE_SEGMENT_SIZE_BYTES = 64 * 1024;
 
-    // 首选候选的最低置信度。
-    private static readonly MIN_CONFIDENCE = 80;
+    // 首选候选的最低置信度分数。
+    private static readonly MIN_CONFIDENCE_SCORE = 80;
 
-    // 受支持候选之间的最小置信度差。
-    private static readonly MIN_SUPPORTED_CONFIDENCE_MARGIN = 20;
+    // 受支持候选之间的最小置信度分差。
+    private static readonly MIN_SUPPORTED_CONFIDENCE_MARGIN_POINTS = 20;
 
     /**
      * 按BOM、严格UTF-8、统计检测的顺序识别文件编码。
@@ -58,7 +58,7 @@ export default class TextEncodingDetector {
         // chardet按置信度降序返回候选，Aura只接受明确领先的传统中文编码。
         const matches = chardet.analyse(sample);
         const bestMatch = matches[0];
-        if (!bestMatch || bestMatch.confidence < TextEncodingDetector.MIN_CONFIDENCE) return null;
+        if (!bestMatch || bestMatch.confidence < TextEncodingDetector.MIN_CONFIDENCE_SCORE) return null;
 
         const encoding = this.toSupportedLegacyEncoding(bestMatch.name);
         if (!encoding) return null;
@@ -71,7 +71,8 @@ export default class TextEncodingDetector {
         const supportedRunnerUp = matches.slice(1).find((match) => this.toSupportedLegacyEncoding(match.name) !== null);
         if (
             supportedRunnerUp &&
-            bestMatch.confidence - supportedRunnerUp.confidence < TextEncodingDetector.MIN_SUPPORTED_CONFIDENCE_MARGIN
+            bestMatch.confidence - supportedRunnerUp.confidence <
+                TextEncodingDetector.MIN_SUPPORTED_CONFIDENCE_MARGIN_POINTS
         )
             return null;
 
@@ -85,13 +86,13 @@ export default class TextEncodingDetector {
      * @returns 最大约192 KiB的字节样本
      */
     private async createSample(file: File): Promise<Uint8Array> {
-        const segmentSize = TextEncodingDetector.SAMPLE_SEGMENT_SIZE;
-        if (file.size <= segmentSize * 3) return new Uint8Array(await file.arrayBuffer());
+        const segmentSizeBytes = TextEncodingDetector.SAMPLE_SEGMENT_SIZE_BYTES;
+        if (file.size <= segmentSizeBytes * 3) return new Uint8Array(await file.arrayBuffer());
 
         // 读取头、中、尾，避免仅凭ASCII文件头误判。
-        const starts = [0, Math.floor((file.size - segmentSize) / 2), file.size - segmentSize];
+        const starts = [0, Math.floor((file.size - segmentSizeBytes) / 2), file.size - segmentSizeBytes];
         const segments = await Promise.all(
-            starts.map(async (start) => new Uint8Array(await file.slice(start, start + segmentSize).arrayBuffer()))
+            starts.map(async (start) => new Uint8Array(await file.slice(start, start + segmentSizeBytes).arrayBuffer()))
         );
 
         // 预分配数组，避免反复拼接产生额外复制。

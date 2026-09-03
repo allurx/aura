@@ -37,15 +37,15 @@ const categoryNames = [
 ] as const;
 
 export function createCategorySeeds(): Category[] {
-    const timestamp = Date.now();
+    const nowMs = Date.now();
     return categoryNames.map(
         (name, index) =>
             new Category({
                 id: crypto.randomUUID(),
                 name,
                 order: index + 1,
-                createdTime: timestamp,
-                updatedTime: timestamp,
+                createdTime: nowMs,
+                updatedTime: nowMs,
             })
     );
 }

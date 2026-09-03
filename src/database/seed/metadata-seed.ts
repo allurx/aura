@@ -18,13 +18,13 @@ import Aura from "@/core/aura";
 import Metadata from "@/domain/metadata/metadata";
 
 export function createMetadataSeed(handbookBookId: string): Metadata {
-    const timestamp = Date.now();
+    const nowMs = Date.now();
     return new Metadata({
         id: crypto.randomUUID(),
         appName: Aura.NAME,
         handbookBookId,
         handbookVersion: Aura.HANDBOOK_VERSION,
-        createdTime: timestamp,
-        updatedTime: timestamp,
+        createdTime: nowMs,
+        updatedTime: nowMs,
     });
 }

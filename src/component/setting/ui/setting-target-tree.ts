@@ -90,9 +90,9 @@ export default class SettingTargetTree {
         return undefined;
     }
 
-    private createNode(target: SettingTarget, root: boolean): HTMLElement {
+    private createNode(target: SettingTarget, isRoot: boolean): HTMLElement {
         const node = document.createElement("div");
-        node.className = root ? "node root" : "node";
+        node.className = isRoot ? "node root" : "node";
         this.nodeByTarget.set(target, node);
 
         const button = document.createElement("button");
@@ -110,7 +110,7 @@ export default class SettingTargetTree {
             childrenElement.className = "children";
             children.forEach((child) => childrenElement.appendChild(this.createNode(child, false)));
             node.appendChild(childrenElement);
-        } else if (!root) {
+        } else if (!isRoot) {
             node.classList.add("leaf");
         }
         return node;
