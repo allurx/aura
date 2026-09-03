@@ -29,6 +29,7 @@ import ChapterService from "@/domain/chapter/chapter-service";
 import ProgressService from "@/domain/progress/progress-service";
 import TocService from "@/domain/toc/toc-service";
 import FileService from "@/domain/file/file-service";
+import TextEncodingDetector from "@/domain/file/text-encoding-detector";
 import FileUtil from "@/util/file-util";
 import ObjectUtil from "@/util/object-util";
 import TransactionManager from "@/database/transaction-manager";
@@ -49,6 +50,21 @@ import {
 } from "@/database/database-definition";
 
 /**
+ * 批量导入结果，供控制器分别更新书架和提示信息。
+ * @author allurx
+ */
+interface AddBookResult {
+    // 成功创建并需要渲染的书籍。
+    books: Book[];
+
+    // 禁止重复添加时因内容hash已存在而跳过的文件。
+    duplicateFiles: File[];
+
+    // 编码无法可靠识别或严格解码，因而未持久化的文件。
+    unsupportedEncodingFiles: File[];
+}
+
+/**
  * 书架服务
  * @author allurx
  */
@@ -60,6 +76,8 @@ export default class BookshelfService {
     private readonly chapterService: ChapterService;
     private readonly progressService: ProgressService;
     private readonly tocService: TocService;
+    // 在章节解析前自动识别并严格验证TXT文件编码。
+    private readonly textEncodingDetector: TextEncodingDetector;
 
     public constructor() {
         this.metadataService = new MetadataService();
@@ -69,6 +87,7 @@ export default class BookshelfService {
         this.chapterService = new ChapterService();
         this.progressService = new ProgressService();
         this.tocService = new TocService();
+        this.textEncodingDetector = new TextEncodingDetector();
     }
 
     public async init() {
@@ -100,26 +119,25 @@ export default class BookshelfService {
      * @param files - 书籍文件列表
      * @param categoryId - 书籍分类id
      * @param allowDuplicate - 相同hash文件是否允许重复添加
-     * @returns  添加的书籍列表
+     * @returns 成功添加、重复跳过和编码不受支持的文件分类结果
      */
-    public async addBook(
-        files: File[],
-        categoryId: string,
-        allowDuplicate: boolean
-    ): Promise<{ books: Book[]; duplicateFiles: File[] }> {
+    public async addBook(files: File[], categoryId: string, allowDuplicate: boolean): Promise<AddBookResult> {
         const books: Book[] = [];
         const duplicateFiles: File[] = [];
+        const unsupportedEncodingFiles: File[] = [];
 
         // 同一hash只解析一次;不同hash组依次持久化,避免所有文件的章节数据同时驻留内存
         for (const [hash, groupedFiles] of await this.groupFilesByHash(files)) {
             const result = await this.addBookGroup(hash, groupedFiles, categoryId, allowDuplicate);
             books.push(...result.books);
             duplicateFiles.push(...result.duplicateFiles);
+            unsupportedEncodingFiles.push(...result.unsupportedEncodingFiles);
         }
 
         return {
             books,
             duplicateFiles,
+            unsupportedEncodingFiles,
         };
     }
 
@@ -251,14 +269,14 @@ export default class BookshelfService {
      * @param files - 内容相同的文件列表
      * @param categoryId - 书籍分类id
      * @param allowDuplicate - 是否为同一内容创建多本书
-     * @returns 新增书籍及未添加的重复文件
+     * @returns 该内容组的成功书籍、重复文件和编码不受支持文件
      */
     private async addBookGroup(
         hash: string,
         files: File[],
         categoryId: string,
         allowDuplicate: boolean
-    ): Promise<{ books: Book[]; duplicateFiles: File[] }> {
+    ): Promise<AddBookResult> {
         const file = assertExists(files[0]);
         // file记录按hash唯一;已存在时直接复用其章节和目录,无需再次解析
         let bookFile = await TransactionManager.runTransaction(
@@ -272,6 +290,9 @@ export default class BookshelfService {
         if (!bookFile) {
             // 只解析组内第一个文件,其余文件与它内容完全相同
             console.log(`Parsing new file with hash: ${hash}`);
+            // 检测失败时跳过整组文件，避免持久化乱码。
+            const encoding = await this.textEncodingDetector.detect(file);
+            if (!encoding) return { books: [], duplicateFiles: [], unsupportedEncodingFiles: files };
             bookFile = new BookFile({
                 id: crypto.randomUUID(),
                 file,
@@ -279,7 +300,8 @@ export default class BookshelfService {
                 createdTime: Date.now(),
                 updatedTime: Date.now(),
             });
-            const chapters = await this.chapterService.parseChapters(file, bookFile.id);
+            // 编码错误已收敛为null，其他异常继续向上抛出。
+            const chapters = await this.chapterService.parseChapters(file, bookFile.id, encoding);
             bookData = {
                 bookFile,
                 chapters,
@@ -320,7 +342,7 @@ export default class BookshelfService {
         // filesToAdd之外的文件均属于本次未添加的重复项
         const duplicateFiles = allowDuplicate ? [] : files.slice(filesToAdd.length);
 
-        if (bookEntries.length === 0) return { books: [], duplicateFiles };
+        if (bookEntries.length === 0) return { books: [], duplicateFiles, unsupportedEncodingFiles: [] };
 
         await TransactionManager.runTransaction(
             [
@@ -351,7 +373,7 @@ export default class BookshelfService {
             }
         );
 
-        return { books: bookEntries.map(({ book }) => book), duplicateFiles };
+        return { books: bookEntries.map(({ book }) => book), duplicateFiles, unsupportedEncodingFiles: [] };
     }
 
     /**

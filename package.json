@@ -35,5 +35,8 @@
         "endOfLine": "lf",
         "embeddedLanguageFormatting": "auto",
         "trailingComma": "es5"
+    },
+    "dependencies": {
+        "chardet": "2.2.0"
     }
 }

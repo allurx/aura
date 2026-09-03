@@ -115,22 +115,27 @@ export default class BookshelfController {
     private async addBook(files: File[]) {
         await this.bookshelfUi
             .showOverlayWhile(async () => {
-                // 只处理文本文件
+                // File.type可能为空，按文件选择器约定的.txt后缀过滤。
                 await this.bookshelfService
                     .addBook(
                         files.filter((file) => {
-                            if (file.type === "text/plain") return true;
+                            if (/\.txt$/i.test(file.name)) return true;
                             void this.bookshelfUi.alertDialog(`${file.name}不是文本文件`);
                             return false;
                         }),
                         this.state.categoryId,
                         true
                     )
-                    .then(async ({ books, duplicateFiles }) => {
+                    .then(async ({ books, duplicateFiles, unsupportedEncodingFiles }) => {
                         this.bookListUi.renderBookElements(books);
                         if (duplicateFiles.length > 0) {
                             await this.bookshelfUi.alertDialog(
                                 `${duplicateFiles.map((file) => file.name).join(", ")}已存在`
+                            );
+                        }
+                        if (unsupportedEncodingFiles.length > 0) {
+                            await this.bookshelfUi.alertDialog(
+                                `${unsupportedEncodingFiles.map((file) => file.name).join(", ")}的编码无法自动识别或不受支持`
                             );
                         }
                     });
