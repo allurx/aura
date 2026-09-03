@@ -44,17 +44,17 @@ export default class TocUi extends Ui {
 
     /**
      * 高亮目录中的当前章节
-     * @param chapterIndex 章节索引
+     * @param chapterNumber 章节序号，从 1 开始
      * @return 当前实例
      */
-    public highlightCurrentChapter(chapterIndex: number) {
+    public highlightCurrentChapter(chapterNumber: number) {
         if (this.root.classList.contains("open")) {
             // 移除之前的章节高亮
             this.tocContentElement.querySelector("p.active")?.classList.remove("active");
 
             // 高亮当前章节
             const currentTocItemElement = this.tocContentElement.querySelector(
-                `p[data-index="${String(chapterIndex)}"]`
+                `p[data-chapter-number="${String(chapterNumber)}"]`
             );
             currentTocItemElement?.classList.add("active");
 
@@ -76,7 +76,7 @@ export default class TocUi extends Ui {
         contents.forEach((content) => {
             const p = document.createElement("p");
             p.textContent = content.title;
-            p.dataset["index"] = content.index.toString();
+            p.dataset["chapterNumber"] = content.chapterNumber.toString();
             fragment.appendChild(p);
         });
 
@@ -90,13 +90,13 @@ export default class TocUi extends Ui {
      * @param  handler - 事件处理函数
      * @return 当前实例
      */
-    public delegateTocItemClick(handler: (chapterIndex: number) => Promise<void>, signal: AbortSignal): this {
+    public delegateTocItemClick(handler: (chapterNumber: number) => Promise<void>, signal: AbortSignal): this {
         EventUtil.delegate(
             this.tocContentElement,
             "p",
             "click",
             async (_, target) => {
-                await handler(Number(target.dataset["index"]));
+                await handler(Number(target.dataset["chapterNumber"]));
             },
             { signal }
         );

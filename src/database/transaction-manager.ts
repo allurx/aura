@@ -25,7 +25,7 @@ import { DatabaseMode } from "./database-mode";
 export default class TransactionManager {
     private static readonly DATABASE = new Database(
         DatabaseDefinition.name,
-        DatabaseDefinition.version,
+        DatabaseDefinition.schemaVersion,
         DatabaseDefinition.stores
     );
 

@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
+import Aura from "@/core/aura";
 import Metadata from "@/domain/metadata/metadata";
 
-export function createMetadataSeed(handbookId: string): Metadata {
+export function createMetadataSeed(handbookBookId: string): Metadata {
     const timestamp = Date.now();
     return new Metadata({
         id: crypto.randomUUID(),
-        appName: "aura",
-        handbookId,
-        version: 1,
+        appName: Aura.NAME,
+        handbookBookId,
+        handbookVersion: Aura.HANDBOOK_VERSION,
         createdTime: timestamp,
         updatedTime: timestamp,
     });

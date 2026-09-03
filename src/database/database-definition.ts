@@ -22,8 +22,8 @@ export default class DatabaseDefinition {
     // 数据库名称
     public static readonly name = "aura";
 
-    // 数据库版本
-    public static readonly version = 1;
+    // IndexedDB schema 版本
+    public static readonly schemaVersion = 1;
 
     // 数据库对象存储定义
     public static readonly stores = {
@@ -76,7 +76,11 @@ export default class DatabaseDefinition {
             autoIncrement: false,
             indexes: {
                 idxFileId: { name: "idx_file_id", path: "fileId", unique: false },
-                ukFileIdIndex: { name: "uk_file_id_index", path: ["fileId", "index"], unique: true },
+                ukFileIdChapterNumber: {
+                    name: "uk_file_id_chapter_number",
+                    path: ["fileId", "chapterNumber"],
+                    unique: true,
+                },
             },
             description: "书籍章节",
         },
@@ -95,7 +99,7 @@ export default class DatabaseDefinition {
 export const stores = DatabaseDefinition.stores;
 export const metadataStore = DatabaseDefinition.stores.metadata;
 export const categoryStore = DatabaseDefinition.stores.category;
-export const fileStore = DatabaseDefinition.stores.file;
+export const bookFileStore = DatabaseDefinition.stores.file;
 export const bookStore = DatabaseDefinition.stores.book;
 export const tocStore = DatabaseDefinition.stores.toc;
 export const chapterStore = DatabaseDefinition.stores.chapter;

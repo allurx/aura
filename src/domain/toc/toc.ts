@@ -39,24 +39,24 @@ export default class Toc extends BaseModel {
     }
 
     /**
-     * 行数
+     * 全书物理总行数
      */
     public numberOfLines() {
-        return this.contents[this.contents.length - 1]?.endLineNumber ?? 0;
+        return this.contents[this.contents.length - 1]?.endBookLineNumber ?? 0;
     }
 
     /**
      * 目录内容
      */
     public static Content = class Content {
-        // 目录索引
-        public readonly index!: number;
+        // 章节序号，从 1 开始
+        public readonly chapterNumber!: number;
         // 目录标题
         public readonly title!: string;
-        // 章节起始行号
-        public readonly startLineNumber!: number;
-        // 章节结束行号
-        public readonly endLineNumber!: number;
+        // 章节在整本书中的起始物理行号
+        public readonly startBookLineNumber!: number;
+        // 章节在整本书中的结束物理行号
+        public readonly endBookLineNumber!: number;
 
         public constructor(data: ClassFields<Content>) {
             ObjectUtil.assignOwnProperties<Content>(this, data);

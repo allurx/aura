@@ -24,8 +24,8 @@ import ObjectUtil from "@/util/object-util";
  */
 export default class Progress extends BaseModel {
     public readonly bookId!: string;
-    public readonly chapterIndex!: number;
-    public readonly lineIndex!: number;
+    public readonly chapterNumber!: number;
+    public readonly chapterLineNumber!: number;
 
     // 行元素可见比例 (0 ~ 1),用于恢复阅读时滚动到精确位置
     public readonly lineVisibleRatio!: number;

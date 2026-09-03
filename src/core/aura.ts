@@ -20,9 +20,5 @@
  */
 export default class Aura {
     public static readonly NAME = "aura";
-    public static readonly VERSION = 1;
-
-    public static isVersionChanged(oldVersion: number): boolean {
-        return oldVersion !== this.VERSION;
-    }
+    public static readonly HANDBOOK_VERSION = 1;
 }

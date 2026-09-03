@@ -28,7 +28,7 @@ import BookService from "@/domain/book/book-service";
 import ChapterService from "@/domain/chapter/chapter-service";
 import ProgressService from "@/domain/progress/progress-service";
 import TocService from "@/domain/toc/toc-service";
-import FileService from "@/domain/file/file-service";
+import BookFileService from "@/domain/file/book-file-service";
 import TextEncodingDetector from "@/domain/file/text-encoding-detector";
 import FileUtil from "@/util/file-util";
 import ObjectUtil from "@/util/object-util";
@@ -42,7 +42,7 @@ import { DatabaseMode } from "@/database/database-mode";
 import {
     metadataStore,
     categoryStore,
-    fileStore,
+    bookFileStore,
     bookStore,
     tocStore,
     chapterStore,
@@ -71,7 +71,7 @@ interface AddBookResult {
 export default class BookshelfService {
     private readonly metadataService: MetadataService;
     private readonly categoryService: CategoryService;
-    private readonly fileService: FileService;
+    private readonly bookFileService: BookFileService;
     private readonly bookService: BookService;
     private readonly chapterService: ChapterService;
     private readonly progressService: ProgressService;
@@ -82,7 +82,7 @@ export default class BookshelfService {
     public constructor() {
         this.metadataService = new MetadataService();
         this.categoryService = new CategoryService();
-        this.fileService = new FileService();
+        this.bookFileService = new BookFileService();
         this.bookService = new BookService();
         this.chapterService = new ChapterService();
         this.progressService = new ProgressService();
@@ -105,7 +105,7 @@ export default class BookshelfService {
         );
 
         // 检查元数据
-        await this.checkMetadata(seeds.metadata, defaultCategory);
+        await this.refreshHandbookIfNeeded(seeds.metadata, defaultCategory);
 
         return new BookshelfState({
             metadata: seeds.metadata,
@@ -147,7 +147,7 @@ export default class BookshelfService {
      */
     public async deleteBook(bookId: string) {
         await TransactionManager.runTransaction(
-            [fileStore.name, bookStore.name, chapterStore.name, tocStore.name, progressStore.name],
+            [bookFileStore.name, bookStore.name, chapterStore.name, tocStore.name, progressStore.name],
             DatabaseMode.READ_WRITE,
             async (transaction) => {
                 const book = assertExists(
@@ -162,7 +162,7 @@ export default class BookshelfService {
                     1
                 )
                     await Promise.all([
-                        this.fileService.deleteByKey(book.fileId, transaction),
+                        this.bookFileService.deleteByKey(book.fileId, transaction),
                         this.chapterService.deleteAllByIndex(
                             chapterStore.indexes.idxFileId.name,
                             book.fileId,
@@ -184,11 +184,11 @@ export default class BookshelfService {
      */
     public async clearBookshelf() {
         await TransactionManager.runTransaction(
-            [fileStore.name, bookStore.name, chapterStore.name, tocStore.name, progressStore.name],
+            [bookFileStore.name, bookStore.name, chapterStore.name, tocStore.name, progressStore.name],
             DatabaseMode.READ_WRITE,
             async (transaction) =>
                 await Promise.all([
-                    this.fileService.clear(transaction),
+                    this.bookFileService.clear(transaction),
                     this.bookService.clear(transaction),
                     this.chapterService.clear(transaction),
                     this.tocService.clear(transaction),
@@ -278,11 +278,12 @@ export default class BookshelfService {
         allowDuplicate: boolean
     ): Promise<AddBookResult> {
         const file = assertExists(files[0]);
-        // file记录按hash唯一;已存在时直接复用其章节和目录,无需再次解析
+        // BookFile记录按hash唯一;已存在时直接复用其章节和目录,无需再次解析
         let bookFile = await TransactionManager.runTransaction(
-            fileStore.name,
+            bookFileStore.name,
             DatabaseMode.READ_ONLY,
-            async (transaction) => await this.fileService.getByIndex(fileStore.indexes.ukHash.name, hash, transaction)
+            async (transaction) =>
+                await this.bookFileService.getByIndex(bookFileStore.indexes.ukHash.name, hash, transaction)
         );
 
         const existingFile = ObjectUtil.exists(bookFile);
@@ -331,8 +332,8 @@ export default class BookshelfService {
                 progress: new Progress({
                     id: crypto.randomUUID(),
                     bookId: book.id,
-                    chapterIndex: 1,
-                    lineIndex: 1,
+                    chapterNumber: 1,
+                    chapterLineNumber: 1,
                     lineVisibleRatio: 1,
                     createdTime: Date.now(),
                     updatedTime: Date.now(),
@@ -347,7 +348,7 @@ export default class BookshelfService {
         await TransactionManager.runTransaction(
             [
                 // 新内容需要写入原文件、章节和目录;已有内容只新增书籍及进度
-                ...(bookData ? [fileStore.name, chapterStore.name, tocStore.name] : []),
+                ...(bookData ? [bookFileStore.name, chapterStore.name, tocStore.name] : []),
                 bookStore.name,
                 progressStore.name,
             ],
@@ -358,7 +359,7 @@ export default class BookshelfService {
                     // IndexedDB会在同一事务内按提交顺序处理请求。先将请求全部入队可避免逐章
                     // await 带来的事件循环往返，同时仍保持不同文件依次解析和持久化。
                     await Promise.all([
-                        this.fileService.add(bookData.bookFile, transaction),
+                        this.bookFileService.add(bookData.bookFile, transaction),
                         this.chapterService.addAll(bookData.chapters, transaction),
                         this.tocService.add(bookData.toc, transaction),
                     ]);
@@ -377,22 +378,22 @@ export default class BookshelfService {
     }
 
     /**
-     * 检查并处理版本变更,手册不存在或者版本不匹配则重新添加手册并更新元数据
+     * 手册不存在或版本不匹配时，重新添加手册并更新元数据。
      * @param metadata - 元数据
      * @param defaultCategory - 默认分类
-     * @see Aura.VERSION 当前应用版本
+     * @see Aura.HANDBOOK_VERSION 当前内置手册版本
      */
-    private async checkMetadata(metadata: Metadata, defaultCategory: Category): Promise<void> {
-        const existsHandbook = ObjectUtil.exists(
+    private async refreshHandbookIfNeeded(metadata: Metadata, defaultCategory: Category): Promise<void> {
+        const handbookExists = ObjectUtil.exists(
             await TransactionManager.runTransaction(
                 [bookStore.name],
                 DatabaseMode.READ_ONLY,
-                async (transaction) => await this.bookService.getByKey(metadata.handbookId, transaction)
+                async (transaction) => await this.bookService.getByKey(metadata.handbookBookId, transaction)
             )
         );
-        const isVersionChanged = Aura.isVersionChanged(metadata.version);
-        if (isVersionChanged || !existsHandbook) {
-            if (isVersionChanged && existsHandbook) await this.deleteBook(metadata.handbookId);
+        const isHandbookOutdated = metadata.handbookVersion !== Aura.HANDBOOK_VERSION;
+        if (isHandbookOutdated || !handbookExists) {
+            if (isHandbookOutdated && handbookExists) await this.deleteBook(metadata.handbookBookId);
             await this.addBook([createFileSeed()], defaultCategory.id, true)
                 .then(({ books }) => assertExists(books[0], "Handbook book not found"))
                 .then(async (newHandbook) => {
@@ -402,8 +403,8 @@ export default class BookshelfService {
                         async (transaction) => {
                             await this.metadataService.update(
                                 metadata.update({
-                                    handbookId: newHandbook.id,
-                                    version: Aura.VERSION,
+                                    handbookBookId: newHandbook.id,
+                                    handbookVersion: Aura.HANDBOOK_VERSION,
                                     updatedTime: Date.now(),
                                 }),
                                 transaction

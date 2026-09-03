@@ -24,8 +24,8 @@ import ObjectUtil from "@/util/object-util";
  */
 export default class Metadata extends BaseModel {
     public readonly appName!: string;
-    public readonly handbookId!: string;
-    public readonly version!: number;
+    public readonly handbookBookId!: string;
+    public readonly handbookVersion!: number;
 
     public constructor(data: ClassFields<Metadata>) {
         super();

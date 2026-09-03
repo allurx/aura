@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import FileRepository from "./file-repository";
 import BookFile from "./book-file";
-import BaseService from "@/domain/base-service";
+import BaseRepository from "@/domain/base-repository";
+import { bookFileStore } from "@/database/database-definition";
 
 /**
- * 文件服务类
+ * 书籍文件数据访问对象
  * @author allurx
  */
-export default class FileService extends BaseService<BookFile> {
+export default class BookFileRepository extends BaseRepository<BookFile> {
     public constructor() {
-        super(new FileRepository());
+        super(bookFileStore, BookFile);
     }
 }

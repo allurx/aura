@@ -22,13 +22,13 @@ import DatabaseDefinition from "./database-definition";
  */
 export default class Database {
     private readonly name: string;
-    private readonly version: number;
+    private readonly schemaVersion: number;
     private readonly stores: typeof DatabaseDefinition.stores;
     private singleton!: IDBDatabase | null;
 
-    public constructor(name: string, version: number, stores: typeof DatabaseDefinition.stores) {
+    public constructor(name: string, schemaVersion: number, stores: typeof DatabaseDefinition.stores) {
         this.name = name;
-        this.version = version;
+        this.schemaVersion = schemaVersion;
         this.stores = stores;
     }
 
@@ -46,7 +46,7 @@ export default class Database {
      */
     private connect(): Promise<IDBDatabase> {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open(this.name, this.version);
+            const request = indexedDB.open(this.name, this.schemaVersion);
             request.onupgradeneeded = () => {
                 Object.values(this.stores).forEach((storeDefinition) => {
                     if (!request.result.objectStoreNames.contains(storeDefinition.name)) {
