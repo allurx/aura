@@ -14,18 +14,22 @@
  * limitations under the License.
  */
 
-/**
- * 常用类型定义
- * @author allurx
- */
+import Aura from "@/core/aura";
+import Metadata from "@/domain/metadata/metadata";
 
 /**
- * ClassFields<T>
- * 提取类T的字段类型(排除方法)
- * 注意(...args: unknown[]) => unknown在某些边界情况下推断不够严格。
- * 不使用Function类型,避免ESLint报警
- * @link https://typescript-eslint.io/rules/no-unsafe-function-type/
+ * 创建应用元数据种子。
+ * @param handbookBookId - 内置手册对应的书籍 ID
+ * @returns 应用元数据
  */
-export type ClassFields<T> = {
-    [K in keyof T as T[K] extends (...args: never[]) => unknown ? never : K]: T[K];
-};
+export function createMetadataSeed(handbookBookId: string): Metadata {
+    const nowMs = Date.now();
+    return new Metadata({
+        id: crypto.randomUUID(),
+        appName: Aura.NAME,
+        handbookBookId,
+        handbookVersion: Aura.HANDBOOK_VERSION,
+        createdTime: nowMs,
+        updatedTime: nowMs,
+    });
+}

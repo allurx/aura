@@ -34,9 +34,9 @@ import TextEncodingDetector from "@/domain/file/text-encoding-detector";
 import FileUtil from "@/util/file-util";
 import ObjectUtil from "@/util/object-util";
 import TransactionManager from "@/database/transaction-manager";
-import { createMetadataSeed } from "@/database/seed/metadata-seed";
-import { createFileSeed } from "@/database/seed/file-seed";
-import { createCategorySeeds } from "@/database/seed/category-seed";
+import { createCategorySeeds } from "./seed/category-seed";
+import { createHandbookFile } from "./seed/handbook-seed";
+import { createMetadataSeed } from "./seed/metadata-seed";
 import BookshelfState from "./bookshelf-state";
 import { assertExists } from "@/util/assert-util";
 import { DatabaseMode } from "@/database/database-mode";
@@ -225,7 +225,7 @@ export default class BookshelfService {
         );
         if (!metadata) {
             const categories = createCategorySeeds();
-            return await this.importBooks([createFileSeed()], assertExists(categories[0]).id, false)
+            return await this.importBooks([createHandbookFile()], assertExists(categories[0]).id, false)
                 .then(({ books }) => assertExists(books[0], "Handbook book not found"))
                 .then(async (handbook) => {
                     return await TransactionManager.runTransaction(
@@ -399,7 +399,7 @@ export default class BookshelfService {
         const isHandbookOutdated = metadata.handbookVersion !== Aura.HANDBOOK_VERSION;
         if (isHandbookOutdated || !handbookExists) {
             if (isHandbookOutdated && handbookExists) await this.deleteBook(metadata.handbookBookId);
-            await this.importBooks([createFileSeed()], defaultCategory.id, true)
+            await this.importBooks([createHandbookFile()], defaultCategory.id, true)
                 .then(({ books }) => assertExists(books[0], "Handbook book not found"))
                 .then(async (newHandbook) => {
                     await TransactionManager.runTransaction(

@@ -15,7 +15,7 @@
  */
 
 import BaseModel from "@/domain/base-model";
-import type { ClassFields } from "@/type/common-type";
+import type { ClassFields } from "@/type/class-fields";
 import ObjectUtil from "@/util/object-util";
 import type TocEntry from "./toc-entry";
 

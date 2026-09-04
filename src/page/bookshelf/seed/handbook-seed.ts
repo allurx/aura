@@ -28,6 +28,10 @@ const handbookText = `
         欢迎加入Aura交流群讨论和交流: 1038423789
     `.trim();
 
-export function createFileSeed(): File {
+/**
+ * 创建内置 Aura 手册文件。
+ * @returns 内置手册文件
+ */
+export function createHandbookFile(): File {
     return new File([handbookText], "Aura.txt", { type: "text/plain" });
 }

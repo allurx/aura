@@ -36,6 +36,10 @@ const categoryNames = [
     "魔幻",
 ] as const;
 
+/**
+ * 创建预置书籍分类。
+ * @returns 按默认展示顺序排列的分类
+ */
 export function createCategorySeeds(): Category[] {
     const nowMs = Date.now();
     return categoryNames.map(

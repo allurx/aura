@@ -15,7 +15,7 @@
  */
 import ObjectUtil from "@/util/object-util";
 
-import type { ClassFields } from "@/type/common-type";
+import type { ClassFields } from "@/type/class-fields";
 
 /**
  * 基础模型类

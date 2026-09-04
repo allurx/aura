@@ -14,17 +14,14 @@
  * limitations under the License.
  */
 
-import Aura from "@/core/aura";
-import Metadata from "@/domain/metadata/metadata";
-
-export function createMetadataSeed(handbookBookId: string): Metadata {
-    const nowMs = Date.now();
-    return new Metadata({
-        id: crypto.randomUUID(),
-        appName: Aura.NAME,
-        handbookBookId,
-        handbookVersion: Aura.HANDBOOK_VERSION,
-        createdTime: nowMs,
-        updatedTime: nowMs,
-    });
-}
+/**
+ * 提取类 T 的字段类型（排除方法）。
+ *
+ * `(...args: never[]) => unknown` 在某些边界情况下推断不够严格；不使用 `Function`，避免削弱类型安全。
+ *
+ * @see https://typescript-eslint.io/rules/no-unsafe-function-type/
+ * @author allurx
+ */
+export type ClassFields<T> = {
+    [K in keyof T as T[K] extends (...args: never[]) => unknown ? never : K]: T[K];
+};
