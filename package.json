@@ -7,11 +7,12 @@
     },
     "scripts": {
         "dev": "vite --open",
-        "format": "prettier --write \"src/**/*.{css,html,ts}\" eslint.config.mjs package.json tsconfig.json vite.config.ts",
-        "format:check": "prettier --check \"src/**/*.{css,html,ts}\" eslint.config.mjs package.json tsconfig.json vite.config.ts",
+        "format": "prettier . --write",
+        "format:check": "prettier . --check",
         "lint": "eslint src vite.config.ts",
         "type-check": "tsc --noEmit",
         "check": "npm run format:check && npm run lint && npm run type-check",
+        "verify": "npm run check && vite build && vite build --mode portable",
         "build": "npm run check && vite build",
         "build:portable": "npm run check && vite build --mode portable",
         "build:obfuscated": "npm run check && vite build --mode obfuscated",
@@ -19,7 +20,9 @@
         "preview": "vite preview --open"
     },
     "devDependencies": {
+        "@eslint/js": "9.38.0",
         "@types/node": "^24.9.2",
+        "eslint": "9.38.0",
         "prettier": "3.6.2",
         "typescript": "5.9.3",
         "typescript-eslint": "8.46.2",

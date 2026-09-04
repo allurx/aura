@@ -41,9 +41,10 @@ Aura 是一个轻量、离线优先的 Web 阅读器。变更应持续保护以�
 
 - 修改前检查 `git status`，识别并保留用户已有改动；以最小必要范围完成当前任务。
 - 开发循环先运行最小相关检查；实现稳定后复查实际 diff，非平凡修改进行独立 review。修复确认的问题后只重跑受影响的检查，最终状态再执行完整验证。
-- 使用 `npm` 和 `package-lock.json`；`package.json` 是脚本定义的事实来源。`npm run format` 会显式改写受管文件；最终只读静态门禁 `npm run check` 依次执行格式、lint 和类型检查，开发循环或定位单项问题时可分别运行对应命令。
+- 使用 `npm` 和 `package-lock.json`；`package.json` 是脚本定义的事实来源。`npm run format` 会改写 Prettier 支持且未被 `.prettierignore` 排除的项目文件；最终只读静态门禁 `npm run check` 依次执行格式、lint 和类型检查，开发循环或定位单项问题时可分别运行对应命令。
 - TypeScript 变更通常至少运行 `npm run check`；影响运行时行为时还应运行对应生产构建，普通 Web 为 `npm run build`。构建脚本已包含静态门禁，最终验证无需紧邻重复运行 `npm run check`。
 - 路由、入口、模板、资源路径、Vite 配置或 portable 相关变更，应同时运行 `npm run build` 和 `npm run build:portable`；混淆流程变更再覆盖 `npm run build:obfuscated` 和 `npm run build:portable:obfuscated`。
+- `npm run verify` 依次执行静态检查、普通 Web 构建和 portable 构建；GitHub Actions 使用该入口验证 PR 和共享分支，只有在仓库规则中将该检查设为 required check 后才构成合并门禁。调整 Node.js 版本范围、验证脚本或构建入口时应同步维护 CI。
 - 构建成功只证明静态构建通过。导航、页面生命周期、移动端交互、持久化和 `file://` portable 行为等浏览器问题，必须在对应运行环境中验证后才能宣称已解决。
 - 导入、解析、去重、事务或批量写入逻辑变更，除功能正确性外，还应使用有代表性的大文件和数据场景检查性能与内存。
 - 可以使用最小且可删除的临时验证脚本；未经确认，不要仅为单次修改引入新的测试框架或运行时依赖。交付前清理临时文件。
