@@ -19,7 +19,7 @@ import "./component/dialog/dialog.css";
 import "./component/overlay/overlay.css";
 import "./component/setting/setting-ui.css";
 import { PageName } from "./constant/page-name";
-import Page from "./page/page";
+import type Page from "./page/page";
 import Bookshelf from "./page/bookshelf/bookshelf";
 import Reader from "./page/reader/reader";
 import Router, { type AppRoute } from "./router/router";

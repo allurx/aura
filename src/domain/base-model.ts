@@ -15,7 +15,7 @@
  */
 import ObjectUtil from "@/util/object-util";
 
-import { ClassFields } from "@/type/common-type";
+import type { ClassFields } from "@/type/class-fields";
 
 /**
  * 基础模型类
@@ -24,7 +24,9 @@ import { ClassFields } from "@/type/common-type";
 export default abstract class BaseModel {
     // 模型唯一标识符(uuid)
     public id!: string;
+    // 创建时间的 Unix 时间戳，单位为毫秒。
     public createdTime!: number;
+    // 最后更新时间的 Unix 时间戳，单位为毫秒。
     public updatedTime!: number;
 
     /**

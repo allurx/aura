@@ -33,21 +33,22 @@
         align-items: center;
         flex: 1;
 
-        img {
-            cursor: pointer;
+        > button {
+            appearance: none;
             width: 22px;
             height: 22px;
-        }
-
-        #toggle-setting-panel {
-            appearance: none;
             padding: 0;
             border: 0;
             background: transparent;
-            width: 22px;
-            height: 22px;
+            color: inherit;
             line-height: 0;
             cursor: pointer;
+        }
+
+        img {
+            display: block;
+            width: 22px;
+            height: 22px;
         }
     }
 

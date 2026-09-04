@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Page from "./page";
+import type Page from "./page";
 import DomUtil from "@/util/dom-util";
 
 /**

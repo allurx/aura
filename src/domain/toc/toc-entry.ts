@@ -13,23 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type Book from "@/domain/book/book";
-import type Chapter from "@/domain/chapter/chapter";
-import type Toc from "@/domain/toc/toc";
-import type Progress from "@/domain/progress/progress";
+
+import type { ClassFields } from "@/type/class-fields";
 import ObjectUtil from "@/util/object-util";
 
 /**
- * 阅读器状态
+ * 目录条目
  * @author allurx
  */
-export default class ReaderState {
-    public readonly book!: Book;
-    public readonly toc!: Toc;
-    public readonly progress!: Progress;
-    public chapter!: Chapter;
+export default class TocEntry {
+    // 章节序号，从 1 开始
+    public readonly chapterNumber!: number;
 
-    public constructor(data: Required<ReaderState>) {
-        ObjectUtil.assignOwnProperties<ReaderState>(this, data);
+    // 目录标题
+    public readonly title!: string;
+
+    // 章节在整本书中的起始物理行号
+    public readonly startBookLineNumber!: number;
+
+    // 章节在整本书中的结束物理行号
+    public readonly endBookLineNumber!: number;
+
+    /**
+     * 创建目录条目
+     * @param data - 目录条目字段
+     */
+    public constructor(data: ClassFields<TocEntry>) {
+        ObjectUtil.assignOwnProperties<TocEntry>(this, data);
     }
 }

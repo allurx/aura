@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-import Setting from "@/component/setting/definition/setting";
-import SettingConfiguration from "@/component/setting/model/setting-configuration";
+import type Setting from "@/component/setting/definition/setting";
+import type SettingConfiguration from "@/component/setting/model/setting-configuration";
 import SettingInteraction from "@/component/setting/model/setting-interaction";
-import SettingTarget from "@/component/setting/model/setting-target";
+import type SettingTarget from "@/component/setting/model/setting-target";
 import EventUtil from "@/util/event-util";
-import ExternalSettingListener from "./external-setting-listener";
+import type ExternalSettingListener from "./external-setting-listener";
 
 /**
  * 将 resize 等面板外部产生的 inline Appearance 变化同步到已提交快照。
+ *
+ * 只跟踪具体的 inline preferred value；外部移除该值不等同于设置 Reset，不会提交。
  *
  * @author allurx
  */
@@ -32,7 +34,7 @@ export default class ExternalSettingSynchronizer {
     public start(configuration: SettingConfiguration, listener: ExternalSettingListener, signal: AbortSignal): void {
         for (const target of configuration.targets) {
             for (const setting of target.settings) {
-                if (setting.synchronizesExternal) this.observe(target, setting, listener, signal);
+                if (setting.tracksExternalChanges) this.observe(target, setting, listener, signal);
             }
         }
         signal.addEventListener(
@@ -56,7 +58,7 @@ export default class ExternalSettingSynchronizer {
         listener: ExternalSettingListener,
         signal: AbortSignal
     ): void {
-        let observedValue = setting.readExternal(target);
+        let observedValue = setting.readExternalValue(target);
         let timer: number | undefined;
 
         const clearTimer = (): void => {
@@ -67,7 +69,7 @@ export default class ExternalSettingSynchronizer {
         };
         const observer = new MutationObserver(() => {
             if (signal.aborted) return;
-            const value = setting.readExternal(target);
+            const value = setting.readExternalValue(target);
             if (value === observedValue) return;
             observedValue = value;
             clearTimer();
@@ -77,10 +79,10 @@ export default class ExternalSettingSynchronizer {
                 const currentTimer = timer;
                 timer = undefined;
                 if (currentTimer !== undefined) this.timers.delete(currentTimer);
-                if (signal.aborted || setting.readExternal(target) !== value) return;
+                if (signal.aborted || setting.readExternalValue(target) !== value) return;
                 if (listener.isPreviewing(target, setting) || listener.getValue(target, setting) === value) return;
                 EventUtil.run(() => {
-                    listener.commitExternal(new SettingInteraction(target, setting, value));
+                    listener.commitExternalChange(new SettingInteraction(target, setting, value));
                 });
             }, 300);
             this.timers.add(timer);

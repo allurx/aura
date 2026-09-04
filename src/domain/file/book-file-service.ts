@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import Metadata from "@/domain/metadata/metadata";
+import BookFileRepository from "./book-file-repository";
+import type BookFile from "./book-file";
+import BaseService from "@/domain/base-service";
 
-export function createMetadataSeed(handbookId: string): Metadata {
-    const timestamp = Date.now();
-    return new Metadata({
-        id: crypto.randomUUID(),
-        appName: "aura",
-        handbookId,
-        version: 1,
-        createdTime: timestamp,
-        updatedTime: timestamp,
-    });
+/**
+ * 书籍文件服务
+ * @author allurx
+ */
+export default class BookFileService extends BaseService<BookFile> {
+    public constructor() {
+        super(new BookFileRepository());
+    }
 }

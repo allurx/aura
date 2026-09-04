@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Category from "@/domain/category/category";
+import type Category from "@/domain/category/category";
 import EventUtil from "@/util/event-util";
 import { assertExists } from "@/util/assert-util";
 import Ui from "@/component/ui";
@@ -33,6 +33,7 @@ export default class NavUi extends Ui {
             .sort((a, b) => a.order - b.order)
             .forEach((category) => {
                 const button = document.createElement("button");
+                button.type = "button";
                 button.dataset["id"] = category.id;
                 button.textContent = category.name;
                 this.root.appendChild(button);
@@ -45,7 +46,7 @@ export default class NavUi extends Ui {
      * @returns 返回当前实例
      */
     public toggleVisibility(): this {
-        this.root.classList.toggle("flag-visible");
+        this.root.classList.toggle("is-toggled");
         return this;
     }
 

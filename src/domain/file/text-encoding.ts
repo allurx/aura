@@ -13,23 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type Book from "@/domain/book/book";
-import type Chapter from "@/domain/chapter/chapter";
-import type Toc from "@/domain/toc/toc";
-import type Progress from "@/domain/progress/progress";
-import ObjectUtil from "@/util/object-util";
 
 /**
- * 阅读器状态
+ * Aura支持并可交由TextDecoderStream严格解码的TXT编码。
  * @author allurx
  */
-export default class ReaderState {
-    public readonly book!: Book;
-    public readonly toc!: Toc;
-    public readonly progress!: Progress;
-    public chapter!: Chapter;
-
-    public constructor(data: Required<ReaderState>) {
-        ObjectUtil.assignOwnProperties<ReaderState>(this, data);
-    }
-}
+export type SupportedTextEncoding = "utf-8" | "utf-16le" | "utf-16be" | "gb18030" | "big5";

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Progress from "@/domain/progress/progress";
+import type Progress from "@/domain/progress/progress";
 import BookService from "@/domain/book/book-service";
 import ChapterService from "@/domain/chapter/chapter-service";
 import ProgressService from "@/domain/progress/progress-service";
@@ -65,8 +65,8 @@ export default class ReaderService {
                 const [toc, chapter] = await Promise.all([
                     this.tocService.getByIndex(tocStore.indexes.ukFileId.name, book.fileId, transaction),
                     this.chapterService.getByIndex(
-                        chapterStore.indexes.ukFileIdIndex.name,
-                        [book.fileId, progress.chapterIndex],
+                        chapterStore.indexes.ukFileIdChapterNumber.name,
+                        [book.fileId, progress.chapterNumber],
                         transaction
                     ),
                 ]);
@@ -77,7 +77,7 @@ export default class ReaderService {
                     progress,
                     chapter: assertExists(
                         chapter,
-                        `Chapter[fileId=${book.fileId}, index=${String(progress.chapterIndex)}] not found`
+                        `Chapter[fileId=${book.fileId}, chapterNumber=${String(progress.chapterNumber)}] not found`
                     ),
                 });
             }
@@ -97,21 +97,21 @@ export default class ReaderService {
     /**
      * 获取章节
      * @param fileId - 书籍文件id
-     * @param chapterIndex - 章节索引
+     * @param chapterNumber - 章节序号，从 1 开始
      */
-    public async getChapter(fileId: string, chapterIndex: number) {
+    public async getChapter(fileId: string, chapterNumber: number) {
         return assertExists(
             await TransactionManager.runTransaction(
                 chapterStore.name,
                 DatabaseMode.READ_ONLY,
                 async (transaction) =>
                     await this.chapterService.getByIndex(
-                        chapterStore.indexes.ukFileIdIndex.name,
-                        [fileId, chapterIndex],
+                        chapterStore.indexes.ukFileIdChapterNumber.name,
+                        [fileId, chapterNumber],
                         transaction
                     )
             ),
-            `Chapter[fileId=${fileId}, index=${String(chapterIndex)}] not found`
+            `Chapter[fileId=${fileId}, chapterNumber=${String(chapterNumber)}] not found`
         );
     }
 }

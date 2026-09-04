@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import ThemeSetting from "@/component/setting/definition/theme-setting";
-import SettingTarget from "@/component/setting/model/setting-target";
+import type ThemeSetting from "@/component/setting/definition/theme-setting";
+import type SettingTarget from "@/component/setting/model/setting-target";
 import EventUtil from "@/util/event-util";
 import SettingControl from "./setting-control";
-import SettingControlListener from "./setting-control-listener";
+import type SettingControlListener from "./setting-control-listener";
 
 /**
  * 枚举值下拉控件。

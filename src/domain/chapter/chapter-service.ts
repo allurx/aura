@@ -15,6 +15,8 @@
  */
 
 import BaseService from "@/domain/base-service";
+import TextFileReader from "@/domain/file/text-file-reader";
+import type { SupportedTextEncoding } from "@/domain/file/text-encoding";
 import Chapter from "./chapter";
 import ChapterRepository from "./chapter-repository";
 
@@ -60,32 +62,33 @@ export default class ChapterService extends BaseService<Chapter> {
      *
      * @param file - 上传的文件
      * @param fileId - 文件id
+     * @param encoding - 文件编码
      * @returns 章节列表
      */
-    public async parseChapters(file: File, fileId: string): Promise<Chapter[]> {
+    public async parseChapters(file: File, fileId: string, encoding: SupportedTextEncoding): Promise<Chapter[]> {
         const chapters: Chapter[] = [];
         let chapterTitle: string | null = null;
         let chapterLines: string[] = [];
-        let currentLineNumber = 1;
+        let currentBookLineNumber = 1;
 
         // 标题行不保存在lines中，但仍占用一个物理行；前言和全文没有标题行，所以不增加这一行。
-        const appendChapter = (title: string, lines: string[], includesTitle: boolean) => {
+        const appendChapter = (title: string, lines: string[], hasExplicitTitleLine: boolean) => {
             const chapter = new Chapter({
                 id: crypto.randomUUID(),
                 fileId,
-                index: chapters.length + 1,
+                chapterNumber: chapters.length + 1,
                 title,
                 lines,
-                startLineNumber: currentLineNumber,
-                endLineNumber: currentLineNumber + lines.length + Number(includesTitle) - 1,
+                startBookLineNumber: currentBookLineNumber,
+                endBookLineNumber: currentBookLineNumber + lines.length + Number(hasExplicitTitleLine) - 1,
                 createdTime: Date.now(),
                 updatedTime: Date.now(),
             });
             chapters.push(chapter);
-            currentLineNumber = chapter.endLineNumber + 1;
+            currentBookLineNumber = chapter.endBookLineNumber + 1;
         };
 
-        for await (const line of this.readLines(file)) {
+        for await (const line of new TextFileReader(encoding).readLines(file)) {
             // 正则是唯一的章节边界判断；未命中的行（包括空行）原样归入当前章节。
             if (!this.chapterRegex.test(line)) {
                 chapterLines.push(line);
@@ -93,12 +96,12 @@ export default class ChapterService extends BaseService<Chapter> {
             }
 
             // 已有标题时封存上一章；首个标题之前只有真实文本才生成前言，纯空白不能制造空章节。
-            const includesTitle = chapterTitle !== null;
-            if (includesTitle || chapterLines.some((contentLine) => contentLine.trim().length > 0)) {
-                appendChapter(chapterTitle ?? "前言", chapterLines, includesTitle);
+            const hasExplicitTitleLine = chapterTitle !== null;
+            if (hasExplicitTitleLine || chapterLines.some((contentLine) => contentLine.trim().length > 0)) {
+                appendChapter(chapterTitle ?? "前言", chapterLines, hasExplicitTitleLine);
             } else {
                 // 即使不生成前言，前置空白仍是原文件中的物理行，必须推进行号以保持定位准确。
-                currentLineNumber += chapterLines.length;
+                currentBookLineNumber += chapterLines.length;
             }
 
             chapterTitle = line.trim();
@@ -108,40 +111,5 @@ export default class ChapterService extends BaseService<Chapter> {
         // 无任何有效标题时整体作为“全文”；否则文件结束处封存最后一个已确认章节。
         appendChapter(chapterTitle ?? "全文", chapterLines, chapterTitle !== null);
         return chapters;
-    }
-
-    /**
-     * 分块读取文件并按行输出，避免一次性将全文解码成一个大字符串。
-     * 保留所有中间空行，不对用户文本整体trim；只移除CRLF中的CR，确保内容和物理行号稳定。
-     *
-     * @param file - 上传的文件
-     * @returns 异步行迭代器
-     */
-    private async *readLines(file: File): AsyncGenerator<string> {
-        const reader = file.stream().pipeThrough(new TextDecoderStream("UTF-8")).getReader();
-        let remaining = "";
-        try {
-            for (;;) {
-                const result = await reader.read();
-                if (result.done) break;
-
-                // UTF-8字符由TextDecoderStream处理；文本行仍可能横跨数据块，因此拼接上次未成行的残余。
-                const text = remaining + result.value;
-                let start = 0;
-                let end = text.indexOf("\n");
-                while (end >= 0) {
-                    const line = text.slice(start, end);
-                    // 以\n分行时只去掉CRLF配对的末尾\r，正文中其他位置的独立\r保持不变。
-                    yield line.endsWith("\r") ? line.slice(0, -1) : line;
-                    start = end + 1;
-                    end = text.indexOf("\n", start);
-                }
-                remaining = text.slice(start);
-            }
-            // 文件以换行符结束时remaining为空，不额外制造一个原文件不存在的尾部空行。
-            if (remaining.length > 0) yield remaining;
-        } finally {
-            reader.releaseLock();
-        }
     }
 }

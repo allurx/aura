@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import RangeStyleSetting from "@/component/setting/definition/range-style-setting";
-import SettingTarget from "@/component/setting/model/setting-target";
+import type RangeStyleSetting from "@/component/setting/definition/range-style-setting";
+import type SettingTarget from "@/component/setting/model/setting-target";
 import EventUtil from "@/util/event-util";
 import SettingControl from "./setting-control";
-import SettingControlListener from "./setting-control-listener";
+import type SettingControlListener from "./setting-control-listener";
 
 /**
  * 有限数值范围的滑块控件。
@@ -40,7 +40,6 @@ export default class RangeSettingControl extends SettingControl {
         this.inputElement.min = String(rangeSetting.minimum);
         this.inputElement.max = String(rangeSetting.maximum);
         this.inputElement.step = String(rangeSetting.step);
-        if (rangeSetting.synchronizesExternal) this.element.classList.add("width-setting");
         this.attachControl(this.inputElement);
 
         EventUtil.bind(

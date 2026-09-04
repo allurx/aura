@@ -26,18 +26,16 @@ import Ui from "@/component/ui";
  */
 export default class HeaderUi extends Ui {
     private readonly headerTitleElement: HTMLSpanElement;
-    private readonly toggleSettingPanelElement: HTMLButtonElement;
-    private readonly clearBookshelfElement: HTMLImageElement;
+    private readonly settingToggleButton: HTMLButtonElement;
+    private readonly clearBookshelfButton: HTMLButtonElement;
 
     public constructor(args: ConstructorParameters<typeof Ui>[0]) {
         super(args);
         this.headerTitleElement = assertExists(this.root.querySelector<HTMLSpanElement>("#title"));
-        this.toggleSettingPanelElement = assertExists(
-            this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel")
-        );
-        this.clearBookshelfElement = assertExists(this.root.querySelector<HTMLImageElement>("#clear-btn"));
-        assertExists(this.toggleSettingPanelElement.querySelector<HTMLImageElement>("img")).src = settingIcon;
-        this.clearBookshelfElement.src = bookshelfClearIcon;
+        this.settingToggleButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel"));
+        this.clearBookshelfButton = assertExists(this.root.querySelector<HTMLButtonElement>("#clear-btn"));
+        assertExists(this.settingToggleButton.querySelector<HTMLImageElement>("img")).src = settingIcon;
+        assertExists(this.clearBookshelfButton.querySelector<HTMLImageElement>("img")).src = bookshelfClearIcon;
     }
 
     /**
@@ -48,7 +46,7 @@ export default class HeaderUi extends Ui {
      */
     public bindToggleSettingPanel(handler: (opener: HTMLButtonElement) => void, signal: AbortSignal): this {
         EventUtil.bind(
-            this.toggleSettingPanelElement,
+            this.settingToggleButton,
             "click",
             (_, opener) => {
                 handler(opener);
@@ -65,7 +63,7 @@ export default class HeaderUi extends Ui {
      * @param signal - 页面生命周期信号
      */
     public bindClearBookshelfClick(handler: () => Promise<void>, signal: AbortSignal): this {
-        EventUtil.bind(this.clearBookshelfElement, "click", handler, { signal });
+        EventUtil.bind(this.clearBookshelfButton, "click", handler, { signal });
         return this;
     }
 

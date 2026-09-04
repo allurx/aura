@@ -15,7 +15,7 @@
  */
 
 import BaseModel from "@/domain/base-model";
-import { ClassFields } from "@/type/common-type";
+import type { ClassFields } from "@/type/class-fields";
 import ObjectUtil from "@/util/object-util";
 
 /**
@@ -24,15 +24,15 @@ import ObjectUtil from "@/util/object-util";
  */
 export default class Chapter extends BaseModel {
     public readonly fileId!: string;
-    public readonly index!: number;
+    public readonly chapterNumber!: number;
     public readonly title!: string;
     public readonly lines!: string[];
 
-    // 本章节在整本书的起始行号
-    public readonly startLineNumber!: number;
+    // 本章节在整本书中的起始物理行号
+    public readonly startBookLineNumber!: number;
 
-    // 本章节在整本书的结束行号
-    public readonly endLineNumber!: number;
+    // 本章节在整本书中的结束物理行号
+    public readonly endBookLineNumber!: number;
 
     public constructor(data: ClassFields<Chapter>) {
         super();
@@ -47,10 +47,11 @@ export default class Chapter extends BaseModel {
     }
 
     /**
-     * 获取章节内指定内容行在全书中的行号
-     * @param lineIndex - 章节内行索引
+     * 将章节内正文行号转换为全书物理行号。
+     * @param chapterLineNumber - 当前章节内的正文行号，从 1 开始
+     * @returns 对应的全书物理行号
      */
-    public lineNumber(lineIndex: number) {
-        return this.endLineNumber - this.lines.length + lineIndex;
+    public toBookLineNumber(chapterLineNumber: number): number {
+        return this.endBookLineNumber - this.lines.length + chapterLineNumber;
     }
 }

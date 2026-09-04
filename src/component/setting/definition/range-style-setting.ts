@@ -17,7 +17,7 @@
 import RangeSettingControl from "@/component/setting/control/range-setting-control";
 import type SettingControl from "@/component/setting/control/setting-control";
 import type SettingControlListener from "@/component/setting/control/setting-control-listener";
-import { StyleProperty } from "@/component/setting/model/style-property";
+import type { StyleProperty } from "@/component/setting/model/style-property";
 import type SettingTarget from "@/component/setting/model/setting-target";
 import StyleSetting from "./style-setting";
 
@@ -34,10 +34,9 @@ export default class RangeStyleSetting extends StyleSetting {
         public readonly maximum: number,
         public readonly step: number,
         public readonly unit: string,
-        displayOrder: number,
-        synchronizesExternal = false
+        displayOrder: number
     ) {
-        super(property, title, displayOrder, synchronizesExternal);
+        super(property, title, displayOrder);
         if (minimum > maximum || step <= 0) throw new Error(`Invalid ${property} range`);
     }
 

@@ -19,7 +19,7 @@ import NavUi from "./nav/nav-ui";
 import BookListUi from "./book-list/book-list-ui";
 import BookshelfUi from "./bookshelf-ui";
 import BookshelfService from "./bookshelf-service";
-import BookshelfState from "./bookshelf-state";
+import type BookshelfState from "./bookshelf-state";
 import { assertExists } from "@/util/assert-util";
 import SettingCatalog from "@/component/setting/definition/setting-catalog";
 import SettingTarget from "@/component/setting/model/setting-target";
@@ -109,28 +109,33 @@ export default class BookshelfController {
     }
 
     /**
-     * 添加书籍
+     * 导入书籍
      * @param files - 书籍文件列表
      */
-    private async addBook(files: File[]) {
+    private async importBooks(files: File[]) {
         await this.bookshelfUi
             .showOverlayWhile(async () => {
-                // 只处理文本文件
+                // File.type可能为空，按文件选择器约定的.txt后缀过滤。
                 await this.bookshelfService
-                    .addBook(
+                    .importBooks(
                         files.filter((file) => {
-                            if (file.type === "text/plain") return true;
+                            if (/\.txt$/i.test(file.name)) return true;
                             void this.bookshelfUi.alertDialog(`${file.name}不是文本文件`);
                             return false;
                         }),
                         this.state.categoryId,
                         true
                     )
-                    .then(async ({ books, duplicateFiles }) => {
+                    .then(async ({ books, duplicateFiles, unsupportedEncodingFiles }) => {
                         this.bookListUi.renderBookElements(books);
                         if (duplicateFiles.length > 0) {
                             await this.bookshelfUi.alertDialog(
                                 `${duplicateFiles.map((file) => file.name).join(", ")}已存在`
+                            );
+                        }
+                        if (unsupportedEncodingFiles.length > 0) {
+                            await this.bookshelfUi.alertDialog(
+                                `${unsupportedEncodingFiles.map((file) => file.name).join(", ")}的编码无法自动识别或不受支持`
                             );
                         }
                     });
@@ -180,7 +185,7 @@ export default class BookshelfController {
 
         // 绑定书籍主体事件
         this.bookListUi
-            .bindBookInputChange((files) => this.addBook(files), signal)
+            .bindBookInputChange((files) => this.importBooks(files), signal)
             .bindBookBodyClick((bookId) => {
                 this.readBook(bookId);
             }, signal)

@@ -17,36 +17,53 @@
 import Aura from "@/core/aura";
 import Book from "@/domain/book/book";
 import BookFile from "@/domain/file/book-file";
-import Chapter from "@/domain/chapter/chapter";
+import type Chapter from "@/domain/chapter/chapter";
 import Toc from "@/domain/toc/toc";
-import Category from "@/domain/category/category";
+import TocEntry from "@/domain/toc/toc-entry";
+import type Category from "@/domain/category/category";
 import Progress from "@/domain/progress/progress";
-import Metadata from "@/domain/metadata/metadata";
+import type Metadata from "@/domain/metadata/metadata";
 import MetadataService from "@/domain/metadata/metadata-service";
 import CategoryService from "@/domain/category/category-service";
 import BookService from "@/domain/book/book-service";
 import ChapterService from "@/domain/chapter/chapter-service";
 import ProgressService from "@/domain/progress/progress-service";
 import TocService from "@/domain/toc/toc-service";
-import FileService from "@/domain/file/file-service";
+import BookFileService from "@/domain/file/book-file-service";
+import TextEncodingDetector from "@/domain/file/text-encoding-detector";
 import FileUtil from "@/util/file-util";
 import ObjectUtil from "@/util/object-util";
 import TransactionManager from "@/database/transaction-manager";
-import { createMetadataSeed } from "@/database/seed/metadata-seed";
-import { createFileSeed } from "@/database/seed/file-seed";
-import { createCategorySeeds } from "@/database/seed/category-seed";
+import { createCategorySeeds } from "./seed/category-seed";
+import { createHandbookFile } from "./seed/handbook-seed";
+import { createMetadataSeed } from "./seed/metadata-seed";
 import BookshelfState from "./bookshelf-state";
 import { assertExists } from "@/util/assert-util";
 import { DatabaseMode } from "@/database/database-mode";
 import {
     metadataStore,
     categoryStore,
-    fileStore,
+    bookFileStore,
     bookStore,
     tocStore,
     chapterStore,
     progressStore,
 } from "@/database/database-definition";
+
+/**
+ * 批量导入结果，供控制器分别更新书架和提示信息。
+ * @author allurx
+ */
+interface BookImportResult {
+    // 成功创建并需要渲染的书籍。
+    books: Book[];
+
+    // 禁止重复导入时因内容hash已存在而跳过的文件。
+    duplicateFiles: File[];
+
+    // 编码无法可靠识别或严格解码，因而未持久化的文件。
+    unsupportedEncodingFiles: File[];
+}
 
 /**
  * 书架服务
@@ -55,20 +72,23 @@ import {
 export default class BookshelfService {
     private readonly metadataService: MetadataService;
     private readonly categoryService: CategoryService;
-    private readonly fileService: FileService;
+    private readonly bookFileService: BookFileService;
     private readonly bookService: BookService;
     private readonly chapterService: ChapterService;
     private readonly progressService: ProgressService;
     private readonly tocService: TocService;
+    // 在章节解析前自动识别并严格验证TXT文件编码。
+    private readonly textEncodingDetector: TextEncodingDetector;
 
     public constructor() {
         this.metadataService = new MetadataService();
         this.categoryService = new CategoryService();
-        this.fileService = new FileService();
+        this.bookFileService = new BookFileService();
         this.bookService = new BookService();
         this.chapterService = new ChapterService();
         this.progressService = new ProgressService();
         this.tocService = new TocService();
+        this.textEncodingDetector = new TextEncodingDetector();
     }
 
     public async init() {
@@ -86,7 +106,7 @@ export default class BookshelfService {
         );
 
         // 检查元数据
-        await this.checkMetadata(seeds.metadata, defaultCategory);
+        await this.refreshHandbookIfNeeded(seeds.metadata, defaultCategory);
 
         return new BookshelfState({
             metadata: seeds.metadata,
@@ -96,30 +116,33 @@ export default class BookshelfService {
     }
 
     /**
-     * 添加书籍
+     * 导入书籍
      * @param files - 书籍文件列表
      * @param categoryId - 书籍分类id
-     * @param allowDuplicate - 相同hash文件是否允许重复添加
-     * @returns  添加的书籍列表
+     * @param allowDuplicateBooks - 是否允许为相同内容创建多个书籍记录
+     * @returns 成功导入、重复跳过和编码不受支持的文件分类结果
      */
-    public async addBook(
+    public async importBooks(
         files: File[],
         categoryId: string,
-        allowDuplicate: boolean
-    ): Promise<{ books: Book[]; duplicateFiles: File[] }> {
+        allowDuplicateBooks: boolean
+    ): Promise<BookImportResult> {
         const books: Book[] = [];
         const duplicateFiles: File[] = [];
+        const unsupportedEncodingFiles: File[] = [];
 
         // 同一hash只解析一次;不同hash组依次持久化,避免所有文件的章节数据同时驻留内存
         for (const [hash, groupedFiles] of await this.groupFilesByHash(files)) {
-            const result = await this.addBookGroup(hash, groupedFiles, categoryId, allowDuplicate);
+            const result = await this.importContentGroup(hash, groupedFiles, categoryId, allowDuplicateBooks);
             books.push(...result.books);
             duplicateFiles.push(...result.duplicateFiles);
+            unsupportedEncodingFiles.push(...result.unsupportedEncodingFiles);
         }
 
         return {
             books,
             duplicateFiles,
+            unsupportedEncodingFiles,
         };
     }
 
@@ -129,7 +152,7 @@ export default class BookshelfService {
      */
     public async deleteBook(bookId: string) {
         await TransactionManager.runTransaction(
-            [fileStore.name, bookStore.name, chapterStore.name, tocStore.name, progressStore.name],
+            [bookFileStore.name, bookStore.name, chapterStore.name, tocStore.name, progressStore.name],
             DatabaseMode.READ_WRITE,
             async (transaction) => {
                 const book = assertExists(
@@ -144,7 +167,7 @@ export default class BookshelfService {
                     1
                 )
                     await Promise.all([
-                        this.fileService.deleteByKey(book.fileId, transaction),
+                        this.bookFileService.deleteByKey(book.fileId, transaction),
                         this.chapterService.deleteAllByIndex(
                             chapterStore.indexes.idxFileId.name,
                             book.fileId,
@@ -166,11 +189,11 @@ export default class BookshelfService {
      */
     public async clearBookshelf() {
         await TransactionManager.runTransaction(
-            [fileStore.name, bookStore.name, chapterStore.name, tocStore.name, progressStore.name],
+            [bookFileStore.name, bookStore.name, chapterStore.name, tocStore.name, progressStore.name],
             DatabaseMode.READ_WRITE,
             async (transaction) =>
                 await Promise.all([
-                    this.fileService.clear(transaction),
+                    this.bookFileService.clear(transaction),
                     this.bookService.clear(transaction),
                     this.chapterService.clear(transaction),
                     this.tocService.clear(transaction),
@@ -194,7 +217,7 @@ export default class BookshelfService {
      * 初始化种子数据
      */
     private async seedDatabase() {
-        // addBook是async函数,需要在事务外部调用以避免事务被浏览器提前提交
+        // importBooks是async函数,需要在事务外部调用以避免事务被浏览器提前提交
         const metadata = await TransactionManager.runTransaction(
             [metadataStore.name],
             DatabaseMode.READ_ONLY,
@@ -202,7 +225,7 @@ export default class BookshelfService {
         );
         if (!metadata) {
             const categories = createCategorySeeds();
-            return await this.addBook([createFileSeed()], assertExists(categories[0]).id, false)
+            return await this.importBooks([createHandbookFile()], assertExists(categories[0]).id, false)
                 .then(({ books }) => assertExists(books[0], "Handbook book not found"))
                 .then(async (handbook) => {
                     return await TransactionManager.runTransaction(
@@ -250,28 +273,32 @@ export default class BookshelfService {
      * @param hash - 文件内容hash
      * @param files - 内容相同的文件列表
      * @param categoryId - 书籍分类id
-     * @param allowDuplicate - 是否为同一内容创建多本书
-     * @returns 新增书籍及未添加的重复文件
+     * @param allowDuplicateBooks - 是否允许为同一内容创建多个书籍记录
+     * @returns 该内容组导入成功的书籍、重复文件和编码不受支持文件
      */
-    private async addBookGroup(
+    private async importContentGroup(
         hash: string,
         files: File[],
         categoryId: string,
-        allowDuplicate: boolean
-    ): Promise<{ books: Book[]; duplicateFiles: File[] }> {
+        allowDuplicateBooks: boolean
+    ): Promise<BookImportResult> {
         const file = assertExists(files[0]);
-        // file记录按hash唯一;已存在时直接复用其章节和目录,无需再次解析
+        // BookFile记录按hash唯一;已存在时直接复用其章节和目录,无需再次解析
         let bookFile = await TransactionManager.runTransaction(
-            fileStore.name,
+            bookFileStore.name,
             DatabaseMode.READ_ONLY,
-            async (transaction) => await this.fileService.getByIndex(fileStore.indexes.ukHash.name, hash, transaction)
+            async (transaction) =>
+                await this.bookFileService.getByIndex(bookFileStore.indexes.ukHash.name, hash, transaction)
         );
 
-        const existingFile = ObjectUtil.exists(bookFile);
+        const fileAlreadyExists = ObjectUtil.exists(bookFile);
         let bookData: { bookFile: BookFile; chapters: Chapter[]; toc: Toc } | null = null;
         if (!bookFile) {
             // 只解析组内第一个文件,其余文件与它内容完全相同
             console.log(`Parsing new file with hash: ${hash}`);
+            // 检测失败时跳过整组文件，避免持久化乱码。
+            const encoding = await this.textEncodingDetector.detect(file);
+            if (!encoding) return { books: [], duplicateFiles: [], unsupportedEncodingFiles: files };
             bookFile = new BookFile({
                 id: crypto.randomUUID(),
                 file,
@@ -279,14 +306,15 @@ export default class BookshelfService {
                 createdTime: Date.now(),
                 updatedTime: Date.now(),
             });
-            const chapters = await this.chapterService.parseChapters(file, bookFile.id);
+            // 编码错误已收敛为null，其他异常继续向上抛出。
+            const chapters = await this.chapterService.parseChapters(file, bookFile.id, encoding);
             bookData = {
                 bookFile,
                 chapters,
                 toc: new Toc({
                     id: crypto.randomUUID(),
                     fileId: bookFile.id,
-                    contents: chapters.map((chapter) => new Toc.Content(chapter)),
+                    entries: chapters.map((chapter) => new TocEntry(chapter)),
                     createdTime: Date.now(),
                     updatedTime: Date.now(),
                 }),
@@ -294,8 +322,8 @@ export default class BookshelfService {
         }
 
         // 允许重复时每个文件都创建书籍;否则已有内容全部跳过,新内容只添加第一个文件
-        const filesToAdd = allowDuplicate ? files : existingFile ? [] : files.slice(0, 1);
-        const bookEntries = filesToAdd.map((item) => {
+        const filesForNewBooks = allowDuplicateBooks ? files : fileAlreadyExists ? [] : files.slice(0, 1);
+        const bookEntries = filesForNewBooks.map((item) => {
             const book = new Book({
                 id: crypto.randomUUID(),
                 categoryId,
@@ -309,23 +337,23 @@ export default class BookshelfService {
                 progress: new Progress({
                     id: crypto.randomUUID(),
                     bookId: book.id,
-                    chapterIndex: 1,
-                    lineIndex: 1,
+                    chapterNumber: 1,
+                    chapterLineNumber: 1,
                     lineVisibleRatio: 1,
                     createdTime: Date.now(),
                     updatedTime: Date.now(),
                 }),
             };
         });
-        // filesToAdd之外的文件均属于本次未添加的重复项
-        const duplicateFiles = allowDuplicate ? [] : files.slice(filesToAdd.length);
+        // filesForNewBooks之外的文件均属于本次未添加的重复项
+        const duplicateFiles = allowDuplicateBooks ? [] : files.slice(filesForNewBooks.length);
 
-        if (bookEntries.length === 0) return { books: [], duplicateFiles };
+        if (bookEntries.length === 0) return { books: [], duplicateFiles, unsupportedEncodingFiles: [] };
 
         await TransactionManager.runTransaction(
             [
                 // 新内容需要写入原文件、章节和目录;已有内容只新增书籍及进度
-                ...(bookData ? [fileStore.name, chapterStore.name, tocStore.name] : []),
+                ...(bookData ? [bookFileStore.name, chapterStore.name, tocStore.name] : []),
                 bookStore.name,
                 progressStore.name,
             ],
@@ -336,7 +364,7 @@ export default class BookshelfService {
                     // IndexedDB会在同一事务内按提交顺序处理请求。先将请求全部入队可避免逐章
                     // await 带来的事件循环往返，同时仍保持不同文件依次解析和持久化。
                     await Promise.all([
-                        this.fileService.add(bookData.bookFile, transaction),
+                        this.bookFileService.add(bookData.bookFile, transaction),
                         this.chapterService.addAll(bookData.chapters, transaction),
                         this.tocService.add(bookData.toc, transaction),
                     ]);
@@ -351,27 +379,27 @@ export default class BookshelfService {
             }
         );
 
-        return { books: bookEntries.map(({ book }) => book), duplicateFiles };
+        return { books: bookEntries.map(({ book }) => book), duplicateFiles, unsupportedEncodingFiles: [] };
     }
 
     /**
-     * 检查并处理版本变更,手册不存在或者版本不匹配则重新添加手册并更新元数据
+     * 手册不存在或版本不匹配时，重新添加手册并更新元数据。
      * @param metadata - 元数据
      * @param defaultCategory - 默认分类
-     * @see Aura.VERSION 当前应用版本
+     * @see Aura.HANDBOOK_VERSION 当前内置手册版本
      */
-    private async checkMetadata(metadata: Metadata, defaultCategory: Category): Promise<void> {
-        const existsHandbook = ObjectUtil.exists(
+    private async refreshHandbookIfNeeded(metadata: Metadata, defaultCategory: Category): Promise<void> {
+        const handbookExists = ObjectUtil.exists(
             await TransactionManager.runTransaction(
                 [bookStore.name],
                 DatabaseMode.READ_ONLY,
-                async (transaction) => await this.bookService.getByKey(metadata.handbookId, transaction)
+                async (transaction) => await this.bookService.getByKey(metadata.handbookBookId, transaction)
             )
         );
-        const isVersionChanged = Aura.isVersionChanged(metadata.version);
-        if (isVersionChanged || !existsHandbook) {
-            if (isVersionChanged && existsHandbook) await this.deleteBook(metadata.handbookId);
-            await this.addBook([createFileSeed()], defaultCategory.id, true)
+        const isHandbookOutdated = metadata.handbookVersion !== Aura.HANDBOOK_VERSION;
+        if (isHandbookOutdated || !handbookExists) {
+            if (isHandbookOutdated && handbookExists) await this.deleteBook(metadata.handbookBookId);
+            await this.importBooks([createHandbookFile()], defaultCategory.id, true)
                 .then(({ books }) => assertExists(books[0], "Handbook book not found"))
                 .then(async (newHandbook) => {
                     await TransactionManager.runTransaction(
@@ -380,8 +408,8 @@ export default class BookshelfService {
                         async (transaction) => {
                             await this.metadataService.update(
                                 metadata.update({
-                                    handbookId: newHandbook.id,
-                                    version: Aura.VERSION,
+                                    handbookBookId: newHandbook.id,
+                                    handbookVersion: Aura.HANDBOOK_VERSION,
                                     updatedTime: Date.now(),
                                 }),
                                 transaction

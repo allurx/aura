@@ -39,7 +39,7 @@ type DialogRequest =
 export default class Dialog {
     private readonly dialogElement: HTMLDialogElement;
     private readonly titleElement: HTMLSpanElement;
-    private readonly closeBtnElement: HTMLSpanElement;
+    private readonly closeButton: HTMLButtonElement;
     private readonly bodyElement: HTMLElement;
     private readonly cancelBtnElement: HTMLButtonElement;
     private readonly confirmBtnElement: HTMLButtonElement;
@@ -47,8 +47,8 @@ export default class Dialog {
 
     public constructor({ containerElement }: { containerElement: HTMLElement }) {
         this.dialogElement = containerElement.appendChild(this.renderTemplate());
-        this.titleElement = assertExists(this.dialogElement.querySelector<HTMLDivElement>(".title"));
-        this.closeBtnElement = assertExists(this.dialogElement.querySelector<HTMLSpanElement>(".close-btn"));
+        this.titleElement = assertExists(this.dialogElement.querySelector<HTMLSpanElement>(".title"));
+        this.closeButton = assertExists(this.dialogElement.querySelector<HTMLButtonElement>(".close-btn"));
         this.bodyElement = assertExists(this.dialogElement.querySelector<HTMLElement>(".body"));
         this.cancelBtnElement = assertExists(this.dialogElement.querySelector<HTMLButtonElement>(".cancel-btn"));
         this.confirmBtnElement = assertExists(this.dialogElement.querySelector<HTMLButtonElement>(".confirm-btn"));
@@ -90,9 +90,6 @@ export default class Dialog {
         return new Promise((resolve) => {
             this.resolve = resolve;
             this.dialogElement.showModal();
-            // 移除dialog打开时的第一个可聚焦的后代元素的焦点
-            this.cancelBtnElement.blur();
-            this.confirmBtnElement.blur();
         });
     }
 
@@ -125,7 +122,7 @@ export default class Dialog {
         });
 
         // 右上角关闭按钮
-        EventUtil.bind(this.closeBtnElement, "click", () => {
+        EventUtil.bind(this.closeButton, "click", () => {
             this.dialogElement.close("cancel");
         });
     }
@@ -154,7 +151,7 @@ export default class Dialog {
       <dialog class="dialog">
           <header class="header">
             <span class="title"></span>
-            <span class="close-btn" title="关闭">✖</span>
+            <button type="button" class="close-btn" aria-label="关闭" title="关闭">✖</button>
           </header>
           <section class="body"></section>
           <footer class="footer">

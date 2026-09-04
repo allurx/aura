@@ -109,10 +109,24 @@
             /* 主轴末尾对齐 */
             justify-content: flex-end;
 
+            .book-delete-btn {
+                appearance: none;
+                padding: 0;
+                border: 0;
+                background: transparent;
+                color: inherit;
+                font: inherit;
+                line-height: 1;
+                cursor: pointer;
+
+                &:focus-visible {
+                    opacity: 1;
+                }
+            }
+
             @media (hover: hover) and (pointer: fine) {
                 .book-delete-btn {
                     opacity: 0;
-                    cursor: pointer;
                     transition: opacity 0.3s;
 
                     .book:hover & {

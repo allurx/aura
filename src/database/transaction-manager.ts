@@ -16,7 +16,7 @@
 
 import Database from "./database";
 import DatabaseDefinition from "./database-definition";
-import { DatabaseMode } from "./database-mode";
+import type { DatabaseMode } from "./database-mode";
 
 /**
  * 事务管理器, 负责事务的创建和管理
@@ -25,7 +25,7 @@ import { DatabaseMode } from "./database-mode";
 export default class TransactionManager {
     private static readonly DATABASE = new Database(
         DatabaseDefinition.name,
-        DatabaseDefinition.version,
+        DatabaseDefinition.schemaVersion,
         DatabaseDefinition.stores
     );
 

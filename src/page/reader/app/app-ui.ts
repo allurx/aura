@@ -26,11 +26,11 @@ import FullscreenUtil from "@/util/fullscreen-util";
 export default class AppUi extends Ui {
     // 追踪指针信息
     private readonly pointer = {
-        // 指针移动轨迹相对于x轴的角度
-        angle: 0,
+        // 指针移动轨迹相对于 x 轴的角度（度）
+        angleFromXAxisDegrees: 0,
         // 指针类型 - mouse | touch
         type: "unknown",
-        // 指针事件动作 - mouse click | touch click | touch horizontal swipe | touch vertical swipe
+        // 指针事件动作 - ignored | mouse click | touch click | touch horizontal swipe | touch non-horizontal swipe | cancelled
         action: "unknown",
         // 指针事件结束原因 - pointerup | pointercancel
         endCause: "unknown",
@@ -81,7 +81,10 @@ export default class AppUi extends Ui {
             document,
             "pointerdown",
             (event: PointerEvent) => {
+                this.pointer.angleFromXAxisDegrees = 0;
                 this.pointer.type = event.pointerType;
+                this.pointer.action = "unknown";
+                this.pointer.endCause = "unknown";
                 this.pointer.startTarget = event.target;
                 this.pointer.endTarget = event.target;
                 this.pointer.startX = event.clientX;
@@ -136,16 +139,16 @@ export default class AppUi extends Ui {
      * @param targetElement - 目标元素
      * @param event - 指针事件
      * @param options - 配置选项
-     * @param options.clickAndSwipeThreshold - 点击和滑动阈值(距离px) - 手指在x/y轴滑动距离同时小于该阈值时才算作点击
-     * @param options.minSwipeAngle - 最小滑动角度阈值(度) - 确保是水平滑动
+     * @param options.movementThresholdPx - 区分点击和滑动的单轴移动阈值（px）；x/y 轴移动距离均小于该值时视为点击
+     * @param options.maxHorizontalSwipeAngleDegrees - 水平滑动相对 x 轴的最大夹角（度）；夹角必须严格小于该值
      * @return 章节切换方向或INVALID
      */
     private handlePointerEnd(
         targetElement: HTMLElement,
         event: PointerEvent,
         options = {
-            clickAndSwipeThreshold: 8,
-            minSwipeAngle: 30,
+            movementThresholdPx: 8,
+            maxHorizontalSwipeAngleDegrees: 30,
         }
     ) {
         // 章节切换方向
@@ -154,13 +157,14 @@ export default class AppUi extends Ui {
         this.pointer.deltaX = this.pointer.lastX - this.pointer.startX;
         this.pointer.deltaY = this.pointer.lastY - this.pointer.startY;
         this.pointer.endCause = event.type;
+        this.pointer.action = "ignored";
 
         // 计算指针移动的距离(绝对值)
         const absDeltaX = Math.abs(this.pointer.deltaX);
         const absDeltaY = Math.abs(this.pointer.deltaY);
 
-        // 计算指针移动的角度 - [0-90]°
-        this.pointer.angle = (Math.atan2(absDeltaY, absDeltaX) * 180) / Math.PI;
+        // 计算指针移动轨迹相对 x 轴的角度 - [0, 90]°
+        this.pointer.angleFromXAxisDegrees = (Math.atan2(absDeltaY, absDeltaX) * 180) / Math.PI;
 
         // 处理鼠标事件
         if (event.pointerType === "mouse") {
@@ -187,8 +191,8 @@ export default class AppUi extends Ui {
 
             // 检查是否在有效区域内
             if ((event.target as HTMLElement).parentElement === targetElement || event.target === targetElement) {
-                // 点击 - 手指在x/y轴滑动距离同时小于该阈值时才算作点击
-                if (absDeltaX < options.clickAndSwipeThreshold && absDeltaY < options.clickAndSwipeThreshold) {
+                // 点击 - 手指在 x/y 轴的移动距离均小于阈值
+                if (absDeltaX < options.movementThresholdPx && absDeltaY < options.movementThresholdPx) {
                     this.pointer.action = "touch click";
 
                     // 点击左侧1/3区域
@@ -204,26 +208,26 @@ export default class AppUi extends Ui {
                         // do nothing
                     }
 
-                    // 水平滑动 - 手指在x轴滑动距离超过该阈值才算滑动
-                } else if (absDeltaX > options.clickAndSwipeThreshold) {
+                    // 水平滑动 - x 轴移动距离超过阈值，且轨迹相对 x 轴的夹角小于上限
+                } else if (
+                    absDeltaX > options.movementThresholdPx &&
+                    this.pointer.angleFromXAxisDegrees < options.maxHorizontalSwipeAngleDegrees
+                ) {
                     this.pointer.action = "touch horizontal swipe";
 
-                    // 只有当滑动角度小于30度时才认为是水平滑动
-                    if (this.pointer.angle < options.minSwipeAngle) {
-                        if (this.pointer.deltaX > 0) {
-                            // 向右滑动 - 上一章
-                            direction = SwitchChapterDirection.PREV;
-                        } else {
-                            // 向左滑动 - 下一章
-                            direction = SwitchChapterDirection.NEXT;
-                        }
+                    if (this.pointer.deltaX > 0) {
+                        // 向右滑动 - 上一章
+                        direction = SwitchChapterDirection.PREV;
+                    } else {
+                        // 向左滑动 - 下一章
+                        direction = SwitchChapterDirection.NEXT;
                     }
 
-                    // 垂直滑动
+                    // 非水平滑动
                 } else {
-                    this.pointer.action = "touch vertical swipe";
+                    this.pointer.action = "touch non-horizontal swipe";
 
-                    // do nothing保留原有的滚动行为
+                    // do nothing，保留原有的滚动行为
                 }
             }
         }

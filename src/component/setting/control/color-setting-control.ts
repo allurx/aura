@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import ColorStyleSetting from "@/component/setting/definition/color-style-setting";
-import SettingTarget from "@/component/setting/model/setting-target";
+import type ColorStyleSetting from "@/component/setting/definition/color-style-setting";
+import type SettingTarget from "@/component/setting/model/setting-target";
 import EventUtil from "@/util/event-util";
 import SettingControl from "./setting-control";
-import SettingControlListener from "./setting-control-listener";
+import type SettingControlListener from "./setting-control-listener";
 
 /**
  * 六位十六进制颜色控件。

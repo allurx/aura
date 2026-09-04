@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Book from "@/domain/book/book";
+import type Book from "@/domain/book/book";
 import EventUtil from "@/util/event-util";
 import { assertExists } from "@/util/assert-util";
 import DomUtil from "@/util/dom-util";
@@ -139,7 +139,7 @@ export default class BookListUi extends Ui {
         const bookElement = DomUtil.createElementFromHTML(`
             <div class="book">
                 <div class="book-header">
-                    <span class="book-delete-btn">✖</span>
+                    <button class="book-delete-btn" type="button" aria-label="删除书籍" title="删除书籍">✖</button>
                 </div>
                 <div class="book-body">
                     <span class="book-title"></span>

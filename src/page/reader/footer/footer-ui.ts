@@ -42,13 +42,13 @@ export default class FooterUi extends Ui {
 
     /**
      * 渲染进度
-     * @param currentLineNumber - 当前行号
-     * @param numberOfLines - 总行数
+     * @param bookLineNumber - 当前正文行在全书中的物理行号
+     * @param numberOfLines - 全书物理总行数
      * @return 当前实例
      */
-    public renderProgress(currentLineNumber: number, numberOfLines: number) {
+    public renderProgress(bookLineNumber: number, numberOfLines: number) {
         this.progressRateElement.textContent = `${(
-            (numberOfLines === 0 ? 0 : Math.min(Math.max(currentLineNumber / numberOfLines, 0), 1)) * 100
+            (numberOfLines === 0 ? 0 : Math.min(Math.max(bookLineNumber / numberOfLines, 0), 1)) * 100
         ).toFixed(2)}%`;
         return this;
     }

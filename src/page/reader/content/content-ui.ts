@@ -32,7 +32,7 @@ export default class ContentUi extends Ui {
         const fragment = document.createDocumentFragment();
         lines.forEach((line, index) => {
             const p = document.createElement("p");
-            p.dataset["index"] = (index + 1).toString();
+            p.dataset["chapterLineNumber"] = (index + 1).toString();
             p.textContent = line;
             fragment.appendChild(p);
         });
@@ -42,12 +42,14 @@ export default class ContentUi extends Ui {
 
     /**
      * 恢复阅读进度,滚动到对应段落
-     * @param lineIndex - 行索引
+     * @param chapterLineNumber - 当前章节内的正文行号，从 1 开始
      * @param lineVisibleRatio - 行可见比例
      * @return  当前实例
      */
-    public restoreProgress(lineIndex: number, lineVisibleRatio: number) {
-        const p = this.root.querySelector<HTMLParagraphElement>(`p[data-index="${String(lineIndex)}"]`);
+    public restoreProgress(chapterLineNumber: number, lineVisibleRatio: number) {
+        const p = this.root.querySelector<HTMLParagraphElement>(
+            `p[data-chapter-line-number="${String(chapterLineNumber)}"]`
+        );
         if (p) {
             // 先定位到大概位置
             p.scrollIntoView({ block: "start", behavior: "auto" });
@@ -73,7 +75,7 @@ export default class ContentUi extends Ui {
      * @return 当前实例
      */
     public bindContentScroll(
-        handler: (lineIndex: number, lineVisibleRatio: number) => Promise<void>,
+        handler: (chapterLineNumber: number, lineVisibleRatio: number) => Promise<void>,
         signal: AbortSignal
     ): this {
         let timer: number | undefined;
@@ -97,7 +99,7 @@ export default class ContentUi extends Ui {
                                     Math.max(0, Math.min(rect.bottom, cRect.bottom) - Math.max(rect.top, cRect.top)) /
                                     rect.height;
                                 return {
-                                    index: Number(p.dataset["index"]),
+                                    chapterLineNumber: Number(p.dataset["chapterLineNumber"]),
                                     ratio,
                                     top: rect.top,
                                     text: p.innerText,
@@ -109,7 +111,7 @@ export default class ContentUi extends Ui {
 
                         if (!line) return;
                         console.log("当前章节最上方可见的行: ", line);
-                        await handler(line.index, line.ratio);
+                        await handler(line.chapterLineNumber, line.ratio);
                     });
                 }, 300);
             },

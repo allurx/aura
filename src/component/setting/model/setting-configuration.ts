@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { UiId } from "@/component/ui-id";
-import Setting from "@/component/setting/definition/setting";
+import type { UiId } from "@/component/ui-id";
+import type Setting from "@/component/setting/definition/setting";
 import ThemeSetting from "@/component/setting/definition/theme-setting";
-import { PageName } from "@/constant/page-name";
+import type { PageName } from "@/constant/page-name";
 import { SettingScope } from "./setting-scope";
-import SettingTarget from "./setting-target";
+import type SettingTarget from "./setting-target";
 import { Theme } from "./theme";
 
 /**

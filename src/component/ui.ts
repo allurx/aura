@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { UiId } from "./ui-id";
+import type { UiId } from "./ui-id";
 import { assertExists, assertNonEmptyString } from "@/util/assert-util";
 
 /**

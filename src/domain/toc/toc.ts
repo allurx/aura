@@ -15,8 +15,9 @@
  */
 
 import BaseModel from "@/domain/base-model";
-import { ClassFields } from "@/type/common-type";
+import type { ClassFields } from "@/type/class-fields";
 import ObjectUtil from "@/util/object-util";
+import type TocEntry from "./toc-entry";
 
 /**
  * 目录
@@ -24,7 +25,7 @@ import ObjectUtil from "@/util/object-util";
  */
 export default class Toc extends BaseModel {
     public readonly fileId!: string;
-    public readonly contents!: InstanceType<typeof Toc.Content>[];
+    public readonly entries!: TocEntry[];
 
     public constructor(data: ClassFields<Toc>) {
         super();
@@ -35,31 +36,13 @@ export default class Toc extends BaseModel {
      * 章节数量
      */
     public numberOfChapters() {
-        return this.contents.length;
+        return this.entries.length;
     }
 
     /**
-     * 行数
+     * 全书物理总行数
      */
     public numberOfLines() {
-        return this.contents[this.contents.length - 1]?.endLineNumber ?? 0;
+        return this.entries[this.entries.length - 1]?.endBookLineNumber ?? 0;
     }
-
-    /**
-     * 目录内容
-     */
-    public static Content = class Content {
-        // 目录索引
-        public readonly index!: number;
-        // 目录标题
-        public readonly title!: string;
-        // 章节起始行号
-        public readonly startLineNumber!: number;
-        // 章节结束行号
-        public readonly endLineNumber!: number;
-
-        public constructor(data: ClassFields<Content>) {
-            ObjectUtil.assignOwnProperties<Content>(this, data);
-        }
-    };
 }

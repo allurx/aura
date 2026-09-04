@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import Ui from "@/component/ui";
-import Setting from "@/component/setting/definition/setting";
+import type Ui from "@/component/ui";
+import type Setting from "@/component/setting/definition/setting";
 
 /**
  * 一个 UI 及其明确开放的 Appearance 能力。

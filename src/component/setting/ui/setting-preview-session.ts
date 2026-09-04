@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import Setting from "@/component/setting/definition/setting";
-import SettingTarget from "@/component/setting/model/setting-target";
+import type Setting from "@/component/setting/definition/setting";
+import type SettingTarget from "@/component/setting/model/setting-target";
 
 /**
  * 将 input 预览与后续 change 提交绑定到同一个目标。

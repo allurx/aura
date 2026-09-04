@@ -17,9 +17,9 @@
 import SelectSettingControl from "@/component/setting/control/select-setting-control";
 import type SettingControl from "@/component/setting/control/setting-control";
 import type SettingControlListener from "@/component/setting/control/setting-control-listener";
-import PageAppearance from "@/component/setting/model/page-appearance";
+import type PageAppearance from "@/component/setting/model/page-appearance";
 import { SettingScope } from "@/component/setting/model/setting-scope";
-import SettingTarget from "@/component/setting/model/setting-target";
+import type SettingTarget from "@/component/setting/model/setting-target";
 import { isTheme, Theme } from "@/component/setting/model/theme";
 import Setting from "./setting";
 

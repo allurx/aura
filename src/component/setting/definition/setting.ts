@@ -16,9 +16,9 @@
 
 import type SettingControl from "@/component/setting/control/setting-control";
 import type SettingControlListener from "@/component/setting/control/setting-control-listener";
-import PageAppearance from "@/component/setting/model/page-appearance";
-import { SettingScope } from "@/component/setting/model/setting-scope";
-import SettingTarget from "@/component/setting/model/setting-target";
+import type PageAppearance from "@/component/setting/model/page-appearance";
+import type { SettingScope } from "@/component/setting/model/setting-scope";
+import type SettingTarget from "@/component/setting/model/setting-target";
 
 /**
  * 一个强类型 Appearance 定义。
@@ -28,12 +28,13 @@ import SettingTarget from "@/component/setting/model/setting-target";
  * @author allurx
  */
 export default abstract class Setting {
+    public readonly tracksExternalChanges: boolean = false;
+
     protected constructor(
         public readonly key: string,
         public readonly title: string,
         public readonly scope: SettingScope,
-        public readonly displayOrder: number,
-        public readonly synchronizesExternal = false
+        public readonly displayOrder: number
     ) {}
 
     /** @returns `value` 是否属于当前设置的合法值域。 */
@@ -55,11 +56,13 @@ export default abstract class Setting {
     public abstract createControl(listener: SettingControlListener, signal: AbortSignal): SettingControl;
 
     /**
-     * 读取 UI 在设置面板之外产生的显式值。
+     * 读取 UI 在设置面板之外产生的 inline preferred value。
      *
-     * @returns 需要同步的值；当前设置没有外部来源时返回 `undefined`
+     * 只有 `tracksExternalChanges` 为 `true` 的设置会被调用，并应覆盖此方法。
+     *
+     * @returns 外部来源当前的显式值；来源当前没有显式值时返回 `undefined`
      */
-    public readExternal(target: SettingTarget): string | undefined {
+    public readExternalValue(target: SettingTarget): string | undefined {
         void target;
         return undefined;
     }

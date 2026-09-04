@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import PageAppearance from "@/component/setting/model/page-appearance";
+import type PageAppearance from "@/component/setting/model/page-appearance";
 import { SettingScope } from "@/component/setting/model/setting-scope";
-import { StyleProperty } from "@/component/setting/model/style-property";
-import SettingTarget from "@/component/setting/model/setting-target";
+import type { StyleProperty } from "@/component/setting/model/style-property";
+import type SettingTarget from "@/component/setting/model/setting-target";
 import Setting from "./setting";
 
 /**
@@ -29,10 +29,9 @@ export default abstract class StyleSetting extends Setting {
     protected constructor(
         public readonly property: StyleProperty,
         title: string,
-        displayOrder: number,
-        synchronizesExternal = false
+        displayOrder: number
     ) {
-        super(property, title, SettingScope.UI, displayOrder, synchronizesExternal);
+        super(property, title, SettingScope.UI, displayOrder);
     }
 
     public override read(appearance: PageAppearance, target: SettingTarget): string | undefined {

@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
+import type SettingControl from "@/component/setting/control/setting-control";
+import type SettingControlListener from "@/component/setting/control/setting-control-listener";
 import { StyleProperty } from "@/component/setting/model/style-property";
-import SettingTarget from "@/component/setting/model/setting-target";
+import type SettingTarget from "@/component/setting/model/setting-target";
 import RangeStyleSetting from "./range-style-setting";
 
 /**
@@ -26,27 +28,38 @@ import RangeStyleSetting from "./range-style-setting";
  * @author allurx
  */
 export default class WidthSetting extends RangeStyleSetting {
-    public static readonly MINIMUM = 800;
-    public static readonly MAXIMUM = 10_000;
+    public static readonly MIN_WIDTH_PX = 800;
+    public static readonly MAX_WIDTH_PX = 10_000;
+    public override readonly tracksExternalChanges = true;
 
     public constructor(displayOrder: number) {
-        super(StyleProperty.WIDTH, "宽度", WidthSetting.MINIMUM, WidthSetting.MAXIMUM, 1, "px", displayOrder, true);
+        super(StyleProperty.WIDTH, "宽度", WidthSetting.MIN_WIDTH_PX, WidthSetting.MAX_WIDTH_PX, 1, "px", displayOrder);
+    }
+
+    public override createControl(listener: SettingControlListener, signal: AbortSignal): SettingControl {
+        const control = super.createControl(listener, signal);
+        control.element.classList.add("width-setting");
+        return control;
     }
 
     public override resolveValue(target: SettingTarget, value: string | undefined): string {
-        return value ?? (target.ui.root.style.width || `${String(WidthSetting.MINIMUM)}px`);
+        return value ?? (target.ui.root.style.width || `${String(WidthSetting.MIN_WIDTH_PX)}px`);
     }
 
     public override controlMaximum(target: SettingTarget, value: string): number {
         void target;
-        const preferredWidth = Number.parseFloat(value);
+        const preferredWidthPx = Number.parseFloat(value);
         return Math.min(
-            WidthSetting.MAXIMUM,
-            Math.max(WidthSetting.MINIMUM, window.innerWidth, Number.isFinite(preferredWidth) ? preferredWidth : 0)
+            WidthSetting.MAX_WIDTH_PX,
+            Math.max(
+                WidthSetting.MIN_WIDTH_PX,
+                window.innerWidth,
+                Number.isFinite(preferredWidthPx) ? preferredWidthPx : 0
+            )
         );
     }
 
-    public override readExternal(target: SettingTarget): string | undefined {
+    public override readExternalValue(target: SettingTarget): string | undefined {
         return target.ui.root.style.width || undefined;
     }
 }

@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-import FileRepository from "./file-repository";
-import BookFile from "./book-file";
-import BaseService from "@/domain/base-service";
-
 /**
- * 文件服务类
+ * 提取类 T 的字段类型（排除方法）。
+ *
+ * `(...args: never[]) => unknown` 在某些边界情况下推断不够严格；不使用 `Function`，避免削弱类型安全。
+ *
+ * @see https://typescript-eslint.io/rules/no-unsafe-function-type/
  * @author allurx
  */
-export default class FileService extends BaseService<BookFile> {
-    public constructor() {
-        super(new FileRepository());
-    }
-}
+export type ClassFields<T> = {
+    [K in keyof T as T[K] extends (...args: never[]) => unknown ? never : K]: T[K];
+};

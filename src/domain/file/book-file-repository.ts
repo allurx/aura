@@ -16,14 +16,14 @@
 
 import BookFile from "./book-file";
 import BaseRepository from "@/domain/base-repository";
-import { fileStore } from "@/database/database-definition";
+import { bookFileStore } from "@/database/database-definition";
 
 /**
- * 文件数据访问对象
+ * 书籍文件数据访问对象
  * @author allurx
  */
-export default class FileRepository extends BaseRepository<BookFile> {
+export default class BookFileRepository extends BaseRepository<BookFile> {
     public constructor() {
-        super(fileStore, BookFile);
+        super(bookFileStore, BookFile);
     }
 }

@@ -16,7 +16,7 @@
 
 import BaseService from "@/domain/base-service";
 import CategoryRepository from "./category-repository";
-import Category from "./category";
+import type Category from "./category";
 
 /**
  * 分类服务
