@@ -15,9 +15,9 @@
  */
 
 import Dialog from "@/component/dialog/dialog";
-import Dialogable from "@/component/dialog/dialogable";
+import type Dialogable from "@/component/dialog/dialogable";
 import Overlay from "@/component/overlay/overlay";
-import Overlayable from "@/component/overlay/overlayable";
+import type Overlayable from "@/component/overlay/overlayable";
 import Ui from "@/component/ui";
 
 /**

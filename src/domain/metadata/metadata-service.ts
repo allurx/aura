@@ -15,7 +15,7 @@
  */
 
 import MetadataRepository from "./metadata-repository";
-import Metadata from "./metadata";
+import type Metadata from "./metadata";
 import BaseService from "@/domain/base-service";
 
 /**

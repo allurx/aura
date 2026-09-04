@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import Setting from "@/component/setting/definition/setting";
-import SettingInteraction from "@/component/setting/model/setting-interaction";
-import SettingTarget from "@/component/setting/model/setting-target";
+import type Setting from "@/component/setting/definition/setting";
+import type SettingInteraction from "@/component/setting/model/setting-interaction";
+import type SettingTarget from "@/component/setting/model/setting-target";
 
 /**
  * 设置 UI 与已提交 Appearance 状态所有者之间的契约。

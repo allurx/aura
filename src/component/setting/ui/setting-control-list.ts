@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import SettingControl from "@/component/setting/control/setting-control";
-import SettingControlListener from "@/component/setting/control/setting-control-listener";
-import Setting from "@/component/setting/definition/setting";
-import SettingConfiguration from "@/component/setting/model/setting-configuration";
-import SettingTarget from "@/component/setting/model/setting-target";
+import type SettingControl from "@/component/setting/control/setting-control";
+import type SettingControlListener from "@/component/setting/control/setting-control-listener";
+import type Setting from "@/component/setting/definition/setting";
+import type SettingConfiguration from "@/component/setting/model/setting-configuration";
+import type SettingTarget from "@/component/setting/model/setting-target";
 import { assertExists } from "@/util/assert-util";
 
 /**

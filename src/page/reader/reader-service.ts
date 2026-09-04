@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Progress from "@/domain/progress/progress";
+import type Progress from "@/domain/progress/progress";
 import BookService from "@/domain/book/book-service";
 import ChapterService from "@/domain/chapter/chapter-service";
 import ProgressService from "@/domain/progress/progress-service";

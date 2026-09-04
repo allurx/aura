@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import Setting from "@/component/setting/definition/setting";
-import SettingTarget from "@/component/setting/model/setting-target";
-import SettingControlListener from "./setting-control-listener";
+import type Setting from "@/component/setting/definition/setting";
+import type SettingTarget from "@/component/setting/model/setting-target";
+import type SettingControlListener from "./setting-control-listener";
 
 /**
  * 一个可复用于多个目标的设置控件。

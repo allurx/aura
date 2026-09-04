@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import Setting from "@/component/setting/definition/setting";
-import SettingConfiguration from "@/component/setting/model/setting-configuration";
+import type Setting from "@/component/setting/definition/setting";
+import type SettingConfiguration from "@/component/setting/model/setting-configuration";
 import SettingInteraction from "@/component/setting/model/setting-interaction";
-import SettingTarget from "@/component/setting/model/setting-target";
+import type SettingTarget from "@/component/setting/model/setting-target";
 import EventUtil from "@/util/event-util";
-import ExternalSettingListener from "./external-setting-listener";
+import type ExternalSettingListener from "./external-setting-listener";
 
 /**
  * 将 resize 等面板外部产生的 inline Appearance 变化同步到已提交快照。

@@ -15,7 +15,7 @@
  */
 
 import ProgressRepository from "./progress-repository";
-import Progress from "./progress";
+import type Progress from "./progress";
 import BaseService from "@/domain/base-service";
 
 /**

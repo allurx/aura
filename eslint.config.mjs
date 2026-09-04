@@ -40,6 +40,15 @@ export default defineConfig(
             "@typescript-eslint/no-extraneous-class": "off",
             // Allow unused type parameters in some cases
             "@typescript-eslint/no-unnecessary-type-parameters": "off",
+            // Keep type-only dependencies out of the runtime module graph
+            "@typescript-eslint/consistent-type-imports": [
+                "error",
+                {
+                    prefer: "type-imports",
+                    fixStyle: "separate-type-imports",
+                },
+            ],
+            "@typescript-eslint/no-import-type-side-effects": "error",
         },
     }
 );

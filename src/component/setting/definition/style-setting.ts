@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import PageAppearance from "@/component/setting/model/page-appearance";
+import type PageAppearance from "@/component/setting/model/page-appearance";
 import { SettingScope } from "@/component/setting/model/setting-scope";
-import { StyleProperty } from "@/component/setting/model/style-property";
-import SettingTarget from "@/component/setting/model/setting-target";
+import type { StyleProperty } from "@/component/setting/model/style-property";
+import type SettingTarget from "@/component/setting/model/setting-target";
 import Setting from "./setting";
 
 /**

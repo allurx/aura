@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import SettingConfiguration from "@/component/setting/model/setting-configuration";
-import SettingTarget from "@/component/setting/model/setting-target";
+import type SettingConfiguration from "@/component/setting/model/setting-configuration";
+import type SettingTarget from "@/component/setting/model/setting-target";
 import EventUtil from "@/util/event-util";
 
 /**

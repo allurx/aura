@@ -17,7 +17,7 @@
 import ColorSettingControl from "@/component/setting/control/color-setting-control";
 import type SettingControl from "@/component/setting/control/setting-control";
 import type SettingControlListener from "@/component/setting/control/setting-control-listener";
-import { StyleProperty } from "@/component/setting/model/style-property";
+import type { StyleProperty } from "@/component/setting/model/style-property";
 import StyleSetting from "./style-setting";
 
 /**

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import DatabaseDefinition from "./database-definition";
+import type DatabaseDefinition from "./database-definition";
 
 /**
  * 数据库

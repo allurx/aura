@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Category from "@/domain/category/category";
+import type Category from "@/domain/category/category";
 import EventUtil from "@/util/event-util";
 import { assertExists } from "@/util/assert-util";
 import Ui from "@/component/ui";

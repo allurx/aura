@@ -19,7 +19,7 @@ import NavUi from "./nav/nav-ui";
 import BookListUi from "./book-list/book-list-ui";
 import BookshelfUi from "./bookshelf-ui";
 import BookshelfService from "./bookshelf-service";
-import BookshelfState from "./bookshelf-state";
+import type BookshelfState from "./bookshelf-state";
 import { assertExists } from "@/util/assert-util";
 import SettingCatalog from "@/component/setting/definition/setting-catalog";
 import SettingTarget from "@/component/setting/model/setting-target";

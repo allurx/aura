@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { UiId } from "@/component/ui-id";
-import { StyleProperty } from "./style-property";
-import { Theme } from "./theme";
+import type { UiId } from "@/component/ui-id";
+import type { StyleProperty } from "./style-property";
+import type { Theme } from "./theme";
 
 /**
  * 单个页面已经提交的不可变 Appearance 快照。

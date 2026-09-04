@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-import SettingControlListener from "@/component/setting/control/setting-control-listener";
-import Setting from "@/component/setting/definition/setting";
-import SettingConfiguration from "@/component/setting/model/setting-configuration";
+import type SettingControlListener from "@/component/setting/control/setting-control-listener";
+import type Setting from "@/component/setting/definition/setting";
+import type SettingConfiguration from "@/component/setting/model/setting-configuration";
 import SettingInteraction from "@/component/setting/model/setting-interaction";
-import SettingTarget from "@/component/setting/model/setting-target";
+import type SettingTarget from "@/component/setting/model/setting-target";
 import Ui from "@/component/ui";
 import { assertExists } from "@/util/assert-util";
 import EventUtil from "@/util/event-util";
 import SettingControlList from "./setting-control-list";
 import SettingPreviewSession from "./setting-preview-session";
 import SettingTargetTree from "./setting-target-tree";
-import SettingUiListener from "./setting-ui-listener";
+import type SettingUiListener from "./setting-ui-listener";
 
 /**
  * Appearance 设置面板。

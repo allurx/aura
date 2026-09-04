@@ -15,7 +15,7 @@
  */
 
 import TocRepository from "./toc-repository";
-import Toc from "./toc";
+import type Toc from "./toc";
 import BaseService from "@/domain/base-service";
 
 /**

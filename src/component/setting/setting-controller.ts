@@ -15,18 +15,18 @@
  */
 
 import AppearanceApplier from "@/component/setting/application/appearance-applier";
-import ExternalSettingListener from "@/component/setting/application/external-setting-listener";
+import type ExternalSettingListener from "@/component/setting/application/external-setting-listener";
 import ExternalSettingSynchronizer from "@/component/setting/application/external-setting-synchronizer";
-import SettingUiListener from "@/component/setting/ui/setting-ui-listener";
-import Setting from "@/component/setting/definition/setting";
+import type SettingUiListener from "@/component/setting/ui/setting-ui-listener";
+import type Setting from "@/component/setting/definition/setting";
 import SettingCatalog from "@/component/setting/definition/setting-catalog";
 import PageAppearance from "@/component/setting/model/page-appearance";
 import SettingConfiguration from "@/component/setting/model/setting-configuration";
-import SettingInteraction from "@/component/setting/model/setting-interaction";
+import type SettingInteraction from "@/component/setting/model/setting-interaction";
 import SettingTarget from "@/component/setting/model/setting-target";
 import AppearanceRepository from "@/component/setting/persistence/appearance-repository";
 import SettingUi from "@/component/setting/ui/setting-ui";
-import { PageName } from "@/constant/page-name";
+import type { PageName } from "@/constant/page-name";
 
 /**
  * 单个页面已提交 Appearance 的唯一状态所有者。

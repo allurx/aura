@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import Setting from "@/component/setting/definition/setting";
-import PageAppearance from "@/component/setting/model/page-appearance";
-import SettingConfiguration from "@/component/setting/model/setting-configuration";
-import SettingInteraction from "@/component/setting/model/setting-interaction";
-import SettingTarget from "@/component/setting/model/setting-target";
+import type Setting from "@/component/setting/definition/setting";
+import type PageAppearance from "@/component/setting/model/page-appearance";
+import type SettingConfiguration from "@/component/setting/model/setting-configuration";
+import type SettingInteraction from "@/component/setting/model/setting-interaction";
+import type SettingTarget from "@/component/setting/model/setting-target";
 
 /**
  * 将 Appearance 快照或单次交互投影到 DOM。

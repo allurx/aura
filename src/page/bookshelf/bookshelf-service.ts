@@ -17,12 +17,12 @@
 import Aura from "@/core/aura";
 import Book from "@/domain/book/book";
 import BookFile from "@/domain/file/book-file";
-import Chapter from "@/domain/chapter/chapter";
+import type Chapter from "@/domain/chapter/chapter";
 import Toc from "@/domain/toc/toc";
 import TocEntry from "@/domain/toc/toc-entry";
-import Category from "@/domain/category/category";
+import type Category from "@/domain/category/category";
 import Progress from "@/domain/progress/progress";
-import Metadata from "@/domain/metadata/metadata";
+import type Metadata from "@/domain/metadata/metadata";
 import MetadataService from "@/domain/metadata/metadata-service";
 import CategoryService from "@/domain/category/category-service";
 import BookService from "@/domain/book/book-service";

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ClassFields } from "@/type/common-type";
+import type { ClassFields } from "@/type/common-type";
 import BaseModel from "@/domain/base-model";
 import ObjectUtil from "@/util/object-util";
 

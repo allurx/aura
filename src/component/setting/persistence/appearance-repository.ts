@@ -16,7 +16,7 @@
 
 import { SettingScope } from "@/component/setting/model/setting-scope";
 import PageAppearance from "@/component/setting/model/page-appearance";
-import SettingConfiguration from "@/component/setting/model/setting-configuration";
+import type SettingConfiguration from "@/component/setting/model/setting-configuration";
 import { assertExists } from "@/util/assert-util";
 
 /**

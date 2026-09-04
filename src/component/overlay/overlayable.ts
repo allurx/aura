@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Overlay from "./overlay";
+import type Overlay from "./overlay";
 
 /**
  * 可遮罩接口

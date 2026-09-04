@@ -16,9 +16,9 @@
 
 import type SettingControl from "@/component/setting/control/setting-control";
 import type SettingControlListener from "@/component/setting/control/setting-control-listener";
-import PageAppearance from "@/component/setting/model/page-appearance";
-import { SettingScope } from "@/component/setting/model/setting-scope";
-import SettingTarget from "@/component/setting/model/setting-target";
+import type PageAppearance from "@/component/setting/model/page-appearance";
+import type { SettingScope } from "@/component/setting/model/setting-scope";
+import type SettingTarget from "@/component/setting/model/setting-target";
 
 /**
  * 一个强类型 Appearance 定义。

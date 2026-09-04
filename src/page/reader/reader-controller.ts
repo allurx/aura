@@ -16,13 +16,13 @@
 
 import AppUi from "./app/app-ui";
 import ReaderUi from "./reader-ui";
-import Progress from "@/domain/progress/progress";
+import type Progress from "@/domain/progress/progress";
 import ReaderService from "./reader-service";
 import HeaderUi from "./header/header-ui";
 import ContentUi from "./content/content-ui";
 import FooterUi from "./footer/footer-ui";
 import TocUi from "./toc/toc-ui";
-import ReaderState from "./reader-state";
+import type ReaderState from "./reader-state";
 import SettingCatalog from "@/component/setting/definition/setting-catalog";
 import SettingTarget from "@/component/setting/model/setting-target";
 import SettingController from "@/component/setting/setting-controller";

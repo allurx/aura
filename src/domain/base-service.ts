@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import BaseModel from "./base-model";
-import BaseRepository from "./base-repository";
+import type BaseModel from "./base-model";
+import type BaseRepository from "./base-repository";
 
 /**
  * 基础服务

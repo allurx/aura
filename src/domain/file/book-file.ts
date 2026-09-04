@@ -16,7 +16,7 @@
 
 import BaseModel from "@/domain/base-model";
 import ObjectUtil from "@/util/object-util";
-import { ClassFields } from "@/type/common-type";
+import type { ClassFields } from "@/type/common-type";
 
 /**
  * 书籍文件

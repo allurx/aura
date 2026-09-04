@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import Setting from "@/component/setting/definition/setting";
-import SettingTarget from "./setting-target";
+import type Setting from "@/component/setting/definition/setting";
+import type SettingTarget from "./setting-target";
 
 /**
  * 一次已经通过目标能力和值域校验的 Appearance 交互。

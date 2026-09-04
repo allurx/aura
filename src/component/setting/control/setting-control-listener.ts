@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Setting from "@/component/setting/definition/setting";
+import type Setting from "@/component/setting/definition/setting";
 
 /**
  * 设置控件产生的预览和提交事件。
