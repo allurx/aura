@@ -10,6 +10,16 @@
 - 🔍 支持快速搜索、目录导航
 - 🛠 可扩展，易于集成到其他网页或应用
 
+## 下载与发布
+
+正式版本可从 [GitHub Releases](https://github.com/allurx/aura/releases) 下载：
+
+- `aura-web-vX.Y.Z.zip` 是普通 Web 部署包，解压后将根目录内容部署到 HTTP(S) 站点根路径。
+- `aura-portable-vX.Y.Z.html` 是可直接以 `file://` 打开的单文件离线版。
+- `aura-vX.Y.Z-SHA256SUMS.txt` 包含上述两个构建产物的 SHA-256 校验值。
+
+正式发布由位于 `main` 历史上的 annotated `vX.Y.Z` tag 触发。发布流程会对该 tag 重新执行完整验证，随后自动创建 GitHub Release 并上传产物。GitHub 自动生成的源码 ZIP/TAR 不是 Aura 构建产物。
+
 ## 注意
 
 - 上传文件目前只支持txt格式，支持自动识别UTF-8、GB18030、Big5和带BOM的UTF-16编码
