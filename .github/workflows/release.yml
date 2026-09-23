@@ -1,0 +1,154 @@
+name: Release
+
+run-name: Release ${{ github.ref_name }}
+
+on:
+    push:
+        tags:
+            - "v*.*.*"
+
+permissions:
+    contents: read
+
+concurrency:
+    group: aura-release
+    queue: max
+
+jobs:
+    build:
+        name: Build release assets
+        runs-on: ubuntu-24.04
+        timeout-minutes: 20
+        outputs:
+            tag_object: ${{ steps.release_tag.outputs.tag_object }}
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  fetch-depth: 0
+                  persist-credentials: false
+
+            - name: Validate release tag
+              id: release_tag
+              shell: bash
+              env:
+                  TAG_NAME: ${{ github.ref_name }}
+              run: |
+                  set -euo pipefail
+
+                  if [[ ! "$TAG_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+                      echo "::error::Release tag must use the stable SemVer form vMAJOR.MINOR.PATCH"
+                      exit 1
+                  fi
+
+                  tag_ref="refs/tags/$TAG_NAME"
+                  if [[ "$(git cat-file -t "$tag_ref")" != "tag" ]]; then
+                      echo "::error::Release tag must be annotated"
+                      exit 1
+                  fi
+
+                  tag_commit="$(git rev-parse "$tag_ref^{commit}")"
+                  if [[ "$(git rev-parse HEAD)" != "$tag_commit" ]]; then
+                      echo "::error::The checked-out commit does not match the release tag"
+                      exit 1
+                  fi
+
+                  if ! git merge-base --is-ancestor "$tag_commit" refs/remotes/origin/main; then
+                      echo "::error::Release tag commit must be contained in main"
+                      exit 1
+                  fi
+
+                  echo "tag_object=$(git rev-parse "$tag_ref")" >> "$GITHUB_OUTPUT"
+
+            - name: Set up Node.js
+              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version: "22"
+                  cache: npm
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Verify project
+              run: npm run verify
+
+            - name: Package release assets
+              shell: bash
+              env:
+                  TAG_NAME: ${{ github.ref_name }}
+              run: |
+                  set -euo pipefail
+
+                  web_asset="aura-web-$TAG_NAME.zip"
+                  portable_asset="aura-portable-$TAG_NAME.html"
+                  checksum_asset="aura-$TAG_NAME-SHA256SUMS.txt"
+
+                  if [[ ! -f dist/index.html ]]; then
+                      echo "::error::Web build entry dist/index.html was not generated"
+                      exit 1
+                  fi
+
+                  if [[ ! -f dist-portable/aura.html ]] || [[ "$(find dist-portable -type f | wc -l)" -ne 1 ]]; then
+                      echo "::error::Portable build must contain only dist-portable/aura.html"
+                      exit 1
+                  fi
+
+                  mkdir release-assets
+                  cp LICENSE.txt dist/LICENSE.txt
+                  (
+                      cd dist
+                      zip -q -r "../release-assets/$web_asset" .
+                  )
+                  cp dist-portable/aura.html "release-assets/$portable_asset"
+                  (
+                      cd release-assets
+                      sha256sum "$web_asset" "$portable_asset" > "$checksum_asset"
+                  )
+
+            - name: Upload release assets
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+              with:
+                  name: release-assets-${{ github.ref_name }}
+                  path: release-assets/
+                  if-no-files-found: error
+                  retention-days: 1
+
+    publish:
+        name: Publish GitHub Release
+        needs: build
+        runs-on: ubuntu-24.04
+        timeout-minutes: 5
+        permissions:
+            contents: write
+        steps:
+            - name: Download release assets
+              uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+              with:
+                  name: release-assets-${{ github.ref_name }}
+                  path: release-assets
+
+            - name: Publish GitHub Release
+              shell: bash
+              env:
+                  EXPECTED_TAG_OBJECT: ${{ needs.build.outputs.tag_object }}
+                  GH_TOKEN: ${{ github.token }}
+                  TAG_NAME: ${{ github.ref_name }}
+              run: |
+                  set -euo pipefail
+
+                  remote_tag_object="$(
+                      gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG_NAME" --jq ".object.sha"
+                  )"
+                  if [[ "$remote_tag_object" != "$EXPECTED_TAG_OBJECT" ]]; then
+                      echo "::error::Release tag changed after the build started"
+                      exit 1
+                  fi
+
+                  cd release-assets
+                  sha256sum --check aura-*-SHA256SUMS.txt
+                  gh release create "$TAG_NAME" ./* \
+                      --repo "$GITHUB_REPOSITORY" \
+                      --verify-tag \
+                      --fail-on-no-commits \
+                      --generate-notes \
+                      --title "Aura $TAG_NAME"
