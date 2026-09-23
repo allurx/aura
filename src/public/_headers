@@ -5,5 +5,5 @@
 /asset/*
   Cache-Control: public, max-age=31536000, immutable
 
-https://aura-preview.allurx.workers.dev/*
+https://aura-preview.allurx.io/*
   X-Robots-Tag: noindex

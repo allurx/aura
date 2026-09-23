@@ -60,7 +60,7 @@ jobs:
         timeout-minutes: 10
         environment:
             name: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
-            url: ${{ github.ref == 'refs/heads/main' && 'https://aura.allurx.io' || 'https://aura-preview.allurx.workers.dev' }}
+            url: ${{ github.ref == 'refs/heads/main' && 'https://aura.allurx.io' || 'https://aura-preview.allurx.io' }}
         steps:
             - name: Check out repository
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
