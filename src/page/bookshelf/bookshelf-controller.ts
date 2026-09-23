@@ -21,9 +21,9 @@ import BookshelfUi from "./bookshelf-ui";
 import BookshelfService from "./bookshelf-service";
 import type BookshelfState from "./bookshelf-state";
 import { assertExists } from "@/util/assert-util";
-import SettingCatalog from "@/component/setting/definition/setting-catalog";
-import SettingTarget from "@/component/setting/model/setting-target";
-import SettingController from "@/component/setting/setting-controller";
+import SettingCatalog from "@/setting/definition/setting-catalog";
+import SettingTarget from "@/setting/model/setting-target";
+import SettingController from "@/setting/setting-controller";
 import { PageName } from "@/constant/page-name";
 
 /**

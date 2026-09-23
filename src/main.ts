@@ -17,7 +17,7 @@
 import "./style/base.css";
 import "./component/dialog/dialog.css";
 import "./component/overlay/overlay.css";
-import "./component/setting/setting-ui.css";
+import "./setting/setting-ui.css";
 import { PageName } from "./constant/page-name";
 import type Page from "./page/page";
 import Bookshelf from "./page/bookshelf/bookshelf";
