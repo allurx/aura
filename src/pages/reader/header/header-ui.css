@@ -18,6 +18,7 @@
 
 #reader > #header {
     display: flex;
+    flex: 0 0 auto;
     height: 60px;
     justify-content: center;
     align-items: center;
@@ -29,22 +30,10 @@
 
     /* 顶部操作icon */
     .action {
+        --icon-size: 22px;
         display: flex;
         align-items: center;
         flex: 1;
-
-        > button {
-            --icon-size: 22px;
-            appearance: none;
-            width: 22px;
-            height: 22px;
-            padding: 0;
-            border: 0;
-            background: transparent;
-            color: inherit;
-            line-height: 0;
-            cursor: pointer;
-        }
     }
 
     /* 顶部左侧操作区域 */
@@ -54,7 +43,7 @@
 
     /* 顶部右侧操作区域 */
     .action-right {
-        gap: 20px;
+        gap: 8px;
         justify-content: right;
     }
 }

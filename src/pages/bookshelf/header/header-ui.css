@@ -23,6 +23,7 @@
     justify-content: space-between;
     align-items: center;
     height: 3.125rem;
+    min-height: 52px;
     width: 100%;
     padding: 0 0.75rem;
     background-color: var(--bookshelf-header-background-color);
@@ -40,19 +41,6 @@
         display: flex;
         flex: 0 0 auto;
         align-items: center;
-        gap: 1rem;
-
-        > button {
-            --icon-size: 1.5rem;
-            appearance: none;
-            width: 1.5rem;
-            height: 1.5rem;
-            padding: 0;
-            border: 0;
-            background: transparent;
-            color: inherit;
-            line-height: 0;
-            cursor: pointer;
-        }
+        gap: 8px;
     }
 }
