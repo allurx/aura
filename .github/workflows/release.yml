@@ -80,29 +80,41 @@ jobs:
                   set -euo pipefail
 
                   web_asset="aura-web-$TAG_NAME.zip"
+                  obfuscated_web_asset="aura-web-obfuscated-$TAG_NAME.zip"
                   portable_asset="aura-portable-$TAG_NAME.html"
+                  obfuscated_portable_asset="aura-portable-obfuscated-$TAG_NAME.html"
                   checksum_asset="aura-$TAG_NAME-SHA256SUMS.txt"
 
-                  if [[ ! -f dist/web/index.html ]]; then
-                      echo "::error::Web build entry dist/web/index.html was not generated"
-                      exit 1
-                  fi
+                  for web_directory in dist/web dist/web-obfuscated; do
+                      if [[ ! -f "$web_directory/index.html" ]]; then
+                          echo "::error::Web build entry $web_directory/index.html was not generated"
+                          exit 1
+                      fi
+                  done
 
-                  if [[ ! -f dist/portable/aura.html ]] || [[ "$(find dist/portable -type f | wc -l)" -ne 1 ]]; then
-                      echo "::error::Portable build must contain only dist/portable/aura.html"
-                      exit 1
-                  fi
+                  for portable_directory in dist/portable dist/portable-obfuscated; do
+                      if [[ ! -f "$portable_directory/aura.html" ]] || [[ "$(find "$portable_directory" -type f | wc -l)" -ne 1 ]]; then
+                          echo "::error::Portable build must contain only $portable_directory/aura.html"
+                          exit 1
+                      fi
+                  done
 
                   mkdir release-assets
                   cp LICENSE.txt dist/web/LICENSE.txt
+                  cp LICENSE.txt dist/web-obfuscated/LICENSE.txt
                   (
                       cd dist/web
                       zip -q -r "../../release-assets/$web_asset" .
                   )
+                  (
+                      cd dist/web-obfuscated
+                      zip -q -r "../../release-assets/$obfuscated_web_asset" .
+                  )
                   cp dist/portable/aura.html "release-assets/$portable_asset"
+                  cp dist/portable-obfuscated/aura.html "release-assets/$obfuscated_portable_asset"
                   (
                       cd release-assets
-                      sha256sum "$web_asset" "$portable_asset" > "$checksum_asset"
+                      sha256sum "$web_asset" "$obfuscated_web_asset" "$portable_asset" "$obfuscated_portable_asset" > "$checksum_asset"
                   )
 
             - name: Upload release assets
