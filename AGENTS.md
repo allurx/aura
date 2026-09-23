@@ -52,6 +52,15 @@ Aura 是一个轻量、离线优先的 Web 阅读器。变更应持续保护以�
 - 可以使用最小且可删除的临时验证脚本；未经确认，不要仅为单次修改引入新的测试框架或运行时依赖。交付前清理临时文件。
 - 收尾时检查 `git status` 和实际 diff，确认没有越界修改、调试残留、意外生成物或敏感信息；最终报告行为变化、验证与 review 结果、未运行项及剩余风险和 Git 状态。
 
+## 分支协作
+
+- `dev` 是开发与预览分支，`main` 是正式发布分支。开发修改进入 `dev` 或以它为基线的任务分支，不在 `main` 上直接开发或向远端 `main` 直接推送。
+- 日常发布通过 `dev → main` PR 集成；合并前核对最新提交的 CI、预览部署和实际差异。保留 `main` 的 push 触发器，用于验证并部署 PR 合并后的实际提交，不在 CI 中额外限制 PR 的来源分支。
+- 长期分支 `dev → main` 使用 Create a merge commit，保留祖先关系；不使用 squash、rebase 或线性历史要求。合并后按祖先关系把 `main` 同步回 `dev`，不重写历史或删除长期分支。
+- `main` 的远端保护在 GitHub 中配置，要求 PR、GitHub Actions 的 `verify` 检查通过，并禁止强推和删除。保护规则必须在 GitHub 端确认已启用；CI 检查和本地约定不能代替服务器端保护。
+- 部署命令必须显式选择目标环境，不依赖 Wrangler 的默认环境。
+- Actions 使用完整 commit SHA 固定，并保留同一行的版本注释。Dependabot Actions 版本更新 PR 以 `dev` 为目标，经验证和人工审核后合并，再随开发成果通过 PR 集成到 `main`。
+
 ## 提交范围
 
 - Conventional Commit 的 `scope` 可选，仅在能够准确表达 Aura 的稳定产品或技术边界时使用；例如 `reader`、`bookshelf`、`parser`、`storage`、`settings`、`router` 和 `portable`，该列表不是封闭白名单。
