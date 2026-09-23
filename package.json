@@ -12,7 +12,7 @@
         "lint": "eslint src vite.config.ts",
         "type-check": "tsc --noEmit",
         "check": "npm run format:check && npm run lint && npm run type-check",
-        "verify": "npm run check && vite build && vite build --mode portable",
+        "verify": "npm run check && vite build && vite build --mode portable && vite build --mode obfuscated && vite build --mode portable-obfuscated",
         "build": "npm run check && vite build",
         "build:portable": "npm run check && vite build --mode portable",
         "build:obfuscated": "npm run check && vite build --mode obfuscated",

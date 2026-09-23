@@ -1,6 +1,6 @@
 # Cloudflare 部署
 
-Web 版使用 Cloudflare Workers Static Assets 托管 `dist/web/`，由 [GitHub Actions](../.github/workflows/ci.yml) 验证后部署。环境配置见 [wrangler.jsonc](../wrangler.jsonc)。portable 仍单独生成 `dist/portable/aura.html`，不上传到站点。
+Web 版使用 Cloudflare Workers Static Assets 托管 `dist/web/`，由 [GitHub Actions](../.github/workflows/ci.yml) 验证全部四种构建后部署。环境配置见 [wrangler.jsonc](../wrangler.jsonc)。portable 仍单独生成 `dist/portable/aura.html`，不上传到站点。
 
 Web 包中的 `index.html`、`assets/` 和 `_headers` 应作为同一次构建的完整产物一起部署。
 
