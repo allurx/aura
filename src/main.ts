@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-import "./style/base.css";
-import "./component/dialog/dialog.css";
-import "./component/overlay/overlay.css";
-import "./component/setting/setting-ui.css";
-import { PageName } from "./constant/page-name";
-import type Page from "./page/page";
-import Bookshelf from "./page/bookshelf/bookshelf";
-import Reader from "./page/reader/reader";
+import "./styles/base.css";
+import "./components/icon/icon.css";
+import "./components/dialog/dialog.css";
+import "./components/overlay/overlay.css";
+import "./settings/setting-ui.css";
+import { PageName } from "./constants/page-name";
+import type Page from "./pages/page";
+import Bookshelf from "./pages/bookshelf/bookshelf";
+import Reader from "./pages/reader/reader";
 import Router, { type AppRoute } from "./router/router";
-import { assertExists } from "./util/assert-util";
-import favicon from "./asset/image/favicon.svg";
+import { assertExists } from "./utils/assert-util";
+import favicon from "./assets/images/favicon.svg";
 
 /**
  * SPA应用入口。

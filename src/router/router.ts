@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { PageName } from "@/constant/page-name";
-import EventUtil from "@/util/event-util";
+import { PageName } from "@/constants/page-name";
+import EventUtil from "@/utils/event-util";
 
 export type AppRoute =
     | { readonly pageName: PageName.BOOKSHELF }

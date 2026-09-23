@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import type { ClassFields } from "@/type/class-fields";
+import type { ClassFields } from "@/types/class-fields";
 import BaseModel from "@/domain/base-model";
-import ObjectUtil from "@/util/object-util";
+import ObjectUtil from "@/utils/object-util";
 
 /**
  * 书籍

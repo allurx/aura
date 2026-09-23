@@ -34,6 +34,7 @@ export default defineConfig(({ command, mode, isPreview }) => {
     const portable = mode === "portable" || mode === "portable-obfuscated";
     const obfuscated = mode === "obfuscated" || mode === "portable-obfuscated";
     const developmentServer = command === "serve" && !isPreview;
+    const outputDirectory = `${portable ? "portable" : "web"}${obfuscated ? "-obfuscated" : ""}`;
 
     return {
         root: SOURCE_ROOT,
@@ -62,20 +63,20 @@ export default defineConfig(({ command, mode, isPreview }) => {
               }
             : {}),
         build: {
-            outDir: resolve(PROJECT_ROOT, portable ? "dist-portable" : "dist"),
+            outDir: resolve(PROJECT_ROOT, "dist", outputDirectory),
             emptyOutDir: true,
             ...(portable ? { modulePreload: false } : {}),
             // https://cn.rollupjs.org/configuration-options
             rollupOptions: {
                 output: {
-                    entryFileNames: "asset/js/[name]-[hash].js",
-                    chunkFileNames: "asset/js/[name]-[hash].js",
+                    entryFileNames: "assets/js/[name]-[hash].js",
+                    chunkFileNames: "assets/js/[name]-[hash].js",
                     assetFileNames: (assetInfo) => {
                         const extension = extname(assetInfo.names[0] ?? "").toLowerCase();
-                        if (extension === ".css") return "asset/css/[name]-[hash][extname]";
-                        if (IMAGE_EXTENSIONS.has(extension)) return "asset/image/[name]-[hash][extname]";
-                        if (FONT_EXTENSIONS.has(extension)) return "asset/font/[name]-[hash][extname]";
-                        return "asset/[name]-[hash][extname]";
+                        if (extension === ".css") return "assets/css/[name]-[hash][extname]";
+                        if (IMAGE_EXTENSIONS.has(extension)) return "assets/images/[name]-[hash][extname]";
+                        if (FONT_EXTENSIONS.has(extension)) return "assets/fonts/[name]-[hash][extname]";
+                        return "assets/[name]-[hash][extname]";
                     },
                 },
             },

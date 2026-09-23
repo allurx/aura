@@ -1,6 +1,8 @@
 # Cloudflare 部署
 
-Web 版使用 Cloudflare Workers Static Assets 托管 `dist/`，由 [GitHub Actions](../.github/workflows/ci.yml) 验证后部署。环境配置见 [wrangler.jsonc](../wrangler.jsonc)。portable 仍单独生成 `dist-portable/aura.html`，不上传到站点。
+Web 版使用 Cloudflare Workers Static Assets 托管混淆产物 `dist/web-obfuscated/`，由 [GitHub Actions](../.github/workflows/ci.yml) 验证全部四种构建后部署。环境配置见 [wrangler.jsonc](../wrangler.jsonc)。两种 portable 产物均作为独立 HTML 下载交付，不上传到站点。
+
+Web 包中的 `index.html`、`assets/` 和 `_headers` 应作为同一次构建的完整产物一起部署。
 
 ## 准备
 
@@ -24,11 +26,11 @@ Cloudflare 端由 Actions 调用 Wrangler 部署，无需启用 Workers Builds �
 
 ## 触发与查看
 
-| 操作          | 行为                                | 部署目标                                         |
-| ------------- | ----------------------------------- | ------------------------------------------------ |
-| 创建或更新 PR | 完整验证和两个环境的部署 dry-run    | 不部署                                           |
-| 推送 `dev`    | 验证后部署同一次运行的 Web artifact | `aura-preview`，`https://aura-preview.allurx.io` |
-| 推送 `main`   | 验证后部署同一次运行的 Web artifact | `aura`，`https://aura.allurx.io`                 |
+| 操作          | 行为                                    | 部署目标                                         |
+| ------------- | --------------------------------------- | ------------------------------------------------ |
+| 创建或更新 PR | 完整验证和两个环境的部署 dry-run        | 不部署                                           |
+| 推送 `dev`    | 验证后部署同一次运行的混淆 Web artifact | `aura-preview`，`https://aura-preview.allurx.io` |
+| 推送 `main`   | 验证后部署同一次运行的混淆 Web artifact | `aura`，`https://aura.allurx.io`                 |
 
 在仓库 **Actions → CI** 查看验证、artifact 和部署结果；在 Cloudflare **Workers & Pages → 对应 Worker → Deployments** 核对当前版本。发布 tag 的 GitHub Release 流程独立运行。
 
@@ -43,7 +45,7 @@ npm run deploy:preview -- --dry-run
 npm run deploy:production -- --dry-run
 ```
 
-确认产物与环境正确后，选择 `npm run deploy:preview` 或 `npm run deploy:production`，分别部署到 `aura-preview` 和 `aura`。始终显式选择环境；直接运行 `wrangler deploy` 会使用顶层名称 `aura`，指向正式 Worker。这两个部署脚本只上传已有 `dist/`，不会重新构建；dry-run 不验证远端凭据、域名绑定或实际访问结果。
+确认产物与环境正确后，选择 `npm run deploy:preview` 或 `npm run deploy:production`，分别部署到 `aura-preview` 和 `aura`。始终显式选择环境；直接运行 `wrangler deploy` 会使用顶层名称 `aura`，指向正式 Worker。这两个部署脚本只上传已有 `dist/web-obfuscated/`，不会重新构建；dry-run 不验证远端凭据、域名绑定或实际访问结果。
 
 ## 域名绑定
 

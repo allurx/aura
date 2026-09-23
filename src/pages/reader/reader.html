@@ -1,0 +1,67 @@
+<!--
+    Copyright 2025 allurx
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+
+<div id="reader">
+    <header id="header">
+        <div class="action action-left">
+            <button
+                id="toggle-toc-panel"
+                class="icon-button"
+                type="button"
+                aria-label="切换目录"
+                aria-controls="toc"
+                aria-expanded="false"
+                title="目录"
+            >
+                <span class="icon" aria-hidden="true"></span>
+            </button>
+        </div>
+        <div class="action action-right">
+            <button
+                id="toggle-setting-panel"
+                class="icon-button"
+                type="button"
+                aria-label="设置"
+                aria-controls="setting"
+                aria-expanded="false"
+                title="设置"
+            >
+                <span class="icon" aria-hidden="true"></span>
+            </button>
+            <button id="toggle-fullscreen" class="icon-button" type="button" aria-label="切换全屏" title="全屏">
+                <span class="icon" aria-hidden="true"></span>
+            </button>
+        </div>
+    </header>
+
+    <main id="content"></main>
+
+    <footer id="footer">
+        <div id="chapter-title"></div>
+        <div id="progress-rate"></div>
+    </footer>
+
+    <section id="toc" aria-hidden="true" inert>
+        <header>
+            <h2>目录</h2>
+            <div class="action">
+                <button class="close" type="button" aria-label="关闭目录" title="关闭">✖</button>
+            </div>
+        </header>
+        <section class="main"></section>
+        <footer class="footer"></footer>
+    </section>
+</div>
