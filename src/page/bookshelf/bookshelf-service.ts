@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Aura from "@/core/aura";
+import { APP_NAME } from "@/app-info";
 import Book from "@/domain/book/book";
 import BookFile from "@/domain/file/book-file";
 import type Chapter from "@/domain/chapter/chapter";
@@ -35,7 +35,7 @@ import FileUtil from "@/util/file-util";
 import ObjectUtil from "@/util/object-util";
 import TransactionManager from "@/database/transaction-manager";
 import { createCategorySeeds } from "./seed/category-seed";
-import { createHandbookFile } from "./seed/handbook-seed";
+import { createHandbookFile, HANDBOOK_VERSION } from "./seed/handbook-seed";
 import { createMetadataSeed } from "./seed/metadata-seed";
 import BookshelfState from "./bookshelf-state";
 import { assertExists } from "@/util/assert-util";
@@ -221,7 +221,7 @@ export default class BookshelfService {
         const metadata = await TransactionManager.runTransaction(
             [metadataStore.name],
             DatabaseMode.READ_ONLY,
-            async (transaction) => await this.metadataService.getByField("appName", Aura.NAME, transaction)
+            async (transaction) => await this.metadataService.getByField("appName", APP_NAME, transaction)
         );
         if (!metadata) {
             const categories = createCategorySeeds();
@@ -386,7 +386,7 @@ export default class BookshelfService {
      * 手册不存在或版本不匹配时，重新添加手册并更新元数据。
      * @param metadata - 元数据
      * @param defaultCategory - 默认分类
-     * @see Aura.HANDBOOK_VERSION 当前内置手册版本
+     * @see HANDBOOK_VERSION 当前内置手册版本
      */
     private async refreshHandbookIfNeeded(metadata: Metadata, defaultCategory: Category): Promise<void> {
         const handbookExists = ObjectUtil.exists(
@@ -396,7 +396,7 @@ export default class BookshelfService {
                 async (transaction) => await this.bookService.getByKey(metadata.handbookBookId, transaction)
             )
         );
-        const isHandbookOutdated = metadata.handbookVersion !== Aura.HANDBOOK_VERSION;
+        const isHandbookOutdated = metadata.handbookVersion !== HANDBOOK_VERSION;
         if (isHandbookOutdated || !handbookExists) {
             if (isHandbookOutdated && handbookExists) await this.deleteBook(metadata.handbookBookId);
             await this.importBooks([createHandbookFile()], defaultCategory.id, true)
@@ -409,7 +409,7 @@ export default class BookshelfService {
                             await this.metadataService.update(
                                 metadata.update({
                                     handbookBookId: newHandbook.id,
-                                    handbookVersion: Aura.HANDBOOK_VERSION,
+                                    handbookVersion: HANDBOOK_VERSION,
                                     updatedTime: Date.now(),
                                 }),
                                 transaction

@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-import Aura from "@/core/aura";
+import { APP_NAME } from "@/app-info";
 import Metadata from "@/domain/metadata/metadata";
+import { HANDBOOK_VERSION } from "./handbook-seed";
 
 /**
  * 创建应用元数据种子。
@@ -26,9 +27,9 @@ export function createMetadataSeed(handbookBookId: string): Metadata {
     const nowMs = Date.now();
     return new Metadata({
         id: crypto.randomUUID(),
-        appName: Aura.NAME,
+        appName: APP_NAME,
         handbookBookId,
-        handbookVersion: Aura.HANDBOOK_VERSION,
+        handbookVersion: HANDBOOK_VERSION,
         createdTime: nowMs,
         updatedTime: nowMs,
     });

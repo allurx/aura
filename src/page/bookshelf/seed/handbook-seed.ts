@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+// 内置手册内容版本，用于判断是否需要更新已导入的手册。
+export const HANDBOOK_VERSION = 1;
+
 const handbookText = `
         1. Aura是什么
         Aura是一个轻量级、原生实现的阅读器网页应用,支持书籍和文档在线阅读,界面简洁、交互流畅。

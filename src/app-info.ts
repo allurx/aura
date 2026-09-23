@@ -14,11 +14,5 @@
  * limitations under the License.
  */
 
-/**
- * Aura
- * @author allurx
- */
-export default class Aura {
-    public static readonly NAME = "aura";
-    public static readonly HANDBOOK_VERSION = 1;
-}
+// 持久化元数据中的应用标识，与界面展示名称无关。
+export const APP_NAME = "aura";
