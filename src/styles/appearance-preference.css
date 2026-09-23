@@ -34,8 +34,6 @@ html[data-page="bookshelf"] {
     --bookshelf-accent-color: #409eff;
     --bookshelf-book-background-color: #144b82;
     --bookshelf-book-hover-background-color: #397fc4;
-    --bookshelf-setting-icon-filter: invert(1);
-    --bookshelf-clear-icon-filter: none;
     --setting-background-color: #f2e8c8;
     --setting-color: #000000;
     --setting-accent-color: #663399;
@@ -55,8 +53,6 @@ html[data-page="bookshelf"] {
         --bookshelf-accent-color: #1a73e8;
         --bookshelf-book-background-color: #d2e3fc;
         --bookshelf-book-hover-background-color: #aecbfa;
-        --bookshelf-setting-icon-filter: none;
-        --bookshelf-clear-icon-filter: invert(1);
         --setting-background-color: #ffffff;
         --setting-color: #202124;
         --setting-accent-color: #174ea6;
@@ -75,8 +71,6 @@ html[data-page="bookshelf"] {
         --bookshelf-accent-color: #8ab4f8;
         --bookshelf-book-background-color: #263b63;
         --bookshelf-book-hover-background-color: #31507f;
-        --bookshelf-setting-icon-filter: invert(1);
-        --bookshelf-clear-icon-filter: none;
         --setting-background-color: #111a2e;
         --setting-color: #e3e3e3;
         --setting-accent-color: #fdd663;
@@ -95,8 +89,6 @@ html[data-page="bookshelf"] {
         --bookshelf-accent-color: #8ab4f8;
         --bookshelf-book-background-color: #3c4043;
         --bookshelf-book-hover-background-color: #4b4f52;
-        --bookshelf-setting-icon-filter: invert(1);
-        --bookshelf-clear-icon-filter: none;
         --setting-background-color: #202124;
         --setting-color: #e3e3e3;
         --setting-accent-color: #fdd663;
@@ -115,8 +107,6 @@ html[data-page="bookshelf"] {
         --bookshelf-accent-color: #174ea6;
         --bookshelf-book-background-color: #397fc4;
         --bookshelf-book-hover-background-color: #4a8ed9;
-        --bookshelf-setting-icon-filter: none;
-        --bookshelf-clear-icon-filter: invert(1);
         --setting-background-color: #d2e3fc;
         --setting-color: #202124;
         --setting-accent-color: #174ea6;
@@ -135,8 +125,6 @@ html[data-page="bookshelf"] {
         --bookshelf-accent-color: #8ab4f8;
         --bookshelf-book-background-color: #555555;
         --bookshelf-book-hover-background-color: #666666;
-        --bookshelf-setting-icon-filter: invert(1);
-        --bookshelf-clear-icon-filter: none;
         --setting-background-color: #3c3c3c;
         --setting-color: #e3e3e3;
         --setting-accent-color: #ffd04b;

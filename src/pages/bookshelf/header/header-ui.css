@@ -43,6 +43,7 @@
         gap: 1rem;
 
         > button {
+            --icon-size: 1.5rem;
             appearance: none;
             width: 1.5rem;
             height: 1.5rem;
@@ -52,20 +53,6 @@
             color: inherit;
             line-height: 0;
             cursor: pointer;
-        }
-
-        img {
-            display: block;
-            width: 1.5rem;
-            height: 1.5rem;
-        }
-
-        #toggle-setting-panel {
-            filter: var(--bookshelf-setting-icon-filter);
-        }
-
-        #clear-btn {
-            filter: var(--bookshelf-clear-icon-filter);
         }
     }
 }

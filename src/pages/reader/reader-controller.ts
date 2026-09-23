@@ -84,6 +84,7 @@ export default class ReaderController {
                     SettingCatalog.BACKGROUND_COLOR,
                 ]),
                 new SettingTarget(this.headerUi, [
+                    SettingCatalog.COLOR,
                     SettingCatalog.PADDING_TOP,
                     SettingCatalog.PADDING_LEFT,
                     SettingCatalog.PADDING_BOTTOM,

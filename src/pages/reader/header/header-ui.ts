@@ -30,14 +30,15 @@ export default class HeaderUi extends Ui {
     private readonly fullscreenToggleButton: HTMLButtonElement;
     private readonly settingToggleButton: HTMLButtonElement;
 
+    /** 通过打包资源设置遮罩，使图标继承页眉颜色并支持 portable 内联。 */
     public constructor(args: ConstructorParameters<typeof Ui>[0]) {
         super(args);
         this.tocToggleButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-toc-panel"));
         this.fullscreenToggleButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-fullscreen"));
         this.settingToggleButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel"));
-        assertExists(this.tocToggleButton.querySelector<HTMLImageElement>("img")).src = tableOfContentsIcon;
-        assertExists(this.fullscreenToggleButton.querySelector<HTMLImageElement>("img")).src = fullscreenIcon;
-        assertExists(this.settingToggleButton.querySelector<HTMLImageElement>("img")).src = settingIcon;
+        this.tocToggleButton.style.setProperty("--icon-image", `url("${tableOfContentsIcon}")`);
+        this.fullscreenToggleButton.style.setProperty("--icon-image", `url("${fullscreenIcon}")`);
+        this.settingToggleButton.style.setProperty("--icon-image", `url("${settingIcon}")`);
     }
 
     /**

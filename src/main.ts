@@ -15,6 +15,7 @@
  */
 
 import "./styles/base.css";
+import "./components/icon/icon.css";
 import "./components/dialog/dialog.css";
 import "./components/overlay/overlay.css";
 import "./settings/setting-ui.css";
