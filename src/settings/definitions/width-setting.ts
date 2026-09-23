@@ -43,7 +43,7 @@ export default class WidthSetting extends RangeStyleSetting {
     }
 
     public override resolveValue(target: SettingTarget, value: string | undefined): string {
-        return value ?? (target.ui.root.style.width || `${String(WidthSetting.MIN_WIDTH_PX)}px`);
+        return value ?? this.readExternalValue(target) ?? `${String(WidthSetting.MIN_WIDTH_PX)}px`;
     }
 
     public override controlMaximum(target: SettingTarget, value: string): number {
@@ -59,7 +59,12 @@ export default class WidthSetting extends RangeStyleSetting {
         );
     }
 
+    /** 将原生 resize 写入的像素宽度限制到首选值范围，CSS 限制只约束实际布局宽度。 */
     public override readExternalValue(target: SettingTarget): string | undefined {
-        return target.ui.root.style.width || undefined;
+        const value = target.ui.root.style.width;
+        if (!value.endsWith(this.unit)) return value || undefined;
+        const widthPx = Number(value.slice(0, -this.unit.length));
+        if (!Number.isFinite(widthPx)) return value;
+        return `${String(Math.min(this.maximum, Math.max(this.minimum, widthPx)))}${this.unit}`;
     }
 }
