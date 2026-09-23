@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import type { ClassFields } from "@/type/class-fields";
-import ObjectUtil from "@/util/object-util";
+import type { ClassFields } from "@/types/class-fields";
+import ObjectUtil from "@/utils/object-util";
 
 /**
  * 目录条目
