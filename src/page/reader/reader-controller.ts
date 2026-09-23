@@ -26,7 +26,7 @@ import type ReaderState from "./reader-state";
 import SettingCatalog from "@/setting/definition/setting-catalog";
 import SettingTarget from "@/setting/model/setting-target";
 import SettingController from "@/setting/setting-controller";
-import { SwitchChapterDirection } from "@/constant/switch-chapter-direction";
+import { SwitchChapterDirection } from "./switch-chapter-direction";
 import { assertExists } from "@/util/assert-util";
 import { PageName } from "@/constant/page-name";
 

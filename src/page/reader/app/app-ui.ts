@@ -16,7 +16,7 @@
 
 import Ui from "@/component/ui";
 import EventUtil from "@/util/event-util";
-import { SwitchChapterDirection } from "@/constant/switch-chapter-direction";
+import { SwitchChapterDirection } from "../switch-chapter-direction";
 import FullscreenUtil from "@/util/fullscreen-util";
 
 /**
