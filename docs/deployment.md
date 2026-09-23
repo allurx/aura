@@ -1,6 +1,6 @@
 # Cloudflare 部署
 
-Web 版使用 Cloudflare Workers Static Assets 托管 `dist/`，由 [GitHub Actions](../.github/workflows/ci.yml) 验证后部署。环境配置见 [wrangler.jsonc](../wrangler.jsonc)。portable 仍单独生成 `dist-portable/aura.html`，不上传到站点。
+Web 版使用 Cloudflare Workers Static Assets 托管 `dist/web/`，由 [GitHub Actions](../.github/workflows/ci.yml) 验证后部署。环境配置见 [wrangler.jsonc](../wrangler.jsonc)。portable 仍单独生成 `dist/portable/aura.html`，不上传到站点。
 
 Web 包中的 `index.html`、`assets/` 和 `_headers` 应作为同一次构建的完整产物一起部署。
 
@@ -45,7 +45,7 @@ npm run deploy:preview -- --dry-run
 npm run deploy:production -- --dry-run
 ```
 
-确认产物与环境正确后，选择 `npm run deploy:preview` 或 `npm run deploy:production`，分别部署到 `aura-preview` 和 `aura`。始终显式选择环境；直接运行 `wrangler deploy` 会使用顶层名称 `aura`，指向正式 Worker。这两个部署脚本只上传已有 `dist/`，不会重新构建；dry-run 不验证远端凭据、域名绑定或实际访问结果。
+确认产物与环境正确后，选择 `npm run deploy:preview` 或 `npm run deploy:production`，分别部署到 `aura-preview` 和 `aura`。始终显式选择环境；直接运行 `wrangler deploy` 会使用顶层名称 `aura`，指向正式 Worker。这两个部署脚本只上传已有 `dist/web/`，不会重新构建；dry-run 不验证远端凭据、域名绑定或实际访问结果。
 
 ## 域名绑定
 

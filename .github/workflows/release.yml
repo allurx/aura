@@ -83,23 +83,23 @@ jobs:
                   portable_asset="aura-portable-$TAG_NAME.html"
                   checksum_asset="aura-$TAG_NAME-SHA256SUMS.txt"
 
-                  if [[ ! -f dist/index.html ]]; then
-                      echo "::error::Web build entry dist/index.html was not generated"
+                  if [[ ! -f dist/web/index.html ]]; then
+                      echo "::error::Web build entry dist/web/index.html was not generated"
                       exit 1
                   fi
 
-                  if [[ ! -f dist-portable/aura.html ]] || [[ "$(find dist-portable -type f | wc -l)" -ne 1 ]]; then
-                      echo "::error::Portable build must contain only dist-portable/aura.html"
+                  if [[ ! -f dist/portable/aura.html ]] || [[ "$(find dist/portable -type f | wc -l)" -ne 1 ]]; then
+                      echo "::error::Portable build must contain only dist/portable/aura.html"
                       exit 1
                   fi
 
                   mkdir release-assets
-                  cp LICENSE.txt dist/LICENSE.txt
+                  cp LICENSE.txt dist/web/LICENSE.txt
                   (
-                      cd dist
-                      zip -q -r "../release-assets/$web_asset" .
+                      cd dist/web
+                      zip -q -r "../../release-assets/$web_asset" .
                   )
-                  cp dist-portable/aura.html "release-assets/$portable_asset"
+                  cp dist/portable/aura.html "release-assets/$portable_asset"
                   (
                       cd release-assets
                       sha256sum "$web_asset" "$portable_asset" > "$checksum_asset"

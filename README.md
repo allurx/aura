@@ -16,12 +16,12 @@
 
 | 命令                                | 输出                                             |
 | ----------------------------------- | ------------------------------------------------ |
-| `npm run build`                     | `dist/`，普通 Web 版                             |
-| `npm run build:obfuscated`          | `dist-obfuscated/`，混淆 Web 版                  |
-| `npm run build:portable`            | `dist-portable/aura.html`，普通离线版            |
-| `npm run build:portable:obfuscated` | `dist-portable-obfuscated/aura.html`，混淆离线版 |
+| `npm run build`                     | `dist/web/`，普通 Web 版                         |
+| `npm run build:obfuscated`          | `dist/web-obfuscated/`，混淆 Web 版              |
+| `npm run build:portable`            | `dist/portable/aura.html`，普通离线版            |
+| `npm run build:portable:obfuscated` | `dist/portable-obfuscated/aura.html`，混淆离线版 |
 
-四种构建各自清理对应目录，产物可以同时保留。构建后，使用 `npm run preview` 预览普通 Web 版，或使用 `npm run preview -- --mode obfuscated` 预览混淆 Web 版；离线版直接打开对应 HTML 文件。
+四种构建使用 `dist/` 下各自的子目录，只清理对应子目录，产物可以同时保留。构建后，使用 `npm run preview` 预览普通 Web 版，或使用 `npm run preview -- --mode obfuscated` 预览混淆 Web 版；离线版直接打开对应 HTML 文件。
 
 ## 下载与发布
 
