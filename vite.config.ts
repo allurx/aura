@@ -34,6 +34,7 @@ export default defineConfig(({ command, mode, isPreview }) => {
     const portable = mode === "portable" || mode === "portable-obfuscated";
     const obfuscated = mode === "obfuscated" || mode === "portable-obfuscated";
     const developmentServer = command === "serve" && !isPreview;
+    const outputDirectory = `dist${portable ? "-portable" : ""}${obfuscated ? "-obfuscated" : ""}`;
 
     return {
         root: SOURCE_ROOT,
@@ -62,7 +63,7 @@ export default defineConfig(({ command, mode, isPreview }) => {
               }
             : {}),
         build: {
-            outDir: resolve(PROJECT_ROOT, portable ? "dist-portable" : "dist"),
+            outDir: resolve(PROJECT_ROOT, outputDirectory),
             emptyOutDir: true,
             ...(portable ? { modulePreload: false } : {}),
             // https://cn.rollupjs.org/configuration-options

@@ -3,6 +3,8 @@
 .vscode/
 node_modules/
 dist/
+dist-obfuscated/
 dist-portable/
+dist-portable-obfuscated/
 .dev.vars*
 .env*

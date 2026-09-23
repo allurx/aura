@@ -10,6 +10,19 @@
 - 🔍 支持快速搜索、目录导航
 - 🛠 可扩展，易于集成到其他网页或应用
 
+## 本地构建
+
+使用 Node.js 22.12.0 或更新版本，在仓库根目录运行 `npm ci`，然后选择构建命令：
+
+| 命令                                | 输出                                             |
+| ----------------------------------- | ------------------------------------------------ |
+| `npm run build`                     | `dist/`，普通 Web 版                             |
+| `npm run build:obfuscated`          | `dist-obfuscated/`，混淆 Web 版                  |
+| `npm run build:portable`            | `dist-portable/aura.html`，普通离线版            |
+| `npm run build:portable:obfuscated` | `dist-portable-obfuscated/aura.html`，混淆离线版 |
+
+四种构建各自清理对应目录，产物可以同时保留。构建后，使用 `npm run preview` 预览普通 Web 版，或使用 `npm run preview -- --mode obfuscated` 预览混淆 Web 版；离线版直接打开对应 HTML 文件。
+
 ## 下载与发布
 
 正式版本可从 [GitHub Releases](https://github.com/allurx/aura/releases) 下载：
