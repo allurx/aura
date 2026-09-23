@@ -31,7 +31,7 @@ export default abstract class BasePage implements Page {
         if (this.lifecycleController.signal.aborted) return;
         if (this.pageElement) throw new Error(`${this.constructor.name} is already mounted`);
 
-        this.pageElement = appRoot.appendChild(DomUtil.createElementFromHTML(this.template));
+        this.pageElement = appRoot.appendChild(DomUtil.createElementFromHtml(this.template));
         await this.init(this.pageElement, appRoot);
     }
 

@@ -22,7 +22,7 @@ export default abstract class DomUtil {
     /**
      * Convert HTML string to typed DOM element.
      */
-    public static createElementFromHTML(html: string): HTMLElement {
+    public static createElementFromHtml(html: string): HTMLElement {
         const template = document.createElement("template");
         template.innerHTML = html.trim();
 
