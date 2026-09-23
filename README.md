@@ -20,6 +20,8 @@
 
 正式发布由位于 `main` 历史上的 annotated `vX.Y.Z` tag 触发。发布流程会对该 tag 重新执行完整验证，随后自动创建 GitHub Release 并上传产物。GitHub 自动生成的源码 ZIP/TAR 不是 Aura 构建产物。
 
+Cloudflare Workers 静态托管的准备、部署与回滚见[部署指南](docs/deployment.md)。
+
 ## 注意
 
 - 上传文件目前只支持txt格式，支持自动识别UTF-8、GB18030、Big5和带BOM的UTF-16编码

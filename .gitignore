@@ -1,5 +1,8 @@
 .vite/
+.wrangler/
 .vscode/
 node_modules/
 dist/
 dist-portable/
+.dev.vars*
+.env*

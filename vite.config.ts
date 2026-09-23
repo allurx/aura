@@ -38,6 +38,7 @@ export default defineConfig(({ command, mode, isPreview }) => {
     return {
         root: SOURCE_ROOT,
         base: portable ? "./" : "/",
+        publicDir: portable ? false : "public",
         resolve: {
             alias: {
                 "@": SOURCE_ROOT,

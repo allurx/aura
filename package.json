@@ -3,7 +3,7 @@
     "private": true,
     "type": "module",
     "engines": {
-        "node": "^20.19.0 || >=22.12.0"
+        "node": ">=22.12.0"
     },
     "scripts": {
         "dev": "vite --open",
@@ -17,7 +17,9 @@
         "build:portable": "npm run check && vite build --mode portable",
         "build:obfuscated": "npm run check && vite build --mode obfuscated",
         "build:portable:obfuscated": "npm run check && vite build --mode portable-obfuscated",
-        "preview": "vite preview --open"
+        "preview": "vite preview --open",
+        "deploy:preview": "wrangler deploy --env preview",
+        "deploy:production": "wrangler deploy --env production"
     },
     "devDependencies": {
         "@eslint/js": "9.38.0",
@@ -28,7 +30,8 @@
         "typescript-eslint": "8.46.2",
         "vite": "7.3.6",
         "vite-plugin-javascript-obfuscator": "3.1.0",
-        "vite-plugin-singlefile": "^2.3.3"
+        "vite-plugin-singlefile": "^2.3.3",
+        "wrangler": "4.136.3"
     },
     "prettier": {
         "tabWidth": 4,
