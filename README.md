@@ -23,7 +23,7 @@
 
 四种构建使用 `dist/` 下各自的子目录，只清理对应子目录，产物可以同时保留。构建后，使用 `npm run preview` 预览普通 Web 版，或使用 `npm run preview -- --mode obfuscated` 预览混淆 Web 版；离线版直接打开对应 HTML 文件。
 
-`npm run verify` 执行一次静态检查，并构建验证上述四种版本。
+`npm run verify` 执行一次静态检查，并构建验证上述四种版本。预览站点和正式站点均部署混淆 Web 版。
 
 ## 下载与发布
 
