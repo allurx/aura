@@ -17,6 +17,8 @@
  */
 
 #reader > #header {
+    --ui-padding-left: 30px;
+    --ui-padding-right: 30px;
     display: flex;
     flex: 0 0 auto;
     height: 60px;
@@ -25,12 +27,11 @@
     -webkit-user-select: none;
     user-select: none;
     overflow: hidden;
-    padding: 0 30px;
+    padding: 0 var(--ui-padding-right) 0 var(--ui-padding-left);
     background-color: inherit;
 
     /* 顶部操作icon */
     .action {
-        --icon-size: 22px;
         display: flex;
         align-items: center;
         flex: 1;
@@ -43,7 +44,6 @@
 
     /* 顶部右侧操作区域 */
     .action-right {
-        gap: 8px;
         justify-content: right;
     }
 }

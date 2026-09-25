@@ -49,7 +49,8 @@ export default abstract class SettingCatalog {
         100,
         1,
         "px",
-        70
+        70,
+        "--ui-padding-right"
     );
     public static readonly PADDING_BOTTOM = new RangeStyleSetting(
         StyleProperty.PADDING_BOTTOM,
@@ -67,7 +68,8 @@ export default abstract class SettingCatalog {
         100,
         1,
         "px",
-        90
+        90,
+        "--ui-padding-left"
     );
     public static readonly LINE_HEIGHT = new RangeStyleSetting(StyleProperty.LINE_HEIGHT, "行高", 16, 48, 1, "px", 100);
 }

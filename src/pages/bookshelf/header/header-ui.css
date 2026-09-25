@@ -17,6 +17,8 @@
  */
 
 #bookshelf > header {
+    --ui-padding-left: 0.75rem;
+    --ui-padding-right: 0.75rem;
     display: flex;
     /* 禁止缩放,保持自身的宽高 */
     flex: 0 0 auto;
@@ -25,7 +27,7 @@
     height: 3.125rem;
     min-height: 52px;
     width: 100%;
-    padding: 0 0.75rem;
+    padding: 0 var(--ui-padding-right) 0 var(--ui-padding-left);
     background-color: var(--bookshelf-header-background-color);
     color: var(--bookshelf-header-color);
     font-size: 2rem;
@@ -41,6 +43,10 @@
         display: flex;
         flex: 0 0 auto;
         align-items: center;
-        gap: 8px;
+        gap: 4px;
+
+        @media (max-width: 480px) {
+            gap: 0;
+        }
     }
 }

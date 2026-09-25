@@ -21,15 +21,19 @@ import type SettingTarget from "../models/setting-target";
 import Setting from "./setting";
 
 /**
- * 投影为单个 UI inline CSS 属性的 Appearance 定义。
+ * 投影为 UI inline CSS 样式的 Appearance 定义。
  *
  * @author allurx
  */
 export default abstract class StyleSetting extends Setting {
+    /**
+     * @param cssVariable - 可选的 CSS 变量写入目标；设置键与计算样式读取仍使用 property。
+     */
     protected constructor(
         public readonly property: StyleProperty,
         title: string,
-        displayOrder: number
+        displayOrder: number,
+        private readonly cssVariable?: `--${string}`
     ) {
         super(property, title, SettingScope.UI, displayOrder);
     }
@@ -43,9 +47,11 @@ export default abstract class StyleSetting extends Setting {
         return appearance.withStyle(target.ui.id, this.property, value);
     }
 
+    /** 向定义声明的 CSS 目标写入样式，未指定变量时使用原生属性。 */
     public override apply(target: SettingTarget, value: string | undefined): void {
-        if (value === undefined) target.ui.root.style.removeProperty(this.property);
-        else target.ui.root.style.setProperty(this.property, value);
+        const property = this.cssVariable ?? this.property;
+        if (value === undefined) target.ui.root.style.removeProperty(property);
+        else target.ui.root.style.setProperty(property, value);
     }
 
     public override resolveValue(target: SettingTarget, value: string | undefined): string {

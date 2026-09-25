@@ -27,18 +27,26 @@
                 aria-expanded="false"
                 title="设置"
             >
-                <span class="icon" aria-hidden="true"></span>
+                <span class="icon icon-setting" aria-hidden="true"></span>
             </button>
-            <button id="clear-btn" class="icon-button" type="button" aria-label="清空书架" title="清空书架">
-                <span class="icon" aria-hidden="true"></span>
+            <button
+                id="clear-btn"
+                class="icon-button icon-button-edge-right"
+                type="button"
+                aria-label="清空书架"
+                title="清空书架"
+            >
+                <span class="icon icon-delete" aria-hidden="true"></span>
             </button>
         </div>
     </header>
     <main>
         <nav id="nav"></nav>
         <section id="book-list">
-            <label id="book-input-label" for="book-input">+</label>
-            <input id="book-input" type="file" accept=".txt" multiple />
+            <label id="book-input-label" class="icon-control" for="book-input" title="添加 TXT 书籍">
+                <span class="icon icon-add" aria-hidden="true"></span>
+                <input id="book-input" type="file" accept=".txt" multiple aria-label="添加 TXT 书籍" />
+            </label>
         </section>
     </main>
 </div>

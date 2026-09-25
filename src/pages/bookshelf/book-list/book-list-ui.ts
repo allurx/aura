@@ -139,7 +139,9 @@ export default class BookListUi extends Ui {
         const bookElement = DomUtil.createElementFromHtml(`
             <div class="book">
                 <div class="book-header">
-                    <button class="book-delete-btn" type="button" aria-label="删除书籍" title="删除书籍">✖</button>
+                    <button class="book-delete-btn icon-button" type="button" aria-label="删除书籍" title="删除书籍">
+                        <span class="icon icon-delete" aria-hidden="true"></span>
+                    </button>
                 </div>
                 <div class="book-body">
                     <span class="book-title"></span>

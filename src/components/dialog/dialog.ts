@@ -151,7 +151,9 @@ export default class Dialog {
       <dialog class="dialog">
           <header class="header">
             <span class="title"></span>
-            <button type="button" class="close-btn" aria-label="关闭" title="关闭">✖</button>
+            <button type="button" class="close-btn icon-button" aria-label="关闭" title="关闭">
+                <span class="icon icon-close" aria-hidden="true"></span>
+            </button>
           </header>
           <section class="body"></section>
           <footer class="footer">

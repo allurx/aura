@@ -70,7 +70,7 @@
         max-width: 16rem;
         height: 100%;
         border-right: 0.1px solid #666666;
-        padding-top: 3rem;
+        padding-top: 56px;
         padding-left: 2rem;
         overflow: auto;
         scrollbar-width: auto;
@@ -96,71 +96,64 @@
                 /* 非root节点 */
                 &:not(.root) {
                     padding-top: 0.3rem;
-                    /* arrow宽度 */
-                    padding-left: 1rem;
+                    padding-left: 20px;
                 }
 
                 > .title::before {
-                    content: "-";
+                    content: "";
+                    display: inline-block;
+                    vertical-align: middle;
+                    margin-right: 4px;
+                    transform: rotate(90deg);
                 }
             }
 
             /* leaf节点 */
             &.leaf {
                 padding-top: 0.3rem;
-                /* arrow宽度 */
-                padding-left: 1rem;
+                padding-left: 20px;
             }
 
             /* 激活的节点 */
             &.active {
                 > .title {
-                    color: var(--setting-accent-color, rebeccapurple);
+                    --icon-color: var(--setting-accent-color, rebeccapurple);
                 }
             }
 
             /* 折叠效果 */
             &.collapsed {
                 > .children {
-                    max-height: 0;
+                    display: none;
                 }
 
                 > .title::before {
-                    content: "+";
+                    transform: rotate(0);
                 }
             }
 
             > .title {
+                --icon-size: 16px;
+                --icon-hover-color: var(--setting-accent-color, rebeccapurple);
                 appearance: none;
-                padding: 0;
+                padding: 2px 4px;
                 border: 0;
-                background: transparent;
-                color: inherit;
+                border-radius: 4px;
                 font: inherit;
                 text-align: left;
-                display: inline-block;
-                height: 1.5rem;
-                line-height: 1.5rem;
-                cursor: pointer;
+                display: block;
+                width: fit-content;
+                max-width: 100%;
+                min-height: 28px;
+                line-height: 1.5;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
 
-                &::before {
-                    display: inline-block;
-                    font-weight: bold;
-                    width: 1rem;
+                @media (max-width: 768px), (pointer: coarse) {
+                    min-width: 44px;
+                    min-height: 44px;
                 }
-
-                &:hover {
-                    color: var(--setting-accent-color, rebeccapurple);
-                }
-            }
-
-            > .children {
-                max-height: 100vh;
-                overflow: hidden;
-                transition: max-height 0.3s ease;
             }
         }
     }
@@ -171,30 +164,20 @@
         overflow: hidden;
 
         > header {
+            --icon-size: 20px;
             display: flex;
             align-items: center;
-            justify-content: right;
-            gap: 1rem;
+            justify-content: flex-end;
             width: 100%;
-            height: 3rem;
+            height: 56px;
             padding-right: 1rem;
-
-            > button {
-                appearance: none;
-                padding: 0;
-                border: 0;
-                background: transparent;
-                color: inherit;
-                font-size: 1.2rem;
-                cursor: pointer;
-            }
         }
 
         > section {
             display: flex;
             flex-direction: column;
             width: 100%;
-            height: calc(100% - 6rem);
+            height: calc(100% - 56px - 3rem);
             overflow-x: hidden;
             overflow-y: auto;
             scrollbar-width: auto;

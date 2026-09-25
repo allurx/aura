@@ -234,8 +234,12 @@ export default class SettingUi extends Ui implements SettingControlListener {
             <aside aria-label="设置目标"></aside>
             <div class="main">
                 <header>
-                    <button class="reset" type="button" title="重置" aria-label="重置当前页面设置">↺</button>
-                    <button class="close" type="button" title="关闭" aria-label="关闭设置">✖</button>
+                    <button class="reset icon-button" type="button" title="重置" aria-label="重置当前页面设置">
+                        <span class="icon icon-reset" aria-hidden="true"></span>
+                    </button>
+                    <button class="close icon-button" type="button" title="关闭" aria-label="关闭设置">
+                        <span class="icon icon-close" aria-hidden="true"></span>
+                    </button>
                 </header>
                 <section class="items"></section>
                 <footer class="footer"></footer>

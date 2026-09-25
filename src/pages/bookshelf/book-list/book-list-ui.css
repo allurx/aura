@@ -17,6 +17,8 @@
  */
 
 #bookshelf #book-list {
+    --ui-padding-left: 1.25rem;
+    --ui-padding-right: 1.25rem;
     display: flex;
     flex: 1;
     flex-wrap: wrap;
@@ -25,7 +27,7 @@
     background-color: var(--bookshelf-book-list-background-color);
     color: var(--bookshelf-book-list-color);
     font-size: 0.9rem;
-    padding: 1.25rem;
+    padding: 1.25rem var(--ui-padding-right) 1.25rem var(--ui-padding-left);
     overflow-x: hidden;
     overflow-y: auto;
     scrollbar-width: auto;
@@ -34,33 +36,32 @@
 
     /* 添加书籍按钮样式 */
     #book-input-label {
+        --icon-size: 36px;
+        --icon-color: var(--bookshelf-book-input-color);
+        --icon-hover-color: var(--bookshelf-header-color);
+        --icon-hover-opacity: 6%;
+        --icon-transition: color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
+        position: relative;
         flex: 0 0 auto;
         width: 7.5rem;
         aspect-ratio: 5/6;
-        border: 0.125rem dashed #ccc;
-        border-radius: 0.375rem;
+        border: 1px dashed currentColor;
+        border-radius: 12px;
         display: flex;
         justify-content: center;
         align-items: center;
-        color: var(--bookshelf-book-input-color);
-        font-size: 3rem;
-        cursor: pointer;
-        transition:
-            border-color 0.3s,
-            color 0.3s;
+        font: inherit;
         -webkit-user-select: none;
         user-select: none;
-
-        @media (hover: hover) and (pointer: fine) {
-            &:hover {
-                border-color: var(--bookshelf-accent-color);
-                color: var(--bookshelf-accent-color);
-            }
-        }
     }
 
     #book-input {
-        display: none;
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
     }
 
     /* 书籍 */
@@ -104,32 +105,31 @@
         /* 书籍头部 */
         .book-header {
             display: flex;
+            flex: 0 0 auto;
             width: 100%;
-            height: 10%;
             /* 主轴末尾对齐 */
             justify-content: flex-end;
 
             .book-delete-btn {
-                appearance: none;
-                padding: 0;
-                border: 0;
-                background: transparent;
-                color: inherit;
-                font: inherit;
-                line-height: 1;
-                cursor: pointer;
+                --icon-button-size: 32px;
+                --icon-size: 18px;
+                --icon-transition: opacity 0.3s ease, background-color 140ms ease;
 
                 &:focus-visible {
-                    opacity: 1;
+                    --icon-transition: none;
+                }
+
+                @media (pointer: coarse) {
+                    --icon-button-size: 44px;
                 }
             }
 
             @media (hover: hover) and (pointer: fine) {
                 .book-delete-btn {
                     opacity: 0;
-                    transition: opacity 0.3s;
 
-                    .book:hover & {
+                    .book:hover &,
+                    &:focus-visible {
                         opacity: 1;
                     }
                 }
@@ -139,8 +139,9 @@
         /* 书籍主体 */
         .book-body {
             display: flex;
+            flex: 1;
+            min-height: 0;
             width: 100%;
-            height: 80%;
             justify-content: center;
             align-items: center;
             cursor: pointer;

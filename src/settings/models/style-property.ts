@@ -15,7 +15,7 @@
  */
 
 /**
- * 允许由 Appearance 写入 UI inline style 的 CSS 属性白名单。
+ * Appearance 支持的原生 CSS 属性，用作设置键与计算样式读取字段。
  *
  * @author allurx
  */

@@ -17,9 +17,6 @@
 import Ui from "@/components/ui";
 import { assertExists } from "@/utils/assert-util";
 import EventUtil from "@/utils/event-util";
-import tableOfContentsIcon from "@/assets/images/table-of-contents.svg";
-import fullscreenIcon from "@/assets/images/fullscreen.svg";
-import settingIcon from "@/assets/images/setting.svg";
 
 /**
  * 阅读器头部界面
@@ -30,15 +27,12 @@ export default class HeaderUi extends Ui {
     private readonly fullscreenToggleButton: HTMLButtonElement;
     private readonly settingToggleButton: HTMLButtonElement;
 
-    /** 通过打包资源设置遮罩，使图标继承页眉颜色并支持 portable 内联。 */
+    /** 绑定页眉控件，图标资源由共享样式映射。 */
     public constructor(args: ConstructorParameters<typeof Ui>[0]) {
         super(args);
         this.tocToggleButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-toc-panel"));
         this.fullscreenToggleButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-fullscreen"));
         this.settingToggleButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel"));
-        this.tocToggleButton.style.setProperty("--icon-image", `url("${tableOfContentsIcon}")`);
-        this.fullscreenToggleButton.style.setProperty("--icon-image", `url("${fullscreenIcon}")`);
-        this.settingToggleButton.style.setProperty("--icon-image", `url("${settingIcon}")`);
     }
 
     /**

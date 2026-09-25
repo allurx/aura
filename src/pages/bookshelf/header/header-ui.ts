@@ -16,8 +16,6 @@
 
 import EventUtil from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
-import bookshelfClearIcon from "@/assets/images/bookshelf-clear.svg";
-import settingIcon from "@/assets/images/setting.svg";
 import Ui from "@/components/ui";
 
 /**
@@ -29,14 +27,12 @@ export default class HeaderUi extends Ui {
     private readonly settingToggleButton: HTMLButtonElement;
     private readonly clearBookshelfButton: HTMLButtonElement;
 
-    /** 通过打包资源设置遮罩，使图标继承页眉颜色并支持 portable 内联。 */
+    /** 绑定页眉控件，图标资源由共享样式映射。 */
     public constructor(args: ConstructorParameters<typeof Ui>[0]) {
         super(args);
         this.headerTitleElement = assertExists(this.root.querySelector<HTMLSpanElement>("#title"));
         this.settingToggleButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel"));
         this.clearBookshelfButton = assertExists(this.root.querySelector<HTMLButtonElement>("#clear-btn"));
-        this.settingToggleButton.style.setProperty("--icon-image", `url("${settingIcon}")`);
-        this.clearBookshelfButton.style.setProperty("--icon-image", `url("${bookshelfClearIcon}")`);
     }
 
     /**

@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-.icon {
+.icon,
+.icon-control::before {
     display: block;
     width: var(--icon-size, 24px);
     height: var(--icon-size, 24px);
@@ -25,32 +26,136 @@
     pointer-events: none;
 }
 
+.icon-table-of-contents {
+    --icon-image: url("../../assets/images/table-of-contents.svg");
+}
+
+.icon-setting {
+    --icon-image: url("../../assets/images/setting.svg");
+}
+
+.icon-fullscreen {
+    --icon-image: url("../../assets/images/fullscreen.svg");
+}
+
+:fullscreen .icon-fullscreen {
+    --icon-image: url("../../assets/images/fullscreen-exit.svg");
+}
+
+.icon-delete {
+    --icon-image: url("../../assets/images/bookshelf-clear.svg");
+}
+
+.icon-close {
+    --icon-image: url("../../assets/images/close.svg");
+}
+
+.icon-reset {
+    --icon-image: url("../../assets/images/reset.svg");
+}
+
+.icon-add {
+    --icon-image: url("../../assets/images/add.svg");
+}
+
+.icon-chevron {
+    --icon-image: url("../../assets/images/chevron.svg");
+}
+
 @media (forced-colors: active) {
-    .icon {
+    .icon,
+    .icon-control::before {
         /* 保留系统按钮文字色，避免遮罩填充被强制改成画布色。 */
         background-color: ButtonText;
         forced-color-adjust: none;
     }
 }
 
+:is(.icon-button, .icon-control) {
+    --icon-feedback-color: transparent;
+    --icon-focus-outline: none;
+    color: var(--icon-color, inherit);
+    cursor: pointer;
+    transition: var(--icon-transition, background-color 140ms ease);
+
+    @media (hover: hover) and (pointer: fine) {
+        &:hover {
+            color: var(--icon-hover-color, var(--icon-color, inherit));
+            --icon-feedback-color: color-mix(in srgb, currentColor var(--icon-hover-opacity, 8%), transparent);
+        }
+    }
+
+    &:active {
+        --icon-feedback-color: color-mix(in srgb, currentColor 16%, transparent);
+    }
+
+    /* 面板入口及模态背景不保留交互高亮，避免指针未移动时出现残影。 */
+    &:is(.icon-button[aria-expanded="true"], [inert], [inert] *),
+    :root:has(dialog:modal) &:not(dialog:modal *) {
+        --icon-feedback-color: transparent;
+        color: var(--icon-color, inherit);
+        transition: none;
+    }
+
+    &:focus-visible,
+    &:has(> input:focus-visible) {
+        --icon-focus-outline: 2px solid currentColor;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        transition: none;
+    }
+}
+
+.icon-control,
+.icon-button::before {
+    background: var(--icon-feedback-color);
+    outline: var(--icon-focus-outline);
+    outline-offset: -2px;
+}
+
 .icon-button {
-    display: inline-flex;
-    flex: 0 0 44px;
-    align-items: center;
-    justify-content: center;
+    --icon-button-size: 44px;
+    display: inline-grid;
+    flex: 0 0 var(--icon-button-size);
+    /* 图形与反馈区域同心，点击区保留独立尺寸。 */
+    grid-template: 32px / 32px;
+    place-content: center;
     appearance: none;
-    width: 44px;
-    height: 44px;
+    width: var(--icon-button-size);
+    height: var(--icon-button-size);
     padding: 0;
     border: 0;
-    border-radius: 4px;
+    border-radius: 8px;
     background: transparent;
-    color: inherit;
+    outline: none;
     line-height: 0;
-    cursor: pointer;
 
-    &:focus-visible {
-        outline: 2px solid currentColor;
-        outline-offset: 2px;
+    &::before {
+        content: "";
+        grid-area: 1 / 1;
+        border-radius: inherit;
+        pointer-events: none;
+        transition: inherit;
+    }
+
+    > .icon {
+        grid-area: 1 / 1;
+        place-self: center;
+    }
+
+    /* 按图形边缘对齐，按钮外扩不超过容器的可用内边距。 */
+    &.icon-button-edge-left {
+        margin-left: max(
+            calc((var(--icon-size, 24px) - var(--icon-button-size)) / 2),
+            calc(-1 * var(--ui-padding-left, 0px))
+        );
+    }
+
+    &.icon-button-edge-right {
+        margin-right: max(
+            calc((var(--icon-size, 24px) - var(--icon-button-size)) / 2),
+            calc(-1 * var(--ui-padding-right, 0px))
+        );
     }
 }

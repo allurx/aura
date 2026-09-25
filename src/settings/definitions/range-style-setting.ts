@@ -27,6 +27,7 @@ import StyleSetting from "./style-setting";
  * @author allurx
  */
 export default class RangeStyleSetting extends StyleSetting {
+    /** @param cssVariable - 可选的 CSS 变量写入目标，交由样式设置基类处理。 */
     public constructor(
         property: StyleProperty,
         title: string,
@@ -34,9 +35,10 @@ export default class RangeStyleSetting extends StyleSetting {
         public readonly maximum: number,
         public readonly step: number,
         public readonly unit: string,
-        displayOrder: number
+        displayOrder: number,
+        cssVariable?: `--${string}`
     ) {
-        super(property, title, displayOrder);
+        super(property, title, displayOrder, cssVariable);
         if (minimum > maximum || step <= 0) throw new Error(`Invalid ${property} range`);
     }
 

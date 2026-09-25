@@ -17,6 +17,8 @@
  */
 
 #reader > #content {
+    --ui-padding-left: 30px;
+    --ui-padding-right: 30px;
     height: calc(100% - 120px);
     overflow-x: hidden;
     overflow-y: auto;
@@ -24,7 +26,7 @@
     scrollbar-color: #666666 transparent;
     word-break: break-word;
     outline: none;
-    padding: 0 30px;
+    padding: 0 var(--ui-padding-right) 0 var(--ui-padding-left);
     font-size: 1.1rem;
     line-height: 2;
     background-color: inherit;

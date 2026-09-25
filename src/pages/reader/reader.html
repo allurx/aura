@@ -19,14 +19,14 @@
         <div class="action action-left">
             <button
                 id="toggle-toc-panel"
-                class="icon-button"
+                class="icon-button icon-button-edge-left"
                 type="button"
                 aria-label="切换目录"
                 aria-controls="toc"
                 aria-expanded="false"
                 title="目录"
             >
-                <span class="icon" aria-hidden="true"></span>
+                <span class="icon icon-table-of-contents" aria-hidden="true"></span>
             </button>
         </div>
         <div class="action action-right">
@@ -39,10 +39,16 @@
                 aria-expanded="false"
                 title="设置"
             >
-                <span class="icon" aria-hidden="true"></span>
+                <span class="icon icon-setting" aria-hidden="true"></span>
             </button>
-            <button id="toggle-fullscreen" class="icon-button" type="button" aria-label="切换全屏" title="全屏">
-                <span class="icon" aria-hidden="true"></span>
+            <button
+                id="toggle-fullscreen"
+                class="icon-button icon-button-edge-right"
+                type="button"
+                aria-label="切换全屏"
+                title="全屏"
+            >
+                <span class="icon icon-fullscreen" aria-hidden="true"></span>
             </button>
         </div>
     </header>
@@ -58,7 +64,14 @@
         <header>
             <h2>目录</h2>
             <div class="action">
-                <button class="close" type="button" aria-label="关闭目录" title="关闭">✖</button>
+                <button
+                    class="close icon-button icon-button-edge-right"
+                    type="button"
+                    aria-label="关闭目录"
+                    title="关闭"
+                >
+                    <span class="icon icon-close" aria-hidden="true"></span>
+                </button>
             </div>
         </header>
         <section class="main"></section>

@@ -90,13 +90,14 @@ export default class SettingTargetTree {
         return undefined;
     }
 
+    /** 创建设置目标及其子节点。 */
     private createNode(target: SettingTarget, isRoot: boolean): HTMLElement {
         const node = document.createElement("div");
         node.className = isRoot ? "node root" : "node";
         this.nodeByTarget.set(target, node);
 
         const button = document.createElement("button");
-        button.className = "title";
+        button.className = "title icon-control icon-chevron";
         button.type = "button";
         button.textContent = target.ui.displayName;
         this.targetByButton.set(button, target);

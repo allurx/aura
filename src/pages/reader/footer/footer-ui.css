@@ -17,6 +17,8 @@
  */
 
 #reader > #footer {
+    --ui-padding-left: 30px;
+    --ui-padding-right: 30px;
     display: flex;
     height: 60px;
     justify-content: center;
@@ -24,7 +26,7 @@
     -webkit-user-select: none;
     user-select: none;
     overflow: hidden;
-    padding: 0 30px;
+    padding: 0 var(--ui-padding-right) 0 var(--ui-padding-left);
     font-size: 0.9rem;
     background-color: inherit;
 
