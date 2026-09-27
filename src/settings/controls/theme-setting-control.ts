@@ -15,7 +15,6 @@
  */
 
 import type ThemeSetting from "../definitions/theme-setting";
-import type SettingTarget from "../models/setting-target";
 import EventUtil from "@/utils/event-util";
 import SettingControl from "./setting-control";
 import type SettingControlListener from "./setting-control-listener";
@@ -34,16 +33,17 @@ export default class ThemeSettingControl extends SettingControl {
         listener: SettingControlListener,
         signal: AbortSignal
     ) {
-        super(themeSetting, listener);
+        super(themeSetting, listener, signal);
 
         // 原生分组承载统一名称，替换单值控件的通用外壳。
         this.element.classList.add("theme-setting");
         const fieldset = document.createElement("fieldset");
         const legend = document.createElement("legend");
+        legend.className = "section-title";
         legend.textContent = themeSetting.title;
         this.controlContainer.className = "theme-options";
         fieldset.append(legend, this.controlContainer);
-        this.element.replaceChildren(fieldset);
+        this.element.replaceChildren(fieldset, this.resetElement);
 
         for (const [value, title] of themeSetting.options) {
             // 单选输入管理选中状态，外层 label 让整个色样都可点击。
@@ -54,12 +54,23 @@ export default class ThemeSettingControl extends SettingControl {
             input.name = "appearance-theme";
             input.value = value;
 
-            // 色样只提供视觉预览，可访问名称使用相邻文本。
+            // 缩略图呈现画布、表面与多种书封，直接继承真实主题的调色板。
             const swatch = document.createElement("span");
             swatch.className = "theme-swatch";
             swatch.dataset["theme"] = value;
             swatch.setAttribute("aria-hidden", "true");
+            const surface = document.createElement("span");
+            surface.className = "theme-preview-surface";
+            for (let index = 0; index < 3; index++) {
+                const cover = document.createElement("span");
+                cover.className = "theme-preview-cover";
+                surface.append(cover);
+            }
+            swatch.append(surface);
+
+            // 标题提供单选项名称，选中标记不依赖主题缩略图内部的颜色。
             const caption = document.createElement("span");
+            caption.className = "theme-caption";
             caption.textContent = title;
 
             // 保留输入节点的索引，后续刷新不打断原生单选组的焦点。
@@ -82,8 +93,21 @@ export default class ThemeSettingControl extends SettingControl {
     /**
      * 根据已提交主题同步选择标记，不重建正在操作的原生控件。
      */
-    public override render(target: SettingTarget, value: string | undefined): void {
-        const resolvedValue = this.themeSetting.resolveValue(target, value);
-        for (const [theme, input] of this.inputByValue) input.checked = theme === resolvedValue;
+    public override render(value: string | undefined): void {
+        const resolvedValue = this.themeSetting.resolveValue(value);
+        for (const [theme, input] of this.inputByValue) {
+            const checked = theme === resolvedValue;
+            const changed = input.checked !== checked;
+            input.checked = checked;
+
+            // 恢复和重置也显示当前主题，只滚动本行，不拉动面板中的常规设置。
+            if (checked && changed) {
+                const option = input.getBoundingClientRect();
+                const viewport = this.controlContainer.getBoundingClientRect();
+                if (option.left < viewport.left) this.controlContainer.scrollLeft += option.left - viewport.left;
+                else if (option.right > viewport.right)
+                    this.controlContainer.scrollLeft += option.right - viewport.right;
+            }
+        }
     }
 }

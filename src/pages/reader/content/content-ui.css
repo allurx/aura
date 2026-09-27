@@ -17,6 +17,7 @@
  */
 
 #reader > #content {
+    --reader-paragraph-spacing: 1.15em;
     --ui-padding-left: 72px;
     --ui-padding-right: 72px;
     flex: 1;
@@ -30,12 +31,14 @@
     overscroll-behavior-y: contain;
     font-family: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
     font-size: 19px;
+    color: var(--reader-color);
     line-height: 1.9;
-    background-color: inherit;
+    background-color: transparent;
 
     .chapter-heading {
         margin-bottom: 1.2em;
-        font-size: 1.6em;
+        font-size: 1.58em;
+        color: inherit;
         line-height: 1.45;
         font-weight: 500;
         letter-spacing: 0.04em;
@@ -47,12 +50,12 @@
             height: 4px;
             margin-bottom: 0.8em;
             border-radius: 999px;
-            background: var(--ui-color, var(--appearance-accent));
+            background: var(--appearance-accent);
             content: "";
         }
     }
     > p {
-        margin-bottom: 1.15em;
+        margin-bottom: var(--reader-paragraph-spacing);
     }
 
     @media (max-width: 600px) {
@@ -63,8 +66,9 @@
                 max(env(safe-area-inset-right), min(var(--ui-padding-right), 12.5vw));
             padding-top: 28px;
         }
+
         .chapter-heading {
-            font-size: 1.4em;
+            font-size: 1.37em;
         }
     }
 

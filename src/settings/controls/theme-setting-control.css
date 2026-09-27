@@ -1,0 +1,210 @@
+@charset "UTF-8";
+
+/*
+ * Copyright 2025 allurx
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+:is(#reader, #bookshelf) > #setting {
+    .theme-setting {
+        position: relative;
+        padding: 0 0 0.4rem;
+
+        > .reset-setting {
+            position: absolute;
+            top: 0;
+            right: 0;
+        }
+
+        fieldset {
+            min-width: 0;
+            padding: 0;
+            margin: 0;
+            border: 0;
+        }
+
+        legend {
+            max-width: calc(100% - 44px);
+        }
+    }
+
+    /* 保留原生横向滚动与整卡单选焦点，鼠标、触摸和方向键共用同一组控件。 */
+    .theme-options {
+        display: flex;
+        gap: 0.5rem;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x proximity;
+        scroll-padding-inline: 4px;
+        scrollbar-width: thin;
+        scrollbar-color: color-mix(in srgb, currentColor 24%, transparent) transparent;
+        padding: 4px 4px 0.55rem;
+        margin-inline: -4px;
+    }
+
+    .theme-option {
+        position: relative;
+        display: flex;
+        flex: 0 0 94px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.4rem;
+        min-width: 0;
+        padding: 0.5rem;
+        scroll-snap-align: start;
+        border: 1px solid color-mix(in srgb, currentColor 9%, transparent);
+        border-radius: 8px;
+        background: color-mix(in srgb, currentColor 3%, transparent);
+        cursor: pointer;
+        transition:
+            background-color 160ms ease,
+            box-shadow 160ms ease,
+            border-color 160ms ease;
+
+        input {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            opacity: 0;
+            cursor: inherit;
+        }
+
+        &:has(input:checked) {
+            border-color: color-mix(in srgb, var(--setting-accent-color) 48%, transparent);
+            background: color-mix(in srgb, var(--setting-accent-color) 10%, transparent);
+            box-shadow: 0 2px 7px color-mix(in srgb, var(--setting-accent-color) 12%, transparent);
+
+            .theme-caption::before {
+                background-color: var(--setting-accent-color);
+            }
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            &:hover {
+                background-color: color-mix(in srgb, currentColor 7%, transparent);
+                box-shadow: 0 3px 8px color-mix(in srgb, currentColor 7%, transparent);
+            }
+        }
+    }
+
+    .theme-caption {
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        min-height: 1.5em;
+        font-size: 0.8em;
+        line-height: 1.5;
+        text-align: center;
+        overflow-wrap: anywhere;
+
+        &::before {
+            content: "";
+            flex: none;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: transparent;
+        }
+    }
+
+    .theme-swatch {
+        pointer-events: none;
+        position: relative;
+        display: block;
+        flex: none;
+        height: 44px;
+        overflow: hidden;
+        border: 1px solid var(--appearance-border);
+        border-radius: 5px;
+        background: var(--appearance-canvas);
+        box-shadow: inset 0 1px var(--appearance-highlight);
+
+        &::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 12px;
+            background: var(--appearance-muted-surface);
+            border-right: 1px solid var(--appearance-border);
+        }
+
+        &::after {
+            content: "";
+            position: absolute;
+            top: 8px;
+            left: 4px;
+            width: 5px;
+            height: 3px;
+            border-radius: 1px;
+            background: var(--appearance-accent);
+            box-shadow: 0 7px 0 color-mix(in srgb, var(--appearance-accent) 30%, transparent);
+        }
+    }
+
+    .theme-preview-surface {
+        position: absolute;
+        inset: 6px 5px 5px 18px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 3px;
+        padding: 6px 4px;
+        background: var(--appearance-surface);
+        border: 1px solid var(--appearance-border);
+        border-radius: 3px;
+        box-shadow: 0 2px 4px color-mix(in srgb, var(--appearance-shadow-color) 12%, transparent);
+    }
+
+    .theme-preview-cover {
+        --preview-cover-hue: 18;
+        flex: 1;
+        height: 17px;
+        border: 1px solid color-mix(in srgb, var(--appearance-cover-ink) 12%, transparent);
+        border-radius: 2px;
+        background: hsl(var(--preview-cover-hue) var(--appearance-cover-saturation) var(--appearance-cover-lightness));
+        box-shadow:
+            inset 2px 0 color-mix(in srgb, var(--appearance-cover-ink) 8%, transparent),
+            0 2px 3px color-mix(in srgb, var(--appearance-shadow-color) 16%, transparent);
+
+        &:nth-child(2) {
+            --preview-cover-hue: 145;
+            height: 21px;
+        }
+
+        &:nth-child(3) {
+            --preview-cover-hue: 255;
+            height: 19px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .theme-option {
+            transition: none;
+        }
+    }
+
+    @media (forced-colors: active) {
+        .theme-options {
+            scrollbar-color: auto;
+        }
+
+        .theme-option:has(input:checked) .theme-caption::before {
+            background-color: Highlight;
+        }
+    }
+}

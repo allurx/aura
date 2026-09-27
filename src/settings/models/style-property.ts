@@ -15,18 +15,15 @@
  */
 
 /**
- * Appearance 支持的原生 CSS 属性，用作设置键与计算样式读取字段。
+ * 阅读常规设置使用的 CSS 属性。
  *
  * @author allurx
  */
 export enum StyleProperty {
     FONT_SIZE = "font-size",
-    COLOR = "color",
-    WIDTH = "width",
-    PADDING_TOP = "padding-top",
-    PADDING_BOTTOM = "padding-bottom",
-    PADDING_LEFT = "padding-left",
-    PADDING_RIGHT = "padding-right",
     LINE_HEIGHT = "line-height",
+    PARAGRAPH_SPACING = "--reader-paragraph-spacing",
+    WIDTH = "width",
+    COLOR = "color",
     BACKGROUND_COLOR = "background-color",
 }

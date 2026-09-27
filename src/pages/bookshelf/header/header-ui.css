@@ -17,6 +17,9 @@
  */
 
 #bookshelf #header {
+    --shelf-title-font-size: 29px;
+    --shelf-primary-font-size: 13px;
+    --shelf-secondary-font-size: 13px;
     --ui-padding-left: 40px;
     --ui-padding-right: 40px;
     display: flex;
@@ -27,8 +30,8 @@
     min-width: 0;
     flex-shrink: 0;
     padding: 2.2rem var(--ui-padding-right) 1.8rem var(--ui-padding-left);
-    background-color: inherit;
-    color: var(--bookshelf-header-color);
+    background-color: var(--appearance-canvas);
+    color: var(--appearance-color);
     font-size: 1rem;
 
     .shelf-heading,
@@ -43,7 +46,8 @@
         gap: 12px;
     }
     #category-title {
-        font-size: 1.8em;
+        color: var(--appearance-color);
+        font-size: var(--shelf-title-font-size);
         font-weight: 600;
         line-height: 1.35;
         letter-spacing: -0.035em;
@@ -53,7 +57,7 @@
         padding: 0.3rem 0.6rem;
         border-radius: 0.65rem;
         background: var(--appearance-tint);
-        color: var(--ui-color, var(--appearance-accent));
+        color: var(--appearance-accent);
         font-size: 0.76em;
         white-space: nowrap;
     }
@@ -72,6 +76,7 @@
         gap: 8px;
         border: 1px solid var(--appearance-border);
         border-radius: 0.95rem;
+        color: var(--appearance-color);
         background: var(--appearance-panel);
         box-shadow:
             0 3px 9px -7px var(--appearance-shadow-color),
@@ -91,7 +96,7 @@
         border: 0;
         background: transparent;
         color: inherit;
-        font-size: max(12px, 0.82em);
+        font-size: 16px;
         line-height: 1.4;
         outline: none;
         padding-inline: 0.1rem;
@@ -113,7 +118,6 @@
         border-radius: 0.95rem;
         padding: 0 12px;
         white-space: nowrap;
-        font-size: max(12px, 0.82em);
         line-height: 1.4;
         transition:
             background-color 140ms ease,
@@ -121,8 +125,9 @@
             box-shadow 140ms ease;
     }
     .appearance-button {
-        color: inherit;
+        color: var(--appearance-color);
         background: var(--appearance-panel);
+        font-size: var(--shelf-secondary-font-size);
         border-color: var(--appearance-border);
         box-shadow: 0 3px 9px -7px var(--appearance-shadow-color);
     }
@@ -131,10 +136,11 @@
         --icon-size: 18px;
     }
     #import-books {
-        background: var(--bookshelf-accent-color);
-        color: var(--ui-color, var(--bookshelf-accent-contrast-color, #fff));
+        background: var(--appearance-accent);
+        color: var(--appearance-on-accent);
+        font-size: var(--shelf-primary-font-size);
         box-shadow:
-            0 5px 12px -6px color-mix(in srgb, var(--bookshelf-accent-color) 65%, transparent),
+            0 5px 12px -6px color-mix(in srgb, var(--appearance-accent) 65%, transparent),
             inset 0 1px 0 var(--appearance-highlight);
     }
     #open-navigation {
@@ -143,11 +149,11 @@
     }
     @media (hover: hover) and (pointer: fine) {
         .appearance-button:hover {
-            background: var(--appearance-tint);
+            background: color-mix(in srgb, var(--appearance-panel) 92%, var(--appearance-color));
             transform: translateY(-2px);
         }
         #import-books:hover {
-            background: color-mix(in srgb, var(--bookshelf-accent-color) 92%, #000);
+            background: color-mix(in srgb, var(--appearance-accent) 92%, #000);
             transform: translateY(-2px);
         }
     }
@@ -155,6 +161,11 @@
     #import-books:active {
         transform: translateY(1px);
         box-shadow: none;
+    }
+    @media (max-width: 1024px) {
+        --shelf-title-font-size: 25px;
+        --shelf-primary-font-size: 12px;
+        --shelf-secondary-font-size: 12px;
     }
     @media (max-width: 1050px) and (min-width: 769px) {
         .shelf-tools {
@@ -165,6 +176,7 @@
         }
     }
     @media (max-width: 768px) {
+        --shelf-title-font-size: 20px;
         --ui-padding-left: 18px;
         --ui-padding-right: 18px;
         display: grid;
@@ -183,7 +195,6 @@
             -webkit-box-orient: vertical;
             -webkit-line-clamp: 2;
             overflow: hidden;
-            font-size: 1.4em;
         }
         #book-count {
             display: none;
@@ -224,11 +235,6 @@
             }
         }
     }
-    @media (max-width: 768px), (any-pointer: coarse) {
-        #book-search {
-            font-size: max(16px, 0.9em);
-        }
-    }
     @media (prefers-reduced-motion: reduce) {
         .appearance-button,
         .appearance-button:hover,
@@ -239,29 +245,6 @@
         .book-search-field {
             transition: none;
             transform: none;
-        }
-    }
-}
-
-/* 显式背景下，辅助控件沿用区域配色，避免主题浅色底覆盖用户的深色外观。 */
-#bookshelf[style*="background-color"] #header,
-#bookshelf #header[style*="background-color"] {
-    --focus-ring-color: currentColor;
-
-    .book-search-field,
-    .appearance-button,
-    #book-count {
-        background-color: color-mix(in srgb, currentColor 5%, transparent);
-        border-color: color-mix(in srgb, currentColor 20%, transparent);
-    }
-
-    #book-count {
-        color: inherit;
-    }
-
-    @media (hover: hover) and (pointer: fine) {
-        .appearance-button:hover {
-            background-color: color-mix(in srgb, currentColor 10%, transparent);
         }
     }
 }

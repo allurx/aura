@@ -17,8 +17,7 @@
 import ColorSettingControl from "../controls/color-setting-control";
 import type SettingControl from "../controls/setting-control";
 import type SettingControlListener from "../controls/setting-control-listener";
-import { StyleProperty } from "../models/style-property";
-import type SettingTarget from "../models/setting-target";
+import type { StyleProperty } from "../models/style-property";
 import StyleSetting from "./style-setting";
 
 /**
@@ -27,22 +26,12 @@ import StyleSetting from "./style-setting";
  * @author allurx
  */
 export default class ColorStyleSetting extends StyleSetting {
-    public constructor(property: StyleProperty, title: string, displayOrder: number) {
-        super(property, title, displayOrder);
+    public constructor(element: HTMLElement, property: StyleProperty, title: string, displayOrder: number) {
+        super(element, property, title, displayOrder);
     }
 
     public override accepts(value: unknown): value is string {
         return typeof value === "string" && /^#[\da-f]{6}$/i.test(value);
-    }
-
-    /**
-     * 显式文字颜色同时提供给局部配色元素；未设置时让它们使用各自的基础配色。
-     */
-    public override apply(target: SettingTarget, value: string | undefined): void {
-        super.apply(target, value);
-        if (this.property !== StyleProperty.COLOR) return;
-        if (value === undefined) target.ui.root.style.removeProperty("--ui-color");
-        else target.ui.root.style.setProperty("--ui-color", value);
     }
 
     public override createControl(listener: SettingControlListener, signal: AbortSignal): SettingControl {

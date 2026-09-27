@@ -14,43 +14,20 @@
  * limitations under the License.
  */
 
-import type { UiId } from "./ui-id";
-import { assertExists, assertNonEmptyString } from "@/utils/assert-util";
+import { assertExists } from "@/utils/assert-util";
 
 /**
- * 界面基类
+ * 接管已有节点或可信模板的通用界面组件。
  * @author allurx
  */
-export default abstract class Ui {
+export default class Ui {
     public readonly root: HTMLElement;
-    public readonly id: UiId;
-    public readonly displayName: string;
-    public readonly children: Ui[] = [];
 
     /**
-     * 接管已有节点或挂载可信模板，并以非空 DOM id 标识设置目标。
+     * 接管已有节点或挂载应用提供的可信模板。
      */
-    public constructor({
-        root,
-        displayName,
-    }: {
-        root: HTMLElement | { container: HTMLElement; template: string };
-        displayName: string;
-    }) {
+    public constructor({ root }: { root: HTMLElement | { container: HTMLElement; template: string } }) {
         this.root = root instanceof HTMLElement ? root : this.renderTemplate(root);
-        this.id = assertNonEmptyString(
-            this.root.id,
-            `${this.constructor.name} Ui must have a non-empty id attribute`
-        ) as UiId;
-        this.displayName = displayName;
-    }
-
-    /**
-     * 是否有子组件
-     * @return 是否有子组件
-     */
-    public hasChildren(): boolean {
-        return this.children.length > 0;
     }
 
     /**

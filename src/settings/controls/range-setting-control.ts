@@ -15,7 +15,6 @@
  */
 
 import type RangeStyleSetting from "../definitions/range-style-setting";
-import type SettingTarget from "../models/setting-target";
 import EventUtil from "@/utils/event-util";
 import SettingControl from "./setting-control";
 import type SettingControlListener from "./setting-control-listener";
@@ -23,7 +22,7 @@ import type SettingControlListener from "./setting-control-listener";
 /**
  * 有限数值范围的滑块控件。
  *
- * input 仅预览，change 才提交；目标变化时同步范围和数值，复用原生滑块节点。
+ * input 仅预览，change 才提交；刷新范围和数值时复用原生滑块节点。
  *
  * @author allurx
  */
@@ -35,7 +34,7 @@ export default class RangeSettingControl extends SettingControl {
         listener: SettingControlListener,
         signal: AbortSignal
     ) {
-        super(rangeSetting, listener);
+        super(rangeSetting, listener, signal);
 
         // 原生滑块只保存数值，CSS 单位在发送交互时补回。
         this.inputElement.className = "control";
@@ -63,15 +62,18 @@ export default class RangeSettingControl extends SettingControl {
         );
     }
 
-    public override render(target: SettingTarget, value: string | undefined): void {
-        const [minimum, maximum] = this.rangeSetting.range(target);
-        const resolvedValue = this.rangeSetting.resolveValue(target, value);
+    public override render(value: string | undefined): void {
+        const [minimum, maximum] = this.rangeSetting.range();
+        const resolvedValue = this.rangeSetting.resolveValue(value);
 
         this.inputElement.min = String(minimum);
         this.inputElement.max = String(maximum);
         this.inputElement.value = this.withoutUnit(resolvedValue);
 
-        this.displayElement.textContent = this.rangeSetting.unit ? resolvedValue : `${resolvedValue} 倍`;
+        this.displayElement.textContent =
+            this.rangeSetting.unit === "em" || this.rangeSetting.unit === ""
+                ? `${this.withoutUnit(resolvedValue)} 倍`
+                : resolvedValue;
     }
 
     private withUnit(value: string): string {

@@ -15,25 +15,24 @@
  */
 
 import { StyleProperty } from "../models/style-property";
-import type SettingTarget from "../models/setting-target";
 import RangeStyleSetting from "./range-style-setting";
 
 /**
- * 正文行距保存为字号倍数，调整字号后仍保持相同的段落节奏。
+ * 正文行距保存为字号倍数，调整字号后保持相同的段落节奏。
  *
  * @author allurx
  */
 export default class LineHeightSetting extends RangeStyleSetting {
-    public constructor(displayOrder: number) {
-        super(StyleProperty.LINE_HEIGHT, "行距", [1.5, 2.2], 0.05, "", displayOrder);
+    public constructor(element: HTMLElement, displayOrder: number) {
+        super(element, StyleProperty.LINE_HEIGHT, "行距", [1.5, 2.2], 0.05, "", displayOrder);
     }
 
     /**
      * CSS 计算样式给出像素值，控件使用相对当前字号的倍数。
      */
-    public override resolveValue(target: SettingTarget, value: string | undefined): string {
+    public override resolveValue(value: string | undefined): string {
         if (value !== undefined) return value;
-        const style = window.getComputedStyle(target.ui.root);
-        return this.normalizeValue(Number.parseFloat(style.lineHeight) / Number.parseFloat(style.fontSize), target);
+        const style = window.getComputedStyle(this.element);
+        return this.normalizeValue(Number.parseFloat(style.lineHeight) / Number.parseFloat(style.fontSize));
     }
 }

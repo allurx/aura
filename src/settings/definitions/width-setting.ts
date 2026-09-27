@@ -17,13 +17,10 @@
 import type SettingControl from "../controls/setting-control";
 import type SettingControlListener from "../controls/setting-control-listener";
 import { StyleProperty } from "../models/style-property";
-import type SettingTarget from "../models/setting-target";
 import RangeStyleSetting from "./range-style-setting";
 
 /**
- * Reader 的用户首选宽度。
- *
- * 响应式 effective width 由 CSS 决定；这里只读取和保存 inline preferred width。
+ * 阅读器的首选宽度；响应式实际宽度由 CSS 约束，不反写用户首选值。
  *
  * @author allurx
  */
@@ -33,8 +30,9 @@ export default class WidthSetting extends RangeStyleSetting {
     public static readonly DEFAULT_WIDTH_PX = 800;
     public override readonly tracksExternalChanges = true;
 
-    public constructor(displayOrder: number) {
+    public constructor(element: HTMLElement, displayOrder: number) {
         super(
+            element,
             StyleProperty.WIDTH,
             "阅读宽度",
             [WidthSetting.MIN_WIDTH_PX, WidthSetting.MAX_WIDTH_PX],
@@ -50,18 +48,18 @@ export default class WidthSetting extends RangeStyleSetting {
         return control;
     }
 
-    public override resolveValue(target: SettingTarget, value: string | undefined): string {
-        return value ?? this.readExternalValue(target) ?? `${String(WidthSetting.DEFAULT_WIDTH_PX)}px`;
+    public override resolveValue(value: string | undefined): string {
+        return value ?? this.readExternalValue() ?? `${String(WidthSetting.DEFAULT_WIDTH_PX)}px`;
     }
 
     /**
-     * 将原生 resize 写入的像素宽度限制到首选值范围，CSS 限制只约束实际布局宽度。
+     * 只读取原生 resize 写入的 inline 像素宽度，不读取响应式实际尺寸。
      */
-    public override readExternalValue(target: SettingTarget): string | undefined {
-        const value = target.ui.root.style.width;
+    public override readExternalValue(): string | undefined {
+        const value = this.element.style.width;
         if (!value.endsWith(this.unit)) return value || undefined;
         const widthPx = Number(value.slice(0, -this.unit.length));
         if (!Number.isFinite(widthPx)) return value;
-        return this.normalizeValue(widthPx, target);
+        return this.normalizeValue(widthPx);
     }
 }

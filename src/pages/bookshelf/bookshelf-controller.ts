@@ -24,7 +24,6 @@ import { bookshelfSession } from "./bookshelf-state";
 import EventUtil from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
 import SettingCatalog from "@/settings/definitions/setting-catalog";
-import SettingTarget from "@/settings/models/setting-target";
 import SettingController from "@/settings/setting-controller";
 import { PageName } from "@/constants/page-name";
 import OperationError from "@/errors/operation-error";
@@ -48,7 +47,7 @@ export default class BookshelfController {
     private busy = false;
 
     /**
-     * 组装书架各区域 UI，并声明它们独立可调的外观能力。
+     * 组装书架 UI、页面主题与书籍操作。
      * @param onReadBook - 将选定书籍 ID 交给页面外部的阅读路由
      */
     public constructor(
@@ -58,49 +57,22 @@ export default class BookshelfController {
         // 按页面区域创建 UI，书籍内容区独立滚动并保存浏览位置。
         this.headerUi = new HeaderUi({
             root: assertExists(bookshelfRoot.querySelector<HTMLElement>("#header")),
-            displayName: "工具栏",
         });
         this.navUi = new NavUi({
             root: assertExists(bookshelfRoot.querySelector<HTMLElement>("#nav")),
-            displayName: "导航",
         });
         this.bookListUi = new BookListUi({
             root: assertExists(bookshelfRoot.querySelector<HTMLElement>("#book-list")),
-            displayName: "书籍列表",
         });
         this.bookshelfUi = new BookshelfUi({
             root: bookshelfRoot,
-            displayName: "书架",
         });
 
-        // 外观按区域声明能力，页面主题与各区域显式设置保持独立。
+        // 书架只提供页面主题，阅读排版由阅读器独立设置。
         this.settingController = new SettingController({
             pageName: PageName.BOOKSHELF,
             container: this.bookshelfUi.root,
-            targets: [
-                new SettingTarget(this.bookshelfUi, [SettingCatalog.THEME, SettingCatalog.BACKGROUND_COLOR]),
-                new SettingTarget(this.headerUi, [
-                    SettingCatalog.FONT_SIZE,
-                    SettingCatalog.COLOR,
-                    SettingCatalog.BACKGROUND_COLOR,
-                    SettingCatalog.PADDING_LEFT,
-                    SettingCatalog.PADDING_RIGHT,
-                ]),
-                new SettingTarget(this.navUi, [
-                    SettingCatalog.FONT_SIZE,
-                    SettingCatalog.COLOR,
-                    SettingCatalog.BACKGROUND_COLOR,
-                ]),
-                new SettingTarget(this.bookListUi, [
-                    SettingCatalog.FONT_SIZE,
-                    SettingCatalog.COLOR,
-                    SettingCatalog.BACKGROUND_COLOR,
-                    SettingCatalog.PADDING_TOP,
-                    SettingCatalog.PADDING_LEFT,
-                    SettingCatalog.PADDING_BOTTOM,
-                    SettingCatalog.PADDING_RIGHT,
-                ]),
-            ],
+            settings: [SettingCatalog.THEME],
         });
 
         this.bookshelfService = new BookshelfService();

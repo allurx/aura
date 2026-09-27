@@ -23,12 +23,17 @@ import type Setting from "../definitions/setting";
  */
 export default interface SettingControlListener {
     /**
-     * 将连续输入交给当前目标预览，直到确认或取消。
+     * 连续输入只预览，直到确认或取消。
      */
     preview(setting: Setting, value: string): void;
 
     /**
-     * 确认控件值；有预览时沿用预览目标，避免切换区域后误写其他 UI。
+     * 确认控件值并保存到当前页面。
      */
     commit(setting: Setting, value: string): void;
+
+    /**
+     * 移除当前项的显式覆盖，恢复页面默认值。
+     */
+    resetSetting(setting: Setting): void;
 }

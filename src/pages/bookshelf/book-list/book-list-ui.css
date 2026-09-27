@@ -17,35 +17,37 @@
  */
 
 #bookshelf #book-list {
+    --book-cover-width: 136px;
+    --book-title-font-size: 21px;
+    --book-column-gap: 20px;
+    --book-row-gap: 24px;
     --ui-padding-top: 10px;
     --ui-padding-right: 40px;
     --ui-padding-bottom: 40px;
     --ui-padding-left: 40px;
-    --book-width: max(8.5rem, 7.5em);
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--book-width)), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--book-cover-width)), 1fr));
     align-content: start;
-    gap: 1.5rem 1.25rem;
+    gap: var(--book-row-gap) var(--book-column-gap);
     flex: 1;
     min-width: 0;
     min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
     padding: var(--ui-padding-top) var(--ui-padding-right) var(--ui-padding-bottom) var(--ui-padding-left);
-    background-color: inherit;
-    color: var(--bookshelf-book-list-color);
+    background-color: var(--appearance-canvas);
+    color: var(--appearance-color);
     font-size: 1rem;
 
     .book {
         --book-cover: hsl(var(--book-cover-hue) var(--appearance-cover-saturation) var(--appearance-cover-lightness));
         --book-cover-ink: var(--appearance-cover-ink);
-        --book-title-size: 1.3;
         --book-title-lines: 4;
         --book-cover-padding-block: 1rem;
         min-width: 0;
         width: 100%;
         /* 换列只重新分配留白，书卡保持目标宽度，不随剩余空间拉伸。 */
-        max-width: var(--book-width);
+        max-width: var(--book-cover-width);
     }
     .book-open {
         position: relative;
@@ -57,14 +59,14 @@
         aspect-ratio: 4 / 5;
         /* 窄书封和大字号仍为完整标题行留足空间。 */
         min-height: calc(
-            var(--book-title-lines) * 1.45 * var(--book-title-size) * 1em + 2 * var(--book-cover-padding-block)
+            var(--book-title-lines) * 1.45 * var(--book-title-font-size) + 2 * var(--book-cover-padding-block)
         );
         padding: var(--book-cover-padding-block) 1.2rem;
         border: 1px solid color-mix(in srgb, var(--book-cover-ink) 10%, transparent);
         border-radius: 5px 12px 12px 5px;
         background-color: var(--book-cover);
         background-image: linear-gradient(120deg, rgb(255 255 255 / 18%), transparent 55%);
-        color: var(--ui-color, var(--book-cover-ink));
+        color: var(--appearance-cover-ink);
         text-align: center;
         box-shadow:
             0 16px 20px -14px color-mix(in srgb, var(--book-cover) 65%, var(--appearance-shadow-color)),
@@ -111,7 +113,7 @@
         -webkit-line-clamp: var(--book-title-lines);
         overflow: hidden;
         font-family: "Noto Serif SC", "Songti SC", "SimSun", Georgia, serif;
-        font-size: calc(var(--book-title-size) * 1em);
+        font-size: var(--book-title-font-size);
         line-height: 1.45;
         letter-spacing: 0.035em;
         text-wrap: balance;
@@ -120,9 +122,9 @@
     }
     .book-progress {
         margin-top: 0.65rem;
-        font-size: max(12px, 0.72em);
+        font-size: 12px;
         line-height: 1.6;
-        color: var(--ui-color, var(--appearance-muted-color));
+        color: var(--appearance-muted-color);
         overflow-wrap: anywhere;
     }
     .book-tools {
@@ -141,30 +143,24 @@
         padding: 0.3rem 0.2rem 0.3rem 0;
         border: 0;
         border-radius: 0.65rem;
-        background: transparent;
-        color: inherit;
-        font-size: max(12px, 0.76em);
+        background: var(--appearance-canvas);
+        color: var(--appearance-color);
+        font-size: 16px;
         cursor: pointer;
-        opacity: 0.85;
     }
     .book-category option {
-        background: var(--bookshelf-background-color);
-        color: var(--ui-color, var(--bookshelf-book-list-color));
+        background: var(--appearance-canvas);
+        color: var(--appearance-color);
     }
     /* 原生 picker 限高滚动；不支持定制选择器的浏览器保留系统菜单。 */
     @supports (appearance: base-select) and selector(::picker(select)) {
-        /* 将列表的实际底色传给浮层，显式外观设置也能沿用。 */
-        .book,
-        .book-tools {
-            background-color: inherit;
-        }
         .book-category {
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
             padding-inline: 0.25rem;
             margin-left: -0.25rem;
-            background-color: inherit;
+            background-color: var(--appearance-canvas);
             white-space: nowrap;
             opacity: 1;
 
@@ -204,8 +200,8 @@
                 padding: 0.35rem;
                 border: 1px solid var(--appearance-border);
                 border-radius: 0.85rem;
-                background-color: inherit;
-                color: inherit;
+                background-color: var(--appearance-canvas);
+                color: var(--appearance-color);
                 box-shadow: var(--appearance-shadow-raised);
                 font-size: max(14px, 1em);
                 line-height: 1.4;
@@ -226,7 +222,7 @@
             option::checkmark {
                 order: 1;
                 margin-left: auto;
-                color: var(--ui-color, var(--appearance-accent));
+                color: var(--appearance-color);
                 font-size: 0.9em;
             }
             option:checked {
@@ -275,7 +271,7 @@
     .shelf-empty > .icon {
         --icon-size: 3rem;
         margin: 0 auto 1.5rem;
-        color: var(--ui-color, var(--appearance-accent-secondary));
+        color: var(--appearance-accent-secondary);
         transform: rotate(-7deg);
     }
     .shelf-empty h2 {
@@ -286,7 +282,7 @@
     .shelf-empty p {
         font-size: 0.88em;
         line-height: 1.7;
-        color: var(--ui-color, var(--appearance-muted-color));
+        color: var(--appearance-muted-color);
     }
     @media (hover: hover) and (pointer: fine) {
         .book-open:hover {
@@ -319,22 +315,25 @@
     .book-open:active {
         transform: translateY(1px);
     }
+    @media (max-width: 1024px) {
+        --book-cover-width: 119px;
+        --book-title-font-size: 18px;
+        --book-column-gap: 18px;
+        --book-row-gap: 21px;
+    }
     @media (max-width: 768px) {
         --ui-padding-left: 18px;
         --ui-padding-right: 18px;
-        --book-width: max(104px, 7.5em);
-        gap: 1.25rem 0.85rem;
+        --book-cover-width: 105px;
+        --book-column-gap: 12px;
+        --book-row-gap: 18px;
         .book-open {
             padding-inline: 1.05rem;
-        }
-        .book-progress {
-            font-size: max(12px, 0.78em);
         }
     }
     @media (max-width: 768px), (any-pointer: coarse) {
         .book-category {
             flex: 1;
-            font-size: max(16px, 0.84em);
         }
     }
     @media (prefers-reduced-motion: reduce) {

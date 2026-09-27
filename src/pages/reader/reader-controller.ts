@@ -25,7 +25,6 @@ import FooterUi from "./footer/footer-ui";
 import TocUi from "./toc/toc-ui";
 import type ReaderState from "./reader-state";
 import SettingCatalog from "@/settings/definitions/setting-catalog";
-import SettingTarget from "@/settings/models/setting-target";
 import SettingController from "@/settings/setting-controller";
 import { SwitchChapterDirection } from "./switch-chapter-direction";
 import { assertExists } from "@/utils/assert-util";
@@ -66,74 +65,31 @@ export default class ReaderController {
 
         this.appUi = new AppUi({
             root: appRoot,
-            displayName: "应用",
         });
         this.readerUi = new ReaderUi({
             root: readerRoot,
-            displayName: "阅读器",
         });
 
-        // 将模板分区绑定为独立 UI，后续按区域恢复和调整外观。
+        // 绑定模板中的阅读内容、信息栏与章节目录。
         this.headerUi = new HeaderUi({
             root: assertExists(readerRoot.querySelector<HTMLElement>("#header")),
-            displayName: "页眉",
         });
         this.contentUi = new ContentUi({
             root: assertExists(readerRoot.querySelector<HTMLElement>("#content")),
-            displayName: "正文",
         });
         this.footerUi = new FooterUi({
             root: assertExists(readerRoot.querySelector<HTMLElement>("#footer")),
-            displayName: "页脚",
         });
         this.tocUi = new TocUi({
             root: assertExists(readerRoot.querySelector<HTMLElement>("#toc")),
-            displayName: "目录",
         });
 
-        // 设置目录只声明本页允许修改的属性，应用配色与领域存储保持分离。
+        // 主题与常规阅读设置独立于书籍和进度保存。
         this.settingController = new SettingController({
             pageName: PageName.READER,
             container: this.readerUi.root,
             inertElements: [this.readerUi.actions],
-            targets: [
-                new SettingTarget(this.appUi, [SettingCatalog.BACKGROUND_COLOR, SettingCatalog.THEME]),
-                new SettingTarget(this.readerUi, [
-                    SettingCatalog.COLOR,
-                    SettingCatalog.WIDTH,
-                    SettingCatalog.BACKGROUND_COLOR,
-                ]),
-                new SettingTarget(this.headerUi, [
-                    SettingCatalog.COLOR,
-                    SettingCatalog.PADDING_TOP,
-                    SettingCatalog.PADDING_LEFT,
-                    SettingCatalog.PADDING_BOTTOM,
-                    SettingCatalog.PADDING_RIGHT,
-                    SettingCatalog.BACKGROUND_COLOR,
-                ]),
-                new SettingTarget(this.contentUi, [
-                    SettingCatalog.FONT_SIZE,
-                    SettingCatalog.COLOR,
-                    SettingCatalog.PADDING_LEFT,
-                    SettingCatalog.PADDING_RIGHT,
-                    SettingCatalog.BACKGROUND_COLOR,
-                    SettingCatalog.LINE_HEIGHT,
-                ]),
-                new SettingTarget(this.footerUi, [
-                    SettingCatalog.FONT_SIZE,
-                    SettingCatalog.COLOR,
-                    SettingCatalog.PADDING_TOP,
-                    SettingCatalog.PADDING_BOTTOM,
-                    SettingCatalog.PADDING_LEFT,
-                    SettingCatalog.PADDING_RIGHT,
-                    SettingCatalog.BACKGROUND_COLOR,
-                ]),
-                new SettingTarget(this.tocUi, [
-                    SettingCatalog.FONT_SIZE,
-                    SettingCatalog.COLOR,
-                    SettingCatalog.BACKGROUND_COLOR,
-                ]),
-            ],
+            settings: SettingCatalog.reader(this.readerUi.root, this.contentUi.root),
         });
     }
 

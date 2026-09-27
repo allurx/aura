@@ -22,11 +22,9 @@ html[data-page="reader"] #app {
     grid-template-rows: minmax(0, 1fr);
     background-color: var(--reader-backdrop);
 
-    &:not([style*="background-color"]) {
-        background-image:
-            radial-gradient(ellipse at 4% 8%, var(--appearance-tint), transparent 48%),
-            radial-gradient(ellipse at 96% 88%, var(--appearance-glow), transparent 48%);
-    }
+    background-image:
+        radial-gradient(ellipse at 4% 8%, var(--appearance-tint), transparent 48%),
+        radial-gradient(ellipse at 96% 88%, var(--appearance-glow), transparent 48%);
 
     &:has(> #reader[data-mobile-controls]) {
         display: flow-root;

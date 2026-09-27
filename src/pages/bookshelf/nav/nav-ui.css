@@ -17,6 +17,7 @@
  */
 
 #bookshelf #nav {
+    --nav-category-font-size: 14px;
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -27,8 +28,8 @@
     padding: 1.5rem 0 1rem;
     border: 1px solid var(--appearance-border);
     border-radius: 1.35rem;
-    background: var(--bookshelf-nav-background-color);
-    color: var(--bookshelf-nav-color);
+    background: var(--appearance-panel);
+    color: var(--appearance-color);
     box-shadow:
         var(--appearance-shadow-soft),
         inset 0 1px 0 var(--appearance-highlight);
@@ -43,7 +44,7 @@
     }
     .brand > .icon {
         --icon-size: 24px;
-        color: var(--ui-color, var(--appearance-accent));
+        color: var(--appearance-accent);
         transform: rotate(-8deg);
     }
     .brand-name {
@@ -79,6 +80,8 @@
     }
     #category-navigation button {
         margin-bottom: 0.3rem;
+        color: var(--appearance-color);
+        font-size: var(--nav-category-font-size);
     }
     #category-navigation button:first-child {
         margin-bottom: 0.8rem;
@@ -93,12 +96,12 @@
         margin-inline: 7px;
         border-radius: 50%;
         background: currentColor;
-        color: var(--ui-color, var(--appearance-accent-secondary));
+        color: var(--appearance-accent-secondary);
         opacity: 0.75;
     }
-    button.active {
-        background: var(--bookshelf-nav-active-background-color);
-        color: var(--ui-color, var(--bookshelf-nav-active-color));
+    #category-navigation button.active {
+        background: var(--appearance-selection);
+        color: var(--appearance-accent);
         font-weight: 600;
         box-shadow:
             0 4px 10px -7px var(--appearance-shadow-color),
@@ -138,14 +141,15 @@
             background: color-mix(in srgb, currentColor 5%, transparent);
             transform: translateX(2px);
         }
-        button.active:hover {
-            background: var(--bookshelf-nav-active-background-color);
+        #category-navigation button.active:hover {
+            background: var(--appearance-selection);
         }
     }
     button:active {
         transform: translateY(1px);
     }
     @media (max-width: 768px) {
+        --nav-category-font-size: 13px;
         font-size: 13px;
         padding-top: 1.25rem;
         .brand {

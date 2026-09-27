@@ -17,11 +17,9 @@
 import type Setting from "../definitions/setting";
 import type PageAppearance from "../models/page-appearance";
 import type SettingConfiguration from "../models/setting-configuration";
-import type SettingInteraction from "../models/setting-interaction";
-import type SettingTarget from "../models/setting-target";
 
 /**
- * 将 Appearance 快照或单次交互投影到 DOM。
+ * 将页面外观快照应用到 DOM。
  *
  * @author allurx
  */
@@ -29,26 +27,17 @@ export default class AppearanceApplier {
     public constructor(private readonly configuration: SettingConfiguration) {}
 
     /**
-     * 应用完整页面快照，并同步文档的页面标识。
+     * 同步页面标识并应用完整快照。
      */
     public apply(appearance: PageAppearance): void {
         document.documentElement.dataset["page"] = this.configuration.pageName;
-        for (const target of this.configuration.targets) {
-            for (const setting of target.settings) this.restore(appearance, target, setting);
-        }
+        for (const setting of this.configuration.settings) this.restore(appearance, setting);
     }
 
     /**
-     * 应用一次预览或已提交交互。
+     * 恢复单个设置的已提交值。
      */
-    public applyInteraction(interaction: SettingInteraction): void {
-        interaction.setting.apply(interaction.target, interaction.value);
-    }
-
-    /**
-     * 将单个设置恢复为快照中的已提交值。
-     */
-    public restore(appearance: PageAppearance, target: SettingTarget, setting: Setting): void {
-        setting.apply(target, setting.read(appearance, target));
+    public restore(appearance: PageAppearance, setting: Setting): void {
+        setting.apply(setting.read(appearance));
     }
 }

@@ -15,27 +15,25 @@
  */
 
 import type Setting from "../definitions/setting";
-import type SettingInteraction from "../models/setting-interaction";
-import type SettingTarget from "../models/setting-target";
 
 /**
- * 面板外部 Appearance 变化与已提交状态所有者之间的契约。
+ * 面板外部变化与已提交状态之间的契约。
  *
  * @author allurx
  */
 export default interface ExternalSettingListener {
     /**
-     * @returns 已提交的显式值，用于排除重复保存
+     * @returns 已提交的显式值，用于排除重复保存。
      */
-    getValue(target: SettingTarget, setting: Setting): string | undefined;
+    getValue(setting: Setting): string | undefined;
 
     /**
-     * @returns 当前目标是否正在预览该设置；预览值不得当作外部变化提交
+     * @returns 该设置是否正在预览；预览值不得作为外部变化提交。
      */
-    isPreviewing(target: SettingTarget, setting: Setting): boolean;
+    isPreviewing(setting: Setting): boolean;
 
     /**
-     * 保存经校验的外部变化，并同步正在显示的设置控件。
+     * 保存外部变化，并同步正在显示的设置控件。
      */
-    commitExternalChange(interaction: SettingInteraction): void;
+    commitExternalChange(setting: Setting, value: string): void;
 }

@@ -86,7 +86,7 @@
         border: 1px solid var(--appearance-border);
         border-radius: 12px;
         background: var(--reader-surface);
-        color: var(--ui-color, var(--reader-color));
+        color: var(--reader-color);
         font: inherit;
         box-shadow: var(--appearance-shadow-raised);
         clip-path: none;

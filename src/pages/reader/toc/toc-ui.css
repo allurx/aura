@@ -32,8 +32,8 @@
     padding: 0;
     border: 1px solid var(--appearance-highlight);
     border-radius: 1.5rem;
-    color: inherit;
-    background-color: inherit;
+    color: var(--appearance-color);
+    background-color: var(--appearance-panel);
     font-size: 1rem;
     line-height: 1.5;
     overflow: hidden;
@@ -114,10 +114,10 @@
         min-width: 0;
         min-height: 44px;
         padding: 0.75rem;
-        border: 1px solid color-mix(in srgb, var(--ui-color, var(--appearance-accent)) 15%, transparent);
+        border: 1px solid color-mix(in srgb, var(--appearance-accent) 15%, transparent);
         border-radius: 0.9rem;
         background: var(--appearance-tint);
-        color: var(--ui-color, var(--appearance-accent));
+        color: var(--appearance-accent);
         font: inherit;
         text-align: left;
         overflow-wrap: anywhere;
@@ -171,7 +171,7 @@
             }
             &.active {
                 font-weight: 600;
-                color: var(--ui-color, var(--appearance-accent));
+                color: var(--appearance-accent);
                 border-color: color-mix(in srgb, currentColor 24%, transparent);
                 background: var(--appearance-tint);
 
@@ -208,24 +208,8 @@
     }
 }
 
-#reader:not([style*="background-color"]) > #toc:not([style*="background-color"]) > header {
+#reader > #toc > header {
     background-image: linear-gradient(115deg, var(--appearance-tint), var(--appearance-glow));
-}
-
-#reader[style*="background-color"] > #toc,
-#reader > #toc[style*="background-color"] {
-    --focus-ring-color: currentColor;
-
-    > header .close,
-    .locate-current {
-        background-color: color-mix(in srgb, currentColor 5%, transparent);
-        color: inherit;
-    }
-
-    > .main > button.active {
-        background-color: color-mix(in srgb, currentColor 10%, transparent);
-        color: inherit;
-    }
 }
 
 #reader[data-mobile-controls] > #toc {

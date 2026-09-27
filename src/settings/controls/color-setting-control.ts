@@ -15,7 +15,6 @@
  */
 
 import type ColorStyleSetting from "../definitions/color-style-setting";
-import type SettingTarget from "../models/setting-target";
 import EventUtil from "@/utils/event-util";
 import SettingControl from "./setting-control";
 import type SettingControlListener from "./setting-control-listener";
@@ -29,7 +28,7 @@ export default class ColorSettingControl extends SettingControl {
     private readonly inputElement = document.createElement("input");
 
     public constructor(setting: ColorStyleSetting, listener: SettingControlListener, signal: AbortSignal) {
-        super(setting, listener);
+        super(setting, listener, signal);
 
         // 挂载原生颜色输入并复用基类的可访问标签。
         this.inputElement.className = "control";
@@ -56,8 +55,8 @@ export default class ColorSettingControl extends SettingControl {
         );
     }
 
-    public override render(target: SettingTarget, value: string | undefined): void {
-        const resolvedValue = this.toHex(this.setting.resolveValue(target, value));
+    public override render(value: string | undefined): void {
+        const resolvedValue = this.toHex(this.setting.resolveValue(value));
         this.inputElement.value = resolvedValue;
         this.displayElement.textContent = resolvedValue;
     }

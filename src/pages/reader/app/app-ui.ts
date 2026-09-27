@@ -45,12 +45,11 @@ export default class AppUi extends Ui {
     private readonly activePointers = new Set<number>();
 
     /**
-     * 清理 Reader 写入持久应用根节点的临时状态。
+     * 清理阅读手势状态并退出当前阅读画布的全屏。
      */
     public cleanup(): void {
         this.pointer = undefined;
         this.activePointers.clear();
-        this.root.style.removeProperty("background-color");
         if (FullscreenUtil.getElement() === this.root) EventUtil.run(() => FullscreenUtil.exit());
     }
 

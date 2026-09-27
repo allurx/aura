@@ -15,48 +15,46 @@
  */
 
 import type PageAppearance from "../models/page-appearance";
-import { SettingScope } from "../models/setting-scope";
 import type { StyleProperty } from "../models/style-property";
-import type SettingTarget from "../models/setting-target";
 import Setting from "./setting";
 
 /**
- * 投影为 UI inline CSS 样式的 Appearance 定义。
+ * 将阅读设置直接应用到对应元素的 CSS 属性。
  *
  * @author allurx
  */
 export default abstract class StyleSetting extends Setting {
-    /**
-     * @param cssVariable - 可选的 CSS 变量写入目标；设置键与计算样式读取仍使用 property。
-     */
     protected constructor(
+        public readonly element: HTMLElement,
         public readonly property: StyleProperty,
         title: string,
-        displayOrder: number,
-        private readonly cssVariable?: `--${string}`
+        displayOrder: number
     ) {
-        super(property, title, SettingScope.UI, displayOrder);
+        super(property, title, displayOrder);
     }
 
-    public override read(appearance: PageAppearance, target: SettingTarget): string | undefined {
-        return appearance.getStyle(target.ui.id, this.property);
+    public override read(appearance: PageAppearance): string | undefined {
+        return appearance.getStyle(this.property);
     }
 
-    public override update(appearance: PageAppearance, target: SettingTarget, value: string): PageAppearance {
-        if (!this.accepts(value, target)) throw new Error(`Invalid ${this.key} setting value`);
-        return appearance.withStyle(target.ui.id, this.property, value);
+    public override update(appearance: PageAppearance, value: string): PageAppearance {
+        if (!this.accepts(value)) throw new Error(`Invalid ${this.key} setting value`);
+        return appearance.withStyle(this.property, value);
     }
 
     /**
-     * 写入原生属性或声明的 CSS 变量；undefined 移除显式值，重新由 CSS 和 Theme 决定表现。
+     * 移除显式样式，让阅读内容重新使用主题和 CSS 默认值。
      */
-    public override apply(target: SettingTarget, value: string | undefined): void {
-        const property = this.cssVariable ?? this.property;
-        if (value === undefined) target.ui.root.style.removeProperty(property);
-        else target.ui.root.style.setProperty(property, value);
+    public override reset(appearance: PageAppearance): PageAppearance {
+        return appearance.withoutStyle(this.property);
     }
 
-    public override resolveValue(target: SettingTarget, value: string | undefined): string {
-        return value ?? window.getComputedStyle(target.ui.root).getPropertyValue(this.property).trim();
+    public override apply(value: string | undefined): void {
+        if (value === undefined) this.element.style.removeProperty(this.property);
+        else this.element.style.setProperty(this.property, value);
+    }
+
+    public override resolveValue(value: string | undefined): string {
+        return value ?? window.getComputedStyle(this.element).getPropertyValue(this.property).trim();
     }
 }

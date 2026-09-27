@@ -19,19 +19,14 @@ import type ExternalSettingListener from "./application/external-setting-listene
 import ExternalSettingSynchronizer from "./application/external-setting-synchronizer";
 import type SettingUiListener from "./ui/setting-ui-listener";
 import type Setting from "./definitions/setting";
-import SettingCatalog from "./definitions/setting-catalog";
 import PageAppearance from "./models/page-appearance";
 import SettingConfiguration from "./models/setting-configuration";
-import type SettingInteraction from "./models/setting-interaction";
-import SettingTarget from "./models/setting-target";
 import AppearanceRepository from "./persistence/appearance-repository";
 import SettingUi from "./ui/setting-ui";
 import type { PageName } from "@/constants/page-name";
 
 /**
- * 单个页面已提交 Appearance 的唯一状态所有者。
- *
- * 负责协调同步持久化、DOM 投影、设置面板及面板外部变化。
+ * 页面已提交外观的唯一状态所有者，协调存储、预览与外部宽度变化。
  *
  * @author allurx
  */
@@ -46,106 +41,141 @@ export default class SettingController implements SettingUiListener, ExternalSet
     public constructor({
         pageName,
         container,
-        targets,
+        settings,
         inertElements = [],
     }: {
         pageName: PageName;
         container: HTMLElement;
-        targets: readonly SettingTarget[];
+        settings: readonly Setting[];
         inertElements?: readonly HTMLElement[];
     }) {
-        // 设置面板本身也是当前页面的一个独立 Appearance 目标。
         this.settingUi = new SettingUi(container, inertElements);
-        this.configuration = new SettingConfiguration(pageName, [
-            ...targets,
-            new SettingTarget(this.settingUi, [
-                SettingCatalog.FONT_SIZE,
-                SettingCatalog.COLOR,
-                SettingCatalog.BACKGROUND_COLOR,
-            ]),
-        ]);
-
+        this.configuration = new SettingConfiguration(pageName, settings);
         this.repository = new AppearanceRepository(this.configuration);
         this.applier = new AppearanceApplier(this.configuration);
         this.appearance = PageAppearance.defaults(this.configuration.defaultTheme);
     }
 
     /**
-     * 在页面初始化的首个异步让出前加载、应用并绑定 Appearance。
-     *
-     * @param signal - 页面生命周期信号
+     * 在页面首个 await 前同步恢复外观，再绑定控件与外部变化。
      */
     public init(signal: AbortSignal): void {
         if (signal.aborted) return;
 
-        // 先同步恢复可见外观，再绑定面板和外部变化，避免把恢复过程误当成用户输入。
         this.appearance = this.repository.load();
         this.applier.apply(this.appearance);
-
         this.settingUi.init(this.configuration, this, signal);
         this.externalSynchronizer.start(this.configuration, this, signal);
     }
 
     /**
-     * 切换外观面板，允许抽屉入口将关闭焦点归还到外部可见按钮。
+     * 切换设置面板，关闭时将焦点归还到指定入口。
      */
     public toggle(opener: HTMLElement, returnFocusTarget = opener): void {
         this.settingUi.toggle(opener, returnFocusTarget);
     }
 
-    public getValue(target: SettingTarget, setting: Setting): string | undefined {
-        return setting.read(this.appearance, target);
+    public getValue(setting: Setting): string | undefined {
+        return setting.read(this.appearance);
     }
 
-    public isPreviewing(target: SettingTarget, setting: Setting): boolean {
-        return this.settingUi.isPreviewing(target, setting);
+    public isPreviewing(setting: Setting): boolean {
+        return this.settingUi.isPreviewing(setting);
     }
 
-    public preview(interaction: SettingInteraction): void {
-        this.applier.applyInteraction(interaction);
+    public preview(setting: Setting, value: string): void {
+        this.requireSetting(setting);
+        if (!setting.accepts(value)) throw new Error(`Invalid ${setting.key} setting value`);
+        setting.apply(value);
     }
 
-    public restore(target: SettingTarget, setting: Setting): void {
-        this.applier.restore(this.appearance, target, setting);
+    public restore(setting: Setting): void {
+        this.applier.restore(this.appearance, setting);
     }
 
     /**
-     * 先投影到 DOM 并同步保存，成功后替换快照；失败则恢复该设置提交前的表现。
+     * 保存成功后才更新快照，失败时恢复提交前的界面。
      */
-    public commit(interaction: SettingInteraction): void {
-        const previousAppearance = this.appearance;
-        const nextAppearance = interaction.setting.update(previousAppearance, interaction.target, interaction.value);
-
-        try {
-            this.applier.applyInteraction(interaction);
-            this.repository.save(nextAppearance);
-            this.appearance = nextAppearance;
-        } catch (error) {
-            this.applier.restore(previousAppearance, interaction.target, interaction.setting);
-            throw error;
-        }
+    public commit(setting: Setting, value: string): void {
+        this.requireSetting(setting);
+        this.save(setting.update(this.appearance, value), [setting]);
     }
 
-    public commitExternalChange(interaction: SettingInteraction): void {
-        this.commit(interaction);
+    public commitExternalChange(setting: Setting, value: string): void {
+        this.commit(setting, value);
         this.settingUi.refresh();
     }
 
     /**
-     * 取消延迟的外部写入并重置当前页面；删除存储失败时恢复原快照及其 DOM 表现。
+     * 重置单项并取消它尚未提交的外部变化。
+     */
+    public resetSetting(setting: Setting): void {
+        this.requireSetting(setting);
+        this.resetSettings([setting]);
+    }
+
+    /**
+     * 清除常规设置的显式值，保留当前页面主题。
+     */
+    public resetGeneral(): void {
+        this.resetSettings(
+            this.configuration.settings.filter((setting) => setting !== this.configuration.themeSetting)
+        );
+    }
+
+    /**
+     * 清除当前页面全部设置，不影响另一页面。
      */
     public reset(): void {
         this.externalSynchronizer.cancelPending();
-        const previousAppearance = this.appearance;
-        const defaultAppearance = PageAppearance.defaults(this.configuration.defaultTheme);
+        this.save(PageAppearance.defaults(this.configuration.defaultTheme), this.configuration.settings, true);
+    }
 
+    /**
+     * 一次保存重置结果，并确保旧 resize 值不会延迟写回。
+     */
+    private resetSettings(settings: readonly Setting[]): void {
+        if (settings.length === 0) return;
+        let nextAppearance = this.appearance;
+        for (const setting of settings) {
+            this.externalSynchronizer.cancelPending(setting);
+            nextAppearance = setting.reset(nextAppearance, this.configuration.defaultTheme);
+        }
+        this.save(nextAppearance, settings);
+    }
+
+    /**
+     * 将本次涉及的设置应用并持久化；逐项回滚保留原始异常与全部恢复异常。
+     */
+    private save(nextAppearance: PageAppearance, settings: readonly Setting[], removeSnapshot = false): void {
+        const previousAppearance = this.appearance;
         try {
-            this.applier.apply(defaultAppearance);
-            this.repository.reset();
-            this.appearance = defaultAppearance;
+            for (const setting of settings) this.applier.restore(nextAppearance, setting);
+            if (removeSnapshot) this.repository.reset();
+            else this.repository.save(nextAppearance);
+            this.appearance = nextAppearance;
         } catch (error) {
-            this.applier.apply(previousAppearance);
+            const restoreErrors: unknown[] = [];
+            for (const setting of settings) {
+                try {
+                    this.applier.restore(previousAppearance, setting);
+                } catch (restoreError) {
+                    restoreErrors.push(restoreError);
+                }
+            }
+            if (restoreErrors.length > 0) {
+                throw new AggregateError([error, ...restoreErrors], "Failed to save and restore appearance settings");
+            }
             throw error;
+        }
+    }
+
+    /**
+     * 交互仅允许使用当前页面清单中的定义实例。
+     */
+    private requireSetting(setting: Setting): void {
+        if (!this.configuration.settings.includes(setting)) {
+            throw new Error(`Unsupported setting: ${setting.key}`);
         }
     }
 }
