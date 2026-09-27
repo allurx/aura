@@ -113,8 +113,9 @@ export default class Overlay {
      */
     private template() {
         return `
-            <div class="overlay" hidden>
-                <div class="spinner"></div>
+            <div class="overlay" role="status" aria-live="polite" aria-atomic="true" hidden>
+                <div class="spinner" aria-hidden="true"></div>
+                <span class="overlay-message">正在处理，请稍候…</span>
             </div>
         `;
     }

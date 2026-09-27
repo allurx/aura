@@ -26,6 +26,7 @@ export default class HeaderUi extends Ui {
     private readonly search = assertExists(this.root.querySelector<HTMLInputElement>("#book-search"));
     private readonly input = assertExists(this.root.querySelector<HTMLInputElement>("#book-input"));
     private readonly importButton = assertExists(this.root.querySelector<HTMLButtonElement>("#import-books"));
+    private renderedQuery = "";
 
     /**
      * 显示当前分类与筛选后的数量。
@@ -33,6 +34,7 @@ export default class HeaderUi extends Ui {
     public render(category: string, count: number, query: string): void {
         assertExists(this.root.querySelector("#category-title")).textContent = category;
         assertExists(this.root.querySelector("#book-count")).textContent = `${String(count)} 本`;
+        this.renderedQuery = query;
         this.search.value = query;
     }
 
@@ -55,14 +57,20 @@ export default class HeaderUi extends Ui {
             { signal }
         );
 
-        // Escape 清空查询，普通输入即时更新当前分类内的筛选。
+        // 输入法完成后才筛选，避免候选阶段反复重建列表和播报数量。
+        const updateSearch = (): void => {
+            if (this.search.value !== this.renderedQuery) onSearch(this.search.value);
+        };
+        EventUtil.bind(this.search, "compositionend", updateSearch, { signal });
+
+        // Escape 清空查询，但输入法取消候选时保留当前书名。
         EventUtil.bind(
             this.search,
             "keydown",
             (event) => {
-                if (event instanceof KeyboardEvent && event.key === "Escape") {
+                if (event instanceof KeyboardEvent && event.key === "Escape" && !event.isComposing) {
                     this.search.value = "";
-                    onSearch("");
+                    updateSearch();
                 }
             },
             { signal }
@@ -71,8 +79,8 @@ export default class HeaderUi extends Ui {
         EventUtil.bind(
             this.search,
             "input",
-            () => {
-                onSearch(this.search.value);
+            (event) => {
+                if (!(event instanceof InputEvent) || !event.isComposing) updateSearch();
             },
             { signal }
         );

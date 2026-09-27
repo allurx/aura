@@ -68,9 +68,10 @@
         background: color-mix(in srgb, currentColor 3%, transparent);
         cursor: pointer;
         transition:
-            background-color 160ms ease,
-            box-shadow 160ms ease,
-            border-color 160ms ease;
+            background-color var(--motion-duration-fast) var(--motion-ease),
+            box-shadow var(--motion-duration-fast) var(--motion-ease),
+            border-color var(--motion-duration-fast) var(--motion-ease),
+            transform var(--motion-duration-fast) var(--motion-ease);
 
         input {
             position: absolute;
@@ -93,10 +94,14 @@
         }
 
         @media (hover: hover) and (pointer: fine) {
-            &:hover {
+            &:hover:not(:has(input:checked)) {
                 background-color: color-mix(in srgb, currentColor 7%, transparent);
                 box-shadow: 0 3px 8px color-mix(in srgb, currentColor 7%, transparent);
             }
+        }
+
+        &:active {
+            transform: scale(0.97);
         }
     }
 
@@ -195,6 +200,10 @@
     @media (prefers-reduced-motion: reduce) {
         .theme-option {
             transition: none;
+
+            &:active {
+                transform: none;
+            }
         }
     }
 

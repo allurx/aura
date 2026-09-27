@@ -33,13 +33,21 @@
     color: var(--appearance-color);
     font-size: 1rem;
     /* 短操作保留点击拦截，只有等待超过阈值才显露加载状态，避免切章闪屏。 */
-    animation: overlay-reveal 120ms ease 150ms both;
+    animation: overlay-reveal var(--motion-duration-fast) var(--motion-ease) 150ms both;
     user-select: none;
     -webkit-user-select: none;
 
     /* 隐藏遮罩层 */
     &[hidden] {
         display: none;
+    }
+
+    .overlay-message {
+        max-width: 24rem;
+        padding-inline: 1.25rem;
+        text-align: center;
+        line-height: 1.6;
+        color: var(--appearance-muted-color);
     }
 
     /* loading动画小圆圈 */

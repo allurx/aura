@@ -103,17 +103,22 @@
     --icon-feedback-color: transparent;
     color: var(--icon-color, inherit);
     cursor: pointer;
-    transition: var(--icon-transition, background-color 140ms ease);
+    transition: var(--icon-transition, background-color var(--motion-duration-fast) var(--motion-ease));
 
     @media (hover: hover) and (pointer: fine) {
-        &:hover {
+        &:hover:not(:disabled, [aria-disabled="true"]) {
             color: var(--icon-hover-color, var(--icon-color, inherit));
             --icon-feedback-color: color-mix(in srgb, currentColor var(--icon-hover-opacity, 8%), transparent);
         }
     }
 
-    &:active {
+    &:active:not(:disabled, [aria-disabled="true"]) {
         --icon-feedback-color: color-mix(in srgb, currentColor 16%, transparent);
+    }
+
+    &:is(:disabled, [aria-disabled="true"]) {
+        --icon-feedback-color: transparent;
+        cursor: not-allowed;
     }
 
     /* 面板入口及模态背景不保留交互高亮，避免指针未移动时出现残影。 */
@@ -161,6 +166,21 @@
     > .icon {
         grid-area: 1 / 1;
         place-self: center;
+        transition: transform var(--motion-duration-fast) var(--motion-ease);
+    }
+
+    &:active:enabled:not([aria-disabled="true"]) > .icon {
+        transform: scale(0.92);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        > .icon {
+            transition: none;
+        }
+
+        &:active:enabled:not([aria-disabled="true"]) > .icon {
+            transform: none;
+        }
     }
 
     /* 按图形边缘对齐，按钮外扩不超过容器的可用内边距。 */

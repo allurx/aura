@@ -54,3 +54,22 @@ html {
     width: 100%;
     height: 100dvh;
 }
+
+/* 选区跟随页面主题，阅读正文仍使用用户选定的颜色与排版。 */
+::selection {
+    background-color: var(--appearance-selection);
+    color: var(--appearance-color);
+}
+
+:where(button, input, select, textarea) {
+    font: inherit;
+    accent-color: var(--appearance-accent);
+}
+
+:where(button, select, input[type="checkbox"], input[type="radio"], input[type="range"]) {
+    touch-action: manipulation;
+}
+
+:where(button, input, select, textarea):disabled {
+    cursor: not-allowed;
+}

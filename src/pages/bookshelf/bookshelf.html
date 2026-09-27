@@ -44,12 +44,13 @@
                     type="button"
                     aria-label="打开导航"
                     aria-controls="bookshelf-sidebar"
+                    aria-haspopup="dialog"
                     aria-expanded="false"
                 >
                     <span class="icon icon-menu" aria-hidden="true"></span>
                 </button>
                 <h1 id="category-title">全部书籍</h1>
-                <span id="book-count" aria-live="polite"></span>
+                <span id="book-count" role="status" aria-atomic="true"></span>
             </div>
             <div class="shelf-tools">
                 <label class="book-search-field">
@@ -59,7 +60,12 @@
                         type="search"
                         placeholder="搜索书名"
                         aria-label="搜索当前分类中的书名"
+                        aria-controls="book-list"
+                        aria-describedby="book-count"
                         autocomplete="off"
+                        autocapitalize="off"
+                        spellcheck="false"
+                        enterkeyhint="search"
                     />
                 </label>
                 <button
@@ -67,6 +73,7 @@
                     class="appearance-button"
                     type="button"
                     aria-controls="setting"
+                    aria-haspopup="dialog"
                     aria-expanded="false"
                     aria-label="外观"
                     title="外观"
@@ -80,6 +87,6 @@
             </div>
         </header>
         <section id="book-list" class="panel-scroll" aria-label="书籍列表" tabindex="-1"></section>
-        <p id="shelf-feedback" role="status" aria-live="polite" hidden></p>
+        <p id="shelf-feedback" role="status" aria-atomic="true" hidden></p>
     </main>
 </div>

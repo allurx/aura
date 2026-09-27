@@ -107,6 +107,7 @@ export default class Dialog {
         // 保留当前请求的完成回调，由原生 close 事件返回用户选择。
         return new Promise((resolve) => {
             this.resolve = resolve;
+            this.dialogElement.inert = false;
             this.dialogElement.showModal();
         });
     }
@@ -121,29 +122,37 @@ export default class Dialog {
             const resolve = this.resolve;
             this.resolve = null;
 
-            // 避免上次的确认结果和内容影响下次打开。
+            // 结果不复用；正文保留至下次 show 替换，避免 CSS 退场时内容突然消失。
             this.dialogElement.returnValue = "";
-            this.bodyElement.textContent = "";
             resolve?.(ok);
         });
 
         // Escape 与显式取消使用相同的返回值。
-        EventUtil.bind(this.dialogElement, "cancel", () => {
-            this.dialogElement.close("cancel");
+        EventUtil.bind(this.dialogElement, "cancel", (event) => {
+            event.preventDefault();
+            this.close("cancel");
         });
 
         // 显式操作入口只设置结果，继续交给统一关闭流程处理。
         EventUtil.bind(this.confirmBtnElement, "click", () => {
-            this.dialogElement.close("confirm");
+            this.close("confirm");
         });
 
         EventUtil.bind(this.cancelBtnElement, "click", () => {
-            this.dialogElement.close("cancel");
+            this.close("cancel");
         });
 
         EventUtil.bind(this.closeButton, "click", () => {
-            this.dialogElement.close("cancel");
+            this.close("cancel");
         });
+    }
+
+    /**
+     * 原生关闭立即归还焦点；退场期间保留绘制，但不再接受键盘交互。
+     */
+    private close(result: "confirm" | "cancel"): void {
+        this.dialogElement.close(result);
+        this.dialogElement.inert = true;
     }
 
     /**
@@ -172,10 +181,10 @@ export default class Dialog {
      */
     private template() {
         return `
-      <dialog class="dialog panel-scroll">
+      <dialog class="dialog panel-scroll" inert>
           <header class="header">
             <span class="title"></span>
-            <button type="button" class="close-btn icon-button" aria-label="关闭" title="关闭">
+            <button type="button" class="close-btn icon-button" aria-label="关闭" title="关闭" autofocus>
                 <span class="icon icon-close" aria-hidden="true"></span>
             </button>
           </header>

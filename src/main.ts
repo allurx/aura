@@ -15,6 +15,7 @@
  */
 
 import "./styles/base.css";
+import "./styles/motion.css";
 import "./styles/panel-scroll.css";
 import "./styles/focus.css";
 import "./components/icon/icon.css";

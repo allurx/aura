@@ -99,11 +99,39 @@
     left: 0;
     right: 0;
     z-index: 3;
+    opacity: 1;
+    transform: none;
+    transition:
+        opacity var(--motion-duration-normal) var(--motion-ease),
+        transform var(--motion-duration-normal) var(--motion-ease-out),
+        visibility 0s;
+}
+
+#reader > #header {
+    --tools-offset: -0.5rem;
+}
+
+#reader > #footer {
+    --tools-offset: 0.5rem;
 }
 
 #reader:not([data-reading-tools-visible]) > :is(#header, #footer) {
     visibility: hidden;
+    opacity: 0;
+    transform: translateY(var(--tools-offset));
     pointer-events: none;
+    transition:
+        opacity var(--motion-duration-fast) var(--motion-ease),
+        transform var(--motion-duration-fast) var(--motion-ease),
+        visibility 0s linear var(--motion-duration-fast);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #reader > :is(#header, #footer),
+    #reader:not([data-reading-tools-visible]) > :is(#header, #footer) {
+        transform: none;
+        transition: none;
+    }
 }
 
 #reader[style*="background-color"] {
@@ -133,10 +161,11 @@
     cursor: pointer;
     white-space: nowrap;
     transition:
-        background-color 140ms ease,
-        color 140ms ease,
-        box-shadow 140ms ease,
-        transform 140ms ease;
+        background-color var(--motion-duration-fast) var(--motion-ease),
+        border-color var(--motion-duration-fast) var(--motion-ease),
+        color var(--motion-duration-fast) var(--motion-ease),
+        box-shadow var(--motion-duration-fast) var(--motion-ease),
+        transform var(--motion-duration-fast) var(--motion-ease);
 
     @media (hover: hover) and (pointer: fine) {
         &:hover:not(:disabled) {
@@ -147,8 +176,22 @@
     }
 
     &:active:not(:disabled) {
+        background: color-mix(in srgb, currentColor 10%, transparent);
         box-shadow: none;
-        transform: translateY(0);
+        transform: scale(0.96);
+    }
+
+    &:is([aria-expanded="true"], [aria-pressed="true"]) {
+        border-color: color-mix(in srgb, currentColor 20%, transparent);
+        background: color-mix(in srgb, currentColor 10%, transparent);
+    }
+
+    @media (forced-colors: active) {
+        &:is([aria-expanded="true"], [aria-pressed="true"]) {
+            border-color: Highlight;
+            background: Highlight;
+            color: HighlightText;
+        }
     }
 
     &:disabled {
@@ -159,7 +202,7 @@
     @media (prefers-reduced-motion: reduce) {
         transition: none;
 
-        &:hover:not(:disabled) {
+        &:is(:hover, :active):not(:disabled) {
             transform: none;
         }
     }

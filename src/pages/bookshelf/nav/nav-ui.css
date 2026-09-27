@@ -74,9 +74,9 @@
         line-height: 1.45;
         overflow-wrap: anywhere;
         transition:
-            background-color 160ms ease,
-            transform 160ms ease,
-            box-shadow 160ms ease;
+            background-color var(--motion-duration-normal) var(--motion-ease),
+            transform var(--motion-duration-normal) var(--motion-ease),
+            box-shadow var(--motion-duration-normal) var(--motion-ease);
     }
     #category-navigation button {
         margin-bottom: 0.3rem;
@@ -137,7 +137,7 @@
         margin-left: auto;
     }
     @media (hover: hover) and (pointer: fine) {
-        button:hover {
+        button:where(:not(:disabled)):hover {
             background: color-mix(in srgb, currentColor 5%, transparent);
             transform: translateX(2px);
         }
@@ -145,7 +145,7 @@
             background: var(--appearance-selection);
         }
     }
-    button:active {
+    button:where(:not(:disabled)):active {
         transform: translateY(1px);
     }
     @media (max-width: 768px) {

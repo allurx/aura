@@ -27,7 +27,7 @@
     >
         显示阅读工具
     </button>
-    <header id="header">
+    <header id="header" aria-hidden="true" inert>
         <h1 id="book-title"></h1>
     </header>
 
@@ -46,7 +46,7 @@
         <div class="reader-action-group bookshelf-actions" role="group" aria-label="返回书架"></div>
     </nav>
 
-    <footer id="footer">
+    <footer id="footer" aria-hidden="true" inert>
         <div class="reading-location">
             <div id="chapter-title"></div>
             <div id="progress-rate" title="全书阅读进度"></div>
@@ -59,6 +59,7 @@
                 aria-label="打开目录"
                 aria-controls="toc"
                 aria-expanded="false"
+                aria-haspopup="dialog"
             >
                 <span class="icon icon-table-of-contents" aria-hidden="true"></span><span>目录</span>
             </button>
@@ -69,6 +70,7 @@
                 aria-label="阅读外观"
                 aria-controls="setting"
                 aria-expanded="false"
+                aria-haspopup="dialog"
             >
                 <span class="appearance-mark" aria-hidden="true">Aa</span><span>外观</span>
             </button>
@@ -88,11 +90,11 @@
         </nav>
     </footer>
 
-    <dialog id="toc" class="panel-scroll" aria-labelledby="toc-title" tabindex="-1">
+    <dialog id="toc" class="panel-scroll" aria-labelledby="toc-title" tabindex="-1" inert>
         <header>
             <div class="toc-heading">
                 <h2 id="toc-title">目录</h2>
-                <p class="toc-summary" aria-live="polite"></p>
+                <p id="toc-summary" class="toc-summary" role="status" aria-atomic="true"></p>
             </div>
             <button class="close icon-button" type="button" aria-label="关闭目录" title="关闭" autofocus>
                 <span class="icon icon-close" aria-hidden="true"></span>
@@ -105,10 +107,20 @@
             </button>
             <label class="toc-search">
                 <span class="icon icon-search" aria-hidden="true"></span>
-                <input id="toc-search" type="search" aria-label="查找章节" placeholder="查找章节" autocomplete="off" />
+                <input
+                    id="toc-search"
+                    type="search"
+                    aria-label="查找章节"
+                    aria-controls="toc-chapters"
+                    aria-describedby="toc-summary"
+                    placeholder="查找章节"
+                    autocomplete="off"
+                    spellcheck="false"
+                    enterkeyhint="search"
+                />
             </label>
         </div>
-        <nav class="main panel-scroll" aria-label="章节列表">
+        <nav id="toc-chapters" class="main panel-scroll" aria-label="章节列表">
             <p class="toc-empty" role="status" hidden>没有找到匹配的章节</p>
         </nav>
     </dialog>

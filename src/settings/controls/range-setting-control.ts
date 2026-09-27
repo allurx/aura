@@ -70,10 +70,12 @@ export default class RangeSettingControl extends SettingControl {
         this.inputElement.max = String(maximum);
         this.inputElement.value = this.withoutUnit(resolvedValue);
 
-        this.displayElement.textContent =
+        const displayValue =
             this.rangeSetting.unit === "em" || this.rangeSetting.unit === ""
                 ? `${this.withoutUnit(resolvedValue)} 倍`
                 : resolvedValue;
+        this.displayElement.textContent = displayValue;
+        this.inputElement.setAttribute("aria-valuetext", displayValue);
     }
 
     private withUnit(value: string): string {

@@ -45,7 +45,7 @@ export default class BookshelfUi extends PageUi {
     }
 
     /**
-     * 操作期间封锁键盘与指针输入并显示单一状态，结束后恢复先前的 inert 状态与可归还的焦点。
+     * 操作期间封锁键盘与指针输入并显示单一状态，结束后恢复先前的交互状态与可归还的焦点。
      * 只管理交互状态，不取消 handler 中已经开始的数据操作。
      */
     public async runBusy(
@@ -57,21 +57,23 @@ export default class BookshelfUi extends PageUi {
             (element): element is HTMLElement =>
                 element instanceof HTMLElement && (element.id === "bookshelf-sidebar" || element.tagName === "MAIN")
         );
-        const previousInert = regions.map((element) => element.inert);
+        const previousStates = regions.map((element) => ({
+            element,
+            inert: element.inert,
+            busy: element.getAttribute("aria-busy"),
+        }));
         const previousFocus = document.activeElement;
 
-        // 将批次进度放在遮罩内，避免被 inert 区域屏蔽。
-        const status = document.createElement("p");
-        status.className = "operation-status";
-        status.setAttribute("role", "status");
+        // 复用遮罩中的单一播报区域，避免批次进度被 inert 区域屏蔽或重复朗读。
+        const status = assertExists(this.root.querySelector<HTMLElement>(".overlay .overlay-message"));
+        const previousStatus = status.textContent;
         status.textContent = message;
-        assertExists(this.root.querySelector(".overlay")).append(status);
 
-        // 当前操作独占输入，结束时按原状态恢复而非一律解除 inert。
+        // 仅内容区域进入 busy 状态，进度播报留在其外，不等待整批操作结束。
         regions.forEach((element) => {
             element.inert = true;
+            element.setAttribute("aria-busy", "true");
         });
-        this.root.setAttribute("aria-busy", "true");
 
         try {
             await this.showOverlayWhile(() =>
@@ -80,11 +82,12 @@ export default class BookshelfUi extends PageUi {
                 })
             );
         } finally {
-            regions.forEach((element, index) => {
-                element.inert = previousInert[index] ?? false;
+            previousStates.forEach(({ element, inert, busy }) => {
+                element.inert = inert;
+                if (busy === null) element.removeAttribute("aria-busy");
+                else element.setAttribute("aria-busy", busy);
             });
-            this.root.removeAttribute("aria-busy");
-            status.remove();
+            status.textContent = previousStatus;
 
             // 用户主动移动过焦点或页面已退出时，不再归还旧焦点。
             if (

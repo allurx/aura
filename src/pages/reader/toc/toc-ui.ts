@@ -80,6 +80,7 @@ export default class TocUi extends Ui {
         }
 
         // 先进入原生模态并建立焦点，再按实际滚动容器恢复浏览位置。
+        this.dialog.inert = false;
         this.dialog.showModal();
         this.closeButton.focus({ preventScroll: true });
         const scrollContainer = this.scrollContainer();
@@ -101,6 +102,8 @@ export default class TocUi extends Ui {
         this.capturePosition();
         this.savedPosition = this.browsingPosition;
         this.dialog.close(reason);
+        // 退场绘制期间保留视觉连续性，但不再让已关闭的章节参与焦点遍历。
+        this.dialog.inert = true;
     }
 
     /**
@@ -163,6 +166,8 @@ export default class TocUi extends Ui {
      * 绑定搜索、关闭与滚动恢复；页面销毁时移除监听、断开 Observer 并关闭原生目录。
      */
     public bindTocClose(handler: (chapterSelected: boolean) => void, signal: AbortSignal): this {
+        let composing = false;
+
         // 尺寸与滚动容器改变时恢复章节锚点，普通滚动才更新当前浏览快照。
         const observer = new ResizeObserver(() => {
             this.restoreAfterResize();
@@ -200,7 +205,19 @@ export default class TocUi extends Ui {
             "cancel",
             (event) => {
                 event.preventDefault();
-                this.close();
+                if (!composing) this.close();
+            },
+            { signal }
+        );
+        EventUtil.bind(
+            this.dialog,
+            "keydown",
+            (event: KeyboardEvent) => {
+                // 取消输入法候选不能同时执行原生 dialog 的 Escape 关闭。
+                if (event.key === "Escape" && (event.isComposing || composing)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
             },
             { signal }
         );
@@ -208,6 +225,7 @@ export default class TocUi extends Ui {
             this.dialog,
             "close",
             () => {
+                composing = false;
                 handler(this.dialog.returnValue === "chapter-selected");
             },
             { signal }
@@ -222,20 +240,43 @@ export default class TocUi extends Ui {
             },
             { signal }
         );
+
+        // 候选输入不重建目录；compositionend 后重复到达的 input 按标准化查询去重。
+        const updateSearch = (): void => {
+            const nextQuery = this.searchInput.value.trim().toLocaleLowerCase();
+            if (nextQuery === this.query) return;
+            if (!this.query && nextQuery) {
+                this.capturePosition();
+                this.unfilteredPosition = this.browsingPosition;
+            }
+            this.query = nextQuery;
+            this.renderFilteredEntries();
+            this.restorePosition(this.query ? undefined : this.unfilteredPosition);
+            this.keepFocusedElementVisible();
+            this.capturePosition();
+        };
+        EventUtil.bind(
+            this.searchInput,
+            "compositionstart",
+            () => {
+                composing = true;
+            },
+            { signal }
+        );
+        EventUtil.bind(
+            this.searchInput,
+            "compositionend",
+            () => {
+                composing = false;
+                updateSearch();
+            },
+            { signal }
+        );
         EventUtil.bind(
             this.searchInput,
             "input",
-            () => {
-                const nextQuery = this.searchInput.value.trim().toLocaleLowerCase();
-                if (!this.query && nextQuery) {
-                    this.capturePosition();
-                    this.unfilteredPosition = this.browsingPosition;
-                }
-                this.query = nextQuery;
-                this.renderFilteredEntries();
-                this.restorePosition(this.query ? undefined : this.unfilteredPosition);
-                this.keepFocusedElementVisible();
-                this.capturePosition();
+            (event) => {
+                if (!composing && (!(event instanceof InputEvent) || !event.isComposing)) updateSearch();
             },
             { signal }
         );
@@ -246,6 +287,7 @@ export default class TocUi extends Ui {
             () => {
                 observer.disconnect();
                 this.dialog.close();
+                this.dialog.inert = true;
             },
             { once: true }
         );

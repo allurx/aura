@@ -75,8 +75,8 @@
             inset 0 -3px 0 color-mix(in srgb, var(--book-cover-ink) 10%, transparent);
         overflow: hidden;
         transition:
-            transform 200ms ease,
-            box-shadow 200ms ease;
+            transform var(--motion-duration-normal) var(--motion-ease-out),
+            box-shadow var(--motion-duration-normal) var(--motion-ease);
     }
     .book-open::before,
     .book-open::after {
@@ -149,6 +149,7 @@
         color: var(--appearance-color);
         font-size: 16px;
         cursor: pointer;
+        transition: background-color var(--motion-duration-fast) var(--motion-ease);
     }
     .book-category option {
         background: var(--appearance-canvas);
@@ -180,7 +181,7 @@
                 border-bottom: 1.5px solid currentColor;
                 transform: rotate(45deg);
                 opacity: 0.6;
-                transition: transform 160ms ease;
+                transition: transform var(--motion-duration-normal) var(--motion-ease);
             }
             &:open {
                 background-image: linear-gradient(
@@ -231,9 +232,13 @@
                 background: color-mix(in srgb, currentColor 7%, transparent);
                 font-weight: 600;
             }
-            option:hover,
             option:focus-visible {
                 background: color-mix(in srgb, currentColor 12%, transparent);
+            }
+            @media (hover: hover) and (pointer: fine) {
+                option:hover {
+                    background: color-mix(in srgb, currentColor 12%, transparent);
+                }
             }
             option:focus-visible {
                 outline: 2px solid var(--focus-ring-color);
@@ -265,6 +270,10 @@
         --icon-size: 18px;
         margin-left: auto;
         opacity: 0.6;
+        transition:
+            opacity var(--motion-duration-fast) var(--motion-ease),
+            color var(--motion-duration-fast) var(--motion-ease),
+            background-color var(--motion-duration-fast) var(--motion-ease);
     }
     .shelf-empty {
         grid-column: 1 / -1;
@@ -288,7 +297,7 @@
         color: var(--appearance-muted-color);
     }
     @media (hover: hover) and (pointer: fine) {
-        .book-open:hover {
+        .book-open:where(:not(:disabled)):hover {
             transform: translateY(-5px) rotate(-0.6deg);
             box-shadow:
                 0 24px 26px -16px color-mix(in srgb, var(--book-cover) 65%, var(--appearance-shadow-color)),
@@ -303,19 +312,16 @@
         .book:focus-within .book-delete {
             opacity: 0.65;
         }
-        .book-delete:hover {
+        .book-delete:where(:not(:disabled)):hover {
             opacity: 1;
             color: var(--appearance-danger, #b64a43);
         }
-        .book-category:hover {
+        .book-category:where(:not(:disabled)):hover {
             opacity: 1;
-            background-image: linear-gradient(
-                color-mix(in srgb, currentColor 4%, transparent),
-                color-mix(in srgb, currentColor 4%, transparent)
-            );
+            background-color: color-mix(in srgb, var(--appearance-canvas) 96%, var(--appearance-color));
         }
     }
-    .book-open:active {
+    .book-open:where(:not(:disabled)):active {
         transform: translateY(1px);
     }
     @media (max-width: 1024px) {
@@ -340,7 +346,9 @@
         }
     }
     @media (prefers-reduced-motion: reduce) {
-        .book-open {
+        .book-open,
+        .book-category,
+        .book-delete {
             transition: none;
         }
         .book-open:hover,
