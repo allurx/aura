@@ -15,8 +15,9 @@
  */
 
 import type PageAppearance from "../models/page-appearance";
-import type { StyleProperty } from "../models/style-property";
+import { StyleProperty } from "../models/style-property";
 import Setting from "./setting";
+import { syncBrowserTheme } from "../application/browser-theme";
 
 /**
  * 将阅读设置直接应用到对应元素的 CSS 属性。
@@ -52,6 +53,8 @@ export default abstract class StyleSetting extends Setting {
     public override apply(value: string | undefined): void {
         if (value === undefined) this.element.style.removeProperty(this.property);
         else this.element.style.setProperty(this.property, value);
+
+        if (this.property === StyleProperty.BACKGROUND_COLOR) syncBrowserTheme();
     }
 
     public override resolveValue(value: string | undefined): string {

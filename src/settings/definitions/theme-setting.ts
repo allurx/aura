@@ -20,6 +20,7 @@ import type SettingControlListener from "../controls/setting-control-listener";
 import type PageAppearance from "../models/page-appearance";
 import { isTheme, Theme } from "../models/theme";
 import Setting from "./setting";
+import { syncBrowserTheme } from "../application/browser-theme";
 
 /**
  * 页面基础主题；切换主题时保留已提交的常规设置。
@@ -65,6 +66,7 @@ export default class ThemeSetting extends Setting {
 
     public override apply(value: string | undefined): void {
         document.documentElement.dataset["theme"] = isTheme(value) ? value : Theme.SUNNY;
+        syncBrowserTheme();
     }
 
     public override resolveValue(value: string | undefined): string {
