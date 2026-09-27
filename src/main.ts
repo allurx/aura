@@ -29,6 +29,7 @@ import Router, { type AppRoute } from "./router/router";
 import { assertExists } from "./utils/assert-util";
 import favicon from "./assets/images/favicon.svg";
 import Dialog from "./components/dialog/dialog";
+import OperationError from "./errors/operation-error";
 
 /**
  * SPA应用入口。
@@ -73,12 +74,16 @@ class Main {
         if (this.errorVisible) return;
         this.errorVisible = true;
         try {
-            await this.errorDialog.alert(
-                error instanceof DOMException && error.name === "QuotaExceededError"
+            // 业务层只补充可读上下文，通用原因与展示仍由统一错误入口负责。
+            const cause = error instanceof OperationError ? error.cause : error;
+            const primaryCause = cause instanceof AggregateError ? cause.cause : cause;
+            const guidance =
+                primaryCause instanceof DOMException && primaryCause.name === "QuotaExceededError"
                     ? "浏览器存储空间不足，操作未完成。请保留原始 TXT，释放存储空间后重试。"
-                    : "操作未完成。请重试；若仍然失败，请保留原始 TXT，并检查浏览器是否允许本地存储。",
-                { title: "操作失败" }
-            );
+                    : "操作未完成。请重试；若仍然失败，请保留原始 TXT，并检查浏览器是否允许本地存储。";
+            const content =
+                error instanceof OperationError ? `${error.message}\n\n${guidance}\n\n${error.details}` : guidance;
+            await this.errorDialog.alert(content, { title: "操作失败" });
         } finally {
             this.errorVisible = false;
         }

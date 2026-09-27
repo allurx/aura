@@ -62,33 +62,6 @@
         overflow-wrap: anywhere;
         text-align: center;
     }
-    #import-result {
-        flex: 0 0 auto;
-        position: relative;
-        margin: 0 2.5rem 1rem;
-        padding: 0.9rem 3.5rem 0.9rem 1.1rem;
-        border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
-        border-radius: 1rem;
-        background: var(--appearance-panel);
-        box-shadow: var(--appearance-shadow-soft);
-        font-size: 0.85rem;
-        line-height: 1.6;
-        overflow-wrap: anywhere;
-    }
-    .import-result-close {
-        --icon-size: 18px;
-        position: absolute;
-        right: 0.25rem;
-        top: 0.25rem;
-    }
-    #import-result summary {
-        cursor: pointer;
-        min-height: 44px;
-        padding-block: 0.7rem;
-    }
-    .import-details {
-        white-space: pre-wrap;
-    }
     #shelf-feedback {
         position: absolute;
         z-index: 5;
@@ -123,9 +96,6 @@
             &::backdrop {
                 background: var(--appearance-backdrop);
             }
-        }
-        #import-result {
-            margin-inline: 1.25rem;
         }
         #shelf-feedback {
             left: 50%;

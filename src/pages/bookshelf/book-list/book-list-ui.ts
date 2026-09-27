@@ -25,17 +25,8 @@ import type { BookSummary } from "../bookshelf-service";
  * @author allurx
  */
 export default class BookListUi extends Ui {
-    public readonly scrollContainer: HTMLElement;
     // 原生选择器禁用后可能失焦，保留来源供列表重渲染时恢复焦点。
     private pendingSelection: HTMLSelectElement | null = null;
-
-    /**
-     * 外观只作用于书籍网格，滚动位置属于同时容纳导入反馈的内容区。
-     */
-    public constructor(args: ConstructorParameters<typeof Ui>[0] & { scrollContainer: HTMLElement }) {
-        super(args);
-        this.scrollContainer = args.scrollContainer;
-    }
 
     /**
      * 返回时恢复仍在当前列表中的书籍；加载期间用户已移走焦点则保持原处。
@@ -54,7 +45,7 @@ export default class BookListUi extends Ui {
      */
     public renderBooks(books: BookSummary[], categories: Category[], searching: boolean): void {
         // 替换 DOM 前记录操作来源，禁用的分类选择器也参与焦点恢复。
-        const scrollTop = this.scrollContainer.scrollTop;
+        const scrollTop = this.root.scrollTop;
         const active = document.activeElement === document.body ? this.pendingSelection : document.activeElement;
         const focused = active instanceof HTMLOptionElement ? active.closest("select") : active;
         const owner = focused instanceof HTMLElement ? focused.closest<HTMLElement>(".book") : null;
@@ -97,7 +88,7 @@ export default class BookListUi extends Ui {
             (next ?? this.root).focus({ preventScroll: true });
         }
 
-        this.scrollContainer.scrollTop = scrollTop;
+        this.root.scrollTop = scrollTop;
     }
 
     /**
