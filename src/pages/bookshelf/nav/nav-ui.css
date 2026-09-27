@@ -42,10 +42,11 @@
         gap: 12px;
         padding: 0 1.5rem 1.8rem;
     }
-    .brand > .icon {
-        --icon-size: 24px;
-        color: var(--appearance-accent);
-        transform: rotate(-8deg);
+    .brand-mark {
+        flex: none;
+        width: 32px;
+        height: 32px;
+        background: url("../../../assets/images/brand.svg?inline") center / contain no-repeat;
     }
     .brand-name {
         font:
