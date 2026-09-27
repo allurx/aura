@@ -129,6 +129,7 @@
     }
     .book-tools {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         justify-content: space-between;
         gap: 4px;
@@ -137,8 +138,9 @@
     }
     .book-category {
         display: block;
+        flex: 1 1 44px;
         min-width: 44px;
-        max-width: calc(100% - 48px);
+        max-width: 100%;
         min-height: 44px;
         padding: 0.3rem 0.2rem 0.3rem 0;
         border: 0;
@@ -261,6 +263,7 @@
     }
     .book-delete {
         --icon-size: 18px;
+        margin-left: auto;
         opacity: 0.6;
     }
     .shelf-empty {

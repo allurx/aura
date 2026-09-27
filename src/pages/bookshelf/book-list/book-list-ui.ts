@@ -210,6 +210,7 @@ export default class BookListUi extends Ui {
         tools.className = "book-tools";
         const categorySelect = document.createElement("select");
         categorySelect.className = "book-category";
+        categorySelect.id = `book-category-${summary.book.id}`;
         categorySelect.dataset["categoryId"] = summary.book.categoryId;
         categorySelect.setAttribute("aria-label", `移动《${summary.title}》到分类`);
         categorySelect.title = "选择分类即可移动";

@@ -62,6 +62,7 @@ html[data-page="reader"] #app {
         flex: none;
         flex-direction: column;
         gap: 6px;
+        min-width: 0;
 
         + .reader-action-group {
             padding-top: 8px;
@@ -73,8 +74,11 @@ html[data-page="reader"] #app {
         flex: none;
         flex-direction: column;
         gap: 4px;
+        width: 100%;
         min-height: 56px;
         padding: 6px 2px;
+        white-space: normal;
+        overflow-wrap: anywhere;
     }
 
     .appearance-mark {
