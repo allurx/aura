@@ -99,11 +99,14 @@
             </button>
         </header>
         <div class="toc-tools">
+            <button class="locate-current" type="button" aria-label="定位当前章节">
+                <span class="toc-current-heading"><span>正在阅读</span><span>定位</span></span>
+                <span class="toc-current-title"></span>
+            </button>
             <label class="toc-search">
                 <span class="icon icon-search" aria-hidden="true"></span>
                 <input id="toc-search" type="search" aria-label="查找章节" placeholder="查找章节" autocomplete="off" />
             </label>
-            <button class="locate-current" type="button">定位当前章节</button>
         </div>
         <nav class="main panel-scroll" aria-label="章节列表">
             <p class="toc-empty" role="status" hidden>没有找到匹配的章节</p>

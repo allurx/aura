@@ -36,6 +36,8 @@ export default class TocUi extends Ui {
     private readonly dialog: HTMLDialogElement;
     private readonly tocContentElement: HTMLElement;
     private readonly closeButton: HTMLButtonElement;
+    private readonly locateCurrentButton: HTMLButtonElement;
+    private readonly currentChapterTitle: HTMLElement;
     private readonly searchInput: HTMLInputElement;
     private readonly emptyMessage: HTMLElement;
     private readonly summary: HTMLElement;
@@ -60,6 +62,8 @@ export default class TocUi extends Ui {
         this.dialog = this.root;
         this.tocContentElement = assertExists(this.root.querySelector<HTMLElement>(".main"));
         this.closeButton = assertExists(this.root.querySelector<HTMLButtonElement>(".close"));
+        this.locateCurrentButton = assertExists(this.root.querySelector<HTMLButtonElement>(".locate-current"));
+        this.currentChapterTitle = assertExists(this.root.querySelector<HTMLElement>(".toc-current-title"));
         this.searchInput = assertExists(this.root.querySelector<HTMLInputElement>("#toc-search"));
         this.emptyMessage = assertExists(this.root.querySelector<HTMLElement>(".toc-empty"));
         this.summary = assertExists(this.root.querySelector<HTMLElement>(".toc-summary"));
@@ -104,6 +108,14 @@ export default class TocUi extends Ui {
      */
     public highlightCurrentChapter(chapterNumber: number): this {
         this.currentChapterNumber = chapterNumber;
+
+        // 顶部入口从完整目录读取当前章，搜索隐藏该行时仍能识别并定位。
+        const currentEntry = this.entries.find((entry) => entry.chapterNumber === chapterNumber);
+        this.currentChapterTitle.textContent = currentEntry?.title ?? "";
+        this.locateCurrentButton.title = currentEntry?.title ?? "";
+        this.locateCurrentButton.hidden = !currentEntry;
+        this.locateCurrentButton.setAttribute("aria-label", `定位当前章节：${currentEntry?.title ?? ""}`);
+
         for (const button of this.tocContentElement.querySelectorAll("button")) {
             const current = Number(button.dataset["chapterNumber"]) === chapterNumber;
             button.classList.toggle("active", current);
@@ -203,7 +215,7 @@ export default class TocUi extends Ui {
 
         // 定位当前章会清除筛选；搜索清空则恢复搜索前的浏览位置。
         EventUtil.bind(
-            assertExists(this.root.querySelector<HTMLButtonElement>(".locate-current")),
+            this.locateCurrentButton,
             "click",
             () => {
                 this.locateCurrentChapter();
