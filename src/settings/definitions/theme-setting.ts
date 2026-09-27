@@ -37,7 +37,10 @@ export default class ThemeSetting extends Setting {
         [Theme.MEADOW, "薄荷"],
         [Theme.PEACH, "杏桃"],
         [Theme.BLOSSOM, "花信"],
+        [Theme.PAPER, "纸页"],
         [Theme.STARRY, "星夜"],
+        [Theme.DUSK, "暮色"],
+        [Theme.OCEAN, "深海"],
     ]);
 
     public constructor(displayOrder: number) {

@@ -178,12 +178,12 @@ export default class BookListUi extends Ui {
     }
 
     /**
-     * 将稳定书籍标识映射到有限调色板，分类与筛选不会改变书封。
+     * 将稳定书籍标识映射到完整色相环，分类与筛选不会改变书封。
      */
-    private coverTone(bookId: string): number {
+    private coverHue(bookId: string): number {
         let hash = 0;
         for (const character of bookId) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
-        return hash % 5;
+        return hash % 360;
     }
 
     /**
@@ -193,8 +193,9 @@ export default class BookListUi extends Ui {
     private createBookElement(summary: BookSummary, categories: Category[]): HTMLElement {
         // 书目容器携带稳定 ID，供事件委托和重渲染后的焦点定位。
         const book = document.createElement("article");
-        book.className = `book book-tone-${String(this.coverTone(summary.book.id))}`;
+        book.className = "book";
         book.dataset["id"] = summary.book.id;
+        book.style.setProperty("--book-cover-hue", String(this.coverHue(summary.book.id)));
 
         // 书封作为阅读入口，完整书名与进度同时提供给辅助技术。
         const open = document.createElement("button");

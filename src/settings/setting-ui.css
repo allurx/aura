@@ -232,8 +232,8 @@
                 border-radius: 3px;
                 background: var(--appearance-accent);
                 box-shadow:
-                    24px 3px 0 var(--appearance-cover-2),
-                    48px -2px 0 var(--appearance-cover-3);
+                    24px 3px 0 hsl(40 var(--appearance-cover-saturation) var(--appearance-cover-lightness)),
+                    48px -2px 0 hsl(160 var(--appearance-cover-saturation) var(--appearance-cover-lightness));
             }
         }
 

@@ -34,11 +34,8 @@
     --appearance-danger: #b4324d;
     --appearance-shadow-color: #426599;
     --appearance-highlight: #ffffffc9;
-    --appearance-cover-1: #aacfff;
-    --appearance-cover-2: #ffda88;
-    --appearance-cover-3: #a7ddd0;
-    --appearance-cover-4: #ffbca8;
-    --appearance-cover-5: #d2baf1;
+    --appearance-cover-saturation: 70%;
+    --appearance-cover-lightness: 82%;
     --appearance-cover-ink: #27354b;
 
     --appearance-focus: var(--appearance-accent);
@@ -69,11 +66,8 @@
     --appearance-tint: #c9edf2;
     --appearance-glow: #fde7db;
     --appearance-shadow-color: #387986;
-    --appearance-cover-1: #95d4e9;
-    --appearance-cover-2: #b2e5d8;
-    --appearance-cover-3: #f9d99e;
-    --appearance-cover-4: #f4bbbd;
-    --appearance-cover-5: #c5cdf4;
+    --appearance-cover-saturation: 58%;
+    --appearance-cover-lightness: 80%;
     --appearance-cover-ink: #24434d;
 }
 
@@ -90,11 +84,8 @@
     --appearance-tint: #d8edce;
     --appearance-glow: #fff0bd;
     --appearance-shadow-color: #5e7e50;
-    --appearance-cover-1: #b7d88e;
-    --appearance-cover-2: #f2dc8c;
-    --appearance-cover-3: #9fd8c1;
-    --appearance-cover-4: #f4bca5;
-    --appearance-cover-5: #b4d0e8;
+    --appearance-cover-saturation: 50%;
+    --appearance-cover-lightness: 78%;
     --appearance-cover-ink: #30402f;
 }
 
@@ -111,11 +102,8 @@
     --appearance-tint: #ffe1cb;
     --appearance-glow: #f9edb8;
     --appearance-shadow-color: #a27056;
-    --appearance-cover-1: #f5b28e;
-    --appearance-cover-2: #f5d287;
-    --appearance-cover-3: #b9d9b4;
-    --appearance-cover-4: #eeb4c6;
-    --appearance-cover-5: #b4d4e8;
+    --appearance-cover-saturation: 65%;
+    --appearance-cover-lightness: 81%;
     --appearance-cover-ink: #4b3432;
 }
 
@@ -132,12 +120,30 @@
     --appearance-tint: #ebdafa;
     --appearance-glow: #ffe2e4;
     --appearance-shadow-color: #896494;
-    --appearance-cover-1: #d6b5ee;
-    --appearance-cover-2: #f3b5d1;
-    --appearance-cover-3: #fad2a5;
-    --appearance-cover-4: #b4dacc;
-    --appearance-cover-5: #b9c9f2;
+    --appearance-cover-saturation: 60%;
+    --appearance-cover-lightness: 83%;
     --appearance-cover-ink: #45324f;
+}
+
+:where(html, .theme-swatch)[data-theme="paper"] {
+    --appearance-canvas: #f5f0e5;
+    --appearance-surface: #fffaf0;
+    --appearance-muted-surface: #ebe4d4;
+    --appearance-panel: #fbf7ee;
+    --appearance-color: #443b2f;
+    --appearance-muted-color: #6e614e;
+    --appearance-accent: #7c571f;
+    --appearance-accent-secondary: #526e64;
+    --appearance-on-accent: #ffffff;
+    --appearance-selection: #e9ddc4;
+    --appearance-tint: #e8ddc6;
+    --appearance-glow: #f5e8ce;
+    --appearance-danger: #a83e45;
+    --appearance-shadow-color: #8b795d;
+    --appearance-highlight: #fffaf0c9;
+    --appearance-cover-saturation: 38%;
+    --appearance-cover-lightness: 79%;
+    --appearance-cover-ink: #433b2e;
 }
 
 :where(html, .theme-swatch)[data-theme="starry"] {
@@ -157,12 +163,53 @@
     --appearance-danger: #ffb6bf;
     --appearance-shadow-color: #080f22;
     --appearance-highlight: #bfcfff17;
-    --appearance-cover-1: #97b4e2;
-    --appearance-cover-2: #d3bb8f;
-    --appearance-cover-3: #93c7bb;
-    --appearance-cover-4: #d89faa;
-    --appearance-cover-5: #b6a4da;
+    --appearance-cover-saturation: 42%;
+    --appearance-cover-lightness: 72%;
     --appearance-cover-ink: #202d43;
+}
+
+:where(html, .theme-swatch)[data-theme="dusk"] {
+    color-scheme: dark;
+    --appearance-canvas: #26212f;
+    --appearance-surface: #332c3e;
+    --appearance-muted-surface: #41384b;
+    --appearance-panel: #393045;
+    --appearance-color: #f3eaf5;
+    --appearance-muted-color: #cbbbd2;
+    --appearance-accent: #e3b8ed;
+    --appearance-accent-secondary: #edbdcb;
+    --appearance-on-accent: #422d49;
+    --appearance-selection: #53405e;
+    --appearance-tint: #40334f;
+    --appearance-glow: #553c4a;
+    --appearance-danger: #ffb7c7;
+    --appearance-shadow-color: #100d19;
+    --appearance-highlight: #efd1ff17;
+    --appearance-cover-saturation: 44%;
+    --appearance-cover-lightness: 76%;
+    --appearance-cover-ink: #382c42;
+}
+
+:where(html, .theme-swatch)[data-theme="ocean"] {
+    color-scheme: dark;
+    --appearance-canvas: #142c33;
+    --appearance-surface: #1d3940;
+    --appearance-muted-surface: #2b4850;
+    --appearance-panel: #24434a;
+    --appearance-color: #e1f3f2;
+    --appearance-muted-color: #accacb;
+    --appearance-accent: #94ded3;
+    --appearance-accent-secondary: #dbceab;
+    --appearance-on-accent: #173b3b;
+    --appearance-selection: #315d63;
+    --appearance-tint: #214a53;
+    --appearance-glow: #3b4e48;
+    --appearance-danger: #ffbab4;
+    --appearance-shadow-color: #071b22;
+    --appearance-highlight: #b5efe617;
+    --appearance-cover-saturation: 48%;
+    --appearance-cover-lightness: 75%;
+    --appearance-cover-ink: #213d42;
 }
 
 html {

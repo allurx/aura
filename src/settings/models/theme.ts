@@ -25,7 +25,10 @@ export enum Theme {
     MEADOW = "meadow",
     PEACH = "peach",
     BLOSSOM = "blossom",
+    PAPER = "paper",
     STARRY = "starry",
+    DUSK = "dusk",
+    OCEAN = "ocean",
 }
 
 const THEMES = new Set<string>(Object.values(Theme));

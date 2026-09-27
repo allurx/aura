@@ -34,25 +34,13 @@
     font-size: 1rem;
 
     .book {
-        --book-cover: var(--appearance-cover-1);
+        --book-cover: hsl(var(--book-cover-hue) var(--appearance-cover-saturation) var(--appearance-cover-lightness));
         --book-cover-ink: var(--appearance-cover-ink);
         --book-title-size: 1.7;
         --book-title-lines: 4;
         --book-cover-top: 1.7rem;
         --book-cover-bottom: 1.4rem;
         min-width: 0;
-    }
-    .book-tone-1 {
-        --book-cover: var(--appearance-cover-2);
-    }
-    .book-tone-2 {
-        --book-cover: var(--appearance-cover-3);
-    }
-    .book-tone-3 {
-        --book-cover: var(--appearance-cover-4);
-    }
-    .book-tone-4 {
-        --book-cover: var(--appearance-cover-5);
     }
     .book-open {
         position: relative;
