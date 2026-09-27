@@ -26,6 +26,10 @@
     gap: 1.35rem;
     min-width: 0;
     flex-shrink: 0;
+    /* 极矮窗口或显式大字号下，工具栏仍为书籍列表留出空间。 */
+    max-height: 50%;
+    overflow-y: auto;
+    scrollbar-gutter: auto;
     padding: 2.2rem var(--ui-padding-right) 1.8rem var(--ui-padding-left);
     background-color: inherit;
     color: var(--bookshelf-header-color);

@@ -150,6 +150,118 @@
         background: var(--bookshelf-background-color);
         color: var(--ui-color, var(--bookshelf-book-list-color));
     }
+    /* 原生 picker 限高滚动；不支持定制选择器的浏览器保留系统菜单。 */
+    @supports (appearance: base-select) and selector(::picker(select)) {
+        /* 将列表的实际底色传给浮层，显式外观设置也能沿用。 */
+        .book,
+        .book-tools {
+            background-color: inherit;
+        }
+        .book-category {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding-inline: 0.25rem;
+            margin-left: -0.25rem;
+            background-color: inherit;
+            white-space: nowrap;
+            opacity: 1;
+
+            &,
+            &::picker(select) {
+                appearance: base-select;
+            }
+            &::picker-icon {
+                content: "";
+                flex: none;
+                width: 0.45em;
+                height: 0.45em;
+                margin: -0.2em 0.2em 0 0;
+                border-right: 1.5px solid currentColor;
+                border-bottom: 1.5px solid currentColor;
+                transform: rotate(45deg);
+                opacity: 0.6;
+                transition: transform 160ms ease;
+            }
+            &:open {
+                background-image: linear-gradient(
+                    color-mix(in srgb, currentColor 6%, transparent),
+                    color-mix(in srgb, currentColor 6%, transparent)
+                );
+            }
+            &:open::picker-icon {
+                transform: rotate(225deg);
+            }
+            &::picker(select) {
+                min-width: 9rem;
+                max-width: calc(100vw - 2rem);
+                max-height: min(16rem, calc(100dvh - 2rem));
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                scroll-padding-block: 0.35rem;
+                margin-block: 0.35rem;
+                padding: 0.35rem;
+                border: 1px solid var(--appearance-border);
+                border-radius: 0.85rem;
+                background-color: inherit;
+                color: inherit;
+                box-shadow: var(--appearance-shadow-raised);
+                font-size: max(14px, 1em);
+                line-height: 1.4;
+                scrollbar-width: thin;
+                scrollbar-color: color-mix(in srgb, currentColor 30%, transparent) transparent;
+            }
+            option {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                min-height: 36px;
+                padding: 0.4rem 0.65rem;
+                border-radius: 0.5rem;
+                background: transparent;
+                color: inherit;
+                cursor: pointer;
+            }
+            option::checkmark {
+                order: 1;
+                margin-left: auto;
+                color: var(--ui-color, var(--appearance-accent));
+                font-size: 0.9em;
+            }
+            option:checked {
+                background: color-mix(in srgb, currentColor 7%, transparent);
+                font-weight: 600;
+            }
+            option:hover,
+            option:focus-visible {
+                background: color-mix(in srgb, currentColor 12%, transparent);
+            }
+            option:focus-visible {
+                outline: 2px solid var(--focus-ring-color);
+                outline-offset: -2px;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                &::picker-icon {
+                    transition: none;
+                }
+            }
+            @media (forced-colors: active) {
+                &::picker(select) {
+                    border-color: ButtonText;
+                    scrollbar-color: auto;
+                }
+                option:checked {
+                    outline: 1px solid Highlight;
+                    outline-offset: -1px;
+                }
+            }
+            @media (any-pointer: coarse) {
+                option {
+                    min-height: 44px;
+                }
+            }
+        }
+    }
     .book-delete {
         --icon-size: 18px;
         opacity: 0.6;
@@ -197,7 +309,10 @@
         }
         .book-category:hover {
             opacity: 1;
-            background: color-mix(in srgb, currentColor 4%, transparent);
+            background-image: linear-gradient(
+                color-mix(in srgb, currentColor 4%, transparent),
+                color-mix(in srgb, currentColor 4%, transparent)
+            );
         }
     }
     .book-open:active {

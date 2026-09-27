@@ -26,35 +26,17 @@ export default class BookshelfUi extends PageUi {
     private signal?: AbortSignal;
 
     /**
-     * 将吸顶测量和反馈计时器绑定到页面生命周期。
+     * 将反馈计时器绑定到页面生命周期。
      * 页面离开时取消待确认对话框，避免挂起的处理器恢复后继续操作。
      */
     public bindLifecycle(signal: AbortSignal): void {
         this.signal = signal;
-        const main = assertExists(this.root.querySelector<HTMLElement>("main"));
-        const header = assertExists(main.querySelector<HTMLElement>("#header"));
 
-        /**
-         * 标题只在能为书籍留下足够空间时吸顶，焦点滚动同时避开其真实高度。
-         */
-        const updateStickyHeader = (): void => {
-            const height = header.getBoundingClientRect().height;
-            main.style.setProperty("--bookshelf-header-height", `${String(height)}px`);
-            main.toggleAttribute("data-sticky-header", height <= main.clientHeight / 3);
-        };
-
-        // 工具栏或主区域尺寸变化时重新判断吸顶空间。
-        const observer = new ResizeObserver(updateStickyHeader);
-        observer.observe(main);
-        observer.observe(header);
-        updateStickyHeader();
-
-        // 页面销毁统一清理测量、反馈和仍在等待用户确认的对话框。
+        // 页面销毁统一清理反馈和仍在等待用户确认的对话框。
         signal.addEventListener(
             "abort",
             () => {
                 window.clearTimeout(this.feedbackTimer);
-                observer.disconnect();
                 for (const dialog of this.root.querySelectorAll<HTMLDialogElement>(".dialog[open]"))
                     dialog.close("cancel");
             },

@@ -54,7 +54,7 @@ export default class BookshelfController {
         bookshelfRoot: HTMLElement,
         private readonly onReadBook: (bookId: string) => void
     ) {
-        // 按页面区域创建 UI，列表使用包含工具栏的主区域保存滚动位置。
+        // 按页面区域创建 UI，书籍内容区独立滚动并保存浏览位置。
         this.headerUi = new HeaderUi({
             root: assertExists(bookshelfRoot.querySelector<HTMLElement>("#header")),
             displayName: "工具栏",
@@ -65,7 +65,7 @@ export default class BookshelfController {
         });
         this.bookListUi = new BookListUi({
             root: assertExists(bookshelfRoot.querySelector<HTMLElement>("#book-list")),
-            scrollContainer: assertExists(bookshelfRoot.querySelector<HTMLElement>("main")),
+            scrollContainer: assertExists(bookshelfRoot.querySelector<HTMLElement>("#book-list-scroll")),
             displayName: "书籍列表",
         });
         this.bookshelfUi = new BookshelfUi({

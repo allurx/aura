@@ -30,7 +30,7 @@ export default class BookListUi extends Ui {
     private pendingSelection: HTMLSelectElement | null = null;
 
     /**
-     * 书籍样式仍属于列表，位置保存与恢复使用包含工具栏的主滚动区。
+     * 外观只作用于书籍网格，滚动位置属于同时容纳导入反馈的内容区。
      */
     public constructor(args: ConstructorParameters<typeof Ui>[0] & { scrollContainer: HTMLElement }) {
         super(args);
@@ -55,7 +55,8 @@ export default class BookListUi extends Ui {
     public renderBooks(books: BookSummary[], categories: Category[], searching: boolean): void {
         // 替换 DOM 前记录操作来源，禁用的分类选择器也参与焦点恢复。
         const scrollTop = this.scrollContainer.scrollTop;
-        const focused = document.activeElement === document.body ? this.pendingSelection : document.activeElement;
+        const active = document.activeElement === document.body ? this.pendingSelection : document.activeElement;
+        const focused = active instanceof HTMLOptionElement ? active.closest("select") : active;
         const owner = focused instanceof HTMLElement ? focused.closest<HTMLElement>(".book") : null;
         const focusId = owner?.dataset["id"];
         const focusClass = focused instanceof HTMLSelectElement ? ".book-category" : ".book-open";
@@ -150,9 +151,9 @@ export default class BookListUi extends Ui {
                 const next = element.value;
                 if (previous === next) return;
 
-                // 禁用原生选择器前保存来源，供回调触发的列表重渲染使用。
+                // 定制原生 picker 的焦点可能落在 option，禁用前一并保存来源。
                 const id = assertExists(element.closest<HTMLElement>(".book")?.dataset["id"]);
-                if (document.activeElement === element) this.pendingSelection = element;
+                if (element.contains(document.activeElement)) this.pendingSelection = element;
                 element.disabled = true;
                 element.setAttribute("aria-busy", "true");
 
