@@ -39,8 +39,7 @@
         --book-cover-ink: var(--appearance-cover-ink);
         --book-title-size: 1.3;
         --book-title-lines: 4;
-        --book-cover-top: 1rem;
-        --book-cover-bottom: 0.85rem;
+        --book-cover-padding-block: 1rem;
         min-width: 0;
         width: 100%;
         /* 换列只重新分配留白，书卡保持目标宽度，不随剩余空间拉伸。 */
@@ -51,20 +50,20 @@
         isolation: isolate;
         display: flex;
         align-items: center;
+        justify-content: center;
         width: 100%;
         aspect-ratio: 4 / 5;
         /* 窄书封和大字号仍为完整标题行留足空间。 */
         min-height: calc(
-            var(--book-title-lines) * 1.45 * var(--book-title-size) * 1em + var(--book-cover-top) +
-                var(--book-cover-bottom)
+            var(--book-title-lines) * 1.45 * var(--book-title-size) * 1em + 2 * var(--book-cover-padding-block)
         );
-        padding: var(--book-cover-top) 0.85rem var(--book-cover-bottom) 1.2rem;
+        padding: var(--book-cover-padding-block) 1.2rem;
         border: 1px solid color-mix(in srgb, var(--book-cover-ink) 10%, transparent);
         border-radius: 5px 12px 12px 5px;
         background-color: var(--book-cover);
         background-image: linear-gradient(120deg, rgb(255 255 255 / 18%), transparent 55%);
         color: var(--ui-color, var(--book-cover-ink));
-        text-align: left;
+        text-align: center;
         box-shadow:
             0 16px 20px -14px color-mix(in srgb, var(--book-cover) 65%, var(--appearance-shadow-color)),
             0 4px 6px -3px var(--appearance-shadow-color),
@@ -324,7 +323,7 @@
         --book-width: max(104px, 7.5em);
         gap: 1.25rem 0.85rem;
         .book-open {
-            padding: var(--book-cover-top) 0.65rem var(--book-cover-bottom) 1.05rem;
+            padding-inline: 1.05rem;
         }
         .book-progress {
             font-size: max(12px, 0.78em);
