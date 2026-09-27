@@ -90,14 +90,35 @@
     #category-navigation .icon {
         --icon-size: 20px;
     }
+    /* 跳过“全部书籍”，真实分类的圆点按彩虹七色循环。 */
+    #category-navigation button:nth-child(7n + 2) {
+        --category-dot-color: #e76f7a;
+    }
+    #category-navigation button:nth-child(7n + 3) {
+        --category-dot-color: #e99a51;
+    }
+    #category-navigation button:nth-child(7n + 4) {
+        --category-dot-color: #d8b543;
+    }
+    #category-navigation button:nth-child(7n + 5) {
+        --category-dot-color: #68b77b;
+    }
+    #category-navigation button:nth-child(7n + 6) {
+        --category-dot-color: #48b6bd;
+    }
+    #category-navigation button:nth-child(7n + 7) {
+        --category-dot-color: #6b91dc;
+    }
+    #category-navigation button:nth-child(7n + 8) {
+        --category-dot-color: #ab7bce;
+    }
     .category-dot {
         flex: none;
         width: 6px;
         height: 6px;
         margin-inline: 7px;
         border-radius: 50%;
-        background: currentColor;
-        color: var(--appearance-accent-secondary);
+        background: var(--category-dot-color);
         opacity: 0.75;
     }
     #category-navigation button.active {
@@ -109,7 +130,6 @@
             inset 0 1px 0 var(--appearance-highlight);
     }
     button.active .category-dot {
-        color: inherit;
         opacity: 1;
     }
     .nav-footer {
