@@ -95,6 +95,7 @@ export default class ReaderController {
         this.settingController = new SettingController({
             pageName: PageName.READER,
             container: this.readerUi.root,
+            inertElements: [this.readerUi.actions],
             targets: [
                 new SettingTarget(this.appUi, [SettingCatalog.BACKGROUND_COLOR, SettingCatalog.THEME]),
                 new SettingTarget(this.readerUi, [
@@ -171,14 +172,14 @@ export default class ReaderController {
     }
 
     /**
-     * 渲染当前章、章末操作和底部进度。
+     * 渲染当前章、工具栏切章状态和阅读进度。
      */
     private renderCurrentChapter(): void {
         // 正文先重建，再按段落锚点恢复位置，不能沿用旧章节的像素偏移。
         this.contentUi
             .renderChapter(this.state.chapter.title, this.state.chapter.lines)
-            .renderChapterNavigation(this.state.progress.chapterNumber, this.state.toc.numberOfChapters())
             .restoreProgress(this.state.progress.chapterLineNumber, this.state.progress.lineVisibleRatio);
+        this.readerUi.renderChapterNavigation(this.state.progress.chapterNumber, this.state.toc.numberOfChapters());
 
         // 底栏与目录显示同一份已提交进度。
         this.footerUi
@@ -226,7 +227,7 @@ export default class ReaderController {
                 const chapter = await this.readerService.getChapter(this.state.book.fileId, chapterNumber);
                 if (!this.isActive()) return;
 
-                // 新章进度先持久化，再将正文和移动工具状态切换到目标章。
+                // 新章进度先持久化，再将正文和工具状态切换到目标章。
                 await this.updateProgress({
                     chapterNumber,
                     chapterLineNumber: 1,
@@ -251,7 +252,7 @@ export default class ReaderController {
     }
 
     /**
-     * 将显式按钮、键盘和辅助手势统一到同一切章流程。
+     * 将按钮、手势和键盘统一到同一切章流程。
      */
     private async switchChapter(direction: SwitchChapterDirection): Promise<void> {
         if (this.readerUi.root.querySelector("#setting.open, #toc[open]")) return;
@@ -283,19 +284,22 @@ export default class ReaderController {
      * 为当前页面注册可随生命周期清理的交互。
      */
     private bindEvent(signal: AbortSignal): void {
-        // 正文手势统一分发到切章或沉浸工具，处理中消费中心点击但不执行动作。
-        this.appUi.bindChapterNavigation(
+        // 仅移动布局接受正文切章手势，中部轻点保留给工具显隐。
+        this.appUi.bindReadingGestures(
             this.contentUi.root,
-            (direction) => this.switchChapter(direction),
+            async (direction) => {
+                if (this.readerUi.root.hasAttribute("data-mobile-controls")) await this.switchChapter(direction);
+            },
             () => {
-                if (this.chapterLoading || this.returningToBookshelf) return true;
-                return this.readerUi.toggleReadingTools();
+                if (this.chapterLoading || this.returningToBookshelf) return;
+                this.readerUi.toggleReadingTools();
             },
             signal
         );
 
         // 返回先提交进度；全屏切换前后用同一段落锚点保持阅读位置。
         this.readerUi
+            .bindChapterNavigation((direction) => this.switchChapter(direction), signal)
             .bindReturnToBookshelf(() => this.returnToBookshelf(), signal)
             .bindToggleFullscreen(async () => {
                 if (this.chapterLoading || this.returningToBookshelf) return;
@@ -322,9 +326,9 @@ export default class ReaderController {
                 this.readerUi.setTocExpanded(this.tocUi.toggleToc());
             }, signal);
 
-        // 章末按钮与键盘复用切章流程，滚动保存只接受稳定正文的位置。
+        // 正文键盘复用切章流程，滚动保存只接受稳定正文的位置。
         this.contentUi
-            .bindChapterNavigation((direction) => this.switchChapter(direction), signal)
+            .bindKeyboardNavigation((direction) => this.switchChapter(direction), signal)
             .bindContentScroll(async (chapterLineNumber, lineVisibleRatio) => {
                 if (this.chapterLoading || this.returningToBookshelf || this.appearancePosition) return;
                 await this.updateProgress({ chapterLineNumber, lineVisibleRatio, updatedTime: Date.now() });

@@ -21,18 +21,37 @@
         type="button"
         aria-controls="header footer"
         aria-expanded="false"
+        aria-label="显示阅读工具"
+        title="显示阅读工具"
         hidden
     >
         显示阅读工具
     </button>
     <header id="header">
-        <div class="action action-left">
-            <button id="return-bookshelf" class="reader-action" type="button" aria-label="返回书架">
-                <span class="icon icon-arrow-left" aria-hidden="true"></span><span>书架</span>
+        <h1 id="book-title"></h1>
+    </header>
+
+    <main id="content" class="panel-scroll" tabindex="0" aria-label="阅读正文"></main>
+
+    <nav id="reader-actions" class="panel-scroll" aria-label="阅读操作" hidden>
+        <div class="reader-action-group navigation-actions" role="group" aria-label="章节导航">
+            <button id="previous-chapter" class="reader-action" type="button" aria-keyshortcuts="ArrowLeft">
+                <span class="icon icon-arrow-left" aria-hidden="true"></span><span>上一章</span>
+            </button>
+            <button id="next-chapter" class="reader-action" type="button" aria-keyshortcuts="ArrowRight">
+                <span class="icon icon-arrow-right" aria-hidden="true"></span><span>下一章</span>
             </button>
         </div>
-        <h1 id="book-title"></h1>
-        <div class="action action-right">
+        <div class="reader-action-group preference-actions" role="group" aria-label="阅读外观与全屏"></div>
+        <div class="reader-action-group bookshelf-actions" role="group" aria-label="返回书架"></div>
+    </nav>
+
+    <footer id="footer">
+        <div class="reading-location">
+            <div id="chapter-title"></div>
+            <div id="progress-rate" title="全书阅读进度"></div>
+        </div>
+        <nav class="mobile-actions" aria-label="阅读操作">
             <button
                 id="toggle-toc-panel"
                 class="reader-action"
@@ -43,22 +62,6 @@
             >
                 <span class="icon icon-table-of-contents" aria-hidden="true"></span><span>目录</span>
             </button>
-        </div>
-    </header>
-
-    <main id="content" class="panel-scroll" tabindex="0" aria-label="阅读正文">
-        <nav class="chapter-navigation" aria-label="章节导航">
-            <button id="previous-chapter" class="reader-action" type="button" aria-keyshortcuts="ArrowLeft">
-                <span class="icon icon-arrow-left" aria-hidden="true"></span>上一章
-            </button>
-            <button id="next-chapter" class="reader-action" type="button" aria-keyshortcuts="ArrowRight">
-                下一章<span class="icon icon-arrow-right" aria-hidden="true"></span>
-            </button>
-        </nav>
-    </main>
-
-    <footer id="footer">
-        <div class="action action-left">
             <button
                 id="toggle-setting-panel"
                 class="reader-action"
@@ -69,12 +72,6 @@
             >
                 <span class="appearance-mark" aria-hidden="true">Aa</span><span>外观</span>
             </button>
-        </div>
-        <div class="reading-location">
-            <div id="chapter-title"></div>
-            <div id="progress-rate"></div>
-        </div>
-        <div class="action action-right">
             <button
                 id="toggle-fullscreen"
                 class="reader-action"
@@ -85,8 +82,10 @@
             >
                 <span class="icon icon-fullscreen" aria-hidden="true"></span><span>全屏</span>
             </button>
-        </div>
-        <nav class="mobile-actions" aria-label="阅读操作"></nav>
+            <button id="return-bookshelf" class="reader-action" type="button" aria-label="返回书架">
+                <span class="icon icon-bookshelf" aria-hidden="true"></span><span>书架</span>
+            </button>
+        </nav>
     </footer>
 
     <dialog id="toc" class="panel-scroll" aria-labelledby="toc-title" tabindex="-1">

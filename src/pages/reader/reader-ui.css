@@ -19,7 +19,9 @@
 #reader {
     width: 800px;
     min-width: 640px;
-    max-width: min(960px, 100%);
+    max-width: min(960px, calc(100vw - 160px));
+    grid-column: 2;
+    grid-row: 1;
     height: calc(100% - 40px);
     margin: 20px auto;
     display: flex;
@@ -34,55 +36,8 @@
     box-shadow: var(--appearance-shadow-raised);
     line-height: 1.6;
 
-    .reader-action {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        --icon-size: 20px;
-        gap: 6px;
-        min-width: 44px;
-        min-height: 44px;
-        padding: 8px;
-        border: 1px solid transparent;
-        border-radius: 13px;
-        background: transparent;
-        color: inherit;
-        font: inherit;
-        line-height: 1.4;
-        text-decoration: none;
-        cursor: pointer;
-        white-space: nowrap;
-        transition:
-            background-color 140ms ease,
-            color 140ms ease,
-            box-shadow 140ms ease,
-            transform 140ms ease;
-
-        @media (hover: hover) and (pointer: fine) {
-            &:hover:not(:disabled) {
-                background: color-mix(in srgb, currentColor 6%, transparent);
-                box-shadow: var(--appearance-shadow-soft);
-                transform: translateY(-1px);
-            }
-        }
-
-        &:active:not(:disabled) {
-            box-shadow: none;
-            transform: translateY(0);
-        }
-
-        &:disabled {
-            opacity: 0.35;
-            cursor: default;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            transition: none;
-
-            &:hover:not(:disabled) {
-                transform: none;
-            }
-        }
+    &[data-mobile-controls] {
+        max-width: min(960px, 100%);
     }
 
     @media (max-width: 800px), (max-height: 500px) and (pointer: coarse) {
@@ -97,13 +52,26 @@
             box-shadow: none;
         }
     }
+
+    @media (max-height: 500px) {
+        height: 100%;
+        margin-block: 0;
+        border-block: 0;
+        border-radius: 0;
+    }
 }
 
-/* 辅助入口保留在阅读顺序中，仅键盘聚焦时显露，避免沉浸界面常驻按钮。 */
+/* 触摸布局由正文中部唤出工具；辅助入口仍在键盘和阅读顺序中。 */
 #reader > .reader-tools-entry {
     position: absolute;
+    z-index: 4;
+    top: max(8px, env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
+    right: auto;
+    transform: none;
     width: 1px;
     height: 1px;
+    min-height: 0;
     padding: 0;
     border: 0;
     overflow: hidden;
@@ -111,9 +79,6 @@
     white-space: nowrap;
 
     &:focus-visible {
-        z-index: 4;
-        top: max(8px, env(safe-area-inset-top));
-        left: max(12px, env(safe-area-inset-left));
         width: auto;
         height: auto;
         min-height: 44px;
@@ -129,14 +94,14 @@
 }
 
 /* 工具覆盖正文而不参与布局，显隐时保持滚动容器尺寸和阅读位置。 */
-#reader[data-mobile-controls] > :is(#header, #footer) {
+#reader > :is(#header, #footer) {
     position: absolute;
     left: 0;
     right: 0;
     z-index: 3;
 }
 
-#reader[data-mobile-controls]:not([data-reading-tools-visible]) > :is(#header, #footer) {
+#reader:not([data-reading-tools-visible]) > :is(#header, #footer) {
     visibility: hidden;
     pointer-events: none;
 }
@@ -146,5 +111,56 @@
 
     > .reader-tools-entry:focus-visible {
         background-color: inherit;
+    }
+}
+
+:is(#reader, #reader-actions) .reader-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    --icon-size: 20px;
+    gap: 6px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px;
+    border: 1px solid transparent;
+    border-radius: 13px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: 1.4;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+        background-color 140ms ease,
+        color 140ms ease,
+        box-shadow 140ms ease,
+        transform 140ms ease;
+
+    @media (hover: hover) and (pointer: fine) {
+        &:hover:not(:disabled) {
+            background: color-mix(in srgb, currentColor 6%, transparent);
+            box-shadow: var(--appearance-shadow-soft);
+            transform: translateY(-1px);
+        }
+    }
+
+    &:active:not(:disabled) {
+        box-shadow: none;
+        transform: translateY(0);
+    }
+
+    &:disabled {
+        opacity: 0.35;
+        cursor: default;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        transition: none;
+
+        &:hover:not(:disabled) {
+            transform: none;
+        }
     }
 }

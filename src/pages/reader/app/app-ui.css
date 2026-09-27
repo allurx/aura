@@ -17,12 +17,78 @@
  */
 
 html[data-page="reader"] #app {
-    display: flow-root;
+    display: grid;
+    grid-template-columns: minmax(80px, 1fr) auto minmax(80px, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     background-color: var(--reader-backdrop);
 
     &:not([style*="background-color"]) {
         background-image:
             radial-gradient(ellipse at 4% 8%, var(--appearance-tint), transparent 48%),
             radial-gradient(ellipse at 96% 88%, var(--appearance-glow), transparent 48%);
+    }
+
+    &:has(> #reader[data-mobile-controls]) {
+        display: flow-root;
+    }
+}
+
+/* 对称预留侧边空间保持正文居中，右栏独立于 Reader 的裁切和宽度拖动。 */
+#reader-actions {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center;
+    justify-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 64px;
+    max-height: calc(100dvh - 32px);
+    margin-left: 12px;
+    padding: 6px;
+    border: 1px solid var(--appearance-highlight);
+    border-radius: 18px;
+    background: var(--appearance-panel);
+    color: var(--appearance-color);
+    box-shadow: var(--appearance-shadow-soft);
+    overflow-y: auto;
+    scrollbar-gutter: auto;
+    font-size: 12px;
+
+    &[hidden] {
+        display: none;
+    }
+
+    .reader-action-group {
+        display: flex;
+        flex: none;
+        flex-direction: column;
+        gap: 6px;
+
+        + .reader-action-group {
+            padding-top: 8px;
+            border-top: 1px solid var(--appearance-border);
+        }
+    }
+
+    .reader-action-group > button.reader-action {
+        flex: none;
+        flex-direction: column;
+        gap: 4px;
+        min-height: 56px;
+        padding: 6px 2px;
+    }
+
+    .appearance-mark {
+        font-family: Georgia, serif;
+        font-size: 22px;
+        line-height: 20px;
+    }
+
+    #progress-rate {
+        padding-top: 6px;
+        border-top: 1px solid var(--appearance-border);
+        text-align: center;
+        line-height: 1.5;
     }
 }

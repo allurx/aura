@@ -74,6 +74,10 @@
     --icon-image: url("../../assets/images/book.svg");
 }
 
+.icon-bookshelf {
+    --icon-image: url("../../assets/images/bookshelf.svg");
+}
+
 .icon-help {
     --icon-image: url("../../assets/images/help.svg");
 }

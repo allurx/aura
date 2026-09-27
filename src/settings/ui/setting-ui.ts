@@ -54,7 +54,14 @@ export default class SettingUi extends Ui implements SettingControlListener {
     private opener: HTMLElement | undefined;
     private returnFocusTarget: HTMLElement | undefined;
 
-    public constructor(container: HTMLElement) {
+    /**
+     * @param container - 面板与遮罩的挂载容器。
+     * @param inertElements - 位于容器外、但同样需要在模态期间隔离的页面区域。
+     */
+    public constructor(
+        container: HTMLElement,
+        private readonly inertElements: readonly HTMLElement[] = []
+    ) {
         super({ root: { container, template: SettingUi.template }, displayName: "设置" });
 
         // 遮罩与面板同级挂载，初始不参与交互或辅助技术访问。
@@ -303,10 +310,10 @@ export default class SettingUi extends Ui implements SettingControlListener {
         this.returnFocusTarget = returnFocusTarget;
         this.opener.setAttribute("aria-expanded", "true");
 
-        // 暂时隔离页面其余区域，不丢失它们各自的原始 inert 状态。
+        // 容器内外的背景区域共用快照，关闭时先恢复交互再归还外部入口焦点。
         this.previousInert.clear();
         const parent = assertExists(this.root.parentElement);
-        for (const child of parent.children) {
+        for (const child of new Set([...parent.children, ...this.inertElements])) {
             if (!(child instanceof HTMLElement) || child === this.root || child === this.backdropElement) continue;
             this.previousInert.set(child, child.inert);
             child.inert = true;

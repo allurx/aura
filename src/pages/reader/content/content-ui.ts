@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { assertExists } from "@/utils/assert-util";
 import { SwitchChapterDirection } from "../switch-chapter-direction";
 import Ui from "@/components/ui";
 import EventUtil from "@/utils/event-util";
@@ -24,20 +23,7 @@ import EventUtil from "@/utils/event-util";
  * @author allurx
  */
 export default class ContentUi extends Ui {
-    private readonly chapterNavigation: HTMLElement;
-    private readonly previousButton: HTMLButtonElement;
-    private readonly nextButton: HTMLButtonElement;
     private scrollTimer: number | undefined;
-
-    /**
-     * 保留章节末尾导航节点，正文重绘不会重复注册监听器。
-     */
-    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
-        super(args);
-        this.chapterNavigation = assertExists(this.root.querySelector<HTMLElement>(".chapter-navigation"));
-        this.previousButton = assertExists(this.root.querySelector<HTMLButtonElement>("#previous-chapter"));
-        this.nextButton = assertExists(this.root.querySelector<HTMLButtonElement>("#next-chapter"));
-    }
 
     /**
      * 标题与正文使用文本节点渲染，段落行号继续对应已有进度模型。
@@ -62,17 +48,8 @@ export default class ContentUi extends Ui {
             fragment.appendChild(paragraph);
         });
 
-        // 一次替换正文并保留已有导航节点，避免丢失按钮状态与监听器。
-        this.root.replaceChildren(fragment, this.chapterNavigation);
-        return this;
-    }
-
-    /**
-     * 根据章序禁用边界按钮。
-     */
-    public renderChapterNavigation(chapterNumber: number, chapterCount: number): this {
-        this.previousButton.disabled = chapterNumber <= 1;
-        this.nextButton.disabled = chapterNumber >= chapterCount;
+        // 操作按钮由外部工具栏持有，正文只保留自然块布局。
+        this.root.replaceChildren(fragment);
         return this;
     }
 
@@ -186,16 +163,12 @@ export default class ContentUi extends Ui {
     }
 
     /**
-     * 绑定可见切章按钮和正文中的左右键，保留控件自身键盘行为。
+     * 绑定正文中的左右键，保留控件自身键盘行为。
      */
-    public bindChapterNavigation(
+    public bindKeyboardNavigation(
         handler: (direction: SwitchChapterDirection) => Promise<void>,
         signal: AbortSignal
     ): this {
-        // 显式导航按钮和键盘使用同一切章处理器。
-        EventUtil.bind(this.previousButton, "click", () => handler(SwitchChapterDirection.PREV), { signal });
-        EventUtil.bind(this.nextButton, "click", () => handler(SwitchChapterDirection.NEXT), { signal });
-
         // 只有普通正文焦点接受方向键，控件编辑、修饰键与长按重复均保留原行为。
         EventUtil.bind(
             document,

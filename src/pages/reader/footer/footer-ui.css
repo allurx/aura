@@ -17,6 +17,7 @@
  */
 
 #reader > #footer {
+    bottom: 0;
     --ui-padding-left: 28px;
     --ui-padding-right: 28px;
     display: grid;
@@ -32,15 +33,6 @@
     border-top: 1px solid color-mix(in srgb, currentColor 7%, transparent);
     box-shadow: 0 -4px 16px color-mix(in srgb, var(--appearance-shadow-color) 18%, transparent);
     user-select: none;
-
-    .action {
-        display: flex;
-        align-items: center;
-    }
-
-    .action-right {
-        justify-content: flex-end;
-    }
 
     .mobile-actions {
         display: none;
@@ -74,12 +66,15 @@
         white-space: nowrap;
         text-overflow: ellipsis;
     }
-    #progress-rate {
-        color: var(--ui-color, var(--appearance-accent));
-        font-variant-numeric: tabular-nums;
-        font-size: 0.85em;
-        font-weight: 650;
-    }
+}
+
+/* 桌面侧栏与移动页脚复用同一进度元素和排版规则。 */
+:is(#reader, #reader-actions) #progress-rate {
+    color: var(--ui-color, var(--appearance-accent));
+    font-variant-numeric: tabular-nums;
+    font-size: 0.85em;
+    font-weight: 650;
+    white-space: nowrap;
 }
 
 #reader:not([style*="background-color"]) > #footer:not([style*="background-color"]) {
@@ -102,13 +97,12 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 6px;
     min-height: 0;
-
-    > .action {
-        display: none;
-    }
+    max-height: 100%;
+    overflow-y: auto;
 
     .reading-location {
         display: flex;
+        flex-wrap: wrap;
         align-items: baseline;
         justify-content: center;
         gap: 8px;
@@ -116,7 +110,9 @@
     }
 
     #chapter-title {
+        flex: 1 1 0;
         min-width: 0;
+        max-width: max-content;
     }
 
     #progress-rate {
@@ -125,7 +121,8 @@
 
     .mobile-actions {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        /* 按实际可用宽度换行，不能让列宽小于按钮的最小点击尺寸。 */
+        grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
         gap: 6px;
 
         > .reader-action {

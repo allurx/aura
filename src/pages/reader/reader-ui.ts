@@ -18,12 +18,16 @@ import PageUi from "@/pages/page-ui";
 import { assertExists } from "@/utils/assert-util";
 import EventUtil from "@/utils/event-util";
 import FullscreenUtil from "@/utils/fullscreen-util";
+import { SwitchChapterDirection } from "./switch-chapter-direction";
 
 /**
- * 阅读器四键布局与移动端沉浸工具状态。
+ * 阅读器工具分组、跨设备布局和移动沉浸状态。
  * @author allurx
  */
 export default class ReaderUi extends PageUi {
+    public readonly actions = assertExists(this.root.querySelector<HTMLElement>("#reader-actions"));
+    private readonly previousButton = assertExists(this.actions.querySelector<HTMLButtonElement>("#previous-chapter"));
+    private readonly nextButton = assertExists(this.actions.querySelector<HTMLButtonElement>("#next-chapter"));
     private readonly returnButton = assertExists(this.root.querySelector<HTMLButtonElement>("#return-bookshelf"));
     private readonly tocButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-toc-panel"));
     private readonly settingButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel"));
@@ -36,42 +40,67 @@ export default class ReaderUi extends PageUi {
     private toolsVisible = false;
 
     /**
-     * 四键在桌面四角与移动端底部间移动原节点，保留事件、展开状态和自然 Tab 顺序。
-     * 移动布局默认沉浸；已聚焦的工具或开启的浮层需要保留入口，不能随布局切换隐藏。
+     * 四键在桌面外侧栏与移动端底部间移动原节点，保留事件、展开状态和自然 Tab 顺序。
+     * 移动工具默认收起；进入移动布局时保留正在使用的入口及浮层返回路径。
      */
     public bindResponsiveControls(signal: AbortSignal): void {
-        // 保存四键的桌面归属，响应式切换只移动节点，不重建事件与展开状态。
-        const mobile = window.matchMedia("(max-width: 800px), (pointer: coarse)");
-        const toolbar = assertExists(this.root.querySelector<HTMLElement>(".mobile-actions"));
-        const controls = [this.returnButton, this.tocButton, this.settingButton, this.fullscreenButton].map(
-            (button) => ({
-                button,
-                desktopParent: assertExists(button.parentElement),
-            })
+        this.root.after(this.actions);
+        signal.addEventListener(
+            "abort",
+            () => {
+                this.actions.remove();
+            },
+            { once: true }
         );
 
+        // 响应式切换只移动节点，不重建事件与展开状态。
+        const mobile = window.matchMedia("(max-width: 800px), (pointer: coarse)");
+        const toolbar = assertExists(this.root.querySelector<HTMLElement>(".mobile-actions"));
+        const location = assertExists(this.root.querySelector<HTMLElement>(".reading-location"));
+        const progress = assertExists(location.querySelector<HTMLElement>("#progress-rate"));
+        const navigation = assertExists(this.actions.querySelector<HTMLElement>(".navigation-actions"));
+        const preferences = assertExists(this.actions.querySelector<HTMLElement>(".preference-actions"));
+        const bookshelf = assertExists(this.actions.querySelector<HTMLElement>(".bookshelf-actions"));
+        const controls = [
+            { button: this.tocButton, desktopParent: navigation },
+            { button: this.settingButton, desktopParent: preferences },
+            { button: this.fullscreenButton, desktopParent: preferences },
+            { button: this.returnButton, desktopParent: bookshelf },
+        ];
+
         /**
-         * 仅进入移动布局时决定初始显隐，保持同一布局内已有的工具状态。
+         * 同步排布和焦点，仅在移动端需要接续操作时展开工具。
          */
         const sync = (): void => {
-            // 进入沉浸布局时保留正在使用的入口，普通首次进入则隐藏工具。
             const focused = document.activeElement;
             const focusedControl = focused instanceof HTMLElement && controls.some(({ button }) => button === focused);
-            if (mobile.matches && !this.mobileControls) this.toolsVisible = focusedControl || this.hasOpenPanel();
+            const focusedChapter = focused === this.previousButton || focused === this.nextButton;
+            if (mobile.matches && !this.mobileControls && (focusedControl || this.hasOpenPanel())) {
+                this.toolsVisible = true;
+            }
             this.mobileControls = mobile.matches;
             this.root.toggleAttribute("data-mobile-controls", mobile.matches);
+            this.actions.hidden = mobile.matches;
+            this.toolsEntry.hidden = !mobile.matches;
 
             // 同步视觉位置与 DOM 顺序，让触摸排列和键盘遍历一致。
             for (const { button, desktopParent } of controls) {
                 const parent = mobile.matches ? toolbar : desktopParent;
                 if (button.parentElement !== parent) parent.append(button);
             }
+
+            // 同一进度节点跟随工具区域，页脚持有的引用持续更新，避免两端显示分叉。
+            const progressParent = mobile.matches ? location : this.actions;
+            if (progress.parentElement !== progressParent) progressParent.append(progress);
             this.renderToolsVisibility();
 
-            // 移动聚焦节点后恢复焦点；桌面不再提供沉浸入口时回到正文。
-            if (focusedControl && (!this.mobileControls || this.toolsVisible)) {
+            // 移动原按钮后恢复焦点，移动辅助入口退出布局时归还正文。
+            if (focusedControl) {
                 focused.focus({ preventScroll: true });
-            } else if (focused === this.toolsEntry && !this.mobileControls) {
+            } else if (
+                (focused === this.toolsEntry && !this.mobileControls) ||
+                (focusedChapter && this.mobileControls)
+            ) {
                 this.content.focus({ preventScroll: true });
             }
         };
@@ -85,7 +114,7 @@ export default class ReaderUi extends PageUi {
                 if (!this.mobileControls || this.hasOpenPanel()) return;
                 this.toolsVisible = !this.toolsVisible;
                 this.renderToolsVisibility();
-                if (this.toolsVisible) this.returnButton.focus({ preventScroll: true });
+                if (this.toolsVisible) this.tocButton.focus({ preventScroll: true });
                 else this.content.focus({ preventScroll: true });
             },
             { signal }
@@ -104,12 +133,9 @@ export default class ReaderUi extends PageUi {
                     this.hasOpenPanel()
                 )
                     return;
-                const focused = document.activeElement;
-                const restoreContentFocus = this.header.contains(focused) || this.footer.contains(focused);
                 event.preventDefault();
                 event.stopPropagation();
                 this.hideReadingTools();
-                if (restoreContentFocus) this.content.focus({ preventScroll: true });
             },
             { signal }
         );
@@ -119,23 +145,47 @@ export default class ReaderUi extends PageUi {
     }
 
     /**
-     * 切换移动端工具；浮层开启时保持入口状态，由浮层自身处理关闭和焦点恢复。
-     * @returns 是否消费中心轻点；移动端即使未切换工具，也不能继续解释为切章。
+     * 桌面切章按钮显示边界状态，移动端通过正文手势或目录切章。
      */
-    public toggleReadingTools(): boolean {
-        if (!this.mobileControls) return false;
-        if (!this.hasOpenPanel()) {
-            this.toolsVisible = !this.toolsVisible;
-            this.renderToolsVisibility();
-        }
-        return true;
+    public renderChapterNavigation(chapterNumber: number, chapterCount: number): this {
+        this.previousButton.disabled = chapterNumber <= 1;
+        this.nextButton.disabled = chapterNumber >= chapterCount;
+        return this;
     }
 
     /**
-     * 切章后回到沉浸正文，不主动把键盘焦点移到别处。
+     * 显式切章入口与手势、键盘复用同一业务处理器。
+     */
+    public bindChapterNavigation(
+        handler: (direction: SwitchChapterDirection) => Promise<void>,
+        signal: AbortSignal
+    ): this {
+        EventUtil.bind(this.previousButton, "click", () => handler(SwitchChapterDirection.PREV), { signal });
+        EventUtil.bind(this.nextButton, "click", () => handler(SwitchChapterDirection.NEXT), { signal });
+        return this;
+    }
+
+    /**
+     * 切换移动端工具；浮层开启时保持入口状态，由浮层自身处理关闭和焦点恢复。
+     */
+    public toggleReadingTools(): void {
+        if (!this.mobileControls || this.hasOpenPanel()) return;
+        if (this.toolsVisible) this.hideReadingTools();
+        else {
+            this.toolsVisible = true;
+            this.renderToolsVisibility();
+        }
+    }
+
+    /**
+     * 切章或显式关闭后回到沉浸正文；收起正在聚焦的工具时先归还正文焦点。
      */
     public hideReadingTools(): void {
-        if (!this.mobileControls || this.hasOpenPanel()) return;
+        if (this.hasOpenPanel()) return;
+        const focused = document.activeElement;
+        if (this.header.contains(focused) || this.footer.contains(focused)) {
+            this.content.focus({ preventScroll: true });
+        }
         this.toolsVisible = false;
         this.renderToolsVisibility();
     }
@@ -153,19 +203,22 @@ export default class ReaderUi extends PageUi {
      */
     private renderToolsVisibility(): void {
         // 视觉覆盖层与可访问状态使用同一结果，不能只隐藏按钮的像素。
-        const hidden = this.mobileControls && !this.toolsVisible;
+        const hidden = !this.mobileControls || !this.toolsVisible;
         const appearanceOpen = this.root.querySelector("#setting.open") !== null;
-        this.root.toggleAttribute("data-reading-tools-visible", this.mobileControls && this.toolsVisible);
+        this.root.toggleAttribute("data-reading-tools-visible", !hidden);
         for (const region of [this.header, this.footer]) {
             if (hidden) region.setAttribute("aria-hidden", "true");
             else region.removeAttribute("aria-hidden");
-            if (!appearanceOpen) region.inert = hidden;
+            // 桌面区域只含信息，保持非 inert，避免浮层跨布局关闭时恢复过期的隔离状态。
+            if (!appearanceOpen) region.inert = this.mobileControls && hidden;
         }
 
-        // 辅助入口始终描述下一次操作，桌面布局不需要额外的工具开关。
-        this.toolsEntry.hidden = !this.mobileControls;
+        // 移动辅助入口描述下一步操作；桌面直接使用独立操作栏。
+        const label = hidden ? "显示阅读工具" : "隐藏阅读工具";
         this.toolsEntry.setAttribute("aria-expanded", String(!hidden));
-        this.toolsEntry.textContent = hidden ? "显示阅读工具" : "隐藏阅读工具";
+        this.toolsEntry.setAttribute("aria-label", label);
+        this.toolsEntry.title = label;
+        this.toolsEntry.textContent = label;
     }
 
     /**

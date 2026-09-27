@@ -17,6 +17,7 @@
  */
 
 #reader > #header {
+    top: 0;
     --ui-padding-left: 28px;
     --ui-padding-right: 28px;
     display: grid;
@@ -34,21 +35,6 @@
     user-select: none;
     z-index: 1;
 
-    .reader-action {
-        border-color: color-mix(in srgb, currentColor 8%, transparent);
-        background-color: var(--appearance-highlight);
-        box-shadow: var(--appearance-shadow-soft);
-    }
-
-    .action {
-        display: flex;
-        align-items: center;
-    }
-
-    .action-right {
-        justify-content: flex-end;
-    }
-
     #book-title {
         min-width: 0;
         overflow: hidden;
@@ -65,16 +51,6 @@
     background-image: linear-gradient(115deg, var(--appearance-tint), transparent 70%);
 }
 
-/* 阅读区域的显式底色也适用于继承它的工具栏。 */
-#reader[style*="background-color"] > #header,
-#reader > #header[style*="background-color"] {
-    --focus-ring-color: currentColor;
-
-    .reader-action {
-        background-color: color-mix(in srgb, currentColor 5%, transparent);
-    }
-}
-
 #reader[data-mobile-controls] > #header {
     --ui-padding-left: 16px;
     --ui-padding-right: 16px;
@@ -83,10 +59,6 @@
     min-height: 48px;
     padding-top: max(8px, env(safe-area-inset-top));
     padding-bottom: 8px;
-
-    .action {
-        display: none;
-    }
 
     @media (max-height: 500px) {
         min-height: 44px;

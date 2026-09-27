@@ -25,7 +25,7 @@
     overflow-x: hidden;
     overflow-y: auto;
     overflow-wrap: anywhere;
-    padding: 44px max(var(--ui-padding-right), env(safe-area-inset-right)) 0
+    padding: 44px max(var(--ui-padding-right), env(safe-area-inset-right)) 32px
         max(var(--ui-padding-left), env(safe-area-inset-left));
     overscroll-behavior-y: contain;
     font-family: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
@@ -33,7 +33,7 @@
     line-height: 1.9;
     background-color: inherit;
 
-    > .chapter-heading {
+    .chapter-heading {
         margin-bottom: 1.2em;
         font-size: 1.6em;
         line-height: 1.45;
@@ -54,29 +54,6 @@
     > p {
         margin-bottom: 1.15em;
     }
-    .chapter-navigation {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        gap: 0.5rem;
-        padding: 1.5rem 0 2rem;
-        margin-top: 2.5rem;
-        border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
-        font-family: system-ui, sans-serif;
-        font-size: 13px;
-        line-height: 1.5;
-
-        > button {
-            padding-inline: 0.75rem;
-            border-color: color-mix(in srgb, currentColor 9%, transparent);
-            background: color-mix(in srgb, currentColor 3%, transparent);
-
-            &:is(:hover, :active) {
-                transform: none;
-                box-shadow: none;
-            }
-        }
-    }
 
     @media (max-width: 600px) {
         & {
@@ -86,7 +63,7 @@
                 max(env(safe-area-inset-right), min(var(--ui-padding-right), 12.5vw));
             padding-top: 28px;
         }
-        > .chapter-heading {
+        .chapter-heading {
             font-size: 1.4em;
         }
     }
@@ -97,6 +74,7 @@
 }
 
 #reader[data-mobile-controls] > #content {
+    touch-action: pan-y pinch-zoom;
     padding-top: max(28px, env(safe-area-inset-top));
     padding-bottom: max(16px, env(safe-area-inset-bottom));
 

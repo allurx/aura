@@ -16,8 +16,8 @@
 
 import Ui from "@/components/ui";
 import EventUtil from "@/utils/event-util";
-import { SwitchChapterDirection } from "../switch-chapter-direction";
 import FullscreenUtil from "@/utils/fullscreen-util";
+import { SwitchChapterDirection } from "../switch-chapter-direction";
 
 /**
  * 一次主指针操作；多指、取消或正文滚动会使本次手势失效。
@@ -62,16 +62,16 @@ export default class AppUi extends Ui {
     }
 
     /**
-     * 共用一条指针链识别切章和中心轻点，不拦截浏览器原生滚动或文字选择。
+     * 区分正文两侧切章与中心工具入口，不拦截原生纵向滚动和文字选择。
      * @param content - 用于命中判断和滚动取消的正文容器。
-     * @param onChapter - 收到有效方向后执行的统一切章流程。
-     * @param onCenterTap - 返回 true 表示已消费中心轻点，不能继续将其解释为切章。
+     * @param onChapter - 将有效切章方向交给当前布局的业务处理器。
+     * @param onCenterTap - 收到有效中心轻点后切换阅读工具。
      * @param signal - 页面生命周期，终止时移除全部指针与滚动监听。
      */
-    public bindChapterNavigation(
+    public bindReadingGestures(
         content: HTMLElement,
         onChapter: (direction: SwitchChapterDirection) => Promise<void>,
-        onCenterTap: () => boolean,
+        onCenterTap: () => void,
         signal: AbortSignal
     ): void {
         // 只为单个主指针建立候选手势，多指或已存在的文本选区会取消本次候选。
@@ -84,7 +84,7 @@ export default class AppUi extends Ui {
                     if (this.pointer) this.pointer.cancelled = true;
                     return;
                 }
-                if (!this.isReadingTarget(event.target, content) && event.target !== this.root) return;
+                if (!this.isReadingTarget(event.target, content)) return;
                 this.pointer = {
                     id: event.pointerId,
                     type: event.pointerType,
@@ -133,7 +133,7 @@ export default class AppUi extends Ui {
             { signal }
         );
 
-        // 正常抬起时先释放候选，再分发至多一次操作，异步切章不会复用旧状态。
+        // 正常抬起时先释放候选，再分发一次工具或切章操作。
         EventUtil.bind(
             document,
             "pointerup",
@@ -150,14 +150,14 @@ export default class AppUi extends Ui {
     }
 
     /**
-     * 仅识别 450ms 内的主指针操作；轻点要求两轴全程位移均小于 8px，避免长按和拖动误触。
-     * 选区、多指、取消及正文滚动均忽略；中心回调优先于切章，水平轻扫另按方向判定。
+     * 轻点要求 450ms 内且两轴全程位移小于 8px；触摸轻扫至少横移 48px，偏角不超过 30°。
+     * 选区、多指、取消及正文滚动均忽略，鼠标拖选不作为轻扫。
      */
     private readGesture(
         content: HTMLElement,
         pointer: ReadingPointer,
         event: PointerEvent,
-        onCenterTap: () => boolean
+        onCenterTap: () => void
     ): SwitchChapterDirection {
         // 排除长按、选区和已交给浏览器处理的操作，避免把取消路径当成点击。
         if (
@@ -166,12 +166,11 @@ export default class AppUi extends Ui {
             event.button !== 0 ||
             this.activePointers.size > 0 ||
             this.hasSelection() ||
-            event.timeStamp - pointer.startedAt > 450 ||
             Math.abs(content.scrollTop - pointer.scrollTop) > 1
         )
             return SwitchChapterDirection.INVALID;
 
-        // 用全程位移判定轻点，并以正文实际边界划分左右及中央区域。
+        // 用全程位移判定轻点，再按正文的实际边界划分左右与中央区域。
         const deltaX = event.clientX - pointer.startX;
         const deltaY = event.clientY - pointer.startY;
         const maxX = Math.max(pointer.maxX, Math.abs(deltaX));
@@ -187,25 +186,16 @@ export default class AppUi extends Ui {
             event.clientY <= bounds.bottom;
         const horizontalPosition = (event.clientX - bounds.left) / bounds.width;
 
-        // 移动端中心轻点由工具层优先消费，避免鼠标模拟触摸时又触发一次切章。
-        if (tap && inContent && horizontalPosition >= 1 / 3 && horizontalPosition <= 2 / 3 && onCenterTap())
-            return SwitchChapterDirection.INVALID;
-
-        // 鼠标只在画布空白或全宽正文中翻章，保留居中阅读区内的普通文本操作。
-        if (pointer.type === "mouse") {
-            const canvasClick = pointer.target === this.root && event.target === this.root;
-            const fullWidthContentClick = inContent && Math.abs(bounds.width - window.innerWidth) < 1;
-            if (!tap || pointer.target !== event.target || (!canvasClick && !fullWidthContentClick))
-                return SwitchChapterDirection.INVALID;
-            return event.clientX < window.innerWidth / 2 ? SwitchChapterDirection.PREV : SwitchChapterDirection.NEXT;
-        }
-
-        // 触摸与笔输入支持两侧轻点和近水平轻扫，中心轻点或纵向动作不翻章。
-        if (!inContent || (pointer.type !== "touch" && pointer.type !== "pen")) return SwitchChapterDirection.INVALID;
-        if (tap) {
+        if (!inContent) return SwitchChapterDirection.INVALID;
+        if (tap && event.timeStamp - pointer.startedAt <= 450) {
             if (horizontalPosition < 1 / 3) return SwitchChapterDirection.PREV;
             if (horizontalPosition > 2 / 3) return SwitchChapterDirection.NEXT;
-        } else if (Math.abs(deltaX) > 8 && maxY / Math.abs(deltaX) < Math.tan(Math.PI / 6)) {
+            onCenterTap();
+        } else if (
+            (pointer.type === "touch" || pointer.type === "pen") &&
+            Math.abs(deltaX) >= 48 &&
+            maxY / Math.abs(deltaX) <= Math.tan(Math.PI / 6)
+        ) {
             return deltaX > 0 ? SwitchChapterDirection.PREV : SwitchChapterDirection.NEXT;
         }
         return SwitchChapterDirection.INVALID;

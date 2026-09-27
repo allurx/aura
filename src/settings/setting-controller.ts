@@ -47,13 +47,15 @@ export default class SettingController implements SettingUiListener, ExternalSet
         pageName,
         container,
         targets,
+        inertElements = [],
     }: {
         pageName: PageName;
         container: HTMLElement;
         targets: readonly SettingTarget[];
+        inertElements?: readonly HTMLElement[];
     }) {
         // 设置面板本身也是当前页面的一个独立 Appearance 目标。
-        this.settingUi = new SettingUi(container);
+        this.settingUi = new SettingUi(container, inertElements);
         this.configuration = new SettingConfiguration(pageName, [
             ...targets,
             new SettingTarget(this.settingUi, [
