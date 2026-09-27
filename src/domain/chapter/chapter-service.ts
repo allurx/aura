@@ -66,12 +66,15 @@ export default class ChapterService extends BaseService<Chapter> {
      * @returns 章节列表
      */
     public async parseChapters(file: File, fileId: string, encoding: SupportedTextEncoding): Promise<Chapter[]> {
+        // 分别记录已完成章节、当前正文缓冲与全书物理行号。
         const chapters: Chapter[] = [];
         let chapterTitle: string | null = null;
         let chapterLines: string[] = [];
         let currentBookLineNumber = 1;
 
-        // 标题行不保存在lines中，但仍占用一个物理行；前言和全文没有标题行，所以不增加这一行。
+        /**
+         * 封存章节并推进物理行号；显式标题虽不进入 lines，仍占原文件一行。
+         */
         const appendChapter = (title: string, lines: string[], hasExplicitTitleLine: boolean) => {
             const chapter = new Chapter({
                 id: crypto.randomUUID(),
@@ -84,10 +87,12 @@ export default class ChapterService extends BaseService<Chapter> {
                 createdTime: Date.now(),
                 updatedTime: Date.now(),
             });
+
             chapters.push(chapter);
             currentBookLineNumber = chapter.endBookLineNumber + 1;
         };
 
+        // 单次逐行扫描，在唯一的标题判定处划分章节。
         for await (const line of new TextFileReader(encoding).readLines(file)) {
             // 正则是唯一的章节边界判断；未命中的行（包括空行）原样归入当前章节。
             if (!this.chapterRegex.test(line)) {

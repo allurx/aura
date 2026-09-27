@@ -29,6 +29,9 @@ export default class ReaderState {
     public readonly progress!: Progress;
     public chapter!: Chapter;
 
+    /**
+     * 接收完整领域状态并保留对象引用，当前章节可由切章流程替换。
+     */
     public constructor(data: Required<ReaderState>) {
         ObjectUtil.assignOwnProperties<ReaderState>(this, data);
     }

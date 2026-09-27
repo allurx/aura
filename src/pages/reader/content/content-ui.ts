@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { assertExists } from "@/utils/assert-util";
+import { SwitchChapterDirection } from "../switch-chapter-direction";
 import Ui from "@/components/ui";
 import EventUtil from "@/utils/event-util";
 
@@ -22,108 +24,208 @@ import EventUtil from "@/utils/event-util";
  * @author allurx
  */
 export default class ContentUi extends Ui {
+    private readonly chapterNavigation: HTMLElement;
+    private readonly previousButton: HTMLButtonElement;
+    private readonly nextButton: HTMLButtonElement;
+    private scrollTimer: number | undefined;
+
     /**
-     * 渲染章节
-     * @param  lines - 章节内容行数组
-     * @return  当前实例
+     * 保留章节末尾导航节点，正文重绘不会重复注册监听器。
      */
-    public renderChapter(lines: string[]) {
-        this.root.innerHTML = "";
+    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
+        super(args);
+        this.chapterNavigation = assertExists(this.root.querySelector<HTMLElement>(".chapter-navigation"));
+        this.previousButton = assertExists(this.root.querySelector<HTMLButtonElement>("#previous-chapter"));
+        this.nextButton = assertExists(this.root.querySelector<HTMLButtonElement>("#next-chapter"));
+    }
+
+    /**
+     * 标题与正文使用文本节点渲染，段落行号继续对应已有进度模型。
+     * @param lines - 当前章的原始文本行，索引加一作为恢复进度的行号。
+     */
+    public renderChapter(title: string, lines: string[]): this {
+        // 停止旧正文的延迟读取，在离线片段中组装新章节。
+        this.cancelPendingScroll();
         const fragment = document.createDocumentFragment();
+
+        // 章节标题独立于正文行号，不参与持久化进度定位。
+        const heading = document.createElement("h2");
+        heading.className = "chapter-heading";
+        heading.textContent = title;
+        fragment.appendChild(heading);
+
+        // 每个原始行对应一个安全文本节点，换行布局变化不改变行号契约。
         lines.forEach((line, index) => {
-            const p = document.createElement("p");
-            p.dataset["chapterLineNumber"] = (index + 1).toString();
-            p.textContent = line;
-            fragment.appendChild(p);
+            const paragraph = document.createElement("p");
+            paragraph.dataset["chapterLineNumber"] = String(index + 1);
+            paragraph.textContent = line;
+            fragment.appendChild(paragraph);
         });
-        this.root.appendChild(fragment);
+
+        // 一次替换正文并保留已有导航节点，避免丢失按钮状态与监听器。
+        this.root.replaceChildren(fragment, this.chapterNavigation);
         return this;
     }
 
     /**
-     * 恢复阅读进度,滚动到对应段落
-     * @param chapterLineNumber - 当前章节内的正文行号，从 1 开始
-     * @param lineVisibleRatio - 行可见比例
-     * @return  当前实例
+     * 根据章序禁用边界按钮。
      */
-    public restoreProgress(chapterLineNumber: number, lineVisibleRatio: number) {
-        const p = this.root.querySelector<HTMLParagraphElement>(
+    public renderChapterNavigation(chapterNumber: number, chapterCount: number): this {
+        this.previousButton.disabled = chapterNumber <= 1;
+        this.nextButton.disabled = chapterNumber >= chapterCount;
+        return this;
+    }
+
+    /**
+     * 按原始行号和段内比例恢复位置，不依赖旧字号下的像素偏移。
+     * @param chapterLineNumber - 当前章内从 1 开始的原始文本行号。
+     * @param lineVisibleRatio - 段落在视口上缘以下的剩余比例；1 表示从段首开始。
+     */
+    public restoreProgress(chapterLineNumber: number, lineVisibleRatio: number): this {
+        // 首行完整可见代表章首；保留标题与正文之间的阅读留白。
+        if (chapterLineNumber === 1 && lineVisibleRatio === 1) {
+            this.root.scrollTop = 0;
+            return this;
+        }
+
+        // 用新布局下的段落高度换算偏移，目标缺失时保持现有滚动位置。
+        const paragraph = this.root.querySelector<HTMLParagraphElement>(
             `p[data-chapter-line-number="${String(chapterLineNumber)}"]`
         );
-        if (p) {
-            // 先定位到大概位置
-            p.scrollIntoView({ block: "start", behavior: "auto" });
-
-            // 然后微调到精确位置
-            this.root.scrollTop += p.offsetHeight * (1 - lineVisibleRatio);
+        if (paragraph) {
+            const top = paragraph.getBoundingClientRect().top - this.root.getBoundingClientRect().top;
+            this.root.scrollTop += top + paragraph.offsetHeight * (1 - lineVisibleRatio);
         }
         return this;
     }
 
     /**
-     * 触发内容滚动事件
-     * @return  当前实例
+     * 获取视口上缘所在行；超长段落使用上缘比例以支持准确恢复。
+     * @returns 行号与段内剩余比例；当前章没有正文行时返回 undefined。
      */
-    public dispatchContentScroll() {
+    public readProgress(): { chapterLineNumber: number; lineVisibleRatio: number } | undefined {
+        const viewport = this.root.getBoundingClientRect();
+        const paragraphs = this.root.querySelectorAll<HTMLParagraphElement>("p[data-chapter-line-number]");
+
+        // 标题可能因长文本或大字号占满视口，此时仍是章首而非章末。
+        const firstParagraph = paragraphs[0];
+        if (firstParagraph && firstParagraph.getBoundingClientRect().top >= viewport.top) {
+            return { chapterLineNumber: 1, lineVisibleRatio: 1 };
+        }
+
+        // 以首个可见段落为锚点，比例只描述视口上缘切入段落的位置。
+        for (const paragraph of paragraphs) {
+            const rect = paragraph.getBoundingClientRect();
+            if (rect.height <= 0 || rect.bottom <= viewport.top || rect.top >= viewport.bottom) continue;
+            return {
+                chapterLineNumber: Number(paragraph.dataset["chapterLineNumber"]),
+                lineVisibleRatio: Math.min(1, Math.max(0, (rect.bottom - viewport.top) / rect.height)),
+            };
+        }
+
+        // 正文已滚过视口时记录章末，空章节则不产生可保存的位置。
+        const lastParagraph = paragraphs[paragraphs.length - 1];
+        return lastParagraph
+            ? {
+                  chapterLineNumber: Number(lastParagraph.dataset["chapterLineNumber"]),
+                  lineVisibleRatio: 0,
+              }
+            : undefined;
+    }
+
+    /**
+     * 触发布局变化后的进度同步。
+     */
+    public dispatchContentScroll(): this {
         this.root.dispatchEvent(new Event("scroll"));
         return this;
     }
 
     /**
-     * 绑定内容滚动事件
-     * @param handler - 事件处理函数
-     * @return 当前实例
+     * 取消尚未触发的滚动回调，避免切章或外观预览时读错位置；已提交写入不受影响。
+     */
+    public cancelPendingScroll(): void {
+        if (this.scrollTimer !== undefined) window.clearTimeout(this.scrollTimer);
+        this.scrollTimer = undefined;
+    }
+
+    /**
+     * 在滚动停止后提交进度，页面销毁时清理定时器。
      */
     public bindContentScroll(
         handler: (chapterLineNumber: number, lineVisibleRatio: number) => Promise<void>,
         signal: AbortSignal
     ): this {
-        let timer: number | undefined;
+        // 滚动停止后再读取当前几何位置，避免每次滚动事件都提交存储。
         EventUtil.bind(
             this.root,
             "scroll",
-            (_, target: HTMLElement) => {
-                if (timer !== undefined) window.clearTimeout(timer);
-                timer = window.setTimeout(() => {
+            () => {
+                this.cancelPendingScroll();
+                this.scrollTimer = window.setTimeout(() => {
+                    this.scrollTimer = undefined;
                     EventUtil.run(async () => {
                         if (signal.aborted) return;
-
-                        // 滚动容器可视区域
-                        const cRect = target.getBoundingClientRect();
-
-                        // 计算当前章节最上方可见的p元素
-                        const line = [...target.querySelectorAll<HTMLParagraphElement>("p")]
-                            .map((p: HTMLParagraphElement) => {
-                                const rect = p.getBoundingClientRect();
-                                const ratio =
-                                    Math.max(0, Math.min(rect.bottom, cRect.bottom) - Math.max(rect.top, cRect.top)) /
-                                    rect.height;
-                                return {
-                                    chapterLineNumber: Number(p.dataset["chapterLineNumber"]),
-                                    ratio,
-                                    top: rect.top,
-                                    text: p.innerText,
-                                };
-                            })
-                            .filter((item) => item.ratio > 0)
-                            .sort((a, b) => a.top - b.top)
-                            .at(0);
-
-                        if (!line) return;
-                        console.log("当前章节最上方可见的行: ", line);
-                        await handler(line.chapterLineNumber, line.ratio);
+                        const progress = this.readProgress();
+                        if (progress) await handler(progress.chapterLineNumber, progress.lineVisibleRatio);
                     });
                 }, 300);
             },
             { signal }
         );
 
+        // 页面退出时取消未执行的回调，已提交写入仍由控制器负责收尾。
         signal.addEventListener(
             "abort",
             () => {
-                if (timer !== undefined) window.clearTimeout(timer);
+                this.cancelPendingScroll();
             },
             { once: true }
+        );
+        return this;
+    }
+
+    /**
+     * 绑定可见切章按钮和正文中的左右键，保留控件自身键盘行为。
+     */
+    public bindChapterNavigation(
+        handler: (direction: SwitchChapterDirection) => Promise<void>,
+        signal: AbortSignal
+    ): this {
+        // 显式导航按钮和键盘使用同一切章处理器。
+        EventUtil.bind(this.previousButton, "click", () => handler(SwitchChapterDirection.PREV), { signal });
+        EventUtil.bind(this.nextButton, "click", () => handler(SwitchChapterDirection.NEXT), { signal });
+
+        // 只有普通正文焦点接受方向键，控件编辑、修饰键与长按重复均保留原行为。
+        EventUtil.bind(
+            document,
+            "keydown",
+            async (event: KeyboardEvent) => {
+                if (
+                    event.defaultPrevented ||
+                    event.altKey ||
+                    event.ctrlKey ||
+                    event.metaKey ||
+                    event.shiftKey ||
+                    event.repeat
+                )
+                    return;
+                const target = event.target;
+                if (!(target instanceof HTMLElement)) return;
+                if (target !== document.body && target !== this.root && !this.root.contains(target)) return;
+                if (target.closest("button, a, input, textarea, select, summary, [contenteditable], [role=dialog]"))
+                    return;
+                const direction =
+                    event.key === "ArrowLeft"
+                        ? SwitchChapterDirection.PREV
+                        : event.key === "ArrowRight"
+                          ? SwitchChapterDirection.NEXT
+                          : SwitchChapterDirection.INVALID;
+                if (direction === SwitchChapterDirection.INVALID) return;
+                event.preventDefault();
+                await handler(direction);
+            },
+            { signal }
         );
         return this;
     }

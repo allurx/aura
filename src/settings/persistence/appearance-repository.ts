@@ -18,6 +18,7 @@ import { SettingScope } from "../models/setting-scope";
 import PageAppearance from "../models/page-appearance";
 import type SettingConfiguration from "../models/setting-configuration";
 import { assertExists } from "@/utils/assert-util";
+import type Setting from "../definitions/setting";
 
 /**
  * 单个页面 Appearance 的同步 localStorage 仓库。
@@ -33,9 +34,13 @@ export default class AppearanceRepository {
         this.storageKey = `aura.${configuration.pageName}.appearance`;
     }
 
-    /** @returns 当前页面已保存的 Appearance；存储不可用或数据损坏时返回默认值。 */
+    /**
+     * @returns 当前页面的有效快照；读取或解析失败时使用默认值，可解析数据则逐项保留合法字段。
+     */
     public load(): PageAppearance {
         const defaults = PageAppearance.defaults(this.configuration.defaultTheme);
+
+        // 存储访问失败与没有快照都回到本页默认值，不尝试其他数据源。
         let serializedAppearance: string | null;
         try {
             serializedAppearance = localStorage.getItem(this.storageKey);
@@ -44,6 +49,7 @@ export default class AppearanceRepository {
         }
         if (serializedAppearance === null) return defaults;
 
+        // JSON 可解析并不代表字段合法，具体能力和值域仍交给 decode 校验。
         let parsedAppearance: unknown;
         try {
             parsedAppearance = JSON.parse(serializedAppearance);
@@ -70,10 +76,14 @@ export default class AppearanceRepository {
         localStorage.removeItem(this.storageKey);
     }
 
+    /**
+     * 根据当前页面开放的目标、设置和值域过滤数据，不修改存储中的原始快照。
+     */
     private decode(value: unknown): PageAppearance {
         let appearance = PageAppearance.defaults(this.configuration.defaultTheme);
         if (!this.isRecord(value)) return appearance;
 
+        // 页面主题单独解码，不把它当成某个 UI 的样式覆盖。
         const theme = value["theme"];
         if (this.configuration.themeSetting.accepts(theme)) {
             const themeTarget = assertExists(
@@ -82,18 +92,21 @@ export default class AppearanceRepository {
             appearance = this.configuration.themeSetting.update(appearance, themeTarget, theme);
         }
 
+        // UI 标识、设置键和值域逐项校验，单个无效字段不影响其他合法值。
         const ui = value["ui"];
         if (!this.isRecord(ui)) return appearance;
+
         for (const [uiId, rawStyles] of Object.entries(ui)) {
             const target = this.configuration.findTarget(uiId);
             if (!target || !this.isRecord(rawStyles)) continue;
 
             for (const [key, rawValue] of Object.entries(rawStyles)) {
-                const setting = target.findSetting(key);
-                if (!setting || setting.scope !== SettingScope.UI || !setting.accepts(rawValue)) continue;
+                const setting: Setting | undefined = target.findSetting(key);
+                if (!setting || setting.scope !== SettingScope.UI || !setting.accepts(rawValue, target)) continue;
                 appearance = setting.update(appearance, target, rawValue);
             }
         }
+
         return appearance;
     }
 

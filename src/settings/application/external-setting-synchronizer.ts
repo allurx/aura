@@ -31,12 +31,20 @@ import type ExternalSettingListener from "./external-setting-listener";
 export default class ExternalSettingSynchronizer {
     private readonly timers = new Set<number>();
 
+    /**
+     * 只观察明确声明外部变化能力的设置，并随页面退出取消待提交任务。
+     *
+     * @param configuration - 当前页面开放的设置目标
+     * @param listener - 提供预览状态与已提交值的协调器
+     * @param signal - 观察器与延迟提交共同使用的页面生命周期
+     */
     public start(configuration: SettingConfiguration, listener: ExternalSettingListener, signal: AbortSignal): void {
         for (const target of configuration.targets) {
             for (const setting of target.settings) {
                 if (setting.tracksExternalChanges) this.observe(target, setting, listener, signal);
             }
         }
+
         signal.addEventListener(
             "abort",
             () => {
@@ -46,12 +54,17 @@ export default class ExternalSettingSynchronizer {
         );
     }
 
-    /** 取消尚未提交的外部变化，Reset 时避免旧值延迟写回。 */
+    /**
+     * 取消尚未提交的外部变化，Reset 时避免旧值延迟写回。
+     */
     public cancelPending(): void {
         for (const timer of this.timers) window.clearTimeout(timer);
         this.timers.clear();
     }
 
+    /**
+     * 将单项 inline 变化合并为一次延迟提交，不把面板预览重复保存为外部变化。
+     */
     private observe(
         target: SettingTarget,
         setting: Setting,
@@ -61,12 +74,17 @@ export default class ExternalSettingSynchronizer {
         let observedValue = setting.readExternalValue(target);
         let timer: number | undefined;
 
+        /**
+         * 同步清理局部句柄与统一任务集合，使 Reset 和页面退出共用同一清理路径。
+         */
         const clearTimer = (): void => {
             if (timer === undefined) return;
             window.clearTimeout(timer);
             this.timers.delete(timer);
             timer = undefined;
         };
+
+        // 先淘汰旧任务；移除 inline 值只取消等待，不自动产生 Reset。
         const observer = new MutationObserver(() => {
             if (signal.aborted) return;
             const value = setting.readExternalValue(target);
@@ -75,12 +93,15 @@ export default class ExternalSettingSynchronizer {
             clearTimer();
             if (value === undefined) return;
 
+            // 等待期间可能出现新值或控件预览，提交前重新核对当前状态。
             timer = window.setTimeout(() => {
                 const currentTimer = timer;
                 timer = undefined;
                 if (currentTimer !== undefined) this.timers.delete(currentTimer);
+
                 if (signal.aborted || setting.readExternalValue(target) !== value) return;
                 if (listener.isPreviewing(target, setting) || listener.getValue(target, setting) === value) return;
+
                 EventUtil.run(() => {
                     listener.commitExternalChange(new SettingInteraction(target, setting, value));
                 });
@@ -88,7 +109,9 @@ export default class ExternalSettingSynchronizer {
             this.timers.add(timer);
         });
 
+        // 仅监听当前 UI 的 style；生命周期结束后不再保留观察器或定时任务。
         observer.observe(target.ui.root, { attributes: true, attributeFilter: ["style"] });
+
         signal.addEventListener(
             "abort",
             () => {

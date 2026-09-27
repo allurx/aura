@@ -37,22 +37,34 @@ export default abstract class Setting {
         public readonly displayOrder: number
     ) {}
 
-    /** @returns `value` 是否属于当前设置的合法值域。 */
-    public abstract accepts(value: unknown): value is string;
+    /**
+     * @returns `value` 是否属于当前目标上该设置的合法值域。
+     */
+    public abstract accepts(value: unknown, target: SettingTarget): value is string;
 
-    /** @returns 当前目标在已提交快照中的显式值。 */
+    /**
+     * @returns 当前目标在已提交快照中的显式值。
+     */
     public abstract read(appearance: PageAppearance, target: SettingTarget): string | undefined;
 
-    /** @returns 写入指定值后的新快照。 */
+    /**
+     * @returns 写入指定值后的新快照。
+     */
     public abstract update(appearance: PageAppearance, target: SettingTarget, value: string): PageAppearance;
 
-    /** 将显式值投影到运行时；`undefined` 表示恢复默认表现。 */
+    /**
+     * 将显式值投影到运行时；`undefined` 表示恢复默认表现。
+     */
     public abstract apply(target: SettingTarget, value: string | undefined): void;
 
-    /** @returns 控件与显示文本应呈现的有效值。 */
+    /**
+     * @returns 控件与显示文本应呈现的有效值。
+     */
     public abstract resolveValue(target: SettingTarget, value: string | undefined): string;
 
-    /** @returns 与当前定义匹配的设置控件。 */
+    /**
+     * @returns 与当前定义匹配的设置控件。
+     */
     public abstract createControl(listener: SettingControlListener, signal: AbortSignal): SettingControl;
 
     /**

@@ -16,37 +16,252 @@
  * limitations under the License.
  */
 
-#bookshelf > header {
-    --ui-padding-left: 0.75rem;
-    --ui-padding-right: 0.75rem;
+#bookshelf #header {
+    --ui-padding-left: 40px;
+    --ui-padding-right: 40px;
     display: flex;
-    /* 禁止缩放,保持自身的宽高 */
-    flex: 0 0 auto;
-    justify-content: space-between;
     align-items: center;
-    height: 3.125rem;
-    min-height: 52px;
-    width: 100%;
-    padding: 0 var(--ui-padding-right) 0 var(--ui-padding-left);
-    background-color: var(--bookshelf-header-background-color);
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1.35rem;
+    min-width: 0;
+    flex-shrink: 0;
+    padding: 2.2rem var(--ui-padding-right) 1.8rem var(--ui-padding-left);
+    background-color: inherit;
     color: var(--bookshelf-header-color);
-    font-size: 2rem;
-    overflow: hidden;
+    font-size: 1rem;
 
-    #title {
+    .shelf-heading,
+    .shelf-tools {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        gap: 0.75rem;
+    }
+    .shelf-heading {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    #category-title {
+        font-size: 1.8em;
+        font-weight: 600;
+        line-height: 1.35;
+        letter-spacing: -0.035em;
+        overflow-wrap: anywhere;
+    }
+    #book-count {
+        padding: 0.3rem 0.6rem;
+        border-radius: 0.65rem;
+        background: var(--appearance-tint);
+        color: var(--ui-color, var(--appearance-accent));
+        font-size: 0.76em;
+        white-space: nowrap;
+    }
+    .shelf-tools {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .book-search-field {
+        display: flex;
+        align-items: center;
+        width: 13.5rem;
+        max-width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        padding-inline: 12px 6px;
+        gap: 8px;
+        border: 1px solid var(--appearance-border);
+        border-radius: 0.95rem;
+        background: var(--appearance-panel);
+        box-shadow:
+            0 3px 9px -7px var(--appearance-shadow-color),
+            inset 0 1px 0 var(--appearance-highlight);
+        transition:
+            border-color 160ms ease,
+            box-shadow 160ms ease;
+    }
+    .book-search-field > .icon {
+        --icon-size: 18px;
+        opacity: 0.55;
+    }
+    #book-search {
+        width: 100%;
+        min-width: 0;
+        min-height: 42px;
+        border: 0;
+        background: transparent;
         color: inherit;
-        font-size: inherit;
-        cursor: pointer;
+        font-size: max(12px, 0.82em);
+        line-height: 1.4;
+        outline: none;
+        padding-inline: 0.1rem;
+    }
+    #book-search::placeholder {
+        color: inherit;
+        opacity: 0.55;
+    }
+    .appearance-button,
+    #import-books {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        gap: 8px;
+        min-width: 44px;
+        min-height: 44px;
+        border: 1px solid transparent;
+        border-radius: 0.95rem;
+        padding: 0 12px;
+        white-space: nowrap;
+        font-size: max(12px, 0.82em);
+        line-height: 1.4;
+        transition:
+            background-color 140ms ease,
+            transform 140ms ease,
+            box-shadow 140ms ease;
+    }
+    .appearance-button {
+        color: inherit;
+        background: var(--appearance-panel);
+        border-color: var(--appearance-border);
+        box-shadow: 0 3px 9px -7px var(--appearance-shadow-color);
+    }
+    .appearance-button .icon,
+    #import-books .icon {
+        --icon-size: 18px;
+    }
+    #import-books {
+        background: var(--bookshelf-accent-color);
+        color: var(--ui-color, var(--bookshelf-accent-contrast-color, #fff));
+        box-shadow:
+            0 5px 12px -6px color-mix(in srgb, var(--bookshelf-accent-color) 65%, transparent),
+            inset 0 1px 0 var(--appearance-highlight);
+    }
+    #open-navigation {
+        --icon-size: 20px;
+        display: none;
+    }
+    @media (hover: hover) and (pointer: fine) {
+        .appearance-button:hover {
+            background: var(--appearance-tint);
+            transform: translateY(-2px);
+        }
+        #import-books:hover {
+            background: color-mix(in srgb, var(--bookshelf-accent-color) 92%, #000);
+            transform: translateY(-2px);
+        }
+    }
+    .appearance-button:active,
+    #import-books:active {
+        transform: translateY(1px);
+        box-shadow: none;
+    }
+    @media (max-width: 1050px) and (min-width: 769px) {
+        .shelf-tools {
+            width: 100%;
+        }
+        .book-search-field {
+            flex: 1;
+        }
+    }
+    @media (max-width: 768px) {
+        --ui-padding-left: 18px;
+        --ui-padding-right: 18px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        padding-top: 1rem;
+        padding-bottom: 1.4rem;
+        gap: 12px 4px;
+        .shelf-heading {
+            min-width: 0;
+            gap: 4px;
+            flex-wrap: nowrap;
+        }
+        #category-title {
+            display: -webkit-box;
+            min-width: 0;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            overflow: hidden;
+            font-size: 1.4em;
+        }
+        #book-count {
+            display: none;
+        }
+        .shelf-tools {
+            display: contents;
+        }
+        .book-search-field {
+            grid-row: 2;
+            grid-column: 1 / -1;
+            width: 100%;
+        }
+        #open-navigation {
+            display: inline-grid;
+            margin-left: -12px;
+        }
+        .appearance-button,
+        #import-books {
+            padding: 0 10px;
+        }
+        .appearance-button {
+            width: 44px;
+            padding: 0;
+        }
+        .appearance-label {
+            display: none;
+        }
+        .import-label {
+            font-size: inherit;
+        }
+        @media (max-width: 360px) {
+            .import-label {
+                display: none;
+            }
+            #import-books {
+                width: 44px;
+                padding: 0;
+            }
+        }
+    }
+    @media (max-width: 768px), (any-pointer: coarse) {
+        #book-search {
+            font-size: max(16px, 0.9em);
+        }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .appearance-button,
+        .appearance-button:hover,
+        .appearance-button:active,
+        #import-books,
+        #import-books:hover,
+        #import-books:active,
+        .book-search-field {
+            transition: none;
+            transform: none;
+        }
+    }
+}
+
+/* 显式背景下，辅助控件沿用区域配色，避免主题浅色底覆盖用户的深色外观。 */
+#bookshelf[style*="background-color"] #header,
+#bookshelf #header[style*="background-color"] {
+    --focus-ring-color: currentColor;
+
+    .book-search-field,
+    .appearance-button,
+    #book-count {
+        background-color: color-mix(in srgb, currentColor 5%, transparent);
+        border-color: color-mix(in srgb, currentColor 20%, transparent);
     }
 
-    .action {
-        display: flex;
-        flex: 0 0 auto;
-        align-items: center;
-        gap: 4px;
+    #book-count {
+        color: inherit;
+    }
 
-        @media (max-width: 480px) {
-            gap: 0;
+    @media (hover: hover) and (pointer: fine) {
+        .appearance-button:hover {
+            background-color: color-mix(in srgb, currentColor 10%, transparent);
         }
     }
 }

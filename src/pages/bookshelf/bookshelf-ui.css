@@ -18,11 +18,117 @@
 
 #bookshelf {
     position: relative;
-    background-color: var(--bookshelf-background-color);
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 14rem minmax(0, 1fr);
     height: 100%;
     width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background: var(--bookshelf-background-color);
+    color: var(--bookshelf-book-list-color);
+
+    button,
+    input,
+    select,
+    summary {
+        font: inherit;
+    }
+    button {
+        cursor: pointer;
+    }
+    button:disabled,
+    select:disabled {
+        cursor: wait;
+        opacity: 0.55;
+    }
+    [hidden] {
+        display: none !important;
+    }
+    #bookshelf-sidebar {
+        position: relative;
+        margin: 0;
+        padding: 0.85rem 0.4rem 0.85rem 0.85rem;
+        border: 0;
+        width: 100%;
+        height: 100%;
+        max-width: none;
+        max-height: none;
+        min-height: 0;
+        background: transparent;
+        color: inherit;
+        overflow: hidden;
+    }
+    .operation-status {
+        padding: 1rem;
+        overflow-wrap: anywhere;
+        text-align: center;
+    }
+    #import-result {
+        flex: 0 0 auto;
+        position: relative;
+        margin: 0 2.5rem 1rem;
+        padding: 0.9rem 3.5rem 0.9rem 1.1rem;
+        border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+        border-radius: 1rem;
+        background: var(--appearance-panel);
+        box-shadow: var(--appearance-shadow-soft);
+        font-size: 0.85rem;
+        line-height: 1.6;
+        overflow-wrap: anywhere;
+    }
+    .import-result-close {
+        --icon-size: 18px;
+        position: absolute;
+        right: 0.25rem;
+        top: 0.25rem;
+    }
+    #import-result summary {
+        cursor: pointer;
+        min-height: 44px;
+        padding-block: 0.7rem;
+    }
+    .import-details {
+        white-space: pre-wrap;
+    }
+    #shelf-feedback {
+        position: absolute;
+        z-index: 5;
+        bottom: max(1.5rem, env(safe-area-inset-bottom));
+        left: calc(50% + 7rem);
+        transform: translateX(-50%);
+        max-width: min(28rem, calc(100% - 3rem));
+        padding: 0.85rem 1.3rem;
+        border: 1px solid var(--appearance-border);
+        border-radius: 1rem;
+        color: var(--bookshelf-nav-color);
+        background: var(--bookshelf-nav-background-color);
+        box-shadow: var(--appearance-shadow-floating);
+        font-size: 0.9rem;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+        pointer-events: none;
+    }
+
+    @media (max-width: 768px) {
+        grid-template-columns: minmax(0, 1fr);
+        #bookshelf-sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            width: min(21rem, 86vw);
+            height: 100dvh;
+            padding: calc(0.65rem + env(safe-area-inset-top)) 0.65rem calc(0.65rem + env(safe-area-inset-bottom))
+                calc(0.65rem + env(safe-area-inset-left));
+            &:not(:modal) {
+                display: none;
+            }
+            &::backdrop {
+                background: var(--appearance-backdrop);
+            }
+        }
+        #import-result {
+            margin-inline: 1.25rem;
+        }
+        #shelf-feedback {
+            left: 50%;
+        }
+    }
 }

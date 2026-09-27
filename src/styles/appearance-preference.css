@@ -16,163 +16,182 @@
  * limitations under the License.
  */
 
-/*
- * 外层变量是默认 yellow Theme，嵌套规则覆盖其他调色板；具体 UI 的
- * inline style 最终优先。按 data-page 隔离可避免两个页面的同名语义互相污染。
- */
+/* 页面与主题色样共用调色板；显式 UI 外观仍由 inline style 优先覆盖。 */
+:where(html, .theme-swatch) {
+    color-scheme: light;
+    --appearance-canvas: #f3f8ff;
+    --appearance-surface: #fffefa;
+    --appearance-muted-surface: #edf3fc;
+    --appearance-panel: #ffffff;
+    --appearance-color: #263653;
+    --appearance-muted-color: #5c6d86;
+    --appearance-accent: #365acb;
+    --appearance-accent-secondary: #aa4b28;
+    --appearance-on-accent: #ffffff;
+    --appearance-selection: #e0eaff;
+    --appearance-tint: #dcecff;
+    --appearance-glow: #ffeccf;
+    --appearance-danger: #b4324d;
+    --appearance-shadow-color: #426599;
+    --appearance-highlight: #ffffffc9;
+    --appearance-cover-1: #aacfff;
+    --appearance-cover-2: #ffda88;
+    --appearance-cover-3: #a7ddd0;
+    --appearance-cover-4: #ffbca8;
+    --appearance-cover-5: #d2baf1;
+    --appearance-cover-ink: #27354b;
+
+    --appearance-focus: var(--appearance-accent);
+    --appearance-border: color-mix(in srgb, var(--appearance-color) 12%, transparent);
+    --appearance-backdrop: color-mix(in srgb, var(--appearance-shadow-color) 20%, transparent);
+    --appearance-shadow-soft:
+        0 2px 4px color-mix(in srgb, var(--appearance-shadow-color) 5%, transparent),
+        0 8px 24px color-mix(in srgb, var(--appearance-shadow-color) 9%, transparent);
+    --appearance-shadow-raised:
+        0 4px 8px color-mix(in srgb, var(--appearance-shadow-color) 9%, transparent),
+        0 18px 42px color-mix(in srgb, var(--appearance-shadow-color) 14%, transparent);
+    --appearance-shadow-floating:
+        0 0 0 1px color-mix(in srgb, var(--appearance-color) 4%, transparent),
+        0 8px 20px color-mix(in srgb, var(--appearance-shadow-color) 12%, transparent),
+        0 28px 80px color-mix(in srgb, var(--appearance-shadow-color) 22%, transparent);
+}
+
+:where(html, .theme-swatch)[data-theme="breeze"] {
+    --appearance-canvas: #edf9fb;
+    --appearance-surface: #fafffe;
+    --appearance-muted-surface: #e4f3f5;
+    --appearance-panel: #f9fffe;
+    --appearance-color: #223e4b;
+    --appearance-muted-color: #526d78;
+    --appearance-accent: #126c7b;
+    --appearance-accent-secondary: #a34c4a;
+    --appearance-selection: #d1eef0;
+    --appearance-tint: #c9edf2;
+    --appearance-glow: #fde7db;
+    --appearance-shadow-color: #387986;
+    --appearance-cover-1: #95d4e9;
+    --appearance-cover-2: #b2e5d8;
+    --appearance-cover-3: #f9d99e;
+    --appearance-cover-4: #f4bbbd;
+    --appearance-cover-5: #c5cdf4;
+    --appearance-cover-ink: #24434d;
+}
+
+:where(html, .theme-swatch)[data-theme="meadow"] {
+    --appearance-canvas: #f2f8ee;
+    --appearance-surface: #fcfff7;
+    --appearance-muted-surface: #e9f1df;
+    --appearance-panel: #fdfff9;
+    --appearance-color: #2e4134;
+    --appearance-muted-color: #5d715f;
+    --appearance-accent: #36734d;
+    --appearance-accent-secondary: #8b5c1b;
+    --appearance-selection: #dbedce;
+    --appearance-tint: #d8edce;
+    --appearance-glow: #fff0bd;
+    --appearance-shadow-color: #5e7e50;
+    --appearance-cover-1: #b7d88e;
+    --appearance-cover-2: #f2dc8c;
+    --appearance-cover-3: #9fd8c1;
+    --appearance-cover-4: #f4bca5;
+    --appearance-cover-5: #b4d0e8;
+    --appearance-cover-ink: #30402f;
+}
+
+:where(html, .theme-swatch)[data-theme="peach"] {
+    --appearance-canvas: #fff5ee;
+    --appearance-surface: #fffdf8;
+    --appearance-muted-surface: #f9eade;
+    --appearance-panel: #fffaf5;
+    --appearance-color: #4b3432;
+    --appearance-muted-color: #80615a;
+    --appearance-accent: #a3452e;
+    --appearance-accent-secondary: #42775f;
+    --appearance-selection: #fbe1d1;
+    --appearance-tint: #ffe1cb;
+    --appearance-glow: #f9edb8;
+    --appearance-shadow-color: #a27056;
+    --appearance-cover-1: #f5b28e;
+    --appearance-cover-2: #f5d287;
+    --appearance-cover-3: #b9d9b4;
+    --appearance-cover-4: #eeb4c6;
+    --appearance-cover-5: #b4d4e8;
+    --appearance-cover-ink: #4b3432;
+}
+
+:where(html, .theme-swatch)[data-theme="blossom"] {
+    --appearance-canvas: #faf2fb;
+    --appearance-surface: #fffaff;
+    --appearance-muted-surface: #f1e5f4;
+    --appearance-panel: #fffbff;
+    --appearance-color: #45324f;
+    --appearance-muted-color: #79617e;
+    --appearance-accent: #8b4793;
+    --appearance-accent-secondary: #a34764;
+    --appearance-selection: #edd9f0;
+    --appearance-tint: #ebdafa;
+    --appearance-glow: #ffe2e4;
+    --appearance-shadow-color: #896494;
+    --appearance-cover-1: #d6b5ee;
+    --appearance-cover-2: #f3b5d1;
+    --appearance-cover-3: #fad2a5;
+    --appearance-cover-4: #b4dacc;
+    --appearance-cover-5: #b9c9f2;
+    --appearance-cover-ink: #45324f;
+}
+
+:where(html, .theme-swatch)[data-theme="starry"] {
+    color-scheme: dark;
+    --appearance-canvas: #171f35;
+    --appearance-surface: #222d46;
+    --appearance-muted-surface: #2d3955;
+    --appearance-panel: #28334e;
+    --appearance-color: #ebeffa;
+    --appearance-muted-color: #b8c5df;
+    --appearance-accent: #b5c6ff;
+    --appearance-accent-secondary: #f5c59f;
+    --appearance-on-accent: #202e50;
+    --appearance-selection: #394d70;
+    --appearance-tint: #293c60;
+    --appearance-glow: #403553;
+    --appearance-danger: #ffb6bf;
+    --appearance-shadow-color: #080f22;
+    --appearance-highlight: #bfcfff17;
+    --appearance-cover-1: #97b4e2;
+    --appearance-cover-2: #d3bb8f;
+    --appearance-cover-3: #93c7bb;
+    --appearance-cover-4: #d89faa;
+    --appearance-cover-5: #b6a4da;
+    --appearance-cover-ink: #202d43;
+}
+
+html {
+    --setting-background-color: var(--appearance-panel);
+    --setting-color: var(--appearance-color);
+    --setting-accent-color: var(--appearance-accent);
+}
+
 html[data-page="bookshelf"] {
-    --bookshelf-background-color: #1f2937;
-    --bookshelf-header-background-color: transparent;
-    --bookshelf-header-color: #409eff;
-    --bookshelf-nav-background-color: #1f2937;
-    --bookshelf-nav-color: #ffffff;
-    --bookshelf-nav-active-background-color: #374151;
-    --bookshelf-nav-active-color: #ffd04b;
-    --bookshelf-book-list-background-color: #f2e8c8;
-    --bookshelf-book-list-color: #eeeeee;
-    --bookshelf-book-input-color: #828282;
-    --bookshelf-accent-color: #409eff;
-    --bookshelf-book-background-color: #144b82;
-    --bookshelf-book-hover-background-color: #397fc4;
-    --setting-background-color: #f2e8c8;
-    --setting-color: #000000;
-    --setting-accent-color: #663399;
+    --bookshelf-background-color: var(--appearance-canvas);
+    --bookshelf-header-color: var(--appearance-color);
+    --bookshelf-nav-background-color: var(--appearance-panel);
+    --bookshelf-nav-color: var(--appearance-color);
+    --bookshelf-nav-active-background-color: var(--appearance-selection);
+    --bookshelf-nav-active-color: var(--appearance-accent);
+    --bookshelf-book-list-color: var(--appearance-color);
+    --bookshelf-book-input-color: var(--appearance-accent);
+    --bookshelf-accent-color: var(--appearance-accent);
+    --bookshelf-accent-contrast-color: var(--appearance-on-accent);
+    --bookshelf-book-background-color: var(--appearance-muted-surface);
+    --bookshelf-book-hover-background-color: var(--appearance-selection);
 
     background-color: var(--bookshelf-background-color);
-
-    &[data-theme="light"] {
-        --bookshelf-background-color: #ffffff;
-        --bookshelf-header-color: #1a73e8;
-        --bookshelf-nav-background-color: #f1f3f4;
-        --bookshelf-nav-color: #202124;
-        --bookshelf-nav-active-background-color: #d2e3fc;
-        --bookshelf-nav-active-color: #174ea6;
-        --bookshelf-book-list-background-color: #ffffff;
-        --bookshelf-book-list-color: #202124;
-        --bookshelf-book-input-color: #5f6368;
-        --bookshelf-accent-color: #1a73e8;
-        --bookshelf-book-background-color: #d2e3fc;
-        --bookshelf-book-hover-background-color: #aecbfa;
-        --setting-background-color: #ffffff;
-        --setting-color: #202124;
-        --setting-accent-color: #174ea6;
-    }
-
-    &[data-theme="dim"] {
-        --bookshelf-background-color: #111a2e;
-        --bookshelf-header-color: #8ab4f8;
-        --bookshelf-nav-background-color: #111a2e;
-        --bookshelf-nav-color: #e3e3e3;
-        --bookshelf-nav-active-background-color: #263554;
-        --bookshelf-nav-active-color: #fdd663;
-        --bookshelf-book-list-background-color: #17223a;
-        --bookshelf-book-list-color: #e3e3e3;
-        --bookshelf-book-input-color: #9aa0a6;
-        --bookshelf-accent-color: #8ab4f8;
-        --bookshelf-book-background-color: #263b63;
-        --bookshelf-book-hover-background-color: #31507f;
-        --setting-background-color: #111a2e;
-        --setting-color: #e3e3e3;
-        --setting-accent-color: #fdd663;
-    }
-
-    &[data-theme="dark"] {
-        --bookshelf-background-color: #202124;
-        --bookshelf-header-color: #8ab4f8;
-        --bookshelf-nav-background-color: #202124;
-        --bookshelf-nav-color: #e3e3e3;
-        --bookshelf-nav-active-background-color: #3c4043;
-        --bookshelf-nav-active-color: #fdd663;
-        --bookshelf-book-list-background-color: #292a2d;
-        --bookshelf-book-list-color: #e3e3e3;
-        --bookshelf-book-input-color: #9aa0a6;
-        --bookshelf-accent-color: #8ab4f8;
-        --bookshelf-book-background-color: #3c4043;
-        --bookshelf-book-hover-background-color: #4b4f52;
-        --setting-background-color: #202124;
-        --setting-color: #e3e3e3;
-        --setting-accent-color: #fdd663;
-    }
-
-    &[data-theme="blue"] {
-        --bookshelf-background-color: #d2e3fc;
-        --bookshelf-header-color: #174ea6;
-        --bookshelf-nav-background-color: #aecbfa;
-        --bookshelf-nav-color: #202124;
-        --bookshelf-nav-active-background-color: #8ab4f8;
-        --bookshelf-nav-active-color: #174ea6;
-        --bookshelf-book-list-background-color: #e8f0fe;
-        --bookshelf-book-list-color: #ffffff;
-        --bookshelf-book-input-color: #5f6368;
-        --bookshelf-accent-color: #174ea6;
-        --bookshelf-book-background-color: #397fc4;
-        --bookshelf-book-hover-background-color: #4a8ed9;
-        --setting-background-color: #d2e3fc;
-        --setting-color: #202124;
-        --setting-accent-color: #174ea6;
-    }
-
-    &[data-theme="gray"] {
-        --bookshelf-background-color: #3c3c3c;
-        --bookshelf-header-color: #8ab4f8;
-        --bookshelf-nav-background-color: #3c3c3c;
-        --bookshelf-nav-color: #e3e3e3;
-        --bookshelf-nav-active-background-color: #555555;
-        --bookshelf-nav-active-color: #ffd04b;
-        --bookshelf-book-list-background-color: #4a4a4a;
-        --bookshelf-book-list-color: #e3e3e3;
-        --bookshelf-book-input-color: #bdbdbd;
-        --bookshelf-accent-color: #8ab4f8;
-        --bookshelf-book-background-color: #555555;
-        --bookshelf-book-hover-background-color: #666666;
-        --setting-background-color: #3c3c3c;
-        --setting-color: #e3e3e3;
-        --setting-accent-color: #ffd04b;
-    }
 }
 
 html[data-page="reader"] {
-    --reader-backdrop: #be966e;
-    --reader-surface: #f2e8c8;
-    --reader-color: #000000;
-    --setting-background-color: var(--reader-surface);
-    --setting-color: var(--reader-color);
-    --setting-accent-color: #663399;
+    --reader-backdrop: var(--appearance-canvas);
+    --reader-surface: var(--appearance-surface);
+    --reader-color: var(--appearance-color);
 
     background-color: var(--reader-backdrop);
-
-    &[data-theme="light"] {
-        --reader-backdrop: #ffffff;
-        --reader-surface: #ffffff;
-        --reader-color: #000000;
-        --setting-accent-color: #174ea6;
-    }
-
-    &[data-theme="dim"] {
-        --reader-backdrop: #111a2e;
-        --reader-surface: #111a2e;
-        --reader-color: #e3e3e3;
-        --setting-accent-color: #8ab4f8;
-    }
-
-    &[data-theme="dark"] {
-        --reader-backdrop: #202124;
-        --reader-surface: #202124;
-        --reader-color: #e3e3e3;
-        --setting-accent-color: #8ab4f8;
-    }
-
-    &[data-theme="blue"] {
-        --reader-backdrop: #d2e3fc;
-        --reader-surface: #d2e3fc;
-        --reader-color: #000000;
-        --setting-accent-color: #174ea6;
-    }
-
-    &[data-theme="gray"] {
-        --reader-backdrop: #3c3c3c;
-        --reader-surface: #3c3c3c;
-        --reader-color: #e3e3e3;
-        --setting-accent-color: #8ab4f8;
-    }
 }

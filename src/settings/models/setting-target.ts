@@ -16,6 +16,8 @@
 
 import type Ui from "@/components/ui";
 import type Setting from "../definitions/setting";
+import type { PageName } from "@/constants/page-name";
+import { assertExists } from "@/utils/assert-util";
 
 /**
  * 一个 UI 及其明确开放的 Appearance 能力。
@@ -24,12 +26,30 @@ import type Setting from "../definitions/setting";
  */
 export default class SettingTarget {
     public readonly settings: readonly Setting[];
+    private configuredPageName: PageName | undefined;
 
     public constructor(
         public readonly ui: Ui,
         settings: readonly Setting[]
     ) {
         this.settings = Object.freeze([...settings]);
+    }
+
+    /**
+     * 页面上下文由能力清单绑定，同名区域仍按所属页面选择值域。
+     */
+    public get pageName(): PageName {
+        return assertExists(this.configuredPageName, `Setting target ${this.ui.id} is not configured`);
+    }
+
+    /**
+     * 将目标固定到当前页面，防止同一目标实例在不同页面间复用。
+     */
+    public configureForPage(pageName: PageName): void {
+        if (this.configuredPageName !== undefined && this.configuredPageName !== pageName) {
+            throw new Error(`Setting target ${this.ui.id} already belongs to ${this.configuredPageName}`);
+        }
+        this.configuredPageName = pageName;
     }
 
     /**

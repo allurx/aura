@@ -20,7 +20,8 @@
  */
 export default abstract class DomUtil {
     /**
-     * Convert HTML string to typed DOM element.
+     * 将仅包含一个根元素的可信 HTML 模板转换为节点。
+     * 本方法不清洗 HTML，文件名和正文等外部数据应通过文本节点写入。
      */
     public static createElementFromHtml(html: string): HTMLElement {
         const template = document.createElement("template");

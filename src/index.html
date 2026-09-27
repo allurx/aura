@@ -18,17 +18,21 @@
 <html lang="zh-CN">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+        />
         <title>Aura</title>
         <link id="favicon" rel="icon" type="image/svg+xml" />
         <script>
+            // 在样式加载前同步恢复页面主题，避免首次绘制闪现默认配色。
             (() => {
                 const page =
                     window.location.hash === "#/reader" && sessionStorage.getItem("aura.router.reader.bookId")
                         ? "reader"
                         : "bookshelf";
                 const appearance = JSON.parse(localStorage.getItem(`aura.${page}.appearance`) ?? "{}");
-                const theme = appearance.theme ?? "yellow";
+                const theme = appearance.theme ?? "sunny";
                 Object.assign(document.documentElement.dataset, { page, theme });
             })();
         </script>

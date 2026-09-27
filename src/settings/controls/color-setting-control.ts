@@ -30,10 +30,13 @@ export default class ColorSettingControl extends SettingControl {
 
     public constructor(setting: ColorStyleSetting, listener: SettingControlListener, signal: AbortSignal) {
         super(setting, listener);
+
+        // 挂载原生颜色输入并复用基类的可访问标签。
         this.inputElement.className = "control";
         this.inputElement.type = "color";
         this.attachControl(this.inputElement);
 
+        // 连续选色只预览，确认值后再由 change 提交。
         EventUtil.bind(
             this.inputElement,
             "input",
@@ -42,6 +45,7 @@ export default class ColorSettingControl extends SettingControl {
             },
             { signal }
         );
+
         EventUtil.bind(
             this.inputElement,
             "change",
@@ -58,6 +62,11 @@ export default class ColorSettingControl extends SettingControl {
         this.displayElement.textContent = resolvedValue;
     }
 
+    /**
+     * 将计算样式的 RGB 通道转换为原生颜色控件使用的六位值，不编码透明度。
+     *
+     * @returns RGB/RGBA 表达式对应的六位颜色；其他格式原样返回
+     */
     private toHex(color: string): string {
         const match = /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)$/.exec(color);
         if (!match) return color;

@@ -28,12 +28,20 @@ import RangeStyleSetting from "./range-style-setting";
  * @author allurx
  */
 export default class WidthSetting extends RangeStyleSetting {
-    public static readonly MIN_WIDTH_PX = 800;
-    public static readonly MAX_WIDTH_PX = 10_000;
+    public static readonly MIN_WIDTH_PX = 640;
+    public static readonly MAX_WIDTH_PX = 960;
+    public static readonly DEFAULT_WIDTH_PX = 800;
     public override readonly tracksExternalChanges = true;
 
     public constructor(displayOrder: number) {
-        super(StyleProperty.WIDTH, "宽度", WidthSetting.MIN_WIDTH_PX, WidthSetting.MAX_WIDTH_PX, 1, "px", displayOrder);
+        super(
+            StyleProperty.WIDTH,
+            "阅读宽度",
+            [WidthSetting.MIN_WIDTH_PX, WidthSetting.MAX_WIDTH_PX],
+            1,
+            "px",
+            displayOrder
+        );
     }
 
     public override createControl(listener: SettingControlListener, signal: AbortSignal): SettingControl {
@@ -43,28 +51,17 @@ export default class WidthSetting extends RangeStyleSetting {
     }
 
     public override resolveValue(target: SettingTarget, value: string | undefined): string {
-        return value ?? this.readExternalValue(target) ?? `${String(WidthSetting.MIN_WIDTH_PX)}px`;
+        return value ?? this.readExternalValue(target) ?? `${String(WidthSetting.DEFAULT_WIDTH_PX)}px`;
     }
 
-    public override controlMaximum(target: SettingTarget, value: string): number {
-        void target;
-        const preferredWidthPx = Number.parseFloat(value);
-        return Math.min(
-            WidthSetting.MAX_WIDTH_PX,
-            Math.max(
-                WidthSetting.MIN_WIDTH_PX,
-                window.innerWidth,
-                Number.isFinite(preferredWidthPx) ? preferredWidthPx : 0
-            )
-        );
-    }
-
-    /** 将原生 resize 写入的像素宽度限制到首选值范围，CSS 限制只约束实际布局宽度。 */
+    /**
+     * 将原生 resize 写入的像素宽度限制到首选值范围，CSS 限制只约束实际布局宽度。
+     */
     public override readExternalValue(target: SettingTarget): string | undefined {
         const value = target.ui.root.style.width;
         if (!value.endsWith(this.unit)) return value || undefined;
         const widthPx = Number(value.slice(0, -this.unit.length));
         if (!Number.isFinite(widthPx)) return value;
-        return `${String(Math.min(this.maximum, Math.max(this.minimum, widthPx)))}${this.unit}`;
+        return this.normalizeValue(widthPx, target);
     }
 }

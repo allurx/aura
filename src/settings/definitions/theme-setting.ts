@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import SelectSettingControl from "../controls/select-setting-control";
+import ThemeSettingControl from "../controls/theme-setting-control";
 import type SettingControl from "../controls/setting-control";
 import type SettingControlListener from "../controls/setting-control-listener";
 import type PageAppearance from "../models/page-appearance";
@@ -26,16 +26,18 @@ import Setting from "./setting";
 /**
  * 页面 Theme 定义。
  *
+ * 只切换文档的主题标识，不重写各 UI 已保存的显式样式。
+ *
  * @author allurx
  */
 export default class ThemeSetting extends Setting {
     public readonly options = new Map<string, string>([
-        [Theme.LIGHT, "浅色"],
-        [Theme.DIM, "昏暗"],
-        [Theme.DARK, "深色"],
-        [Theme.YELLOW, "黄色"],
-        [Theme.BLUE, "蓝色"],
-        [Theme.GRAY, "灰色"],
+        [Theme.SUNNY, "晴空"],
+        [Theme.BREEZE, "海盐"],
+        [Theme.MEADOW, "薄荷"],
+        [Theme.PEACH, "杏桃"],
+        [Theme.BLOSSOM, "花信"],
+        [Theme.STARRY, "星夜"],
     ]);
 
     public constructor(displayOrder: number) {
@@ -59,15 +61,15 @@ export default class ThemeSetting extends Setting {
 
     public override apply(target: SettingTarget, value: string | undefined): void {
         void target;
-        document.documentElement.dataset["theme"] = isTheme(value) ? value : Theme.YELLOW;
+        document.documentElement.dataset["theme"] = isTheme(value) ? value : Theme.SUNNY;
     }
 
     public override resolveValue(target: SettingTarget, value: string | undefined): string {
         void target;
-        return isTheme(value) ? value : Theme.YELLOW;
+        return isTheme(value) ? value : Theme.SUNNY;
     }
 
     public override createControl(listener: SettingControlListener, signal: AbortSignal): SettingControl {
-        return new SelectSettingControl(this, listener, signal);
+        return new ThemeSettingControl(this, listener, signal);
     }
 }

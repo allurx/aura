@@ -18,7 +18,8 @@ import type BaseModel from "./base-model";
 import type BaseRepository from "./base-repository";
 
 /**
- * 基础服务
+ * 复用仓库的数据操作入口；事务由调用方传入，不在服务内单独提交。
+ * 需要跨多个服务保证原子性时，应将同一事务传给相关调用。
  * @author allurx
  */
 export default class BaseService<T extends BaseModel> {

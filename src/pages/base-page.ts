@@ -27,6 +27,9 @@ export default abstract class BasePage implements Page {
 
     protected constructor(private readonly template: string) {}
 
+    /**
+     * 挂载并初始化单个页面实例；已销毁实例不再挂载，重复挂载视为调用错误。
+     */
     public async mount(appRoot: HTMLElement): Promise<void> {
         if (this.lifecycleController.signal.aborted) return;
         if (this.pageElement) throw new Error(`${this.constructor.name} is already mounted`);
@@ -35,6 +38,9 @@ export default abstract class BasePage implements Page {
         await this.init(this.pageElement, appRoot);
     }
 
+    /**
+     * 先结束异步与事件生命周期，再移除页面节点；销毁后的实例不可复用。
+     */
     public dispose(): void {
         this.lifecycleController.abort();
         this.pageElement?.remove();

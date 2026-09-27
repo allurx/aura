@@ -17,5 +17,12 @@
  */
 
 html[data-page="reader"] #app {
+    display: flow-root;
     background-color: var(--reader-backdrop);
+
+    &:not([style*="background-color"]) {
+        background-image:
+            radial-gradient(ellipse at 4% 8%, var(--appearance-tint), transparent 48%),
+            radial-gradient(ellipse at 96% 88%, var(--appearance-glow), transparent 48%);
+    }
 }

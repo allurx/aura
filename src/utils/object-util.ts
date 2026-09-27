@@ -20,7 +20,7 @@
  */
 export default abstract class ObjectUtil {
     /**
-     * 赋值对象自身属性
+     * 仅更新目标已声明的自身可枚举属性，忽略源对象中值为 undefined 的字段。
      * @param target - 目标对象
      * @param source - 源对象
      */

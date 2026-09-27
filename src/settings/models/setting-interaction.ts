@@ -31,7 +31,7 @@ export default class SettingInteraction {
         if (!target.supports(setting)) {
             throw new Error(`${target.ui.id} does not support setting ${setting.key}`);
         }
-        if (!setting.accepts(value)) {
+        if (!setting.accepts(value, target)) {
             throw new Error(`Invalid ${setting.key} setting value`);
         }
     }

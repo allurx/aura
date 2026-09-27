@@ -26,19 +26,26 @@ export default class SettingPreviewSession {
     private readonly targetBySetting = new Map<Setting, SettingTarget>();
     private readonly cancelledSettings = new Set<Setting>();
 
+    /**
+     * 新的 input 重新开启预览，并解除上一轮取消留下的迟到提交标记。
+     */
     public begin(setting: Setting, target: SettingTarget): void {
         this.cancelledSettings.delete(setting);
         this.targetBySetting.set(setting, target);
     }
 
-    /** @returns 对应预览目标，并结束该设置的预览会话。 */
+    /**
+     * @returns 对应预览目标，并结束该设置的预览会话。
+     */
     public finish(setting: Setting): SettingTarget | undefined {
         const target = this.targetBySetting.get(setting);
         this.targetBySetting.delete(setting);
         return target;
     }
 
-    /** @returns 当前提交是否来自已经取消、且尚未开始下一次 input 的预览。 */
+    /**
+     * @returns 当前提交是否来自已经取消、且尚未开始下一次 input 的预览。
+     */
     public isCancelled(setting: Setting): boolean {
         return this.cancelledSettings.has(setting);
     }
@@ -47,7 +54,9 @@ export default class SettingPreviewSession {
         return this.targetBySetting.get(setting) === target;
     }
 
-    /** 取消全部预览，并让调用方恢复每个目标的已提交值。 */
+    /**
+     * 取消全部预览，并让调用方恢复每个目标的已提交值。
+     */
     public cancel(restore: (target: SettingTarget, setting: Setting) => void): void {
         for (const [setting, target] of this.targetBySetting) {
             restore(target, setting);
@@ -56,7 +65,9 @@ export default class SettingPreviewSession {
         this.targetBySetting.clear();
     }
 
-    /** 页面销毁时丢弃会话，不再向即将移除的目标写回 DOM。 */
+    /**
+     * 页面销毁时丢弃会话，不再向即将移除的目标写回 DOM。
+     */
     public discard(): void {
         this.targetBySetting.clear();
         this.cancelledSettings.clear();

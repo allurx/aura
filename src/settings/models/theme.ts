@@ -20,12 +20,12 @@
  * @author allurx
  */
 export enum Theme {
-    LIGHT = "light",
-    DIM = "dim",
-    DARK = "dark",
-    YELLOW = "yellow",
-    BLUE = "blue",
-    GRAY = "gray",
+    SUNNY = "sunny",
+    BREEZE = "breeze",
+    MEADOW = "meadow",
+    PEACH = "peach",
+    BLOSSOM = "blossom",
+    STARRY = "starry",
 }
 
 const THEMES = new Set<string>(Object.values(Theme));

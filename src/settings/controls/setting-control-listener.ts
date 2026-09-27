@@ -22,6 +22,13 @@ import type Setting from "../definitions/setting";
  * @author allurx
  */
 export default interface SettingControlListener {
+    /**
+     * 将连续输入交给当前目标预览，直到确认或取消。
+     */
     preview(setting: Setting, value: string): void;
+
+    /**
+     * 确认控件值；有预览时沿用预览目标，避免切换区域后误写其他 UI。
+     */
     commit(setting: Setting, value: string): void;
 }

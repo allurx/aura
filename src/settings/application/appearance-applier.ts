@@ -28,7 +28,9 @@ import type SettingTarget from "../models/setting-target";
 export default class AppearanceApplier {
     public constructor(private readonly configuration: SettingConfiguration) {}
 
-    /** 应用完整页面快照，并同步文档的页面标识。 */
+    /**
+     * 应用完整页面快照，并同步文档的页面标识。
+     */
     public apply(appearance: PageAppearance): void {
         document.documentElement.dataset["page"] = this.configuration.pageName;
         for (const target of this.configuration.targets) {
@@ -36,12 +38,16 @@ export default class AppearanceApplier {
         }
     }
 
-    /** 应用一次预览或已提交交互。 */
+    /**
+     * 应用一次预览或已提交交互。
+     */
     public applyInteraction(interaction: SettingInteraction): void {
         interaction.setting.apply(interaction.target, interaction.value);
     }
 
-    /** 将单个设置恢复为快照中的已提交值。 */
+    /**
+     * 将单个设置恢复为快照中的已提交值。
+     */
     public restore(appearance: PageAppearance, target: SettingTarget, setting: Setting): void {
         setting.apply(target, setting.read(appearance, target));
     }

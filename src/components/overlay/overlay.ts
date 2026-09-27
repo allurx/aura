@@ -33,8 +33,11 @@ export default class Overlay {
         overlayStyle?: Partial<CSSStyleDeclaration>;
         spinnerStyle?: Partial<CSSStyleDeclaration>;
     }) {
+        // 将遮罩与加载图形挂载到同一容器。
         this.overlay = containerElement.appendChild(this.renderTemplate());
         this.spinner = assertExists(this.overlay.querySelector(".spinner")) as HTMLDivElement;
+
+        // 分别应用容器与图形的局部外观。
         this.applyOverlayStyle(overlayStyle);
         this.applySpinnerStyle(spinnerStyle);
     }

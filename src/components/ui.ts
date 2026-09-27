@@ -27,6 +27,9 @@ export default abstract class Ui {
     public readonly displayName: string;
     public readonly children: Ui[] = [];
 
+    /**
+     * 接管已有节点或挂载可信模板，并以非空 DOM id 标识设置目标。
+     */
     public constructor({
         root,
         displayName,
@@ -51,7 +54,7 @@ export default abstract class Ui {
     }
 
     /**
-     * 渲染模板
+     * 挂载应用提供的可信模板；外部字符串不得作为模板传入。
      */
     public renderTemplate({ container, template }: { container: HTMLElement; template: string }): HTMLElement {
         const templateElement = document.createElement("template");

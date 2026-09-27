@@ -24,6 +24,9 @@ export default class FooterUi extends Ui {
     private readonly chapterTitleElement: HTMLElement;
     private readonly progressRateElement: HTMLElement;
 
+    /**
+     * 绑定底部章节信息。
+     */
     public constructor(args: ConstructorParameters<typeof Ui>[0]) {
         super(args);
         this.chapterTitleElement = assertExists(this.root.querySelector<HTMLElement>("#chapter-title"));
@@ -31,20 +34,21 @@ export default class FooterUi extends Ui {
     }
 
     /**
-     * 渲染章节标题
+     * 显示当前章名，截断后的完整文本保留为悬停提示。
      * @param title - 标题
-     * @return  当前实例
+     * @returns 当前实例。
      */
     public renderChapterTitle(title: string) {
         this.chapterTitleElement.textContent = title;
+        this.chapterTitleElement.title = title;
         return this;
     }
 
     /**
-     * 渲染进度
+     * 按全书物理行号显示百分比，空书为零并限制结果在有效范围内。
      * @param bookLineNumber - 当前正文行在全书中的物理行号
      * @param numberOfLines - 全书物理总行数
-     * @return 当前实例
+     * @returns 当前实例。
      */
     public renderProgress(bookLineNumber: number, numberOfLines: number) {
         this.progressRateElement.textContent = `${(

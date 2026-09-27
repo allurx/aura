@@ -17,42 +17,143 @@
  */
 
 #reader > #footer {
-    --ui-padding-left: 30px;
-    --ui-padding-right: 30px;
-    display: flex;
-    height: 60px;
-    justify-content: center;
+    --ui-padding-left: 28px;
+    --ui-padding-right: 28px;
+    display: grid;
+    grid-template-columns: 100px minmax(0, 1fr) 100px;
+    flex: 0 0 auto;
+    min-height: 76px;
     align-items: center;
-    -webkit-user-select: none;
-    user-select: none;
-    overflow: hidden;
-    padding: 0 var(--ui-padding-right) 0 var(--ui-padding-left);
-    font-size: 0.9rem;
+    gap: 8px;
+    padding: 8px max(var(--ui-padding-right), env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom))
+        max(var(--ui-padding-left), env(safe-area-inset-left));
+    font-size: 13px;
     background-color: inherit;
+    border-top: 1px solid color-mix(in srgb, currentColor 7%, transparent);
+    box-shadow: 0 -4px 16px color-mix(in srgb, var(--appearance-shadow-color) 18%, transparent);
+    user-select: none;
 
-    @media (max-width: 768px) {
-        & {
-            font-size: 1rem;
+    .action {
+        display: flex;
+        align-items: center;
+    }
+
+    .action-right {
+        justify-content: flex-end;
+    }
+
+    .mobile-actions {
+        display: none;
+    }
+
+    .reader-action {
+        flex: 0 0 auto;
+        font-size: inherit;
+        padding-inline: 12px;
+        border-color: color-mix(in srgb, currentColor 8%, transparent);
+        background-color: var(--appearance-highlight);
+        box-shadow: var(--appearance-shadow-soft);
+    }
+    .appearance-mark {
+        display: inline-flex;
+        flex: 0 0 24px;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        font-family: Georgia, serif;
+        font-size: 22px;
+        line-height: 1;
+    }
+    .reading-location {
+        min-width: 0;
+        text-align: center;
+    }
+    #chapter-title {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+    #progress-rate {
+        color: var(--ui-color, var(--appearance-accent));
+        font-variant-numeric: tabular-nums;
+        font-size: 0.85em;
+        font-weight: 650;
+    }
+}
+
+#reader:not([style*="background-color"]) > #footer:not([style*="background-color"]) {
+    background-image: linear-gradient(105deg, transparent 30%, var(--appearance-glow));
+}
+
+#reader[style*="background-color"] > #footer,
+#reader > #footer[style*="background-color"] {
+    --focus-ring-color: currentColor;
+
+    .reader-action {
+        background-color: color-mix(in srgb, currentColor 5%, transparent);
+    }
+}
+
+#reader[data-mobile-controls] > #footer {
+    --ui-padding-left: 12px;
+    --ui-padding-right: 12px;
+    bottom: 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    min-height: 0;
+
+    > .action {
+        display: none;
+    }
+
+    .reading-location {
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: 8px;
+        line-height: 1.4;
+    }
+
+    #chapter-title {
+        min-width: 0;
+    }
+
+    #progress-rate {
+        flex: 0 0 auto;
+    }
+
+    .mobile-actions {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+
+        > .reader-action {
+            flex-direction: column;
+            width: 100%;
+            min-width: 44px;
+            min-height: 58px;
+            padding: 6px 2px;
+            gap: 3px;
         }
     }
 
-    /* 阅读进度 */
-    #progress-rate {
-        font-weight: bold;
-        text-align: right;
-        flex: 1;
+    .appearance-mark {
+        flex-basis: 20px;
+        width: 20px;
+        height: 20px;
+        font-size: 20px;
     }
 
-    /* 章节标题 */
-    #chapter-title {
-        font-weight: bold;
-        text-align: left;
-        flex: 1;
-        /* 不换行 */
-        white-space: nowrap;
-        /* 超出隐藏 */
-        overflow: hidden;
-        /* 超出用省略号替代 */
-        text-overflow: ellipsis;
+    @media (max-height: 500px) {
+        gap: 4px;
+        padding-top: 4px;
+        padding-bottom: max(4px, env(safe-area-inset-bottom));
+
+        .mobile-actions > .reader-action {
+            min-height: 48px;
+            padding-block: 4px;
+            gap: 1px;
+        }
     }
 }

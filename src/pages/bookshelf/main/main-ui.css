@@ -17,7 +17,22 @@
  */
 
 #bookshelf > main {
-    flex: 1;
+    min-width: 0;
+    min-height: 0;
     display: flex;
-    overflow: hidden;
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+    background: inherit;
+
+    &[data-sticky-header] {
+        scroll-padding-top: calc(var(--bookshelf-header-height) + 0.5rem);
+
+        > #header {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            box-shadow: 0 8px 20px -20px var(--appearance-shadow-color);
+        }
+    }
 }

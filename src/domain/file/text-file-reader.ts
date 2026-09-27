@@ -39,10 +39,12 @@ export default class TextFileReader {
      * @returns 整个文件能否按候选编码解码
      */
     public static async canDecode(file: File, encoding: SupportedTextEncoding): Promise<boolean> {
+        // 严格解码整条流，不保留已验证的文本块。
         const reader = file
             .stream()
             .pipeThrough(new TextDecoderStream(encoding, { fatal: true }))
             .getReader();
+
         try {
             for (;;) {
                 const result = await reader.read();
@@ -62,12 +64,15 @@ export default class TextFileReader {
      * @returns 按原文件顺序产生文本行的异步迭代器
      */
     public async *readLines(file: File): AsyncGenerator<string> {
+        // 解码器处理字节与字符边界，本层只处理文本行边界。
         const reader = file
             .stream()
             .pipeThrough(new TextDecoderStream(this.encoding, { fatal: true }))
             .getReader();
+
         // 缓存当前块末尾尚未形成完整行的文本。
         let remaining = "";
+
         try {
             for (;;) {
                 const result = await reader.read();
@@ -84,8 +89,11 @@ export default class TextFileReader {
                     start = end + 1;
                     end = text.indexOf("\n", start);
                 }
+
+                // 将最后一个不完整行留给下一文本块。
                 remaining = text.slice(start);
             }
+
             // 结尾换行不额外生成空行。
             if (remaining.length > 0) yield remaining;
         } finally {

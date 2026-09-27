@@ -17,83 +17,218 @@
  */
 
 #reader > #toc {
+    --toc-edge: 1rem;
+    --toc-top: max(var(--toc-edge), env(safe-area-inset-top));
+    --toc-right: max(var(--toc-edge), env(safe-area-inset-right));
+    --toc-bottom: max(var(--toc-edge), env(safe-area-inset-bottom));
+    --toc-left: max(var(--toc-edge), env(safe-area-inset-left));
     position: fixed;
-    top: 0;
-    right: 100%;
-    width: 40rem;
-    height: 100%;
+    inset: var(--toc-top) var(--toc-right) var(--toc-bottom) auto;
+    margin: 0;
+    width: min(26rem, calc(100% - var(--toc-left) - var(--toc-right)));
+    height: calc(100dvh - var(--toc-top) - var(--toc-bottom));
+    max-width: none;
+    max-height: none;
+    padding: 0;
+    border: 1px solid var(--appearance-highlight);
+    border-radius: 1.5rem;
+    color: inherit;
     background-color: inherit;
-    overflow: hidden;
-    white-space: nowrap;
-    user-select: none;
-    -webkit-user-select: none;
     font-size: 1rem;
     line-height: 1.5;
-    transition: right 0.28s ease;
+    overflow: hidden;
+    scrollbar-gutter: auto;
+    box-shadow: var(--appearance-shadow-floating);
 
-    &.open {
-        right: calc(50% - 20rem);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6);
-    }
-
-    @media (max-width: 768px) {
-        & {
-            width: 100%;
-            font-size: 1.4rem;
-        }
-
-        &.open {
-            right: 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6);
-        }
-    }
-
-    > header {
-        --ui-padding-left: 30px;
-        --ui-padding-right: 30px;
-        padding: 0 var(--ui-padding-right) 0 var(--ui-padding-left);
-        width: 100%;
-        height: 60px;
+    &[open] {
         display: flex;
-        justify-content: space-between;
+        flex-direction: column;
+    }
+    &::backdrop {
+        background: var(--appearance-backdrop);
+        backdrop-filter: blur(5px);
+    }
+    > header {
+        flex: 0 0 auto;
+        display: flex;
         align-items: center;
+        gap: 0.75rem;
+        padding: 1.1rem 1.35rem;
+        background-color: inherit;
+        border-bottom: 1px solid color-mix(in srgb, currentColor 7%, transparent);
 
-        > h2 {
-            font-weight: bold;
-            font-size: 1.4rem;
+        .toc-heading {
+            flex: 1;
+            min-width: 0;
+            overflow-wrap: anywhere;
         }
-
-        > .action {
+        h2 {
+            font-size: 1.25em;
+            font-weight: 650;
+        }
+        .toc-summary {
+            font-size: 0.78em;
+            color: color-mix(in srgb, currentColor 70%, transparent);
+        }
+        .close {
             --icon-size: 20px;
-            display: flex;
+            border-radius: 13px;
+            background: var(--appearance-highlight);
         }
     }
+    .toc-tools {
+        flex: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        padding: 0.85rem 1.35rem;
+    }
+    .toc-search {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        flex: 1 1 10rem;
+        min-width: 0;
+        padding: 0 12px;
+        border: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+        border-radius: 0.9rem;
+        background: color-mix(in srgb, currentColor 3%, transparent);
+        box-shadow: inset 0 1px 3px color-mix(in srgb, var(--appearance-shadow-color) 30%, transparent);
 
+        > .icon {
+            --icon-size: 18px;
+            opacity: 0.5;
+        }
+        > input {
+            width: 100%;
+            min-width: 0;
+            min-height: 44px;
+            padding: 0.6rem 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+            font-size: max(1em, 16px);
+            outline: none;
+        }
+    }
+    .locate-current {
+        flex: none;
+        min-height: 44px;
+        padding: 0.5em 0.75em;
+        border: 1px solid color-mix(in srgb, var(--ui-color, var(--appearance-accent)) 15%, transparent);
+        border-radius: 0.9rem;
+        background: var(--appearance-tint);
+        color: var(--ui-color, var(--appearance-accent));
+        font: inherit;
+        font-size: 0.85em;
+        cursor: pointer;
+        box-shadow: var(--appearance-shadow-soft);
+
+        &:hover {
+            background: var(--appearance-selection);
+        }
+    }
     > .main {
-        width: 100%;
-        height: calc(100% - 120px);
-        padding: 0 30px;
-        overflow-x: auto;
+        flex: 1;
+        min-height: 0;
+        overflow-x: hidden;
         overflow-y: auto;
-        scrollbar-width: auto;
-        scrollbar-color: #666666 transparent;
+        padding: 0.25rem 0.6rem 0.85rem;
+        overscroll-behavior: contain;
 
-        p {
-            padding: 12px 0;
+        > button {
+            display: block;
+            width: 100%;
+            min-height: 48px;
+            padding: 0.85rem 12px;
+            margin-bottom: 3px;
+            border: 1px solid transparent;
+            border-radius: 0.9rem;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+            text-align: left;
+            overflow-wrap: anywhere;
             cursor: pointer;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            border-bottom: 0.1px solid #666666;
 
-            &:hover,
+            &:hover {
+                background: color-mix(in srgb, currentColor 6%, transparent);
+            }
             &.active {
-                color: #337ab7;
+                font-weight: 600;
+                color: var(--ui-color, var(--appearance-accent));
+                border-color: color-mix(in srgb, currentColor 12%, transparent);
+                background: var(--appearance-tint);
+                box-shadow:
+                    inset 3px 0 currentColor,
+                    var(--appearance-shadow-soft);
             }
         }
     }
+    .toc-empty {
+        padding: 1rem 0.75rem;
+        opacity: 0.65;
+    }
 
-    > .footer {
-        height: 60px;
+    @media (max-height: 28rem) {
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+
+        > header {
+            padding-block: 0.5rem;
+        }
+
+        .toc-tools {
+            padding-block: 0.6rem;
+        }
+
+        > .main {
+            flex: none;
+            overflow: visible;
+            scrollbar-gutter: auto;
+        }
+    }
+}
+
+#reader:not([style*="background-color"]) > #toc:not([style*="background-color"]) > header {
+    background-image: linear-gradient(115deg, var(--appearance-tint), var(--appearance-glow));
+}
+
+#reader[style*="background-color"] > #toc,
+#reader > #toc[style*="background-color"] {
+    --focus-ring-color: currentColor;
+
+    > header .close,
+    .locate-current {
+        background-color: color-mix(in srgb, currentColor 5%, transparent);
+        color: inherit;
+    }
+
+    > .main > button.active {
+        background-color: color-mix(in srgb, currentColor 10%, transparent);
+        color: inherit;
+    }
+}
+
+#reader[data-mobile-controls] > #toc {
+    inset: auto 0 0;
+    width: 100%;
+    height: 90dvh;
+    max-height: min(90dvh, calc(100dvh - env(safe-area-inset-top)));
+    border-radius: 1.5rem 1.5rem 0 0;
+    border-bottom: 0;
+
+    > header,
+    .toc-tools {
+        padding-left: max(1.35rem, env(safe-area-inset-left));
+        padding-right: max(1.35rem, env(safe-area-inset-right));
+    }
+
+    > .main {
+        padding-left: max(0.6rem, env(safe-area-inset-left));
+        padding-right: max(0.6rem, env(safe-area-inset-right));
+        padding-bottom: max(0.85rem, env(safe-area-inset-bottom));
     }
 }

@@ -32,6 +32,9 @@ export default abstract class AssertUtil {
         return value;
     }
 
+    /**
+     * 断言字符串至少包含一个字符；不裁剪空白或改变原值。
+     */
     public static assertNonEmptyString(value: string, message?: string): string {
         if (typeof value !== "string" || value.length === 0) {
             throw new Error(message ?? "Value must be a non-empty string");

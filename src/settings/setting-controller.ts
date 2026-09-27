@@ -52,6 +52,7 @@ export default class SettingController implements SettingUiListener, ExternalSet
         container: HTMLElement;
         targets: readonly SettingTarget[];
     }) {
+        // 设置面板本身也是当前页面的一个独立 Appearance 目标。
         this.settingUi = new SettingUi(container);
         this.configuration = new SettingConfiguration(pageName, [
             ...targets,
@@ -61,6 +62,7 @@ export default class SettingController implements SettingUiListener, ExternalSet
                 SettingCatalog.BACKGROUND_COLOR,
             ]),
         ]);
+
         this.repository = new AppearanceRepository(this.configuration);
         this.applier = new AppearanceApplier(this.configuration);
         this.appearance = PageAppearance.defaults(this.configuration.defaultTheme);
@@ -73,14 +75,20 @@ export default class SettingController implements SettingUiListener, ExternalSet
      */
     public init(signal: AbortSignal): void {
         if (signal.aborted) return;
+
+        // 先同步恢复可见外观，再绑定面板和外部变化，避免把恢复过程误当成用户输入。
         this.appearance = this.repository.load();
         this.applier.apply(this.appearance);
+
         this.settingUi.init(this.configuration, this, signal);
         this.externalSynchronizer.start(this.configuration, this, signal);
     }
 
-    public toggle(opener: HTMLElement): void {
-        this.settingUi.toggle(opener);
+    /**
+     * 切换外观面板，允许抽屉入口将关闭焦点归还到外部可见按钮。
+     */
+    public toggle(opener: HTMLElement, returnFocusTarget = opener): void {
+        this.settingUi.toggle(opener, returnFocusTarget);
     }
 
     public getValue(target: SettingTarget, setting: Setting): string | undefined {
@@ -99,9 +107,13 @@ export default class SettingController implements SettingUiListener, ExternalSet
         this.applier.restore(this.appearance, target, setting);
     }
 
+    /**
+     * 先投影到 DOM 并同步保存，成功后替换快照；失败则恢复该设置提交前的表现。
+     */
     public commit(interaction: SettingInteraction): void {
         const previousAppearance = this.appearance;
         const nextAppearance = interaction.setting.update(previousAppearance, interaction.target, interaction.value);
+
         try {
             this.applier.applyInteraction(interaction);
             this.repository.save(nextAppearance);
@@ -117,10 +129,14 @@ export default class SettingController implements SettingUiListener, ExternalSet
         this.settingUi.refresh();
     }
 
+    /**
+     * 取消延迟的外部写入并重置当前页面；删除存储失败时恢复原快照及其 DOM 表现。
+     */
     public reset(): void {
         this.externalSynchronizer.cancelPending();
         const previousAppearance = this.appearance;
         const defaultAppearance = PageAppearance.defaults(this.configuration.defaultTheme);
+
         try {
             this.applier.apply(defaultAppearance);
             this.repository.reset();

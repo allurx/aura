@@ -32,7 +32,7 @@ export default abstract class BaseModel {
     /**
      * 更新模型属性
      * @param data - 包含要更新的属性的对象
-     * @return {this} 返回更新后的模型实例
+     * @returns 更新后的当前模型实例。
      */
     update(data: Partial<ClassFields<this>>): this {
         ObjectUtil.assignOwnProperties(this, data);

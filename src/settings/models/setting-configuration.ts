@@ -25,13 +25,15 @@ import { Theme } from "./theme";
 /**
  * 单个页面的 Appearance 能力清单及其跨目标不变量。
  *
+ * 同名设置必须复用同一份定义实例，页面 Theme 只由一个目标承载。
+ *
  * @author allurx
  */
 export default class SettingConfiguration {
     public readonly targets: readonly SettingTarget[];
     public readonly settings: readonly Setting[];
     public readonly themeSetting: ThemeSetting;
-    public readonly defaultTheme = Theme.YELLOW;
+    public readonly defaultTheme = Theme.SUNNY;
 
     private readonly targetById = new Map<UiId, SettingTarget>();
 
@@ -45,11 +47,14 @@ export default class SettingConfiguration {
         let themeSetting: ThemeSetting | undefined;
 
         for (const target of targets) {
+            // 先固定页面归属并检查 UI 唯一性，避免同名区域共享错误的设置上下文。
+            target.configureForPage(pageName);
             if (this.targetById.has(target.ui.id)) {
                 throw new Error(`Duplicate setting target: ${target.ui.id}`);
             }
             this.targetById.set(target.ui.id, target);
 
+            // 目标内的键不能重复；跨目标的同名设置必须共用同一个定义实例。
             const targetKeys = new Set<string>();
             for (const setting of target.settings) {
                 if (targetKeys.has(setting.key)) {
@@ -63,6 +68,7 @@ export default class SettingConfiguration {
                 }
                 settingByKey.set(setting.key, setting);
 
+                // 页面级设置只允许一个 Theme，其余属性归各 UI 目标所有。
                 if (setting.scope === SettingScope.PAGE) {
                     if (!(setting instanceof ThemeSetting)) {
                         throw new Error(`Unsupported page-scoped setting: ${setting.key}`);
@@ -73,6 +79,7 @@ export default class SettingConfiguration {
             }
         }
 
+        // 全部校验通过后固化清单，供控件创建和存储过滤共同使用。
         if (!themeSetting) throw new Error("Setting configuration must declare a Theme setting");
         this.targets = Object.freeze([...targets]);
         this.settings = Object.freeze([...settingByKey.values()]);

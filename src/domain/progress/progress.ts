@@ -27,7 +27,7 @@ export default class Progress extends BaseModel {
     public readonly chapterNumber!: number;
     public readonly chapterLineNumber!: number;
 
-    // 行元素可见比例 (0 ~ 1),用于恢复阅读时滚动到精确位置
+    // 段落在视口上缘以下的剩余比例（0～1），用于恢复段内阅读位置。
     public readonly lineVisibleRatio!: number;
 
     public constructor(data: ClassFields<Progress>) {

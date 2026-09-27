@@ -19,15 +19,22 @@ import ObjectUtil from "@/utils/object-util";
 import type Metadata from "@/domain/metadata/metadata";
 
 /**
- * 书架状态
+ * 当前标签页内往返阅读器时保留的书架位置，不写入外观或领域数据。
+ */
+export const bookshelfSession = { categoryId: "", search: "", scrollTop: 0, focusBookId: "" };
+
+/**
+ * 书架当前分类与初始化数据；空分类表示虚拟的全部书籍。
  * @author allurx
  */
 export default class BookshelfState {
     public readonly metadata!: Metadata;
     public readonly categories!: Category[];
-    // 当前选中的书籍分类id
     public categoryId!: string;
 
+    /**
+     * 从初始化结果构造页面状态。
+     */
     public constructor(data: Required<BookshelfState>) {
         ObjectUtil.assignOwnProperties<BookshelfState>(this, data);
     }

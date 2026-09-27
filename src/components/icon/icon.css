@@ -17,8 +17,8 @@
 .icon,
 .icon-control::before {
     display: block;
-    width: var(--icon-size, 24px);
-    height: var(--icon-size, 24px);
+    width: var(--icon-size, 20px);
+    height: var(--icon-size, 20px);
     flex: 0 0 auto;
     background-color: currentColor;
     mask: var(--icon-image) center / contain no-repeat;
@@ -62,6 +62,30 @@
     --icon-image: url("../../assets/images/chevron.svg");
 }
 
+.icon-search {
+    --icon-image: url("../../assets/images/search.svg");
+}
+
+.icon-menu {
+    --icon-image: url("../../assets/images/menu.svg");
+}
+
+.icon-book {
+    --icon-image: url("../../assets/images/book.svg");
+}
+
+.icon-help {
+    --icon-image: url("../../assets/images/help.svg");
+}
+
+.icon-arrow-left {
+    --icon-image: url("../../assets/images/arrow-left.svg");
+}
+
+.icon-arrow-right {
+    --icon-image: url("../../assets/images/arrow-right.svg");
+}
+
 @media (forced-colors: active) {
     .icon,
     .icon-control::before {
@@ -73,7 +97,6 @@
 
 :is(.icon-button, .icon-control) {
     --icon-feedback-color: transparent;
-    --icon-focus-outline: none;
     color: var(--icon-color, inherit);
     cursor: pointer;
     transition: var(--icon-transition, background-color 140ms ease);
@@ -97,11 +120,6 @@
         transition: none;
     }
 
-    &:focus-visible,
-    &:has(> input:focus-visible) {
-        --icon-focus-outline: 2px solid currentColor;
-    }
-
     @media (prefers-reduced-motion: reduce) {
         transition: none;
     }
@@ -110,8 +128,6 @@
 .icon-control,
 .icon-button::before {
     background: var(--icon-feedback-color);
-    outline: var(--icon-focus-outline);
-    outline-offset: -2px;
 }
 
 .icon-button {
@@ -128,7 +144,6 @@
     border: 0;
     border-radius: 8px;
     background: transparent;
-    outline: none;
     line-height: 0;
 
     &::before {
@@ -147,14 +162,14 @@
     /* 按图形边缘对齐，按钮外扩不超过容器的可用内边距。 */
     &.icon-button-edge-left {
         margin-left: max(
-            calc((var(--icon-size, 24px) - var(--icon-button-size)) / 2),
+            calc((var(--icon-size, 20px) - var(--icon-button-size)) / 2),
             calc(-1 * var(--ui-padding-left, 0px))
         );
     }
 
     &.icon-button-edge-right {
         margin-right: max(
-            calc((var(--icon-size, 24px) - var(--icon-button-size)) / 2),
+            calc((var(--icon-size, 20px) - var(--icon-button-size)) / 2),
             calc(-1 * var(--ui-padding-right, 0px))
         );
     }

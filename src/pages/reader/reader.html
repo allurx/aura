@@ -15,66 +15,99 @@
 -->
 
 <div id="reader">
+    <button
+        id="reading-tools-entry"
+        class="reader-tools-entry"
+        type="button"
+        aria-controls="header footer"
+        aria-expanded="false"
+        hidden
+    >
+        显示阅读工具
+    </button>
     <header id="header">
         <div class="action action-left">
-            <button
-                id="toggle-toc-panel"
-                class="icon-button icon-button-edge-left"
-                type="button"
-                aria-label="切换目录"
-                aria-controls="toc"
-                aria-expanded="false"
-                title="目录"
-            >
-                <span class="icon icon-table-of-contents" aria-hidden="true"></span>
+            <button id="return-bookshelf" class="reader-action" type="button" aria-label="返回书架">
+                <span class="icon icon-arrow-left" aria-hidden="true"></span><span>书架</span>
             </button>
         </div>
+        <h1 id="book-title"></h1>
         <div class="action action-right">
             <button
-                id="toggle-setting-panel"
-                class="icon-button"
+                id="toggle-toc-panel"
+                class="reader-action"
                 type="button"
-                aria-label="设置"
-                aria-controls="setting"
+                aria-label="打开目录"
+                aria-controls="toc"
                 aria-expanded="false"
-                title="设置"
             >
-                <span class="icon icon-setting" aria-hidden="true"></span>
-            </button>
-            <button
-                id="toggle-fullscreen"
-                class="icon-button icon-button-edge-right"
-                type="button"
-                aria-label="切换全屏"
-                title="全屏"
-            >
-                <span class="icon icon-fullscreen" aria-hidden="true"></span>
+                <span class="icon icon-table-of-contents" aria-hidden="true"></span><span>目录</span>
             </button>
         </div>
     </header>
 
-    <main id="content"></main>
+    <main id="content" class="panel-scroll" tabindex="0" aria-label="阅读正文">
+        <nav class="chapter-navigation" aria-label="章节导航">
+            <button id="previous-chapter" class="reader-action" type="button" aria-keyshortcuts="ArrowLeft">
+                <span class="icon icon-arrow-left" aria-hidden="true"></span>上一章
+            </button>
+            <button id="next-chapter" class="reader-action" type="button" aria-keyshortcuts="ArrowRight">
+                下一章<span class="icon icon-arrow-right" aria-hidden="true"></span>
+            </button>
+        </nav>
+    </main>
 
     <footer id="footer">
-        <div id="chapter-title"></div>
-        <div id="progress-rate"></div>
+        <div class="action action-left">
+            <button
+                id="toggle-setting-panel"
+                class="reader-action"
+                type="button"
+                aria-label="阅读外观"
+                aria-controls="setting"
+                aria-expanded="false"
+            >
+                <span class="appearance-mark" aria-hidden="true">Aa</span><span>外观</span>
+            </button>
+        </div>
+        <div class="reading-location">
+            <div id="chapter-title"></div>
+            <div id="progress-rate"></div>
+        </div>
+        <div class="action action-right">
+            <button
+                id="toggle-fullscreen"
+                class="reader-action"
+                type="button"
+                aria-label="进入全屏"
+                aria-pressed="false"
+                title="进入全屏"
+            >
+                <span class="icon icon-fullscreen" aria-hidden="true"></span><span>全屏</span>
+            </button>
+        </div>
+        <nav class="mobile-actions" aria-label="阅读操作"></nav>
     </footer>
 
-    <section id="toc" aria-hidden="true" inert>
+    <dialog id="toc" class="panel-scroll" aria-labelledby="toc-title" tabindex="-1">
         <header>
-            <h2>目录</h2>
-            <div class="action">
-                <button
-                    class="close icon-button icon-button-edge-right"
-                    type="button"
-                    aria-label="关闭目录"
-                    title="关闭"
-                >
-                    <span class="icon icon-close" aria-hidden="true"></span>
-                </button>
+            <div class="toc-heading">
+                <h2 id="toc-title">目录</h2>
+                <p class="toc-summary" aria-live="polite"></p>
             </div>
+            <button class="close icon-button" type="button" aria-label="关闭目录" title="关闭" autofocus>
+                <span class="icon icon-close" aria-hidden="true"></span>
+            </button>
         </header>
-        <section class="main"></section>
-        <footer class="footer"></footer>
-    </section>
+        <div class="toc-tools">
+            <label class="toc-search">
+                <span class="icon icon-search" aria-hidden="true"></span>
+                <input id="toc-search" type="search" aria-label="查找章节" placeholder="查找章节" autocomplete="off" />
+            </label>
+            <button class="locate-current" type="button">定位当前章节</button>
+        </div>
+        <nav class="main panel-scroll" aria-label="章节列表">
+            <p class="toc-empty" role="status" hidden>没有找到匹配的章节</p>
+        </nav>
+    </dialog>
 </div>

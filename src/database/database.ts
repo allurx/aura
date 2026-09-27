@@ -34,7 +34,7 @@ export default class Database {
 
     /**
      * 获取数据库实例
-     * @returns {Promise<IDBDatabase>} 返回一个解析为数据库实例的Promise.
+     * @returns 当前连接或新建立的数据库连接。
      */
     public async instance(): Promise<IDBDatabase> {
         return this.singleton ?? (await this.connect());
@@ -42,11 +42,13 @@ export default class Database {
 
     /**
      * 连接数据库
-     * @returns {Promise<IDBDatabase>} 返回一个解析为数据库实例的Promise.
+     * @returns 成功建立的数据库连接；打开失败或被其他标签页阻塞时拒绝。
      */
     private connect(): Promise<IDBDatabase> {
         return new Promise((resolve, reject) => {
+            // 打开指定版本，升级阶段只按定义创建缺失的存储及其索引。
             const request = indexedDB.open(this.name, this.schemaVersion);
+
             request.onupgradeneeded = () => {
                 Object.values(this.stores).forEach((storeDefinition) => {
                     if (!request.result.objectStoreNames.contains(storeDefinition.name)) {
@@ -54,6 +56,8 @@ export default class Database {
                             keyPath: storeDefinition.keyPath,
                             autoIncrement: storeDefinition.autoIncrement,
                         });
+
+                        // 索引归属于新建存储，与其在同一升级事务内创建。
                         Object.values(storeDefinition.indexes).forEach((index) => {
                             store.createIndex(index.name, index.path, { unique: index.unique });
                         });
@@ -61,11 +65,13 @@ export default class Database {
                 });
             };
 
+            // 缓存成功建立的连接，供后续事务复用。
             request.onsuccess = () => {
                 this.singleton = request.result;
                 resolve(this.singleton);
             };
 
+            // 将打开失败与跨标签页阻塞分别交给调用方处理。
             request.onerror = () => {
                 reject(new Error(`Database connection failed`, { cause: request.error }));
             };

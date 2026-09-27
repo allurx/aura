@@ -18,27 +18,133 @@
 
 #reader {
     width: 800px;
-    min-width: 800px;
-    max-width: 100%;
-    height: 100%;
-    margin: 0 auto;
+    min-width: 640px;
+    max-width: min(960px, 100%);
+    height: calc(100% - 40px);
+    margin: 20px auto;
     display: flex;
     flex-direction: column;
-    background-color: var(--reader-surface);
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
     position: relative;
-    outline: none;
     overflow: hidden;
     resize: horizontal;
+    border: 1px solid var(--appearance-highlight);
+    border-radius: 26px;
+    background-color: var(--reader-surface);
     color: var(--reader-color);
-    line-height: 2;
+    box-shadow: var(--appearance-shadow-raised);
+    line-height: 1.6;
 
-    /* 窄屏只限制 effective width；inline preferred width 保留，离开窄屏后可恢复。 */
-    @media (max-width: 800px) {
+    .reader-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        --icon-size: 20px;
+        gap: 6px;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 8px;
+        border: 1px solid transparent;
+        border-radius: 13px;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        line-height: 1.4;
+        text-decoration: none;
+        cursor: pointer;
+        white-space: nowrap;
+        transition:
+            background-color 140ms ease,
+            color 140ms ease,
+            box-shadow 140ms ease,
+            transform 140ms ease;
+
+        @media (hover: hover) and (pointer: fine) {
+            &:hover:not(:disabled) {
+                background: color-mix(in srgb, currentColor 6%, transparent);
+                box-shadow: var(--appearance-shadow-soft);
+                transform: translateY(-1px);
+            }
+        }
+
+        &:active:not(:disabled) {
+            box-shadow: none;
+            transform: translateY(0);
+        }
+
+        &:disabled {
+            opacity: 0.35;
+            cursor: default;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            transition: none;
+
+            &:hover:not(:disabled) {
+                transform: none;
+            }
+        }
+    }
+
+    @media (max-width: 800px), (max-height: 500px) and (pointer: coarse) {
         & {
             width: 100% !important;
             min-width: 100% !important;
+            height: 100%;
+            margin: 0;
             resize: none;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
         }
+    }
+}
+
+/* 辅助入口保留在阅读顺序中，仅键盘聚焦时显露，避免沉浸界面常驻按钮。 */
+#reader > .reader-tools-entry {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+
+    &:focus-visible {
+        z-index: 4;
+        top: max(8px, env(safe-area-inset-top));
+        left: max(12px, env(safe-area-inset-left));
+        width: auto;
+        height: auto;
+        min-height: 44px;
+        padding: 8px 12px;
+        border: 1px solid var(--appearance-border);
+        border-radius: 12px;
+        background: var(--reader-surface);
+        color: var(--ui-color, var(--reader-color));
+        font: inherit;
+        box-shadow: var(--appearance-shadow-raised);
+        clip-path: none;
+    }
+}
+
+/* 工具覆盖正文而不参与布局，显隐时保持滚动容器尺寸和阅读位置。 */
+#reader[data-mobile-controls] > :is(#header, #footer) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 3;
+}
+
+#reader[data-mobile-controls]:not([data-reading-tools-visible]) > :is(#header, #footer) {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+#reader[style*="background-color"] {
+    --focus-ring-color: currentColor;
+
+    > .reader-tools-entry:focus-visible {
+        background-color: inherit;
     }
 }

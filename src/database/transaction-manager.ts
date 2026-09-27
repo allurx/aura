@@ -30,8 +30,8 @@ export default class TransactionManager {
     );
 
     /**
-     * 执行一个带有事务的操作
-     * 注意: 不要在operation中执行除了数据库操作以外的异步操作, 否则可能导致事务被浏览器提前结束
+     * 在指定事务中执行操作，并等待事务实际提交后才返回结果。
+     * operation 中不要等待文件读取、网络等非数据库异步工作，以免事务因没有待处理请求而提前结束。
      *
      * @template   T - operation返回值的类型
      * @param  storeNames - 需要操作的对象存储名称
@@ -44,21 +44,24 @@ export default class TransactionManager {
         mode: DatabaseMode,
         operation: (transaction: IDBTransaction) => Promise<T>
     ): Promise<T> {
+        // 创建事务后立即监听结算，避免错过操作期间触发的完成或失败事件。
         const transaction = await this.createTransaction(storeNames, mode);
         const transactionPromise = this.transactionPromise(transaction);
 
         try {
+            // 请求处理结束不等于事务提交，两个阶段都成功才向调用方返回。
             const result = await operation(transaction);
             await transactionPromise;
             return result;
         } catch (error) {
+            // 尽力中止并等待清理，清理失败不能覆盖原始操作异常。
             await Promise.allSettled([
                 // 发起中止
                 Promise.try(() => {
                     transaction.abort();
                 }),
 
-                // 等待事务真正结束
+                // 等待事务结果 Promise 结算。
                 transactionPromise,
             ]);
 

@@ -18,7 +18,8 @@ import type { StoreDefinition } from "@/database/database-definition";
 import type BaseModel from "./base-model";
 
 /**
- * 基础数据访问仓库
+ * 在调用方提供的事务内读写模型，不自行创建或提交事务。
+ * 请求 Promise 完成不代表事务已提交，事务结算由 TransactionManager 负责。
  * @template T - 模型类型
  * @author allurx
  */
@@ -35,6 +36,9 @@ export default abstract class BaseRepository<T extends BaseModel> {
         return await this.requestPromise(transaction.objectStore(this.storeName()).add(data));
     }
 
+    /**
+     * 在同一事务内一次入队全部新增请求；原子性由调用方的事务保证。
+     */
     public async addAll(dataArray: T[], transaction: IDBTransaction) {
         return await Promise.all(dataArray.map((data) => this.add(data, transaction)));
     }
@@ -47,11 +51,17 @@ export default abstract class BaseRepository<T extends BaseModel> {
         return await Promise.all(dataArray.map((data) => this.put(data, transaction)));
     }
 
+    /**
+     * 按主键或键范围获取首条记录并恢复为模型实例，未找到时返回 null。
+     */
     public async getByKey(key: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
         const result = await this.requestPromise<unknown>(transaction.objectStore(this.storeName()).get(key));
         return result ? this.createModel(result as Required<T>) : null;
     }
 
+    /**
+     * 按索引获取首条匹配记录；非唯一索引的多条结果应使用 getAllByIndex。
+     */
     public async getByIndex(indexName: string, indexValue: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
         const result = await this.requestPromise<unknown>(
             transaction.objectStore(this.storeName()).index(indexName).get(indexValue)
@@ -72,6 +82,7 @@ export default abstract class BaseRepository<T extends BaseModel> {
         transaction: IDBTransaction
     ): Promise<T | null> {
         return new Promise<T | null>((resolve, reject) => {
+            // 没有可用索引时逐条扫描，首次命中后立即结束。
             const request = transaction.objectStore(this.storeName()).openCursor();
             request.onsuccess = () => {
                 const cursor = request.result;
@@ -86,6 +97,7 @@ export default abstract class BaseRepository<T extends BaseModel> {
                     resolve(null);
                 }
             };
+
             request.onerror = () => {
                 reject(request.error ?? new Error("Failed to get record by field"));
             };
@@ -108,6 +120,9 @@ export default abstract class BaseRepository<T extends BaseModel> {
         await this.requestPromise(transaction.objectStore(this.storeName()).delete(key));
     }
 
+    /**
+     * 删除索引命中的首条记录；需要删除全部匹配项时使用 deleteAllByIndex。
+     */
     public async deleteByIndex(indexName: string, indexValue: IDBValidKey | IDBKeyRange, transaction: IDBTransaction) {
         const store = transaction.objectStore(this.storeName());
         const key = await this.requestPromise(store.index(indexName).getKey(indexValue));
@@ -143,7 +158,7 @@ export default abstract class BaseRepository<T extends BaseModel> {
     }
 
     /**
-     * 将IDBRequest转换为Promise
+     * 将单个 IDBRequest 转为 Promise；成功只表示请求结束，不表示整个事务提交。
      * @template R - 请求结果类型
      * @param  request - IndexedDB请求对象
      * @returns 请求结果
@@ -164,7 +179,7 @@ export default abstract class BaseRepository<T extends BaseModel> {
      * @param store - 对象存储
      * @param indexName - 索引名称
      * @param indexValue - 索引值
-     * @returns 删除完成的Promise
+     * @returns 遍历并入队全部删除请求后完成；实际提交或回滚仍由外层事务确认。
      */
     private deleteAllByIndexRequestPromise(
         store: IDBObjectStore,
@@ -176,14 +191,15 @@ export default abstract class BaseRepository<T extends BaseModel> {
             request.onsuccess = () => {
                 const cursor = request.result;
                 if (cursor) {
+                    // 连续入队删除与游标请求，统一由外层事务负责错误和提交。
                     cursor.delete();
-                    //await this.requestPromise(cursor.delete());
                     cursor.continue();
                 } else {
-                    // 没有更多记录,完成删除
+                    // 游标耗尽，交由外层事务等待已入队的删除全部提交。
                     resolve();
                 }
             };
+
             request.onerror = () => {
                 reject(request.error ?? new Error("Failed to delete records by index"));
             };

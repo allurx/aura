@@ -33,17 +33,23 @@ export default abstract class SettingControl {
         public readonly setting: Setting,
         protected readonly listener: SettingControlListener
     ) {
+        // 基类提供统一的设置外壳与标签，具体输入稍后关联到该标签。
         this.element.className = "item";
-
         this.titleElement.className = "title";
         this.titleElement.textContent = setting.title;
 
+        // 输入与当前值分区，子类只需填充控件而不重建公共结构。
         this.controlContainer.className = "control-container";
         this.displayElement.className = "display";
         this.element.append(this.titleElement, this.controlContainer, this.displayElement);
     }
 
-    /** 根据目标及已提交显式值刷新控件。 */
+    /**
+     * 根据目标与显式值刷新控件，预览期间也可显示尚未提交的值。
+     *
+     * @param target - 当前控件实际读写的 UI 目标
+     * @param value - 预览或已提交的显式值；缺失时由设置定义解析默认表现
+     */
     public abstract render(target: SettingTarget, value: string | undefined): void;
 
     public show(): void {
@@ -54,7 +60,9 @@ export default abstract class SettingControl {
         this.element.hidden = true;
     }
 
-    /** 将具体控件与可访问标签关联后挂载。 */
+    /**
+     * 将具体控件与可访问标签关联后挂载。
+     */
     protected attachControl(control: HTMLInputElement | HTMLSelectElement): void {
         control.id = `setting-control-${this.setting.key}`;
         this.titleElement.htmlFor = control.id;

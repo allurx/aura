@@ -24,7 +24,18 @@ import type SettingTarget from "../models/setting-target";
  * @author allurx
  */
 export default interface ExternalSettingListener {
+    /**
+     * @returns 已提交的显式值，用于排除重复保存
+     */
     getValue(target: SettingTarget, setting: Setting): string | undefined;
+
+    /**
+     * @returns 当前目标是否正在预览该设置；预览值不得当作外部变化提交
+     */
     isPreviewing(target: SettingTarget, setting: Setting): boolean;
+
+    /**
+     * 保存经校验的外部变化，并同步正在显示的设置控件。
+     */
     commitExternalChange(interaction: SettingInteraction): void;
 }

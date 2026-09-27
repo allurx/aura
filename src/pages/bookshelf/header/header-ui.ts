@@ -19,59 +19,86 @@ import { assertExists } from "@/utils/assert-util";
 import Ui from "@/components/ui";
 
 /**
- * 书架头部界面
+ * 分类标题、搜索和导入工具栏。
  * @author allurx
  */
 export default class HeaderUi extends Ui {
-    private readonly headerTitleElement: HTMLSpanElement;
-    private readonly settingToggleButton: HTMLButtonElement;
-    private readonly clearBookshelfButton: HTMLButtonElement;
+    private readonly search = assertExists(this.root.querySelector<HTMLInputElement>("#book-search"));
+    private readonly input = assertExists(this.root.querySelector<HTMLInputElement>("#book-input"));
+    private readonly importButton = assertExists(this.root.querySelector<HTMLButtonElement>("#import-books"));
 
-    /** 绑定页眉控件，图标资源由共享样式映射。 */
-    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
-        super(args);
-        this.headerTitleElement = assertExists(this.root.querySelector<HTMLSpanElement>("#title"));
-        this.settingToggleButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel"));
-        this.clearBookshelfButton = assertExists(this.root.querySelector<HTMLButtonElement>("#clear-btn"));
+    /**
+     * 显示当前分类与筛选后的数量。
+     */
+    public render(category: string, count: number, query: string): void {
+        assertExists(this.root.querySelector("#category-title")).textContent = category;
+        assertExists(this.root.querySelector("#book-count")).textContent = `${String(count)} 本`;
+        this.search.value = query;
     }
 
     /**
-     * 绑定设置面板切换事件
-     * @param handler - 处理函数
-     * @param signal - 页面生命周期信号
-     * @returns 返回当前实例
+     * 绑定搜索与文件选择器，选择结束后允许再次选择同一文件。
      */
-    public bindToggleSettingPanel(handler: (opener: HTMLButtonElement) => void, signal: AbortSignal): this {
+    public bindEvents(
+        onSearch: (query: string) => void,
+        onImport: (files: File[]) => Promise<void>,
+        onAppearance: (opener: HTMLElement) => void,
+        signal: AbortSignal
+    ): void {
+        // 保留外观入口节点，面板关闭后可将焦点归还给原按钮。
         EventUtil.bind(
-            this.settingToggleButton,
+            assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel")),
             "click",
-            (_, opener) => {
-                handler(opener);
+            (_, button) => {
+                onAppearance(button);
             },
             { signal }
         );
-        return this;
-    }
 
-    /**
-     * 绑定清空书架点击事件
-     * @param  handler - 处理函数
-     * @returns  返回当前实例
-     * @param signal - 页面生命周期信号
-     */
-    public bindClearBookshelfClick(handler: () => Promise<void>, signal: AbortSignal): this {
-        EventUtil.bind(this.clearBookshelfButton, "click", handler, { signal });
-        return this;
-    }
+        // Escape 清空查询，普通输入即时更新当前分类内的筛选。
+        EventUtil.bind(
+            this.search,
+            "keydown",
+            (event) => {
+                if (event instanceof KeyboardEvent && event.key === "Escape") {
+                    this.search.value = "";
+                    onSearch("");
+                }
+            },
+            { signal }
+        );
 
-    /**
-     * 绑定头部标题点击事件
-     * @returns 返回当前实例
-     * @param handler - 处理函数
-     * @param signal - 页面生命周期信号
-     */
-    public bindHeaderTitleClick(handler: () => void, signal: AbortSignal): this {
-        EventUtil.bind(this.headerTitleElement, "click", handler, { signal });
-        return this;
+        EventUtil.bind(
+            this.search,
+            "input",
+            () => {
+                onSearch(this.search.value);
+            },
+            { signal }
+        );
+
+        // 可见按钮打开原生文件选择器，文件列表由其 change 事件提交。
+        EventUtil.bind(
+            this.importButton,
+            "click",
+            () => {
+                this.input.click();
+            },
+            { signal }
+        );
+
+        EventUtil.bind(
+            this.input,
+            "change",
+            async () => {
+                try {
+                    await onImport(Array.from(this.input.files ?? []));
+                } finally {
+                    // 成功或失败都清空选择，下一次仍能导入同一文件。
+                    this.input.value = "";
+                }
+            },
+            { signal }
+        );
     }
 }

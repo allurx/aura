@@ -43,11 +43,13 @@ export default abstract class StyleSetting extends Setting {
     }
 
     public override update(appearance: PageAppearance, target: SettingTarget, value: string): PageAppearance {
-        if (!this.accepts(value)) throw new Error(`Invalid ${this.key} setting value`);
+        if (!this.accepts(value, target)) throw new Error(`Invalid ${this.key} setting value`);
         return appearance.withStyle(target.ui.id, this.property, value);
     }
 
-    /** 向定义声明的 CSS 目标写入样式，未指定变量时使用原生属性。 */
+    /**
+     * 写入原生属性或声明的 CSS 变量；undefined 移除显式值，重新由 CSS 和 Theme 决定表现。
+     */
     public override apply(target: SettingTarget, value: string | undefined): void {
         const property = this.cssVariable ?? this.property;
         if (value === undefined) target.ui.root.style.removeProperty(property);

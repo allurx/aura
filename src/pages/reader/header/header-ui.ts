@@ -16,81 +16,28 @@
 
 import Ui from "@/components/ui";
 import { assertExists } from "@/utils/assert-util";
-import EventUtil from "@/utils/event-util";
 
 /**
  * 阅读器头部界面
  * @author allurx
  */
 export default class HeaderUi extends Ui {
-    private readonly tocToggleButton: HTMLButtonElement;
-    private readonly fullscreenToggleButton: HTMLButtonElement;
-    private readonly settingToggleButton: HTMLButtonElement;
+    private readonly bookTitle: HTMLElement;
 
-    /** 绑定页眉控件，图标资源由共享样式映射。 */
+    /**
+     * 绑定书名，跨布局的操作由阅读器统一管理。
+     */
     public constructor(args: ConstructorParameters<typeof Ui>[0]) {
         super(args);
-        this.tocToggleButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-toc-panel"));
-        this.fullscreenToggleButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-fullscreen"));
-        this.settingToggleButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel"));
+        this.bookTitle = assertExists(this.root.querySelector<HTMLElement>("#book-title"));
     }
 
     /**
-     * 绑定目录面板切换事件
-     * @param handler - 事件处理函数
-     * @param signal - 页面生命周期信号
-     * @returns 当前实例
+     * 显示书名，长文件名保留原文供辅助技术和悬停查看。
      */
-    public bindToggleTocPanel(handler: () => void, signal: AbortSignal): this {
-        EventUtil.bind(this.tocToggleButton, "click", handler, { signal });
-        return this;
-    }
-
-    /**
-     * 同步目录面板的展开状态。
-     * @param expanded - 目录面板是否展开
-     * @returns 当前实例
-     */
-    public setTocExpanded(expanded: boolean): this {
-        this.tocToggleButton.setAttribute("aria-expanded", String(expanded));
-        return this;
-    }
-
-    /**
-     * 将焦点归还给目录切换按钮。
-     * @returns 当前实例
-     */
-    public focusTocToggleButton(): this {
-        this.tocToggleButton.focus();
-        return this;
-    }
-
-    /**
-     * 绑定全屏切换事件
-     * @param handler - 事件处理函数
-     * @param signal - 页面生命周期信号
-     * @returns 当前实例
-     */
-    public bindToggleFullscreen(handler: () => void, signal: AbortSignal): this {
-        EventUtil.bind(this.fullscreenToggleButton, "click", handler, { signal });
-        return this;
-    }
-
-    /**
-     * 绑定设置面板切换事件
-     * @param handler - 事件处理函数
-     * @param signal - 页面生命周期信号
-     * @returns 当前实例
-     */
-    public bindToggleSettingPanel(handler: (opener: HTMLButtonElement) => void, signal: AbortSignal): this {
-        EventUtil.bind(
-            this.settingToggleButton,
-            "click",
-            (_, opener) => {
-                handler(opener);
-            },
-            { signal }
-        );
+    public renderBookTitle(title: string): this {
+        this.bookTitle.textContent = title.replace(/\.txt$/i, "");
+        this.bookTitle.title = title;
         return this;
     }
 }

@@ -23,11 +23,12 @@ import type SettingControlListener from "./setting-control-listener";
 /**
  * 有限数值范围的滑块控件。
  *
+ * input 仅预览，change 才提交；目标变化时同步范围和数值，复用原生滑块节点。
+ *
  * @author allurx
  */
 export default class RangeSettingControl extends SettingControl {
     private readonly inputElement = document.createElement("input");
-    private target: SettingTarget | undefined;
 
     public constructor(
         private readonly rangeSetting: RangeStyleSetting,
@@ -35,13 +36,14 @@ export default class RangeSettingControl extends SettingControl {
         signal: AbortSignal
     ) {
         super(rangeSetting, listener);
+
+        // 原生滑块只保存数值，CSS 单位在发送交互时补回。
         this.inputElement.className = "control";
         this.inputElement.type = "range";
-        this.inputElement.min = String(rangeSetting.minimum);
-        this.inputElement.max = String(rangeSetting.maximum);
         this.inputElement.step = String(rangeSetting.step);
         this.attachControl(this.inputElement);
 
+        // 拖动与键盘调整先预览，再由原生 change 确认最终值。
         EventUtil.bind(
             this.inputElement,
             "input",
@@ -50,6 +52,7 @@ export default class RangeSettingControl extends SettingControl {
             },
             { signal }
         );
+
         EventUtil.bind(
             this.inputElement,
             "change",
@@ -58,31 +61,17 @@ export default class RangeSettingControl extends SettingControl {
             },
             { signal }
         );
-        for (const eventType of ["pointerdown", "focus"] as const) {
-            EventUtil.bind(
-                this.inputElement,
-                eventType,
-                () => {
-                    this.updateMaximum();
-                },
-                { signal }
-            );
-        }
     }
 
     public override render(target: SettingTarget, value: string | undefined): void {
-        this.target = target;
+        const [minimum, maximum] = this.rangeSetting.range(target);
         const resolvedValue = this.rangeSetting.resolveValue(target, value);
-        this.inputElement.max = String(this.rangeSetting.controlMaximum(target, resolvedValue));
-        this.inputElement.value = this.withoutUnit(resolvedValue);
-        this.displayElement.textContent = resolvedValue;
-    }
 
-    private updateMaximum(): void {
-        if (!this.target) return;
-        this.inputElement.max = String(
-            this.rangeSetting.controlMaximum(this.target, this.withUnit(this.inputElement.value))
-        );
+        this.inputElement.min = String(minimum);
+        this.inputElement.max = String(maximum);
+        this.inputElement.value = this.withoutUnit(resolvedValue);
+
+        this.displayElement.textContent = this.rangeSetting.unit ? resolvedValue : `${resolvedValue} 倍`;
     }
 
     private withUnit(value: string): string {

@@ -1,0 +1,45 @@
+@charset "UTF-8";
+
+/* 焦点与选中状态分开：浏览器判断何时显示焦点，颜色由页面主题提供。 */
+html {
+    --focus-ring-color: var(--appearance-focus);
+}
+
+:where(button, a[href], input, select, textarea, summary, [tabindex]):focus-visible,
+:where(.book-search-field, .toc-search, .theme-option, .icon-control):has(> input:focus-visible) {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+/* 包裹型控件只在完整的点击区域描边，内部原生输入继续承载焦点与键盘操作。 */
+:where(.book-search-field, .toc-search, .theme-option, .icon-control) > input:focus-visible {
+    outline: none;
+}
+
+/* 滚动容器和紧邻的导航行向内描边，避免被父容器裁切。 */
+:where(.panel-scroll[tabindex], #book-list):focus-visible,
+#bookshelf #category-navigation button:focus-visible,
+#reader #toc > .main > button:focus-visible {
+    outline-offset: -2px;
+}
+
+#bookshelf #book-list :is(.book-category, .book-delete):focus-visible {
+    opacity: 1;
+}
+
+:where(input[type="range"]):focus-visible {
+    border-radius: 0.5rem;
+}
+
+@media (forced-colors: active) {
+    html,
+    #bookshelf #nav {
+        --focus-ring-color: Highlight;
+    }
+
+    /* 系统高对比模式会移除填充和阴影，用双线保留选中状态，外环仍专用于焦点。 */
+    :is(#reader, #bookshelf) > #setting .theme-options .theme-option:has(input:checked) {
+        border: 3px double Highlight;
+        padding: calc(0.5rem - 2px);
+    }
+}

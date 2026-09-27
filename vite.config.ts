@@ -31,12 +31,14 @@ const FONT_EXTENSIONS = new Set([".woff", ".woff2", ".ttf", ".otf", ".eot"]);
  * @author allurx
  */
 export default defineConfig(({ command, mode, isPreview }) => {
+    // 从构建模式推导交付组合，每种产物写入独立目录。
     const portable = mode === "portable" || mode === "portable-obfuscated";
     const obfuscated = mode === "obfuscated" || mode === "portable-obfuscated";
     const developmentServer = command === "serve" && !isPreview;
     const outputDirectory = `${portable ? "portable" : "web"}${obfuscated ? "-obfuscated" : ""}`;
 
     return {
+        // portable 内联资源并使用相对路径，Web 版按站点根路径部署。
         root: SOURCE_ROOT,
         base: portable ? "./" : "/",
         publicDir: portable ? false : "public",
@@ -45,6 +47,8 @@ export default defineConfig(({ command, mode, isPreview }) => {
                 "@": SOURCE_ROOT,
             },
         },
+
+        // 仅开发服务器读取本机证书，构建与预览不依赖证书文件。
         ...(developmentServer
             ? {
                   server: {
@@ -55,6 +59,8 @@ export default defineConfig(({ command, mode, isPreview }) => {
                   },
               }
             : {}),
+
+        // 生产构建统一移除调试输出。
         ...(command === "build"
             ? {
                   esbuild: {
@@ -62,6 +68,8 @@ export default defineConfig(({ command, mode, isPreview }) => {
                   },
               }
             : {}),
+
+        // 单次构建只清理当前交付目录，其他版本的产物仍保留。
         build: {
             outDir: resolve(PROJECT_ROOT, "dist", outputDirectory),
             emptyOutDir: true,
@@ -81,6 +89,8 @@ export default defineConfig(({ command, mode, isPreview }) => {
                 },
             },
         },
+
+        // 先生成可选混淆代码，再为 portable 内联并重命名入口。
         plugins: [
             // https://github.com/elmeet/vite-plugin-javascript-obfuscator
             obfuscated &&
@@ -112,6 +122,9 @@ function portableEntryPlugin(): Plugin {
         apply: "build",
         generateBundle: {
             order: "post",
+            /**
+             * 内联完成后将标准 HTML 入口替换为便携版文件名。
+             */
             handler(_options, bundle) {
                 const entry = bundle["index.html"];
                 if (entry?.type !== "asset") throw new Error("Portable HTML entry was not generated");

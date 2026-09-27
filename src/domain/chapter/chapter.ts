@@ -40,7 +40,8 @@ export default class Chapter extends BaseModel {
     }
 
     /**
-     * @return {string} 整个章节内容
+     * 将正文行按换行符连接，不补回章节标题。
+     * @returns 整个章节的正文内容。
      */
     public content(): string {
         return this.lines.join("\n");
