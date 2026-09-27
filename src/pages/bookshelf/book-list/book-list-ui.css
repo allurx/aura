@@ -21,10 +21,11 @@
     --ui-padding-right: 40px;
     --ui-padding-bottom: 40px;
     --ui-padding-left: 40px;
+    --book-width: max(8.5rem, 7.5em);
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, max(10.5rem, 9em)), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--book-width)), 1fr));
     align-content: start;
-    gap: 2rem 1.75rem;
+    gap: 1.5rem 1.25rem;
     flex: 1 0 auto;
     min-width: 0;
     min-height: 0;
@@ -36,11 +37,14 @@
     .book {
         --book-cover: hsl(var(--book-cover-hue) var(--appearance-cover-saturation) var(--appearance-cover-lightness));
         --book-cover-ink: var(--appearance-cover-ink);
-        --book-title-size: 1.7;
+        --book-title-size: 1.3;
         --book-title-lines: 4;
-        --book-cover-top: 1.7rem;
-        --book-cover-bottom: 1.4rem;
+        --book-cover-top: 1rem;
+        --book-cover-bottom: 0.85rem;
         min-width: 0;
+        width: 100%;
+        /* 换列只重新分配留白，书卡保持目标宽度，不随剩余空间拉伸。 */
+        max-width: var(--book-width);
     }
     .book-open {
         position: relative;
@@ -54,7 +58,7 @@
             var(--book-title-lines) * 1.45 * var(--book-title-size) * 1em + var(--book-cover-top) +
                 var(--book-cover-bottom)
         );
-        padding: var(--book-cover-top) 1.3rem var(--book-cover-bottom) 1.75rem;
+        padding: var(--book-cover-top) 0.85rem var(--book-cover-bottom) 1.2rem;
         border: 1px solid color-mix(in srgb, var(--book-cover-ink) 10%, transparent);
         border-radius: 5px 12px 12px 5px;
         background-color: var(--book-cover);
@@ -114,7 +118,7 @@
         font-weight: 500;
     }
     .book-progress {
-        margin-top: 1rem;
+        margin-top: 0.65rem;
         font-size: max(12px, 0.72em);
         line-height: 1.6;
         color: var(--ui-color, var(--appearance-muted-color));
@@ -202,15 +206,10 @@
     @media (max-width: 768px) {
         --ui-padding-left: 18px;
         --ui-padding-right: 18px;
-        grid-template-columns: repeat(auto-fill, minmax(min(100%, max(124px, 9em)), 1fr));
-        gap: 1.6rem 1.25rem;
-        .book {
-            --book-title-size: 1.8;
-            --book-cover-top: 1.45rem;
-            --book-cover-bottom: 1.2rem;
-        }
+        --book-width: max(104px, 7.5em);
+        gap: 1.25rem 0.85rem;
         .book-open {
-            padding: var(--book-cover-top) 1.1rem var(--book-cover-bottom) 1.45rem;
+            padding: var(--book-cover-top) 0.65rem var(--book-cover-bottom) 1.05rem;
         }
         .book-progress {
             font-size: max(12px, 0.78em);
