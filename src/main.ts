@@ -27,7 +27,6 @@ import Bookshelf from "./pages/bookshelf/bookshelf";
 import Reader from "./pages/reader/reader";
 import Router, { type AppRoute } from "./router/router";
 import { assertExists } from "./utils/assert-util";
-import favicon from "./assets/images/favicon.svg";
 import Dialog from "./components/dialog/dialog";
 import OperationError from "./errors/operation-error";
 
@@ -46,7 +45,6 @@ class Main {
      * 准备应用挂载节点与路由，页面实例由路由分发时创建。
      */
     public constructor() {
-        assertExists(document.querySelector<HTMLLinkElement>("#favicon")).href = favicon;
         this.appRoot = assertExists(document.querySelector<HTMLElement>("#app"));
         this.router = new Router((route) => this.render(route));
     }
