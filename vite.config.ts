@@ -16,7 +16,7 @@
 
 import { readFileSync } from "node:fs";
 import { extname, resolve } from "node:path";
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, type HtmlTagDescriptor, type Plugin } from "vite";
 import obfuscatorPlugin from "vite-plugin-javascript-obfuscator";
 import { viteSingleFile } from "vite-plugin-singlefile";
 
@@ -90,8 +90,46 @@ export default defineConfig(({ command, mode, isPreview }) => {
             },
         },
 
-        // 先生成可选混淆代码，再为 portable 内联并重命名入口。
+        // 按交付方式组合 HTML 声明、混淆与 portable 内联。
         plugins: [
+            // 开发服务器和 Web 构建共用安装声明，portable 不引用外部安装资源。
+            !portable && {
+                name: "aura:web-app",
+                transformIndexHtml: {
+                    order: "post",
+                    /**
+                     * 标签放在 head 尾部，保留字符集声明在文档开头的位置。
+                     */
+                    handler(): HtmlTagDescriptor[] {
+                        return [
+                            {
+                                tag: "link",
+                                attrs: { rel: "manifest", href: "/manifest.webmanifest" },
+                                injectTo: "head",
+                            },
+                            {
+                                tag: "link",
+                                attrs: {
+                                    rel: "apple-touch-icon",
+                                    href: "/icons/apple-touch-icon.png",
+                                    sizes: "180x180",
+                                },
+                                injectTo: "head",
+                            },
+                            {
+                                tag: "meta",
+                                attrs: { name: "apple-mobile-web-app-title", content: "Aura" },
+                                injectTo: "head",
+                            },
+                            {
+                                tag: "link",
+                                attrs: { rel: "canonical", href: "https://aura.allurx.io/" },
+                                injectTo: "head",
+                            },
+                        ];
+                    },
+                },
+            },
             // https://github.com/elmeet/vite-plugin-javascript-obfuscator
             obfuscated &&
                 obfuscatorPlugin({

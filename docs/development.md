@@ -31,7 +31,9 @@ npm run dev
 | `npm run build:portable`            | `dist/portable/aura.html`，普通离线版            |
 | `npm run build:portable:obfuscated` | `dist/portable-obfuscated/aura.html`，混淆离线版 |
 
-每个构建命令先执行静态检查，再只清理自身输出子目录，四种产物可以同时保留。Web 包中的 `index.html`、`assets/` 和 `_headers` 属于同一次构建；portable 输出为单个 HTML 文件。
+每个构建命令先执行静态检查，再只清理自身输出子目录，四种产物可以同时保留。Web 输出中的入口、资源、manifest、图标与 `_headers` 属于同一次构建，应整体使用；portable 输出为单个 HTML 文件。
+
+开发服务器与 Web 构建共用安装元信息和图标，可在本地 HTTPS 开发页或下面的 HTTP 预览中，从浏览器地址栏或菜单验证原生安装；portable 不包含安装元信息。安装交互与状态由浏览器管理，Web 安装不依赖 Service Worker，也不增加应用资源离线缓存。
 
 构建对应版本后，选择一种预览方式：
 

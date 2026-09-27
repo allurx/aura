@@ -4,7 +4,19 @@ Aura 用于阅读自己导入的 TXT 文件。书籍、阅读进度与外观保�
 
 ## 打开 Aura
 
-日常使用可以直接打开[在线版](https://aura.allurx.io)。需要不联网打开时，从 [GitHub Releases](https://github.com/allurx/aura/releases) 下载 portable HTML，用浏览器打开该文件即可。
+日常使用可以直接打开[在线版](https://aura.allurx.io)，也可以安装为应用。需要不联网打开时，从 [GitHub Releases](https://github.com/allurx/aura/releases) 下载 portable HTML，用浏览器打开该文件即可。
+
+### 安装应用
+
+联网打开 Web 版，通过浏览器地址栏或菜单提供的安装入口添加到桌面或主屏幕，按浏览器提示完成。
+
+- Chrome、Edge 等浏览器可能在地址栏显示安装图标，也可在浏览器菜单查找“安装 Aura”“安装此站点为应用”或“添加到主屏幕”等选项；是否提供入口取决于浏览器及当前安装资格。
+- iPhone、iPad 可在 Safari 的分享菜单选择“添加到主屏幕”；Mac Safari 可在支持的系统中通过“文件 → 添加到程序坞”添加。
+- 菜单没有安装选项时，可以继续使用网页或下载 portable。
+
+安装需要 HTTPS（本机开发预览可使用 localhost）。安装提供桌面或主屏幕入口，重新打开 Web 版仍需联网；需要离线打开时请使用 portable。portable 不提供安装入口。
+
+安装不提供账户同步或书籍备份。不同浏览器、设备或独立应用环境可能使用不同的存储空间，不应假定安装后会自动带入网页中的书架；请保留原始 TXT。
 
 ### 选择下载文件
 
