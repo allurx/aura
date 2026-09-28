@@ -64,6 +64,7 @@ export default class NavUi extends Ui {
         handlers: {
             category: (categoryId: string) => void;
             clear: () => Promise<void>;
+            reset: () => Promise<void>;
         },
         signal: AbortSignal
     ): void {
@@ -129,16 +130,21 @@ export default class NavUi extends Ui {
             { signal }
         );
 
-        // 清空流程先退出当前模态，避免遮罩与确认对话框冲突。
-        bind(
-            assertExists(this.root.querySelector("#clear-btn")),
-            "click",
-            async () => {
-                this.closeDrawer();
-                await handlers.clear();
-            },
-            { signal }
-        );
+        // 数据操作先退出当前模态，避免遮罩与确认对话框冲突。
+        for (const [selector, handler] of [
+            ["#clear-btn", handlers.clear],
+            ["#reset-data", handlers.reset],
+        ] as const) {
+            bind(
+                assertExists(this.root.querySelector(selector)),
+                "click",
+                async () => {
+                    this.closeDrawer();
+                    await handler();
+                },
+                { signal }
+            );
+        }
 
         // 关于窗口集中展示项目链接与内嵌许可，离线查看声明不读取书籍或外部资源。
         const about = assertExists(document.querySelector<HTMLDialogElement>("#about-dialog"));

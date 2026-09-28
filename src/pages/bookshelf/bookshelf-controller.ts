@@ -21,10 +21,12 @@ import { bookshelfSession } from "./bookshelf-state";
 import { DEFAULT_CATEGORY_ID, getCategory } from "@/domain/category/category";
 import { bind } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
+import { createElementFromHtml } from "@/utils/dom-util";
 import { createBookshelfSettings } from "@/settings/definitions/setting-catalog";
 import SettingController from "@/settings/setting-controller";
 import { PageName } from "@/constants/page-name";
 import OperationError from "@/errors/operation-error";
+import { resetData } from "@/reset-data";
 
 /**
  * 编排书架筛选、数据操作与页面外观，并在异步渲染前核对页面生命周期。
@@ -290,6 +292,40 @@ export default class BookshelfController {
     }
 
     /**
+     * 确认后删除 Aura 的全部数据，成功才刷新；旧结构导致书架加载失败时也可执行。
+     */
+    private async resetData(): Promise<void> {
+        if (this.busy || !this.isActive()) return;
+
+        this.busy = true;
+        try {
+            const confirmed = await this.bookshelfUi.dialog.confirm(
+                createElementFromHtml(`
+                    <div class="reset-warning">
+                        <p class="reset-warning-title">
+                            <span class="icon icon-warning" aria-hidden="true"></span><strong>此操作无法撤销</strong>
+                        </p>
+                        <p>将清除全部本地数据，包括书籍、阅读进度和外观设置。</p>
+                        <p class="reset-warning-note">请先保留原始 TXT，并关闭其他 Aura 页面。<br>完成后自动刷新。</p>
+                    </div>
+                `),
+                { title: "重置数据", confirmBtnText: "确认清除" }
+            );
+            if (!confirmed || !this.isActive()) return;
+
+            await this.bookshelfUi.runBusy("正在重置数据，完成后将自动刷新…", async (setStatus) => {
+                await resetData(() => {
+                    setStatus("请关闭其他 Aura 标签页或窗口，数据重置将在解除占用后自动继续…");
+                });
+
+                window.location.reload();
+            });
+        } finally {
+            this.busy = false;
+        }
+    }
+
+    /**
      * 所有页面事件受同一生命周期信号管理。
      */
     private bindEvent(signal: AbortSignal): void {
@@ -304,6 +340,7 @@ export default class BookshelfController {
                     this.bookListUi.root.scrollTop = 0;
                 },
                 clear: () => this.clearBookshelf(),
+                reset: () => this.resetData(),
             },
             signal
         );

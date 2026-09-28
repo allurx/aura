@@ -63,6 +63,27 @@
         pointer-events: none;
     }
 
+    .reset-warning {
+        display: grid;
+        gap: 0.65rem;
+        white-space: normal;
+
+        .reset-warning-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--appearance-danger);
+            font-size: 1.0625rem;
+        }
+        .reset-warning-note {
+            color: var(--appearance-muted-color);
+            font-size: 0.875rem;
+        }
+    }
+    .dialog:has(.reset-warning) {
+        --appearance-accent: var(--appearance-danger);
+    }
+
     @media (prefers-reduced-motion: no-preference) {
         #shelf-feedback:not([hidden]) {
             animation: shelf-feedback-enter var(--motion-duration-normal) var(--motion-ease-out);

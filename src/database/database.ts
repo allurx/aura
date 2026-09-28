@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+const DATABASE_NAME = "aura";
 let connectionPromise: Promise<IDBDatabase> | undefined;
 
 /**
@@ -10,7 +11,7 @@ let connectionPromise: Promise<IDBDatabase> | undefined;
  */
 export function openDatabase(): Promise<IDBDatabase> {
     connectionPromise ??= new Promise<IDBDatabase>((resolve, reject) => {
-        const request = indexedDB.open("aura", 1);
+        const request = indexedDB.open(DATABASE_NAME, 1);
         let blocked = false;
 
         request.onupgradeneeded = () => {
@@ -32,7 +33,7 @@ export function openDatabase(): Promise<IDBDatabase> {
                 return;
             }
 
-            // 其他标签页要求升级时释放连接，后续操作重新打开。
+            // 数据库被升级或删除时释放连接，后续操作重新打开。
             database.onversionchange = () => {
                 database.close();
                 connectionPromise = undefined;
@@ -55,4 +56,21 @@ export function openDatabase(): Promise<IDBDatabase> {
     });
 
     return connectionPromise;
+}
+
+/**
+ * 删除整个数据库，不依赖旧结构能否打开；现有连接通过 versionchange 释放。
+ * 阻塞时通知调用方并继续等待，只有 success 才代表删除完成。
+ */
+export function deleteDatabase(onBlocked: () => void): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+        const request = indexedDB.deleteDatabase(DATABASE_NAME);
+        request.onblocked = onBlocked;
+        request.onsuccess = () => {
+            resolve();
+        };
+        request.onerror = () => {
+            reject(new Error("Database deletion failed", { cause: request.error }));
+        };
+    });
 }
