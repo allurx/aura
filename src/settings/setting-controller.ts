@@ -1,133 +1,171 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import AppearanceApplier from "./application/appearance-applier";
-import type ExternalSettingListener from "./application/external-setting-listener";
-import ExternalSettingSynchronizer from "./application/external-setting-synchronizer";
+import WidthSynchronizer from "./application/width-synchronizer";
 import type SettingUiListener from "./ui/setting-ui-listener";
 import type Setting from "./definitions/setting";
-import SettingCatalog from "./definitions/setting-catalog";
+import WidthSetting from "./definitions/width-setting";
 import PageAppearance from "./models/page-appearance";
-import SettingConfiguration from "./models/setting-configuration";
-import type SettingInteraction from "./models/setting-interaction";
-import SettingTarget from "./models/setting-target";
+import SettingConfiguration, { type PageSettings } from "./models/setting-configuration";
 import AppearanceRepository from "./persistence/appearance-repository";
 import SettingUi from "./ui/setting-ui";
 import type { PageName } from "@/constants/page-name";
 
 /**
- * 单个页面已提交 Appearance 的唯一状态所有者。
+ * 页面已提交外观的唯一状态所有者，协调存储、预览与外部宽度变化。
  *
- * 负责协调同步持久化、DOM 投影、设置面板及面板外部变化。
- *
- * @author allurx
  */
-export default class SettingController implements SettingUiListener, ExternalSettingListener {
+export default class SettingController implements SettingUiListener {
     private readonly settingUi: SettingUi;
     private readonly configuration: SettingConfiguration;
     private readonly repository: AppearanceRepository;
-    private readonly applier: AppearanceApplier;
-    private readonly externalSynchronizer = new ExternalSettingSynchronizer();
+    private readonly width: WidthSetting | undefined;
+    private readonly widthSynchronizer: WidthSynchronizer | undefined;
     private appearance: PageAppearance;
 
     public constructor({
         pageName,
         container,
-        targets,
+        settings,
     }: {
         pageName: PageName;
         container: HTMLElement;
-        targets: readonly SettingTarget[];
+        settings: PageSettings;
     }) {
         this.settingUi = new SettingUi(container);
-        this.configuration = new SettingConfiguration(pageName, [
-            ...targets,
-            new SettingTarget(this.settingUi, [
-                SettingCatalog.FONT_SIZE,
-                SettingCatalog.COLOR,
-                SettingCatalog.BACKGROUND_COLOR,
-            ]),
-        ]);
+        this.configuration = new SettingConfiguration(pageName, settings);
         this.repository = new AppearanceRepository(this.configuration);
-        this.applier = new AppearanceApplier(this.configuration);
+        this.width = settings.general.find((setting): setting is WidthSetting => setting instanceof WidthSetting);
+        this.widthSynchronizer = this.width ? new WidthSynchronizer(this.width) : undefined;
         this.appearance = PageAppearance.defaults(this.configuration.defaultTheme);
     }
 
     /**
-     * 在页面初始化的首个异步让出前加载、应用并绑定 Appearance。
-     *
-     * @param signal - 页面生命周期信号
+     * 在页面首个 await 前同步恢复外观，再绑定控件与外部变化。
      */
     public init(signal: AbortSignal): void {
         if (signal.aborted) return;
+
         this.appearance = this.repository.load();
-        this.applier.apply(this.appearance);
+        document.documentElement.dataset["page"] = this.configuration.pageName;
+        for (const setting of this.configuration.settings) this.restore(setting);
         this.settingUi.init(this.configuration, this, signal);
-        this.externalSynchronizer.start(this.configuration, this, signal);
+
+        const width = this.width;
+        if (width) {
+            this.widthSynchronizer?.start(
+                {
+                    getValue: () => this.getValue(width),
+                    isPreviewing: () => this.settingUi.isPreviewing(width),
+                    commit: (value) => {
+                        this.commit(width, value);
+                        this.settingUi.refresh();
+                    },
+                },
+                signal
+            );
+        }
     }
 
-    public toggle(opener: HTMLElement): void {
-        this.settingUi.toggle(opener);
+    /**
+     * 切换设置面板，关闭时将焦点归还到指定入口。
+     */
+    public toggle(opener: HTMLElement, returnFocusTarget = opener): void {
+        this.settingUi.toggle(opener, returnFocusTarget);
     }
 
-    public getValue(target: SettingTarget, setting: Setting): string | undefined {
-        return setting.read(this.appearance, target);
+    public getValue(setting: Setting): string | undefined {
+        return setting.read(this.appearance);
     }
 
-    public isPreviewing(target: SettingTarget, setting: Setting): boolean {
-        return this.settingUi.isPreviewing(target, setting);
+    public preview(setting: Setting, value: string): void {
+        this.requireSetting(setting);
+        if (!setting.accepts(value)) throw new Error(`Invalid ${setting.key} setting value`);
+        setting.apply(value);
     }
 
-    public preview(interaction: SettingInteraction): void {
-        this.applier.applyInteraction(interaction);
+    public restore(setting: Setting): void {
+        setting.apply(setting.read(this.appearance));
     }
 
-    public restore(target: SettingTarget, setting: Setting): void {
-        this.applier.restore(this.appearance, target, setting);
+    /**
+     * 保存成功后才更新快照，失败时恢复提交前的界面。
+     */
+    public commit(setting: Setting, value: string): void {
+        this.requireSetting(setting);
+        this.save(setting.update(this.appearance, value), [setting]);
     }
 
-    public commit(interaction: SettingInteraction): void {
+    /**
+     * 重置单项并取消它尚未提交的外部变化。
+     */
+    public resetSetting(setting: Setting): void {
+        this.requireSetting(setting);
+        this.resetSettings([setting]);
+    }
+
+    /**
+     * 清除常规设置的显式值，保留当前页面主题。
+     */
+    public resetGeneral(): void {
+        this.resetSettings(this.configuration.general);
+    }
+
+    /**
+     * 清除当前页面全部设置，不影响另一页面。
+     */
+    public reset(): void {
+        this.widthSynchronizer?.cancelPending();
+        this.save(PageAppearance.defaults(this.configuration.defaultTheme), this.configuration.settings, true);
+    }
+
+    /**
+     * 一次保存重置结果，并确保旧 resize 值不会延迟写回。
+     */
+    private resetSettings(settings: readonly Setting[]): void {
+        if (settings.length === 0) return;
+        if (this.width && settings.includes(this.width)) this.widthSynchronizer?.cancelPending();
+        let nextAppearance = this.appearance;
+        for (const setting of settings) {
+            nextAppearance = setting.reset(nextAppearance, this.configuration.defaultTheme);
+        }
+        this.save(nextAppearance, settings);
+    }
+
+    /**
+     * 将本次涉及的设置应用并持久化；逐项回滚保留原始异常与全部恢复异常。
+     */
+    private save(nextAppearance: PageAppearance, settings: readonly Setting[], removeSnapshot = false): void {
         const previousAppearance = this.appearance;
-        const nextAppearance = interaction.setting.update(previousAppearance, interaction.target, interaction.value);
         try {
-            this.applier.applyInteraction(interaction);
-            this.repository.save(nextAppearance);
+            for (const setting of settings) setting.apply(setting.read(nextAppearance));
+            if (removeSnapshot) this.repository.reset();
+            else this.repository.save(nextAppearance);
             this.appearance = nextAppearance;
         } catch (error) {
-            this.applier.restore(previousAppearance, interaction.target, interaction.setting);
+            const restoreErrors: unknown[] = [];
+            for (const setting of settings) {
+                try {
+                    setting.apply(setting.read(previousAppearance));
+                } catch (restoreError) {
+                    restoreErrors.push(restoreError);
+                }
+            }
+            if (restoreErrors.length > 0) {
+                throw new AggregateError([error, ...restoreErrors], "Failed to save and restore appearance settings");
+            }
             throw error;
         }
     }
 
-    public commitExternalChange(interaction: SettingInteraction): void {
-        this.commit(interaction);
-        this.settingUi.refresh();
-    }
-
-    public reset(): void {
-        this.externalSynchronizer.cancelPending();
-        const previousAppearance = this.appearance;
-        const defaultAppearance = PageAppearance.defaults(this.configuration.defaultTheme);
-        try {
-            this.applier.apply(defaultAppearance);
-            this.repository.reset();
-            this.appearance = defaultAppearance;
-        } catch (error) {
-            this.applier.apply(previousAppearance);
-            throw error;
+    /**
+     * 交互仅允许使用当前页面清单中的定义实例。
+     */
+    private requireSetting(setting: Setting): void {
+        if (!this.configuration.settings.includes(setting)) {
+            throw new Error(`Unsupported setting: ${setting.key}`);
         }
     }
 }

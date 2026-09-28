@@ -1,161 +1,246 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #bookshelf #book-list {
-    display: flex;
+    --book-cover-width: 136px;
+    --book-title-font-size: 21px;
+    --book-column-gap: 20px;
+    --book-row-gap: 24px;
+    --ui-padding-top: 10px;
+    --ui-padding-right: 40px;
+    --ui-padding-bottom: 40px;
+    --ui-padding-left: 40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--book-cover-width)), 1fr));
+    align-content: start;
+    gap: var(--book-row-gap) var(--book-column-gap);
     flex: 1;
-    flex-wrap: wrap;
-    gap: 1.25rem;
-    align-content: flex-start;
-    background-color: var(--bookshelf-book-list-background-color);
-    color: var(--bookshelf-book-list-color);
-    font-size: 0.9rem;
-    padding: 1.25rem;
+    min-width: 0;
+    min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
-    scrollbar-width: auto;
-    scrollbar-color: #666666 transparent;
-    box-shadow: 0 0 1rem rgba(0, 0, 0, 1) inset;
+    padding: var(--ui-padding-top) var(--ui-padding-right) var(--ui-padding-bottom) var(--ui-padding-left);
+    background-color: var(--appearance-canvas);
+    color: var(--appearance-color);
+    font-size: 1rem;
 
-    /* 添加书籍按钮样式 */
-    #book-input-label {
-        flex: 0 0 auto;
-        width: 7.5rem;
-        aspect-ratio: 5/6;
-        border: 0.125rem dashed #ccc;
-        border-radius: 0.375rem;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        color: var(--bookshelf-book-input-color);
-        font-size: 3rem;
-        cursor: pointer;
-        transition:
-            border-color 0.3s,
-            color 0.3s;
-        -webkit-user-select: none;
-        user-select: none;
-
-        @media (hover: hover) and (pointer: fine) {
-            &:hover {
-                border-color: var(--bookshelf-accent-color);
-                color: var(--bookshelf-accent-color);
-            }
-        }
-    }
-
-    #book-input {
-        display: none;
-    }
-
-    /* 书籍 */
     .book {
+        --book-cover: hsl(var(--book-cover-hue) var(--appearance-cover-saturation) var(--appearance-cover-lightness));
+        --book-cover-ink: var(--appearance-cover-ink);
+        --book-title-lines: 4;
+        --book-cover-padding-block: 1rem;
+        min-width: 0;
+        width: 100%;
+        /* 换列只重新分配留白，书卡保持目标宽度，不随剩余空间拉伸。 */
+        max-width: var(--book-cover-width);
+    }
+    .book-open {
+        position: relative;
+        isolation: isolate;
         display: flex;
-        /* 禁止缩放,保持自身的宽高 */
-        flex: 0 0 auto;
-        width: 7.5rem;
-        /* 宽高比*/
-        aspect-ratio: 5/6;
-        background-color: var(--bookshelf-book-background-color);
-        border-radius: 0.375rem;
-        color: inherit;
-        padding: 0.5rem;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        aspect-ratio: 4 / 5;
+        /* 窄书封和大字号仍为完整标题行留足空间。 */
+        min-height: calc(
+            var(--book-title-lines) * 1.45 * var(--book-title-font-size) + 2 * var(--book-cover-padding-block)
+        );
+        padding: var(--book-cover-padding-block) clamp(14px, calc(var(--book-cover-width) * 0.15), 1.2rem);
+        border: 1px solid color-mix(in srgb, var(--book-cover-ink) 10%, transparent);
+        border-radius: 5px 12px 12px 5px;
+        background-color: var(--book-cover);
+        background-image: linear-gradient(120deg, rgb(255 255 255 / 18%), transparent 55%);
+        color: var(--appearance-cover-ink);
+        text-align: center;
+        box-shadow:
+            0 16px 20px -14px color-mix(in srgb, var(--book-cover) 65%, var(--appearance-shadow-color)),
+            0 4px 6px -3px var(--appearance-shadow-color),
+            inset 0 1px 0 rgb(255 255 255 / 55%),
+            inset 0 -3px 0 color-mix(in srgb, var(--book-cover-ink) 10%, transparent);
         overflow: hidden;
-        font-size: inherit;
-        flex-direction: column;
-        box-shadow: 0 0.32rem 1rem rgba(0, 0, 0, 0.6);
-
-        /* 初始透明 */
-        opacity: 0;
-        /* 初始偏移 */
-        transform: translateY(-1rem);
-        /* 动画效果 */
         transition:
-            opacity 0.3s ease,
-            transform 0.3s ease;
+            transform var(--motion-duration-normal) var(--motion-ease-out),
+            box-shadow var(--motion-duration-normal) var(--motion-ease);
 
-        &.show {
-            opacity: 1;
-            transform: translateY(0);
+        &::before,
+        &::after {
+            content: "";
+            position: absolute;
+            pointer-events: none;
         }
-
-        @media (hover: hover) and (pointer: fine) {
-            &:hover {
-                background-color: var(--bookshelf-book-hover-background-color);
-                transform: translateY(-0.32rem);
-            }
+        &::before {
+            inset: 0 auto 0 0;
+            width: 14px;
+            border-right: 1px solid rgb(255 255 255 / 32%);
+            background: linear-gradient(
+                90deg,
+                color-mix(in srgb, var(--book-cover-ink) 14%, transparent),
+                transparent 35%,
+                rgb(255 255 255 / 14%) 65%,
+                color-mix(in srgb, var(--book-cover-ink) 8%, transparent)
+            );
         }
-
-        /* 书籍头部 */
-        .book-header {
-            display: flex;
-            width: 100%;
-            height: 10%;
-            /* 主轴末尾对齐 */
-            justify-content: flex-end;
-
-            .book-delete-btn {
-                appearance: none;
-                padding: 0;
-                border: 0;
-                background: transparent;
-                color: inherit;
-                font: inherit;
-                line-height: 1;
-                cursor: pointer;
-
-                &:focus-visible {
-                    opacity: 1;
-                }
-            }
-
-            @media (hover: hover) and (pointer: fine) {
-                .book-delete-btn {
-                    opacity: 0;
-                    transition: opacity 0.3s;
-
-                    .book:hover & {
-                        opacity: 1;
-                    }
-                }
-            }
+        &::after {
+            inset: 5px 0 5px auto;
+            width: 5px;
+            border-radius: 2px 5px 5px 2px;
+            background: repeating-linear-gradient(
+                0deg,
+                color-mix(in srgb, var(--book-cover) 14%, #fff) 0 2px,
+                color-mix(in srgb, var(--book-cover-ink) 16%, #fff) 2px 3px
+            );
+            box-shadow: -1px 0 1px color-mix(in srgb, var(--book-cover-ink) 14%, transparent);
         }
+    }
+    .book-title {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: var(--book-title-lines);
+        overflow: hidden;
+        font-size: var(--book-title-font-size);
+        line-height: 1.45;
+        letter-spacing: 0.035em;
+        text-wrap: balance;
+        overflow-wrap: anywhere;
+        font-weight: 500;
+    }
+    .book-progress {
+        margin-top: 0.65rem;
+        font-size: 12px;
+        line-height: 1.6;
+        color: var(--appearance-muted-color);
+        overflow-wrap: anywhere;
+    }
+    .book-tools {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 4px;
+        min-width: 0;
+        margin-top: 0.1rem;
+    }
+    .book-category {
+        display: block;
+        flex: 1 1 44px;
+        min-width: 44px;
+        max-width: 100%;
+        min-height: 44px;
+        padding: 0.3rem 0.2rem 0.3rem 0;
+        border: 0;
+        border-radius: 0.65rem;
+        background: var(--appearance-canvas);
+        color: var(--appearance-color);
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color var(--motion-duration-fast) var(--motion-ease);
 
-        /* 书籍主体 */
-        .book-body {
-            display: flex;
-            width: 100%;
-            height: 80%;
-            justify-content: center;
+        /* 闭合选择框贴合书封；弹出列表由共享原生 select 样式管理。 */
+        @supports (appearance: base-select) and selector(::picker(select)) {
+            display: inline-flex;
             align-items: center;
-            cursor: pointer;
-
-            .book-title {
-                max-width: 100%;
-                max-height: 100%;
-                overflow: hidden;
-                text-align: center;
-            }
+            gap: 0.4rem;
+            padding-inline: 0.25rem;
+            margin-left: -0.25rem;
+            background-color: var(--appearance-canvas);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            opacity: 1;
         }
+    }
+    .book-delete {
+        --icon-size: 18px;
+        margin-left: auto;
+        opacity: 0.6;
+        transition:
+            opacity var(--motion-duration-fast) var(--motion-ease),
+            color var(--motion-duration-fast) var(--motion-ease),
+            background-color var(--motion-duration-fast) var(--motion-ease);
+    }
+    .shelf-empty {
+        grid-column: 1 / -1;
+        padding: clamp(3rem, 12vh, 9rem) 1rem;
+        text-align: center;
 
-        .book-footer {
-            width: 100%;
-            height: 10%;
+        > .icon {
+            --icon-size: 3rem;
+            margin: 0 auto 1.5rem;
+            color: var(--appearance-accent-secondary);
+            transform: rotate(-7deg);
+        }
+        h2 {
+            font-size: 1.3em;
+            font-weight: 500;
+            margin-bottom: 0.8rem;
+        }
+        p {
+            font-size: 0.88em;
+            line-height: 1.7;
+            color: var(--appearance-muted-color);
+        }
+    }
+    @media (hover: hover) and (pointer: fine) {
+        .book-open:where(:not(:disabled)):hover {
+            transform: translateY(-5px) rotate(-0.6deg);
+            box-shadow:
+                0 24px 26px -16px color-mix(in srgb, var(--book-cover) 65%, var(--appearance-shadow-color)),
+                0 8px 10px -5px var(--appearance-shadow-color),
+                inset 0 1px 0 rgb(255 255 255 / 55%),
+                inset 0 -3px 0 color-mix(in srgb, var(--book-cover-ink) 10%, transparent);
+        }
+        .book-delete {
+            opacity: 0;
+        }
+        .book:hover .book-delete,
+        .book:focus-within .book-delete {
+            opacity: 0.65;
+        }
+        .book-delete:where(:not(:disabled)):hover {
+            opacity: 1;
+            color: var(--appearance-danger, #b64a43);
+        }
+        .book-category:where(:not(:disabled)):hover {
+            opacity: 1;
+            background-color: color-mix(in srgb, var(--appearance-canvas) 96%, var(--appearance-color));
+        }
+    }
+    .book-open:where(:not(:disabled)):active {
+        transform: translateY(1px);
+    }
+    @media (max-width: 1024px) {
+        --book-cover-width: 119px;
+        --book-title-font-size: 18px;
+        --book-column-gap: 18px;
+        --book-row-gap: 21px;
+    }
+    @media (max-width: 768px) {
+        --ui-padding-left: 18px;
+        --ui-padding-right: 18px;
+        --book-cover-width: 105px;
+        --book-column-gap: 12px;
+        --book-row-gap: 18px;
+        .book-open {
+            padding-inline: 1.05rem;
+        }
+    }
+    @media (max-width: 768px), (any-pointer: coarse) {
+        .book-category {
+            flex: 1;
+        }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .book-open,
+        .book-category,
+        .book-delete {
+            transition: none;
+        }
+        .book-open:hover,
+        .book-open:active {
+            transform: none;
         }
     }
 }

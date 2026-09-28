@@ -1,28 +1,149 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #bookshelf {
     position: relative;
-    background-color: var(--bookshelf-background-color);
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 14rem minmax(0, 1fr);
     height: 100%;
     width: 100%;
-    -webkit-user-select: none;
-    user-select: none;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background: var(--bookshelf-background-color);
+    color: var(--bookshelf-book-list-color);
+
+    button,
+    input,
+    select,
+    summary {
+        font: inherit;
+    }
+    button {
+        cursor: pointer;
+    }
+    button:disabled,
+    select:disabled {
+        cursor: wait;
+        opacity: 0.55;
+    }
+    [hidden] {
+        display: none !important;
+    }
+    #bookshelf-sidebar {
+        position: relative;
+        margin: 0;
+        padding: 0.85rem 0.4rem 0.85rem 0.85rem;
+        border: 0;
+        width: 100%;
+        height: 100%;
+        max-width: none;
+        max-height: none;
+        min-height: 0;
+        background: transparent;
+        color: inherit;
+        overflow: hidden;
+    }
+    #shelf-feedback {
+        position: absolute;
+        z-index: 5;
+        bottom: max(1.5rem, env(safe-area-inset-bottom));
+        left: calc(50% + 7rem);
+        transform: translateX(-50%);
+        max-width: min(28rem, calc(100% - 3rem));
+        padding: 0.85rem 1.3rem;
+        border: 1px solid var(--appearance-border);
+        border-radius: 1rem;
+        color: var(--bookshelf-nav-color);
+        background: var(--bookshelf-nav-background-color);
+        box-shadow: var(--appearance-shadow-floating);
+        font-size: 0.9rem;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+        pointer-events: none;
+
+        @media (prefers-reduced-motion: no-preference) {
+            &:not([hidden]) {
+                animation: shelf-feedback-enter var(--motion-duration-normal) var(--motion-ease-out);
+            }
+        }
+    }
+
+    .reset-warning {
+        display: grid;
+        gap: 0.65rem;
+        white-space: normal;
+
+        .reset-warning-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--appearance-danger);
+            font-size: 1.0625rem;
+        }
+        .reset-warning-note {
+            color: var(--appearance-muted-color);
+            font-size: 0.875rem;
+        }
+    }
+    @media (max-width: 768px) {
+        grid-template-columns: minmax(0, 1fr);
+        #bookshelf-sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            width: min(21rem, 86vw);
+            height: 100dvh;
+            padding: calc(0.65rem + env(safe-area-inset-top)) 0.65rem calc(0.65rem + env(safe-area-inset-bottom))
+                calc(0.65rem + env(safe-area-inset-left));
+            &:not(:modal) {
+                display: none;
+            }
+            &::backdrop {
+                background: var(--appearance-backdrop);
+            }
+        }
+        #shelf-feedback {
+            left: 50%;
+        }
+        @media (prefers-reduced-motion: no-preference) {
+            #bookshelf-sidebar:modal {
+                animation: shelf-navigation-enter var(--motion-duration-slow) var(--motion-ease-out);
+            }
+            #bookshelf-sidebar:modal::backdrop {
+                animation: shelf-backdrop-enter var(--motion-duration-normal) var(--motion-ease);
+            }
+        }
+    }
+}
+
+/* 原生抽屉仍即时关闭并归还焦点，动效只辅助识别打开方向。 */
+@keyframes shelf-navigation-enter {
+    from {
+        opacity: 0;
+        transform: translateX(-0.75rem);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes shelf-backdrop-enter {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes shelf-feedback-enter {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 0.35rem);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
 }

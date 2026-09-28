@@ -1,6 +1,18 @@
-<svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round"
-    stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
-    <path d="M3 6h4M13 6h8M3 18h8M17 18h4" />
-    <circle cx="10" cy="6" r="3" />
-    <circle cx="14" cy="18" r="3" />
+<!--
+    Copyright 2026 allurx
+    SPDX-License-Identifier: Apache-2.0
+-->
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#000"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+>
+    <path d="M5 3.5v4m0 5v8M12 3.5v9m0 5v3M19 3.5v2m0 5v10" />
+    <rect x="3" y="7.5" width="4" height="5" rx="1.3" />
+    <rect x="10" y="12.5" width="4" height="5" rx="1.3" />
+    <rect x="17" y="5.5" width="4" height="5" rx="1.3" />
 </svg>

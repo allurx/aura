@@ -1,78 +1,199 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-#bookshelf > main > nav {
-    width: 6rem;
-    height: 100%;
+#bookshelf #nav {
+    --nav-category-font-size: 14px;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    overflow-x: hidden;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: #666 transparent;
-    background-color: var(--bookshelf-nav-background-color);
-    color: var(--bookshelf-nav-color);
-    font-size: 0.9rem;
-    transition: width 0.3s ease;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: clip;
+    padding: 1.5rem 0 1rem;
+    border: 1px solid var(--appearance-border);
+    border-radius: 1.35rem;
+    background: var(--appearance-panel);
+    color: var(--appearance-color);
+    box-shadow: var(--appearance-shadow-soft);
+    font-size: 14px;
 
-    &.is-toggled {
-        width: 0;
+    .brand {
+        display: flex;
+        flex: none;
+        align-items: center;
+        gap: 12px;
+        padding: 0 1.5rem 1.8rem;
     }
-
-    @media (max-width: 768px) {
-        & {
-            width: 0;
-        }
-
-        &.is-toggled {
-            width: 6rem;
-        }
+    .brand-mark {
+        flex: none;
+        width: 32px;
+        height: 32px;
+        background: url("../../../assets/images/brand.svg?inline") center / contain no-repeat;
     }
-
+    .brand-name {
+        font:
+            italic 500 2.25rem/1 Georgia,
+            serif;
+        letter-spacing: -0.07em;
+    }
+    #category-navigation {
+        min-height: 0;
+        overflow-y: auto;
+        flex: 1;
+        padding: 0.2rem 0.8rem;
+    }
     button {
-        width: 75%;
-        background: none;
-        border: none;
-        border-radius: 0.4rem;
-        margin: 0.75rem 0;
-        padding: 0.4rem 0.8rem;
-        font-size: inherit;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        min-height: 44px;
+        padding: 8px 12px;
+        border: 0;
+        border-radius: 0.9rem;
+        background: transparent;
         color: inherit;
-        word-break: keep-all;
-        text-align: center;
-        cursor: pointer;
+        text-align: left;
+        text-decoration: none;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
         transition:
-            background-color 0.3s,
-            border-color 0.3s;
-        box-shadow: 0 0 0.625rem rgba(0, 0, 0, 1);
+            background-color var(--motion-duration-normal) var(--motion-ease),
+            transform var(--motion-duration-normal) var(--motion-ease),
+            box-shadow var(--motion-duration-normal) var(--motion-ease);
+    }
+    #category-navigation button {
+        margin-bottom: 0.3rem;
+        color: var(--appearance-color);
+        font-size: var(--nav-category-font-size);
+
+        &:first-child {
+            margin-bottom: 0.8rem;
+        }
+
+        /* 跳过“全部书籍”，真实分类的圆点按彩虹七色循环。 */
+        &:nth-child(7n + 2) {
+            --category-dot-color: #e76f7a;
+        }
+        &:nth-child(7n + 3) {
+            --category-dot-color: #e99a51;
+        }
+        &:nth-child(7n + 4) {
+            --category-dot-color: #d8b543;
+        }
+        &:nth-child(7n + 5) {
+            --category-dot-color: #68b77b;
+        }
+        &:nth-child(7n + 6) {
+            --category-dot-color: #48b6bd;
+        }
+        &:nth-child(7n + 7) {
+            --category-dot-color: #6b91dc;
+        }
+        &:nth-child(7n + 8) {
+            --category-dot-color: #ab7bce;
+        }
 
         &.active {
-            background-color: var(--bookshelf-nav-active-background-color);
-            color: var(--bookshelf-nav-active-color);
+            background: var(--appearance-selection);
+            color: var(--appearance-accent);
+            font-weight: 600;
+            box-shadow: 0 4px 10px -7px var(--appearance-shadow-color);
         }
+    }
+    #category-navigation .icon {
+        --icon-size: 20px;
+    }
+    .category-dot {
+        flex: none;
+        width: 6px;
+        height: 6px;
+        margin-inline: 7px;
+        border-radius: 50%;
+        background: var(--category-dot-color);
+        opacity: 0.75;
+    }
+    button.active .category-dot {
+        opacity: 1;
+    }
+    .nav-footer {
+        flex: none;
+        display: grid;
+        gap: 0.1rem;
+        margin-top: 0.8rem;
+        margin-inline: 0.8rem;
+        padding-top: 0.8rem;
+        padding-inline: 0.2rem;
+        border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
 
-        /* 仅桌面端悬停生效 */
-        @media (hover: hover) and (pointer: fine) {
-            &:hover {
-                background-color: var(--bookshelf-nav-active-background-color);
-                color: var(--bookshelf-nav-active-color);
+        button {
+            min-height: 44px;
+            opacity: 0.85;
+        }
+        .icon {
+            --icon-size: 18px;
+            margin-inline: 1px;
+        }
+    }
+    #close-navigation {
+        --icon-size: 20px;
+        display: none;
+        width: 44px;
+        padding: 0;
+        margin-left: auto;
+    }
+    @media (hover: hover) and (pointer: fine) {
+        button:where(:not(:disabled)):hover {
+            background: color-mix(in srgb, currentColor 5%, transparent);
+            transform: translateX(2px);
+        }
+        #category-navigation button.active:hover {
+            background: var(--appearance-selection);
+        }
+    }
+    button:where(:not(:disabled)):active {
+        transform: translateY(1px);
+    }
+    @media (max-width: 768px) {
+        --nav-category-font-size: 13px;
+        font-size: 13px;
+        padding-top: 1.25rem;
+        .brand {
+            padding-bottom: 1.25rem;
+        }
+        #close-navigation {
+            display: inline-grid;
+        }
+    }
+    /* 矮窗口压缩固定区域，分类仍在自己的区域内滚动。 */
+    @media (max-height: 24rem) {
+        padding-block: 0.35rem;
+
+        .brand {
+            padding-bottom: 0.35rem;
+        }
+        .nav-footer {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            margin-top: 0.35rem;
+            padding-top: 0.35rem;
+
+            button {
+                flex-direction: column;
+                justify-content: center;
+                gap: 2px;
+                padding: 4px;
             }
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        button,
+        button:hover,
+        button:active {
+            transition: none;
+            transform: none;
         }
     }
 }

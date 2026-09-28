@@ -1,162 +1,232 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import type Book from "@/domain/book/book";
-import EventUtil from "@/utils/event-util";
+import { delegate } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
-import DomUtil from "@/utils/dom-util";
 import Ui from "@/components/ui";
+import { CATEGORIES } from "@/domain/category/category";
+import type { BookSummary } from "../bookshelf-service";
 
 /**
- * 书籍列表界面
- * @author allurx
+ * 渲染书籍摘要，并管理阅读、分类移动与删除操作后的焦点。
  */
 export default class BookListUi extends Ui {
-    private readonly bookInputElement: HTMLInputElement;
+    // 原生选择器禁用后可能失焦，保留来源供列表重渲染时恢复焦点。
+    private pendingSelection: HTMLSelectElement | null = null;
 
-    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
-        super(args);
-        this.bookInputElement = assertExists(this.root.querySelector<HTMLInputElement>("#book-input"));
+    /**
+     * 返回时恢复仍在当前列表中的书籍；加载期间用户已移走焦点则保持原处。
+     */
+    public restoreBookFocus(bookId: string): void {
+        if (!bookId || document.activeElement !== document.body) return;
+        const book = Array.from(this.root.querySelectorAll<HTMLElement>(".book")).find(
+            (element) => element.dataset["id"] === bookId
+        );
+        book?.querySelector<HTMLButtonElement>(".book-open")?.focus({ preventScroll: true });
     }
 
     /**
-     * 创建书籍元素并添加到页面中
-     * @param book - 书籍实例
-     * @param index - 书籍索引
-     * @returns  返回当前实例
+     * 更新筛选结果，并保留还在书架中的操作焦点及滚动位置。
+     * @param searching - 是否存在有效查询，用于区分空书架与无搜索结果
      */
-    public renderBookElement(book: Book, index: number): this {
-        const bookElement = this.root.appendChild(this.createBookElement(book));
-        // 创建顺序延迟,形成"瀑布入场"动画效果
-        window.setTimeout(() => {
-            bookElement.classList.add("show");
-        }, index * 20);
-        return this;
-    }
+    public renderBooks(books: BookSummary[], searching: boolean): void {
+        // 替换 DOM 前记录操作来源，禁用的分类选择器也参与焦点恢复。
+        const scrollTop = this.root.scrollTop;
+        const active = document.activeElement === document.body ? this.pendingSelection : document.activeElement;
+        const focused = active instanceof HTMLOptionElement ? active.closest("select") : active;
+        const owner = focused instanceof HTMLElement ? focused.closest<HTMLElement>(".book") : null;
+        const focusId = owner?.dataset["id"];
+        const focusClass = focused instanceof HTMLSelectElement ? ".book-category" : ".book-open";
+        const previousIndex = owner ? Array.from(this.root.children).indexOf(owner) : -1;
 
-    public renderBookElements(books: Book[]): this {
-        books
-            .sort((a, b) => a.createdTime - b.createdTime)
-            .forEach((book, index) => this.renderBookElement(book, index + 1));
-        return this;
-    }
+        // 空态区分无藏书与无搜索结果，给出对应的下一步提示。
+        if (books.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "shelf-empty";
 
-    public removeBookElement(bookId: string): this {
-        this.root.querySelector<HTMLElement>(`.book[data-id="${bookId}"]`)?.remove();
-        return this;
+            // 图标只作装饰，标题与提示承担可读信息。
+            const symbol = document.createElement("span");
+            symbol.className = "icon icon-book";
+            symbol.setAttribute("aria-hidden", "true");
+
+            const title = document.createElement("h2");
+            title.textContent = searching ? "没有找到这本书" : "给书架添一本书吧";
+            const hint = document.createElement("p");
+            hint.textContent = searching ? "试试其他书名，或清除搜索。" : "导入一本 TXT，让故事从这里开始。";
+
+            empty.append(symbol, title, hint);
+            this.root.replaceChildren(empty);
+        } else {
+            // 先在片段中生成全部书目，再一次替换当前结果。
+            const fragment = document.createDocumentFragment();
+            for (const book of books) fragment.append(this.createBookElement(book));
+            this.root.replaceChildren(fragment);
+        }
+
+        // 优先恢复同书目的原操作，已移出结果时再回退到相邻书目或列表。
+        if (focusId && !this.root.contains(owner)) {
+            const cards = Array.from(this.root.querySelectorAll<HTMLElement>(".book"));
+            const replacement = cards.find((card) => card.dataset["id"] === focusId);
+            const next =
+                replacement?.querySelector<HTMLElement>(focusClass) ??
+                cards[Math.min(previousIndex, cards.length - 1)]?.querySelector<HTMLElement>(".book-open");
+            (next ?? this.root).focus({ preventScroll: true });
+        }
+
+        this.root.scrollTop = scrollTop;
     }
 
     /**
-     * 清空书籍列表元素
-     * @returns 返回当前实例
+     * 阅读与删除直接可达；分类选择完成即保存，失败时恢复原值。
+     * @param onMove - 返回是否接受目标分类；返回 false 或抛错时恢复选择器原值
      */
-    public removeBookElements(): this {
-        this.root.querySelectorAll(".book").forEach((element) => {
-            element.remove();
-        });
-        return this;
-    }
+    public bindEvents(
+        onRead: (id: string) => void,
+        onDelete: (id: string) => Promise<void>,
+        onMove: (id: string, categoryId: string) => Promise<boolean>,
+        signal: AbortSignal
+    ): void {
+        // 阅读委托给整块书封，避免标题子节点影响书籍定位。
+        delegate(
+            this.root,
+            ".book-open",
+            "click",
+            (_, button) => {
+                onRead(assertExists(button.closest<HTMLElement>(".book")?.dataset["id"]));
+            },
+            { signal }
+        );
 
-    /**
-     * 清空书籍输入框, 以支持重复上传同一文件
-     * @returns 返回当前实例
-     */
-    public clearBookInput(): this {
-        this.bookInputElement.value = "";
-        return this;
-    }
+        // 删除完成且原控件已移除时，将焦点交给相邻书目。
+        delegate(
+            this.root,
+            ".book-delete",
+            "click",
+            async (_, button) => {
+                const owner = assertExists(button.closest<HTMLElement>(".book"));
+                const index = Array.from(this.root.children).indexOf(owner);
+                await onDelete(assertExists(owner.dataset["id"]));
 
-    /**
-     * 绑定书籍输入框变化事件
-     * @param  handler - 处理函数
-     * @returns 返回当前实例
-     * @param signal - 页面生命周期信号
-     */
-    public bindBookInputChange(handler: (files: File[]) => Promise<void>, signal: AbortSignal): this {
-        EventUtil.bind(
-            this.bookInputElement,
+                if (!signal.aborted && !owner.isConnected && document.activeElement === document.body) {
+                    const cards = this.root.querySelectorAll<HTMLElement>(".book");
+                    const next = cards[Math.min(index, cards.length - 1)]?.querySelector<HTMLElement>(".book-open");
+                    (next ?? this.root).focus({ preventScroll: true });
+                }
+            },
+            { signal }
+        );
+
+        // 分类选择即时提交；保存期间禁用该选择器，失败则回滚显示值。
+        delegate(
+            this.root,
+            ".book-category",
             "change",
-            async () => {
-                await handler(Array.from(assertExists(this.bookInputElement.files)));
+            async (_, element) => {
+                if (!(element instanceof HTMLSelectElement) || element.disabled) return;
+                const previous = assertExists(element.dataset["categoryId"]);
+                const next = element.value;
+                if (previous === next) return;
+
+                // 定制原生 picker 的焦点可能落在 option，禁用前一并保存来源。
+                const id = assertExists(element.closest<HTMLElement>(".book")?.dataset["id"]);
+                if (element.contains(document.activeElement)) this.pendingSelection = element;
+                element.disabled = true;
+                element.setAttribute("aria-busy", "true");
+
+                try {
+                    if (await onMove(id, next)) element.dataset["categoryId"] = next;
+                    else element.value = previous;
+                } catch (error) {
+                    element.value = previous;
+                    throw error;
+                } finally {
+                    // 仅在控件仍存在且用户未移走焦点时恢复焦点。
+                    element.disabled = false;
+                    element.removeAttribute("aria-busy");
+                    if (this.pendingSelection === element) {
+                        this.pendingSelection = null;
+                        if (!signal.aborted && element.isConnected && document.activeElement === document.body)
+                            element.focus({ preventScroll: true });
+                    }
+                }
             },
             { signal }
         );
-        return this;
     }
 
     /**
-     * 绑定书籍主体点击事件
-     * @param handler - 处理函数
-     * @returns 返回当前实例
-     * @param signal - 页面生命周期信号
+     * 将稳定书籍标识映射到完整色相环，分类与筛选不会改变书封。
      */
-    public bindBookBodyClick(handler: (bookId: string) => void, signal: AbortSignal): this {
-        EventUtil.delegate(
-            this.root,
-            ".book-body",
-            "click",
-            (_, target) => {
-                handler(assertExists(target.parentElement?.dataset["id"]));
-            },
-            { signal }
-        );
-        return this;
+    private coverHue(bookId: string): number {
+        let hash = 0;
+        for (const character of bookId) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+        return hash % 360;
     }
 
     /**
-     * 绑定删除书籍点击事件
-     * @param handler - 处理函数
-     * @returns 返回当前实例
-     * @param signal - 页面生命周期信号
+     * 全书名使用文本和无障碍名称，视觉书封保持有限行数。
      */
-    public bindDeleteBookClick(handler: (bookId: string) => Promise<void>, signal: AbortSignal): this {
-        EventUtil.delegate(
-            this.root,
-            ".book-delete-btn",
-            "click",
-            async (_, target) => {
-                await handler(assertExists(target.closest<HTMLElement>(".book")?.dataset["id"]));
-            },
-            { signal }
-        );
-        return this;
-    }
+    private createBookElement(summary: BookSummary): HTMLElement {
+        // 书目容器携带稳定 ID，供事件委托和重渲染后的焦点定位。
+        const book = document.createElement("article");
+        book.className = "book";
+        book.dataset["id"] = summary.book.id;
+        book.style.setProperty("--book-cover-hue", String(this.coverHue(summary.book.id)));
 
-    private createBookElement(book: Book): HTMLDivElement {
-        const bookElement = DomUtil.createElementFromHtml(`
-            <div class="book">
-                <div class="book-header">
-                    <button class="book-delete-btn" type="button" aria-label="删除书籍" title="删除书籍">✖</button>
-                </div>
-                <div class="book-body">
-                    <span class="book-title"></span>
-                </div>
-                <div class="book-footer"></div>
-            </div>
-        `) as HTMLDivElement;
+        // 书封作为阅读入口，完整书名与进度同时提供给辅助技术。
+        const open = document.createElement("button");
+        open.type = "button";
+        open.className = "book-open";
+        open.title = summary.title;
+        open.setAttribute("aria-label", `阅读《${summary.title}》，${summary.progress}`);
+        const title = document.createElement("span");
+        title.className = "book-title";
+        title.textContent = summary.title;
+        open.append(title);
 
-        bookElement.dataset["id"] = book.id;
-        assertExists(bookElement.querySelector<HTMLElement>(".book-title")).textContent = this.extractTitle(
-            book.fileName
-        );
-        return bookElement;
-    }
+        // 书封外显示已保存位置，便于快速接续阅读。
+        const progress = document.createElement("p");
+        progress.className = "book-progress";
+        progress.textContent = summary.progress;
 
-    private extractTitle(filename: string): string {
-        const extensionIndex = filename.lastIndexOf(".");
-        return extensionIndex > 0 ? filename.slice(0, extensionIndex) : filename;
+        // 分类选择与删除共用操作区，选项值保留持久化分类 ID。
+        const tools = document.createElement("div");
+        tools.className = "book-tools";
+        const categorySelect = document.createElement("select");
+        categorySelect.className = "book-category";
+        categorySelect.id = `book-category-${summary.book.id}`;
+        categorySelect.dataset["categoryId"] = summary.book.categoryId;
+        categorySelect.setAttribute("aria-label", `移动《${summary.title}》到分类`);
+        categorySelect.title = "选择分类即可移动";
+        // 窄书封内截断分类文字，保留箭头与独立删除入口。
+        const categoryButton = document.createElement("button");
+        categoryButton.type = "button";
+        categoryButton.append(document.createElement("selectedcontent"));
+        categorySelect.append(categoryButton);
+        for (const category of CATEGORIES) {
+            const option = document.createElement("option");
+            option.value = category.id;
+            option.textContent = category.name;
+            categorySelect.append(option);
+        }
+        categorySelect.value = summary.book.categoryId;
+
+        // 删除入口独立于阅读按钮，装饰图标不重复朗读书名。
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "book-delete icon-button";
+        remove.setAttribute("aria-label", `删除《${summary.title}》`);
+        remove.title = "删除书籍";
+        const icon = document.createElement("span");
+        icon.className = "icon icon-delete";
+        icon.setAttribute("aria-hidden", "true");
+        remove.append(icon);
+
+        // 按阅读、进度和就近操作的顺序组装书目。
+        tools.append(categorySelect, remove);
+        book.append(open, progress, tools);
+        return book;
     }
 }

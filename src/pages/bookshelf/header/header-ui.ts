@@ -1,81 +1,100 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import EventUtil from "@/utils/event-util";
+import { bind } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
-import bookshelfClearIcon from "@/assets/images/bookshelf-clear.svg";
-import settingIcon from "@/assets/images/setting.svg";
 import Ui from "@/components/ui";
 
 /**
- * 书架头部界面
- * @author allurx
+ * 分类标题、搜索和导入工具栏。
  */
 export default class HeaderUi extends Ui {
-    private readonly headerTitleElement: HTMLSpanElement;
-    private readonly settingToggleButton: HTMLButtonElement;
-    private readonly clearBookshelfButton: HTMLButtonElement;
+    private readonly search = assertExists(this.root.querySelector<HTMLInputElement>("#book-search"));
+    private readonly input = assertExists(this.root.querySelector<HTMLInputElement>("#book-input"));
+    private readonly importButton = assertExists(this.root.querySelector<HTMLButtonElement>("#import-books"));
+    private renderedQuery = "";
 
-    /** 通过打包资源设置遮罩，使图标继承页眉颜色并支持 portable 内联。 */
-    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
-        super(args);
-        this.headerTitleElement = assertExists(this.root.querySelector<HTMLSpanElement>("#title"));
-        this.settingToggleButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel"));
-        this.clearBookshelfButton = assertExists(this.root.querySelector<HTMLButtonElement>("#clear-btn"));
-        this.settingToggleButton.style.setProperty("--icon-image", `url("${settingIcon}")`);
-        this.clearBookshelfButton.style.setProperty("--icon-image", `url("${bookshelfClearIcon}")`);
+    /**
+     * 显示当前分类与筛选后的数量。
+     */
+    public render(category: string, count: number, query: string): void {
+        assertExists(this.root.querySelector("#category-title")).textContent = category;
+        assertExists(this.root.querySelector("#book-count")).textContent = `${String(count)} 本`;
+        this.renderedQuery = query;
+        this.search.value = query;
     }
 
     /**
-     * 绑定设置面板切换事件
-     * @param handler - 处理函数
-     * @param signal - 页面生命周期信号
-     * @returns 返回当前实例
+     * 绑定搜索与文件选择器，选择结束后允许再次选择同一文件。
      */
-    public bindToggleSettingPanel(handler: (opener: HTMLButtonElement) => void, signal: AbortSignal): this {
-        EventUtil.bind(
-            this.settingToggleButton,
+    public bindEvents(
+        onSearch: (query: string) => void,
+        onImport: (files: File[]) => Promise<void>,
+        onAppearance: (opener: HTMLElement) => void,
+        signal: AbortSignal
+    ): void {
+        // 保留外观入口节点，面板关闭后可将焦点归还给原按钮。
+        bind(
+            assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel")),
             "click",
-            (_, opener) => {
-                handler(opener);
+            (_, button) => {
+                onAppearance(button);
             },
             { signal }
         );
-        return this;
-    }
 
-    /**
-     * 绑定清空书架点击事件
-     * @param  handler - 处理函数
-     * @returns  返回当前实例
-     * @param signal - 页面生命周期信号
-     */
-    public bindClearBookshelfClick(handler: () => Promise<void>, signal: AbortSignal): this {
-        EventUtil.bind(this.clearBookshelfButton, "click", handler, { signal });
-        return this;
-    }
+        // 输入法完成后才筛选，避免候选阶段反复重建列表和播报数量。
+        const updateSearch = (): void => {
+            if (this.search.value !== this.renderedQuery) onSearch(this.search.value);
+        };
+        bind(this.search, "compositionend", updateSearch, { signal });
 
-    /**
-     * 绑定头部标题点击事件
-     * @returns 返回当前实例
-     * @param handler - 处理函数
-     * @param signal - 页面生命周期信号
-     */
-    public bindHeaderTitleClick(handler: () => void, signal: AbortSignal): this {
-        EventUtil.bind(this.headerTitleElement, "click", handler, { signal });
-        return this;
+        // Escape 清空查询，但输入法取消候选时保留当前书名。
+        bind(
+            this.search,
+            "keydown",
+            (event) => {
+                if (event instanceof KeyboardEvent && event.key === "Escape" && !event.isComposing) {
+                    this.search.value = "";
+                    updateSearch();
+                }
+            },
+            { signal }
+        );
+
+        bind(
+            this.search,
+            "input",
+            (event) => {
+                if (!(event instanceof InputEvent) || !event.isComposing) updateSearch();
+            },
+            { signal }
+        );
+
+        // 可见按钮打开原生文件选择器，文件列表由其 change 事件提交。
+        bind(
+            this.importButton,
+            "click",
+            () => {
+                this.input.click();
+            },
+            { signal }
+        );
+
+        bind(
+            this.input,
+            "change",
+            async () => {
+                try {
+                    await onImport(Array.from(this.input.files ?? []));
+                } finally {
+                    // 成功或失败都清空选择，下一次仍能导入同一文件。
+                    this.input.value = "";
+                }
+            },
+            { signal }
+        );
     }
 }

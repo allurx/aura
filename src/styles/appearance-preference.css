@@ -1,178 +1,224 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-/*
- * 外层变量是默认 yellow Theme，嵌套规则覆盖其他调色板；具体 UI 的
- * inline style 最终优先。按 data-page 隔离可避免两个页面的同名语义互相污染。
- */
+/* 页面与主题色样共用调色板；显式 UI 外观仍由 inline style 优先覆盖。 */
+:where(html, .theme-swatch) {
+    color-scheme: light;
+    --appearance-canvas: #f3f8ff;
+    --appearance-surface: #fffefa;
+    --appearance-muted-surface: #edf3fc;
+    --appearance-panel: #ffffff;
+    --appearance-color: #263653;
+    --appearance-muted-color: #5c6d86;
+    --appearance-accent: #365acb;
+    --appearance-accent-secondary: #aa4b28;
+    --appearance-on-accent: #ffffff;
+    --appearance-selection: #e0eaff;
+    --appearance-tint: #dcecff;
+    --appearance-glow: #ffeccf;
+    --appearance-danger: #b4324d;
+    --appearance-shadow-color: #426599;
+    --appearance-highlight: #ffffffc9;
+    --appearance-cover-saturation: 70%;
+    --appearance-cover-lightness: 82%;
+    --appearance-cover-ink: #27354b;
+
+    --appearance-focus: var(--appearance-accent);
+    --appearance-border: color-mix(in srgb, var(--appearance-color) 12%, transparent);
+    --appearance-control-border: color-mix(in srgb, var(--appearance-color) 24%, transparent);
+    --control-shadow: 0 2px 4px color-mix(in srgb, var(--appearance-shadow-color) 14%, transparent);
+    --appearance-backdrop: color-mix(in srgb, var(--appearance-shadow-color) 20%, transparent);
+    --appearance-shadow-soft:
+        0 2px 4px color-mix(in srgb, var(--appearance-shadow-color) 5%, transparent),
+        0 8px 24px color-mix(in srgb, var(--appearance-shadow-color) 9%, transparent);
+    --appearance-shadow-raised:
+        0 4px 8px color-mix(in srgb, var(--appearance-shadow-color) 9%, transparent),
+        0 18px 42px color-mix(in srgb, var(--appearance-shadow-color) 14%, transparent);
+    --appearance-shadow-floating:
+        0 8px 20px color-mix(in srgb, var(--appearance-shadow-color) 12%, transparent),
+        0 28px 80px color-mix(in srgb, var(--appearance-shadow-color) 22%, transparent);
+}
+
+:where(html, .theme-swatch)[data-theme="breeze"] {
+    --appearance-canvas: #edf9fb;
+    --appearance-surface: #fafffe;
+    --appearance-muted-surface: #e4f3f5;
+    --appearance-panel: #f9fffe;
+    --appearance-color: #223e4b;
+    --appearance-muted-color: #526d78;
+    --appearance-accent: #126c7b;
+    --appearance-accent-secondary: #a34c4a;
+    --appearance-selection: #d1eef0;
+    --appearance-tint: #c9edf2;
+    --appearance-glow: #fde7db;
+    --appearance-shadow-color: #387986;
+    --appearance-cover-saturation: 58%;
+    --appearance-cover-lightness: 80%;
+    --appearance-cover-ink: #24434d;
+}
+
+:where(html, .theme-swatch)[data-theme="meadow"] {
+    --appearance-canvas: #f2f8ee;
+    --appearance-surface: #fcfff7;
+    --appearance-muted-surface: #e9f1df;
+    --appearance-panel: #fdfff9;
+    --appearance-color: #2e4134;
+    --appearance-muted-color: #5d715f;
+    --appearance-accent: #36734d;
+    --appearance-accent-secondary: #8b5c1b;
+    --appearance-selection: #dbedce;
+    --appearance-tint: #d8edce;
+    --appearance-glow: #fff0bd;
+    --appearance-shadow-color: #5e7e50;
+    --appearance-cover-saturation: 50%;
+    --appearance-cover-lightness: 78%;
+    --appearance-cover-ink: #30402f;
+}
+
+:where(html, .theme-swatch)[data-theme="peach"] {
+    --appearance-canvas: #fff5ee;
+    --appearance-surface: #fffdf8;
+    --appearance-muted-surface: #f9eade;
+    --appearance-panel: #fffaf5;
+    --appearance-color: #4b3432;
+    --appearance-muted-color: #80615a;
+    --appearance-accent: #a3452e;
+    --appearance-accent-secondary: #42775f;
+    --appearance-selection: #fbe1d1;
+    --appearance-tint: #ffe1cb;
+    --appearance-glow: #f9edb8;
+    --appearance-shadow-color: #a27056;
+    --appearance-cover-saturation: 65%;
+    --appearance-cover-lightness: 81%;
+    --appearance-cover-ink: #4b3432;
+}
+
+:where(html, .theme-swatch)[data-theme="blossom"] {
+    --appearance-canvas: #faf2fb;
+    --appearance-surface: #fffaff;
+    --appearance-muted-surface: #f1e5f4;
+    --appearance-panel: #fffbff;
+    --appearance-color: #45324f;
+    --appearance-muted-color: #79617e;
+    --appearance-accent: #8b4793;
+    --appearance-accent-secondary: #a34764;
+    --appearance-selection: #edd9f0;
+    --appearance-tint: #ebdafa;
+    --appearance-glow: #ffe2e4;
+    --appearance-shadow-color: #896494;
+    --appearance-cover-saturation: 60%;
+    --appearance-cover-lightness: 83%;
+    --appearance-cover-ink: #45324f;
+}
+
+:where(html, .theme-swatch)[data-theme="paper"] {
+    --appearance-canvas: #f5f0e5;
+    --appearance-surface: #fffaf0;
+    --appearance-muted-surface: #ebe4d4;
+    --appearance-panel: #fbf7ee;
+    --appearance-color: #443b2f;
+    --appearance-muted-color: #6e614e;
+    --appearance-accent: #7c571f;
+    --appearance-accent-secondary: #526e64;
+    --appearance-on-accent: #ffffff;
+    --appearance-selection: #e9ddc4;
+    --appearance-tint: #e8ddc6;
+    --appearance-glow: #f5e8ce;
+    --appearance-danger: #a83e45;
+    --appearance-shadow-color: #8b795d;
+    --appearance-highlight: #fffaf0c9;
+    --appearance-cover-saturation: 38%;
+    --appearance-cover-lightness: 79%;
+    --appearance-cover-ink: #433b2e;
+}
+
+:where(html, .theme-swatch)[data-theme="starry"] {
+    color-scheme: dark;
+    --appearance-canvas: #171f35;
+    --appearance-surface: #222d46;
+    --appearance-muted-surface: #2d3955;
+    --appearance-panel: #28334e;
+    --appearance-color: #ebeffa;
+    --appearance-muted-color: #b8c5df;
+    --appearance-accent: #b5c6ff;
+    --appearance-accent-secondary: #f5c59f;
+    --appearance-on-accent: #202e50;
+    --appearance-selection: #394d70;
+    --appearance-tint: #293c60;
+    --appearance-glow: #403553;
+    --appearance-danger: #ffb6bf;
+    --appearance-shadow-color: #080f22;
+    --appearance-highlight: #bfcfff17;
+    --appearance-cover-saturation: 42%;
+    --appearance-cover-lightness: 72%;
+    --appearance-cover-ink: #202d43;
+}
+
+:where(html, .theme-swatch)[data-theme="dusk"] {
+    color-scheme: dark;
+    --appearance-canvas: #26212f;
+    --appearance-surface: #332c3e;
+    --appearance-muted-surface: #41384b;
+    --appearance-panel: #393045;
+    --appearance-color: #f3eaf5;
+    --appearance-muted-color: #cbbbd2;
+    --appearance-accent: #e3b8ed;
+    --appearance-accent-secondary: #edbdcb;
+    --appearance-on-accent: #422d49;
+    --appearance-selection: #53405e;
+    --appearance-tint: #40334f;
+    --appearance-glow: #553c4a;
+    --appearance-danger: #ffb7c7;
+    --appearance-shadow-color: #100d19;
+    --appearance-highlight: #efd1ff17;
+    --appearance-cover-saturation: 44%;
+    --appearance-cover-lightness: 76%;
+    --appearance-cover-ink: #382c42;
+}
+
+:where(html, .theme-swatch)[data-theme="ocean"] {
+    color-scheme: dark;
+    --appearance-canvas: #142c33;
+    --appearance-surface: #1d3940;
+    --appearance-muted-surface: #2b4850;
+    --appearance-panel: #24434a;
+    --appearance-color: #e1f3f2;
+    --appearance-muted-color: #accacb;
+    --appearance-accent: #94ded3;
+    --appearance-accent-secondary: #dbceab;
+    --appearance-on-accent: #173b3b;
+    --appearance-selection: #315d63;
+    --appearance-tint: #214a53;
+    --appearance-glow: #3b4e48;
+    --appearance-danger: #ffbab4;
+    --appearance-shadow-color: #071b22;
+    --appearance-highlight: #b5efe617;
+    --appearance-cover-saturation: 48%;
+    --appearance-cover-lightness: 75%;
+    --appearance-cover-ink: #213d42;
+}
+
+html {
+    --setting-background-color: var(--appearance-panel);
+    --setting-color: var(--appearance-color);
+    --setting-accent-color: var(--appearance-accent);
+}
+
 html[data-page="bookshelf"] {
-    --bookshelf-background-color: #1f2937;
-    --bookshelf-header-background-color: transparent;
-    --bookshelf-header-color: #409eff;
-    --bookshelf-nav-background-color: #1f2937;
-    --bookshelf-nav-color: #ffffff;
-    --bookshelf-nav-active-background-color: #374151;
-    --bookshelf-nav-active-color: #ffd04b;
-    --bookshelf-book-list-background-color: #f2e8c8;
-    --bookshelf-book-list-color: #eeeeee;
-    --bookshelf-book-input-color: #cccccc;
-    --bookshelf-accent-color: #409eff;
-    --bookshelf-book-background-color: #144b82;
-    --bookshelf-book-hover-background-color: #397fc4;
-    --setting-background-color: #f2e8c8;
-    --setting-color: #000000;
-    --setting-accent-color: #663399;
+    --bookshelf-background-color: var(--appearance-canvas);
+    --bookshelf-nav-background-color: var(--appearance-panel);
+    --bookshelf-nav-color: var(--appearance-color);
+    --bookshelf-book-list-color: var(--appearance-color);
 
     background-color: var(--bookshelf-background-color);
-
-    &[data-theme="light"] {
-        --bookshelf-background-color: #ffffff;
-        --bookshelf-header-color: #1a73e8;
-        --bookshelf-nav-background-color: #f1f3f4;
-        --bookshelf-nav-color: #202124;
-        --bookshelf-nav-active-background-color: #d2e3fc;
-        --bookshelf-nav-active-color: #174ea6;
-        --bookshelf-book-list-background-color: #ffffff;
-        --bookshelf-book-list-color: #202124;
-        --bookshelf-book-input-color: #5f6368;
-        --bookshelf-accent-color: #1a73e8;
-        --bookshelf-book-background-color: #d2e3fc;
-        --bookshelf-book-hover-background-color: #aecbfa;
-        --setting-background-color: #ffffff;
-        --setting-color: #202124;
-        --setting-accent-color: #174ea6;
-    }
-
-    &[data-theme="dim"] {
-        --bookshelf-background-color: #111a2e;
-        --bookshelf-header-color: #8ab4f8;
-        --bookshelf-nav-background-color: #111a2e;
-        --bookshelf-nav-color: #e3e3e3;
-        --bookshelf-nav-active-background-color: #263554;
-        --bookshelf-nav-active-color: #fdd663;
-        --bookshelf-book-list-background-color: #17223a;
-        --bookshelf-book-list-color: #e3e3e3;
-        --bookshelf-book-input-color: #9aa0a6;
-        --bookshelf-accent-color: #8ab4f8;
-        --bookshelf-book-background-color: #263b63;
-        --bookshelf-book-hover-background-color: #31507f;
-        --setting-background-color: #111a2e;
-        --setting-color: #e3e3e3;
-        --setting-accent-color: #fdd663;
-    }
-
-    &[data-theme="dark"] {
-        --bookshelf-background-color: #202124;
-        --bookshelf-header-color: #8ab4f8;
-        --bookshelf-nav-background-color: #202124;
-        --bookshelf-nav-color: #e3e3e3;
-        --bookshelf-nav-active-background-color: #3c4043;
-        --bookshelf-nav-active-color: #fdd663;
-        --bookshelf-book-list-background-color: #292a2d;
-        --bookshelf-book-list-color: #e3e3e3;
-        --bookshelf-book-input-color: #9aa0a6;
-        --bookshelf-accent-color: #8ab4f8;
-        --bookshelf-book-background-color: #3c4043;
-        --bookshelf-book-hover-background-color: #4b4f52;
-        --setting-background-color: #202124;
-        --setting-color: #e3e3e3;
-        --setting-accent-color: #fdd663;
-    }
-
-    &[data-theme="blue"] {
-        --bookshelf-background-color: #d2e3fc;
-        --bookshelf-header-color: #174ea6;
-        --bookshelf-nav-background-color: #aecbfa;
-        --bookshelf-nav-color: #202124;
-        --bookshelf-nav-active-background-color: #8ab4f8;
-        --bookshelf-nav-active-color: #174ea6;
-        --bookshelf-book-list-background-color: #e8f0fe;
-        --bookshelf-book-list-color: #ffffff;
-        --bookshelf-book-input-color: #5f6368;
-        --bookshelf-accent-color: #174ea6;
-        --bookshelf-book-background-color: #397fc4;
-        --bookshelf-book-hover-background-color: #4a8ed9;
-        --setting-background-color: #d2e3fc;
-        --setting-color: #202124;
-        --setting-accent-color: #174ea6;
-    }
-
-    &[data-theme="gray"] {
-        --bookshelf-background-color: #3c3c3c;
-        --bookshelf-header-color: #8ab4f8;
-        --bookshelf-nav-background-color: #3c3c3c;
-        --bookshelf-nav-color: #e3e3e3;
-        --bookshelf-nav-active-background-color: #555555;
-        --bookshelf-nav-active-color: #ffd04b;
-        --bookshelf-book-list-background-color: #4a4a4a;
-        --bookshelf-book-list-color: #e3e3e3;
-        --bookshelf-book-input-color: #bdbdbd;
-        --bookshelf-accent-color: #8ab4f8;
-        --bookshelf-book-background-color: #555555;
-        --bookshelf-book-hover-background-color: #666666;
-        --setting-background-color: #3c3c3c;
-        --setting-color: #e3e3e3;
-        --setting-accent-color: #ffd04b;
-    }
 }
 
 html[data-page="reader"] {
-    --reader-backdrop: #be966e;
-    --reader-surface: #f2e8c8;
-    --reader-color: #000000;
-    --setting-background-color: var(--reader-surface);
-    --setting-color: var(--reader-color);
-    --setting-accent-color: #663399;
+    --reader-backdrop: var(--appearance-canvas);
+    --reader-surface: var(--appearance-surface);
+    --reader-color: var(--appearance-color);
 
     background-color: var(--reader-backdrop);
-
-    &[data-theme="light"] {
-        --reader-backdrop: #ffffff;
-        --reader-surface: #ffffff;
-        --reader-color: #000000;
-        --setting-accent-color: #174ea6;
-    }
-
-    &[data-theme="dim"] {
-        --reader-backdrop: #111a2e;
-        --reader-surface: #111a2e;
-        --reader-color: #e3e3e3;
-        --setting-accent-color: #8ab4f8;
-    }
-
-    &[data-theme="dark"] {
-        --reader-backdrop: #202124;
-        --reader-surface: #202124;
-        --reader-color: #e3e3e3;
-        --setting-accent-color: #8ab4f8;
-    }
-
-    &[data-theme="blue"] {
-        --reader-backdrop: #d2e3fc;
-        --reader-surface: #d2e3fc;
-        --reader-color: #000000;
-        --setting-accent-color: #174ea6;
-    }
-
-    &[data-theme="gray"] {
-        --reader-backdrop: #3c3c3c;
-        --reader-surface: #3c3c3c;
-        --reader-color: #e3e3e3;
-        --setting-accent-color: #8ab4f8;
-    }
 }

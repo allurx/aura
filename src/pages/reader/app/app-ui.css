@@ -1,21 +1,83 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 html[data-page="reader"] #app {
+    display: grid;
+    grid-template-columns: minmax(80px, 1fr) auto minmax(80px, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     background-color: var(--reader-backdrop);
+
+    background-image:
+        radial-gradient(ellipse at 4% 8%, var(--appearance-tint), transparent 48%),
+        radial-gradient(ellipse at 96% 88%, var(--appearance-glow), transparent 48%);
+
+    &:has(> #reader[data-mobile-controls]) {
+        display: flow-root;
+    }
+}
+
+/* 对称预留侧边空间保持正文居中，右栏独立于 Reader 的裁切和宽度拖动。 */
+#reader-actions {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center;
+    justify-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 64px;
+    max-height: calc(100dvh - 32px);
+    margin-left: 12px;
+    padding: 6px;
+    border: 1px solid var(--appearance-border);
+    border-radius: 18px;
+    background: var(--appearance-panel);
+    color: var(--appearance-color);
+    box-shadow: var(--appearance-shadow-soft);
+    overflow-y: auto;
+    scrollbar-gutter: auto;
+    font-size: 12px;
+
+    &[hidden] {
+        display: none;
+    }
+
+    .reader-action-group {
+        display: flex;
+        flex: none;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+
+        + .reader-action-group {
+            padding-top: 8px;
+            border-top: 1px solid var(--appearance-border);
+        }
+    }
+
+    .reader-action-group > button.reader-action {
+        flex: none;
+        flex-direction: column;
+        gap: 4px;
+        width: 100%;
+        min-height: 56px;
+        padding: 6px 2px;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .appearance-mark {
+        font-family: Georgia, serif;
+        font-size: 22px;
+        line-height: 20px;
+    }
+
+    #progress-rate {
+        padding-top: 6px;
+        border-top: 1px solid var(--appearance-border);
+        text-align: center;
+        line-height: 1.5;
+    }
 }

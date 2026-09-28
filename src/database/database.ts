@@ -1,85 +1,76 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import type DatabaseDefinition from "./database-definition";
+const DATABASE_NAME = "aura";
+let connectionPromise: Promise<IDBDatabase> | undefined;
 
 /**
- * 数据库
- * @author allurx
+ * 复用当前数据库连接；只初始化当前结构，不迁移旧数据。
  */
-export default class Database {
-    private readonly name: string;
-    private readonly schemaVersion: number;
-    private readonly stores: typeof DatabaseDefinition.stores;
-    private singleton!: IDBDatabase | null;
+export function openDatabase(): Promise<IDBDatabase> {
+    connectionPromise ??= new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open(DATABASE_NAME, 1);
+        let blocked = false;
 
-    public constructor(name: string, schemaVersion: number, stores: typeof DatabaseDefinition.stores) {
-        this.name = name;
-        this.schemaVersion = schemaVersion;
-        this.stores = stores;
-    }
+        request.onupgradeneeded = () => {
+            const database = request.result;
+            database.createObjectStore("file", { keyPath: "id" }).createIndex("hash", "hash", { unique: true });
+            database.createObjectStore("book", { keyPath: "id" }).createIndex("fileId", "fileId");
+            database.createObjectStore("toc", { keyPath: "fileId" });
+            database
+                .createObjectStore("chapter", { keyPath: ["fileId", "chapterNumber"] })
+                .createIndex("fileId", "fileId");
+            database.createObjectStore("progress", { keyPath: "bookId" });
+        };
 
-    /**
-     * 获取数据库实例
-     * @returns {Promise<IDBDatabase>} 返回一个解析为数据库实例的Promise.
-     */
-    public async instance(): Promise<IDBDatabase> {
-        return this.singleton ?? (await this.connect());
-    }
+        request.onsuccess = () => {
+            const database = request.result;
+            // blocked 已向调用方报错；稍后打开的连接不能成为无人持有的连接。
+            if (blocked) {
+                database.close();
+                return;
+            }
 
-    /**
-     * 连接数据库
-     * @returns {Promise<IDBDatabase>} 返回一个解析为数据库实例的Promise.
-     */
-    private connect(): Promise<IDBDatabase> {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(this.name, this.schemaVersion);
-            request.onupgradeneeded = () => {
-                Object.values(this.stores).forEach((storeDefinition) => {
-                    if (!request.result.objectStoreNames.contains(storeDefinition.name)) {
-                        const store = request.result.createObjectStore(storeDefinition.name, {
-                            keyPath: storeDefinition.keyPath,
-                            autoIncrement: storeDefinition.autoIncrement,
-                        });
-                        Object.values(storeDefinition.indexes).forEach((index) => {
-                            store.createIndex(index.name, index.path, { unique: index.unique });
-                        });
-                    }
-                });
+            // 数据库被升级或删除时释放连接，后续操作重新打开。
+            database.onversionchange = () => {
+                database.close();
+                connectionPromise = undefined;
             };
-
-            request.onsuccess = () => {
-                this.singleton = request.result;
-                resolve(this.singleton);
+            database.onclose = () => {
+                connectionPromise = undefined;
             };
+            resolve(database);
+        };
+        request.onerror = () => {
+            reject(new Error("Database connection failed", { cause: request.error }));
+        };
+        request.onblocked = () => {
+            blocked = true;
+            reject(new Error("Database connection blocked. Please close other tabs."));
+        };
+    }).catch((error: unknown) => {
+        connectionPromise = undefined;
+        throw error;
+    });
 
-            request.onerror = () => {
-                reject(new Error(`Database connection failed`, { cause: request.error }));
-            };
+    return connectionPromise;
+}
 
-            request.onblocked = () => {
-                reject(new Error("Database connection blocked. Please close other tabs."));
-            };
-        });
-    }
-
-    /**
-     * 关闭数据库连接
-     */
-    public close() {
-        this.singleton?.close();
-    }
+/**
+ * 删除整个数据库，不依赖旧结构能否打开；现有连接通过 versionchange 释放。
+ * 阻塞时通知调用方并继续等待，只有 success 才代表删除完成。
+ */
+export function deleteDatabase(onBlocked: () => void): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+        const request = indexedDB.deleteDatabase(DATABASE_NAME);
+        request.onblocked = onBlocked;
+        request.onsuccess = () => {
+            resolve();
+        };
+        request.onerror = () => {
+            reject(new Error("Database deletion failed", { cause: request.error }));
+        };
+    });
 }

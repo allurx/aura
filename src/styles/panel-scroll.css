@@ -1,0 +1,32 @@
+/*
+ * Copyright 2026 allurx
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* 滚动区域共用原生交互；容器尺寸和溢出边界由各自布局定义。 */
+.panel-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, currentColor 50%, transparent) transparent;
+    scrollbar-gutter: stable;
+    overscroll-behavior: contain;
+    scroll-padding-block: 0.5rem;
+
+    &:focus-within {
+        scrollbar-color: color-mix(in srgb, currentColor 65%, transparent) transparent;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+        &:hover {
+            scrollbar-color: color-mix(in srgb, currentColor 65%, transparent) transparent;
+        }
+    }
+
+    @media (forced-colors: active) {
+        &,
+        &:hover,
+        &:focus-within {
+            scrollbar-width: auto;
+            scrollbar-color: auto;
+        }
+    }
+}

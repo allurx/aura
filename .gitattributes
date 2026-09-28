@@ -1,2 +1,5 @@
+# Copyright 2026 allurx
+# SPDX-License-Identifier: Apache-2.0
+
 # Keep text files consistent across platforms and aligned with Prettier.
 * text=auto eol=lf

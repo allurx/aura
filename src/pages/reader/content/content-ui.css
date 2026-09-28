@@ -1,37 +1,73 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #reader > #content {
-    height: calc(100% - 120px);
+    --reader-paragraph-spacing: 1.15em;
+    --ui-padding-left: 72px;
+    --ui-padding-right: 72px;
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
     overflow-x: hidden;
     overflow-y: auto;
-    scrollbar-width: auto;
-    scrollbar-color: #666666 transparent;
-    word-break: break-word;
-    outline: none;
-    padding: 0 30px;
-    font-size: 1.1rem;
-    line-height: 2;
-    background-color: inherit;
+    overflow-wrap: anywhere;
+    padding: 44px max(var(--ui-padding-right), env(safe-area-inset-right)) 32px
+        max(var(--ui-padding-left), env(safe-area-inset-left));
+    overscroll-behavior-y: contain;
+    font-family: sans-serif;
+    font-size: 19px;
+    color: var(--reader-color);
+    line-height: 1.9;
+    background-color: transparent;
 
-    @media (max-width: 768px) {
-        & {
-            font-size: 1.5rem;
+    .chapter-heading {
+        margin-bottom: 1.2em;
+        font-size: 1.58em;
+        color: inherit;
+        line-height: 1.45;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        overflow-wrap: anywhere;
+
+        &::before {
+            display: block;
+            width: 32px;
+            height: 4px;
+            margin-bottom: 0.8em;
+            border-radius: 999px;
+            background: var(--appearance-accent);
+            content: "";
         }
+    }
+    > p {
+        margin-bottom: var(--reader-paragraph-spacing);
+    }
+
+    @media (max-width: 600px) {
+        --ui-padding-left: 24px;
+        --ui-padding-right: 24px;
+        padding-inline: max(env(safe-area-inset-left), min(var(--ui-padding-left), 12.5vw))
+            max(env(safe-area-inset-right), min(var(--ui-padding-right), 12.5vw));
+        padding-top: 28px;
+
+        .chapter-heading {
+            font-size: 1.37em;
+        }
+    }
+
+    @media (max-height: 500px) {
+        padding-top: 20px;
+    }
+}
+
+#reader[data-mobile-controls] > #content {
+    touch-action: pan-y pinch-zoom;
+    padding-top: max(28px, env(safe-area-inset-top));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+
+    @media (max-height: 500px) {
+        padding-top: max(20px, env(safe-area-inset-top));
     }
 }

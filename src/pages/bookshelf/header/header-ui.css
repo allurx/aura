@@ -1,46 +1,240 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-#bookshelf > header {
+#bookshelf #header {
+    --shelf-title-font-size: 29px;
+    --shelf-primary-font-size: 14px;
+    --shelf-secondary-font-size: 14px;
+    --ui-padding-left: 40px;
+    --ui-padding-right: 40px;
     display: flex;
-    /* 禁止缩放,保持自身的宽高 */
-    flex: 0 0 auto;
-    justify-content: space-between;
     align-items: center;
-    height: 3.125rem;
-    min-height: 52px;
-    width: 100%;
-    padding: 0 0.75rem;
-    background-color: var(--bookshelf-header-background-color);
-    color: var(--bookshelf-header-color);
-    font-size: 2rem;
-    overflow: hidden;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1.35rem;
+    min-width: 0;
+    flex-shrink: 0;
+    padding: 2.2rem var(--ui-padding-right) 1.8rem var(--ui-padding-left);
+    background-color: var(--appearance-canvas);
+    color: var(--appearance-color);
+    font-size: 1rem;
 
-    #title {
-        color: inherit;
-        font-size: inherit;
-        cursor: pointer;
-    }
-
-    .action {
+    .shelf-heading,
+    .shelf-tools {
         display: flex;
-        flex: 0 0 auto;
         align-items: center;
+        min-width: 0;
+        gap: 0.75rem;
+    }
+    .shelf-heading {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    #category-title {
+        color: var(--appearance-color);
+        font-size: var(--shelf-title-font-size);
+        font-weight: 600;
+        line-height: 1.35;
+        letter-spacing: -0.035em;
+        overflow-wrap: anywhere;
+    }
+    #book-count {
+        padding: 0.3rem 0.6rem;
+        border-radius: 0.65rem;
+        background: var(--appearance-tint);
+        color: var(--appearance-accent);
+        font-size: 0.76em;
+        white-space: nowrap;
+    }
+    .shelf-tools {
+        flex-wrap: wrap;
         gap: 8px;
+    }
+    .book-search-field {
+        display: flex;
+        align-items: center;
+        width: 13.5rem;
+        max-width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        padding-inline: 12px 6px;
+        gap: 8px;
+
+        > .icon {
+            --icon-size: 18px;
+        }
+    }
+    #book-search {
+        width: 100%;
+        min-width: 0;
+        min-height: 42px;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font-size: 16px;
+        line-height: 1.4;
+        outline: none;
+        padding-inline: 0.1rem;
+    }
+    .appearance-button,
+    #import-books {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        gap: 8px;
+        min-width: 44px;
+        min-height: 44px;
+        border: 1px solid transparent;
+        border-radius: var(--control-radius);
+        padding: 0 14px;
+        white-space: nowrap;
+        line-height: 1.4;
+        cursor: pointer;
+        transition:
+            background-color var(--motion-duration-fast) var(--motion-ease),
+            transform var(--motion-duration-fast) var(--motion-ease),
+            box-shadow var(--motion-duration-fast) var(--motion-ease);
+    }
+    .appearance-button {
+        color: var(--appearance-color);
+        background: var(--appearance-panel);
+        font-size: var(--shelf-secondary-font-size);
+        border-color: var(--appearance-border);
+
+        &[aria-expanded="true"] {
+            border-color: var(--appearance-border);
+            background: var(--appearance-selection);
+            color: var(--appearance-accent);
+        }
+    }
+    .appearance-button .icon,
+    #import-books .icon {
+        --icon-size: 18px;
+    }
+    #import-books {
+        background: var(--appearance-accent);
+        color: var(--appearance-on-accent);
+        font-size: var(--shelf-primary-font-size);
+        font-weight: 600;
+        box-shadow: var(--control-shadow);
+    }
+    #open-navigation {
+        --icon-size: 20px;
+        display: none;
+    }
+    @media (hover: hover) and (pointer: fine) {
+        .appearance-button:where(:not(:disabled):not([aria-expanded="true"])):hover {
+            background: color-mix(in srgb, var(--appearance-panel) 92%, var(--appearance-color));
+        }
+        #import-books:where(:not(:disabled)):hover {
+            background: color-mix(in srgb, var(--appearance-accent) 90%, var(--appearance-color));
+        }
+    }
+    .appearance-button:where(:not(:disabled)):active,
+    #import-books:where(:not(:disabled)):active {
+        transform: translateY(1px);
+        box-shadow: none;
+    }
+    .appearance-button:disabled,
+    #import-books:disabled {
+        opacity: 0.5;
+        box-shadow: none;
+        cursor: not-allowed;
+    }
+    @media (max-width: 1024px) {
+        --shelf-title-font-size: 25px;
+        --shelf-primary-font-size: 13px;
+        --shelf-secondary-font-size: 13px;
+    }
+    @media (max-width: 1050px) and (min-width: 769px) {
+        .shelf-tools {
+            width: 100%;
+        }
+        .book-search-field {
+            flex: 1;
+        }
+    }
+    @media (max-width: 768px) {
+        --shelf-title-font-size: 20px;
+        --ui-padding-left: 18px;
+        --ui-padding-right: 18px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        padding-top: 1rem;
+        padding-bottom: 1.4rem;
+        gap: 12px 4px;
+        .shelf-heading {
+            min-width: 0;
+            gap: 4px;
+            flex-wrap: nowrap;
+        }
+        #category-title {
+            display: -webkit-box;
+            min-width: 0;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            overflow: hidden;
+        }
+        #book-count {
+            /* 移动端让出标题空间，但仍保留搜索结果数量的播报。 */
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip-path: inset(50%);
+            white-space: nowrap;
+        }
+        .shelf-tools {
+            display: contents;
+        }
+        .book-search-field {
+            grid-row: 2;
+            grid-column: 1 / -1;
+            width: 100%;
+        }
+        #open-navigation {
+            display: inline-grid;
+            margin-left: -12px;
+        }
+        .appearance-button,
+        #import-books {
+            padding: 0 10px;
+        }
+        .appearance-button {
+            width: 44px;
+            padding: 0;
+        }
+        .appearance-label {
+            display: none;
+        }
+        .import-label {
+            font-size: inherit;
+        }
+        @media (max-width: 360px) {
+            .import-label {
+                display: none;
+            }
+            #import-books {
+                width: 44px;
+                padding: 0;
+            }
+        }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .appearance-button,
+        .appearance-button:hover,
+        .appearance-button:active,
+        #import-books,
+        #import-books:hover,
+        #import-books:active,
+        .book-search-field {
+            transition: none;
+            transform: none;
+        }
     }
 }

@@ -1,49 +1,53 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #reader > #header {
-    display: flex;
+    top: 0;
+    --ui-padding-left: 28px;
+    --ui-padding-right: 28px;
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr) 84px;
     flex: 0 0 auto;
-    height: 60px;
-    justify-content: center;
+    min-height: 78px;
     align-items: center;
-    -webkit-user-select: none;
+    gap: 8px;
+    padding: max(10px, env(safe-area-inset-top)) max(var(--ui-padding-right), env(safe-area-inset-right)) 10px
+        max(var(--ui-padding-left), env(safe-area-inset-left));
+    color: var(--reader-color);
+    background-color: var(--reader-surface);
+    background-image: linear-gradient(115deg, var(--appearance-tint), transparent 70%);
+    border-bottom: 1px solid color-mix(in srgb, currentColor 7%, transparent);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--appearance-shadow-color) 24%, transparent);
+    font-size: 13px;
     user-select: none;
-    overflow: hidden;
-    padding: 0 30px;
-    background-color: inherit;
+    z-index: 1;
 
-    /* 顶部操作icon */
-    .action {
-        --icon-size: 22px;
-        display: flex;
-        align-items: center;
-        flex: 1;
+    #book-title {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: inherit;
+        font-weight: 600;
+        text-align: center;
+        opacity: 0.75;
     }
+}
 
-    /* 顶部左侧操作区域 */
-    .action-left {
-        justify-content: left;
-    }
+#reader[data-mobile-controls] > #header {
+    --ui-padding-left: 16px;
+    --ui-padding-right: 16px;
+    top: 0;
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 48px;
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-bottom: 8px;
 
-    /* 顶部右侧操作区域 */
-    .action-right {
-        gap: 8px;
-        justify-content: right;
+    @media (max-height: 500px) {
+        min-height: 44px;
+        padding-top: max(4px, env(safe-area-inset-top));
+        padding-bottom: 4px;
     }
 }

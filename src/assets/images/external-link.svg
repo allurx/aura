@@ -1,0 +1,17 @@
+<!--
+    Copyright 2026 allurx
+    SPDX-License-Identifier: Apache-2.0
+-->
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#000"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+>
+    <path
+        d="M14 3.5h6.5V10M20 4 10 14M10 5H5a1.5 1.5 0 0 0-1.5 1.5V19A1.5 1.5 0 0 0 5 20.5h12.5A1.5 1.5 0 0 0 19 19v-5"
+    />
+</svg>

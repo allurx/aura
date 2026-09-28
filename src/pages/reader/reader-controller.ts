@@ -1,280 +1,312 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
+import { run, bind } from "@/utils/event-util";
 import AppUi from "./app/app-ui";
 import ReaderUi from "./reader-ui";
 import type Progress from "@/domain/progress/progress";
-import ReaderService from "./reader-service";
-import HeaderUi from "./header/header-ui";
+import { toBookLineNumber } from "@/domain/chapter/chapter";
+import { numberOfLines } from "@/domain/toc/toc";
+import { initReader, updateProgress, getChapter } from "./reader-service";
 import ContentUi from "./content/content-ui";
-import FooterUi from "./footer/footer-ui";
 import TocUi from "./toc/toc-ui";
 import type ReaderState from "./reader-state";
-import SettingCatalog from "@/settings/definitions/setting-catalog";
-import SettingTarget from "@/settings/models/setting-target";
+import { createReaderSettings } from "@/settings/definitions/setting-catalog";
 import SettingController from "@/settings/setting-controller";
 import { SwitchChapterDirection } from "./switch-chapter-direction";
 import { assertExists } from "@/utils/assert-util";
 import { PageName } from "@/constants/page-name";
+import OperationError from "@/errors/operation-error";
 
 /**
  * 阅读器控制器
- * @author allurx
  */
 export default class ReaderController {
     private readonly appUi: AppUi;
     private readonly readerUi: ReaderUi;
-    private readonly headerUi: HeaderUi;
     private readonly contentUi: ContentUi;
-    private readonly footerUi: FooterUi;
     private readonly tocUi: TocUi;
     private readonly settingController: SettingController;
-    private readonly readerService: ReaderService;
     private state!: ReaderState;
+    private initialized = false;
+    private signal!: AbortSignal;
+    private chapterLoading = false;
+    private returningToBookshelf = false;
+    // 外观预览会改变换行；关闭前以原位置为准，避免把预览布局写成阅读进度。
+    private appearancePosition: ReturnType<ContentUi["readProgress"]>;
+    private progressWrite: Promise<void> = Promise.resolve();
 
-    public constructor(appRoot: HTMLElement, readerRoot: HTMLElement) {
-        this.readerService = new ReaderService();
+    /**
+     * 组装阅读界面，路由回调由应用入口提供。
+     */
+    public constructor(
+        appRoot: HTMLElement,
+        readerRoot: HTMLElement,
+        private readonly onReturnToBookshelf: () => void
+    ) {
+        // 组装顶层 UI，区分持久画布和当前阅读页。
+        this.appUi = new AppUi(appRoot);
+        this.readerUi = new ReaderUi(readerRoot);
 
-        this.appUi = new AppUi({
-            root: appRoot,
-            displayName: "应用",
-        });
-        this.readerUi = new ReaderUi({
-            root: readerRoot,
-            displayName: "阅读器",
-        });
-        this.headerUi = new HeaderUi({
-            root: assertExists(readerRoot.querySelector<HTMLElement>("#header")),
-            displayName: "页眉",
-        });
-        this.contentUi = new ContentUi({
-            root: assertExists(readerRoot.querySelector<HTMLElement>("#content")),
-            displayName: "正文",
-        });
-        this.footerUi = new FooterUi({
-            root: assertExists(readerRoot.querySelector<HTMLElement>("#footer")),
-            displayName: "页脚",
-        });
-        this.tocUi = new TocUi({
-            root: assertExists(readerRoot.querySelector<HTMLElement>("#toc")),
-            displayName: "目录",
-        });
+        // 正文位置和目录浏览各自保留独立的交互状态。
+        this.contentUi = new ContentUi(assertExists(readerRoot.querySelector<HTMLElement>("#content")));
+        this.tocUi = new TocUi(assertExists(readerRoot.querySelector<HTMLDialogElement>("#toc")));
 
+        // 主题与常规阅读设置独立于书籍和进度保存。
         this.settingController = new SettingController({
             pageName: PageName.READER,
             container: this.readerUi.root,
-            targets: [
-                new SettingTarget(this.appUi, [SettingCatalog.BACKGROUND_COLOR, SettingCatalog.THEME]),
-                new SettingTarget(this.readerUi, [
-                    SettingCatalog.COLOR,
-                    SettingCatalog.WIDTH,
-                    SettingCatalog.BACKGROUND_COLOR,
-                ]),
-                new SettingTarget(this.headerUi, [
-                    SettingCatalog.COLOR,
-                    SettingCatalog.PADDING_TOP,
-                    SettingCatalog.PADDING_LEFT,
-                    SettingCatalog.PADDING_BOTTOM,
-                    SettingCatalog.PADDING_RIGHT,
-                    SettingCatalog.BACKGROUND_COLOR,
-                ]),
-                new SettingTarget(this.contentUi, [
-                    SettingCatalog.FONT_SIZE,
-                    SettingCatalog.COLOR,
-                    SettingCatalog.PADDING_LEFT,
-                    SettingCatalog.PADDING_RIGHT,
-                    SettingCatalog.BACKGROUND_COLOR,
-                    SettingCatalog.LINE_HEIGHT,
-                ]),
-                new SettingTarget(this.footerUi, [
-                    SettingCatalog.FONT_SIZE,
-                    SettingCatalog.COLOR,
-                    SettingCatalog.PADDING_TOP,
-                    SettingCatalog.PADDING_BOTTOM,
-                    SettingCatalog.PADDING_LEFT,
-                    SettingCatalog.PADDING_RIGHT,
-                    SettingCatalog.BACKGROUND_COLOR,
-                ]),
-                new SettingTarget(this.tocUi, [
-                    SettingCatalog.FONT_SIZE,
-                    SettingCatalog.COLOR,
-                    SettingCatalog.BACKGROUND_COLOR,
-                ]),
-            ],
+            settings: createReaderSettings(this.readerUi.root, this.contentUi.root),
         });
     }
 
     /**
-     * 初始化阅读器
-     * @param bookId - 书籍id
+     * 首个 await 前恢复外观和工具布局，书籍加载后仅为仍有效的页面绑定阅读交互。
      */
     public async init(bookId: string, signal: AbortSignal): Promise<void> {
+        // 在可能触发异步加载前注册退出清理，离开时保留最后一次有效位置。
+        this.signal = signal;
         signal.addEventListener(
             "abort",
             () => {
+                // 路由离开时 DOM 尚在；保存最后一次滚动，但不再更新已销毁页面。
+                if (this.initialized && !this.chapterLoading && !this.returningToBookshelf) {
+                    const position = this.appearancePosition ?? this.contentUi.readProgress();
+                    if (position) run(() => this.updateProgress(position));
+                }
                 this.appUi.cleanup();
             },
             { once: true }
         );
 
+        // 首次绘制使用已保存外观和移动布局，避免等待数据库后才切换显示。
         this.settingController.init(signal);
-        const state = await this.readerService.init(bookId);
+        this.readerUi.bindResponsiveControls(signal);
+
+        // 只有当前页面仍有效时才提交初始状态、渲染章节并接受交互。
+        const state = await initReader(bookId);
         if (signal.aborted) return;
-
         this.state = state;
-
-        // restoreProgress 触发的 scroll 可能延迟到事件绑定之后，产生一次等值的进度保存。
-
-        this.tocUi.renderEntries(this.state.toc.entries);
-
-        this.contentUi
-            .renderChapter(this.state.chapter.lines)
-            .restoreProgress(this.state.progress.chapterLineNumber, this.state.progress.lineVisibleRatio);
-
-        this.footerUi
-            .renderChapterTitle(this.state.chapter.title)
-            .renderProgress(
-                this.state.chapter.toBookLineNumber(this.state.progress.chapterLineNumber),
-                this.state.toc.numberOfLines()
-            );
-
-        // 绑定事件
+        this.initialized = true;
+        this.readerUi.renderBookTitle(state.book.fileName);
+        this.tocUi.renderEntries(state.toc.entries);
+        this.renderCurrentChapter();
         this.bindEvent(signal);
     }
 
     /**
-     * 加载章节
+     * 渲染当前章、工具栏切章状态和阅读进度。
      */
-    private async loadChapter() {
-        // 获取章节数据
-        this.state.chapter = await this.readerService.getChapter(
-            this.state.book.fileId,
-            this.state.progress.chapterNumber
-        );
-
-        // 渲染正文
+    private renderCurrentChapter(): void {
+        // 正文先重建，再按段落锚点恢复位置，不能沿用旧章节的像素偏移。
         this.contentUi
-            .renderChapter(this.state.chapter.lines)
+            .renderChapter(this.state.chapter.title, this.state.chapter.lines)
             .restoreProgress(this.state.progress.chapterLineNumber, this.state.progress.lineVisibleRatio);
+        this.readerUi.renderChapterNavigation(this.state.progress.chapterNumber, this.state.toc.entries.length);
 
-        // 渲染底部信息
-        this.footerUi
-            .renderChapterTitle(this.state.chapter.title)
-            .renderProgress(
-                this.state.chapter.toBookLineNumber(this.state.progress.chapterLineNumber),
-                this.state.toc.numberOfLines()
-            );
-
-        // 高亮当前章节
+        // 底栏与目录显示同一份已提交进度。
+        this.readerUi.renderChapterInfo(
+            this.state.chapter.title,
+            toBookLineNumber(this.state.chapter, this.state.progress.chapterLineNumber),
+            numberOfLines(this.state.toc)
+        );
         this.tocUi.highlightCurrentChapter(this.state.progress.chapterNumber);
     }
 
     /**
-     * 更新阅读进度
-     * @param progress - 阅读进度对象
+     * 按提交顺序保存独立快照；已删除的书籍退出阅读，真实失败交给调用方反馈。
      */
-    private async updateProgress(progress: Partial<Progress>) {
-        this.state.progress.update(progress);
-        await this.readerService.updateProgress(this.state.progress);
-    }
+    private async updateProgress(progress: Partial<Progress>): Promise<void> {
+        const snapshot: Progress = { ...this.state.progress, ...progress };
+        const write = this.progressWrite.then(() => updateProgress(snapshot));
 
-    /**
-     * 切换章节
-     * @param  direction - 方向
-     */
-    private async switchChapter(direction: SwitchChapterDirection) {
-        if (direction === SwitchChapterDirection.PREV) {
-            if (this.state.progress.chapterNumber === 1) {
-                await this.readerUi.alertDialog("已经是第一章了");
-            } else {
-                await this.readerUi.showOverlayWhile(async () => {
-                    await this.updateProgress({
-                        chapterNumber: this.state.progress.chapterNumber - 1,
-                        chapterLineNumber: 1,
-                        lineVisibleRatio: 1,
-                        updatedTime: Date.now(),
-                    });
-                    await this.loadChapter();
-                });
-            }
-        } else if (direction === SwitchChapterDirection.NEXT) {
-            if (this.state.progress.chapterNumber === this.state.toc.numberOfChapters()) {
-                await this.readerUi.alertDialog("已经是最后一章了");
-            } else {
-                await this.readerUi.showOverlayWhile(async () => {
-                    await this.updateProgress({
-                        chapterNumber: this.state.progress.chapterNumber + 1,
-                        chapterLineNumber: 1,
-                        lineVisibleRatio: 1,
-                        updatedTime: Date.now(),
-                    });
-                    await this.loadChapter();
-                });
-            }
+        // 队列保留继续写入的能力；本次失败仍由下面的 await 抛给调用方。
+        this.progressWrite = write.then(
+            () => undefined,
+            () => undefined
+        );
+        if (await write) this.state.progress = snapshot;
+        else if (!this.signal.aborted && !this.returningToBookshelf) {
+            // 复用返回状态，阻止 hash 切换完成前继续交互或重复导航。
+            this.returningToBookshelf = true;
+            this.contentUi.cancelPendingScroll();
+            this.onReturnToBookshelf();
         }
     }
 
     /**
-     * 绑定ui事件
+     * 先保存旧位置，再获取并保存目标章；存储成功且页面仍有效时才重绘正文。
+     */
+    private async selectChapter(chapterNumber: number): Promise<void> {
+        // 拒绝重入与无效章序，避免无效操作覆盖当前进度。
+        if (this.chapterLoading || this.returningToBookshelf || this.signal.aborted) return;
+        if (chapterNumber === this.state.progress.chapterNumber) return;
+        if (chapterNumber < 1 || chapterNumber > this.state.toc.entries.length) return;
+
+        // 固定离开当前章的位置，取消仍可能读取旧 DOM 的延迟滚动回调。
+        const currentPosition = this.contentUi.readProgress();
+        this.chapterLoading = true;
+        this.contentUi.cancelPendingScroll();
+        try {
+            await this.readerUi.overlay.showWhile(async () => {
+                // 保存也属于切章过程；加载中离开页面时仍保留最后一次滚动。
+                if (currentPosition) await this.updateProgress(currentPosition);
+                if (!this.isActive()) return;
+
+                // 每个异步阶段重新确认生命周期，失败前不替换当前正文。
+                const chapter = await getChapter(this.state.book.fileId, chapterNumber);
+                if (!this.isActive()) return;
+
+                // 新章进度先持久化，再将正文和工具状态切换到目标章。
+                await this.updateProgress({
+                    chapterNumber,
+                    chapterLineNumber: 1,
+                    lineVisibleRatio: 1,
+                });
+                if (!this.isActive()) return;
+                this.state.chapter = chapter;
+                this.renderCurrentChapter();
+                this.readerUi.hideReadingTools();
+            });
+        } finally {
+            this.chapterLoading = false;
+        }
+    }
+
+    /**
+     * 跨异步边界确认页面仍在阅读，已开始返回时不继续更新正文。
+     */
+    private isActive(): boolean {
+        return !this.signal.aborted && !this.returningToBookshelf;
+    }
+
+    /**
+     * 将按钮、手势和键盘统一到同一切章流程。
+     */
+    private async switchChapter(direction: SwitchChapterDirection): Promise<void> {
+        if (this.readerUi.root.querySelector("#setting[open], #toc[open]")) return;
+        if (direction === SwitchChapterDirection.PREV) await this.selectChapter(this.state.progress.chapterNumber - 1);
+        else if (direction === SwitchChapterDirection.NEXT)
+            await this.selectChapter(this.state.progress.chapterNumber + 1);
+    }
+
+    /**
+     * 等待最新位置写入后离开；书籍已删除时仍可返回，真实失败时留在正文供重试。
+     */
+    private async returnToBookshelf(): Promise<void> {
+        // 离开与切章互斥，退出流程直接保存当前位置，不等待滚动防抖。
+        if (this.chapterLoading || this.returningToBookshelf) return;
+        this.returningToBookshelf = true;
+        this.contentUi.cancelPendingScroll();
+
+        // 写入失败时保留当前页面；路由已销毁时不重复跳转。
+        try {
+            const position = this.contentUi.readProgress();
+            if (position) await this.updateProgress(position);
+            if (!this.signal.aborted) this.onReturnToBookshelf();
+        } catch (error) {
+            this.returningToBookshelf = false;
+            throw error;
+        }
+    }
+
+    /**
+     * 为当前页面注册可随生命周期清理的交互。
      */
     private bindEvent(signal: AbortSignal): void {
-        // App UI 事件
-        this.appUi.bindChapterNavigation(this.contentUi.root, (direction) => this.switchChapter(direction), signal);
+        // 仅移动布局接受正文切章手势，中部轻点保留给工具显隐。
+        this.appUi.bindReadingGestures(
+            this.contentUi.root,
+            async (direction) => {
+                if (this.readerUi.root.hasAttribute("data-mobile-controls")) await this.switchChapter(direction);
+            },
+            () => {
+                if (this.chapterLoading || this.returningToBookshelf) return;
+                this.readerUi.toggleReadingTools();
+            },
+            signal
+        );
 
-        // header ui事件
-        this.headerUi
+        // 返回先提交进度；全屏切换前后用同一段落锚点保持阅读位置。
+        this.readerUi
+            .bindChapterNavigation((direction) => this.switchChapter(direction), signal)
+            .bindReturnToBookshelf(() => this.returnToBookshelf(), signal)
+            .bindToggleFullscreen(async () => {
+                if (this.chapterLoading || this.returningToBookshelf) return;
+                const position = this.contentUi.readProgress();
+                try {
+                    await this.appUi.toggleFullscreen();
+                } catch (error) {
+                    if (signal.aborted) return;
+                    throw new OperationError(
+                        "无法切换全屏。",
+                        "浏览器可能未提供或拒绝了全屏请求，可以继续普通阅读。",
+                        error
+                    );
+                }
+                if (signal.aborted) return;
+                if (position) this.contentUi.restoreProgress(position.chapterLineNumber, position.lineVisibleRatio);
+                this.contentUi.dispatchContentScroll();
+            }, signal);
+
+        // 同一组可移动入口交给各浮层，展开和焦点状态不依赖按钮所在容器。
+        this.readerUi
             .bindToggleSettingPanel((opener) => {
+                if (this.chapterLoading || this.returningToBookshelf) return;
                 this.settingController.toggle(opener);
             }, signal)
             .bindToggleTocPanel(() => {
-                const expanded = this.tocUi.toggleToc();
-                this.headerUi.setTocExpanded(expanded);
-                if (expanded) this.tocUi.highlightCurrentChapter(this.state.progress.chapterNumber);
-            }, signal)
-            .bindToggleFullscreen(() => {
-                this.appUi
-                    .toggleFullscreen()
-                    .then(() => this.contentUi.dispatchContentScroll())
-                    .catch(async () => await this.readerUi.alertDialog("当前浏览器不支持全屏功能"));
+                if (this.chapterLoading || this.returningToBookshelf) return;
+                this.tocUi.highlightCurrentChapter(this.state.progress.chapterNumber);
+                this.readerUi.setTocExpanded(this.tocUi.toggleToc());
             }, signal);
 
-        // Reader UI 事件
-        this.contentUi.bindContentScroll(async (chapterLineNumber, lineVisibleRatio) => {
-            await this.updateProgress({ chapterLineNumber, lineVisibleRatio, updatedTime: Date.now() });
-            this.footerUi.renderProgress(
-                this.state.chapter.toBookLineNumber(chapterLineNumber),
-                this.state.toc.numberOfLines()
-            );
-        }, signal);
+        // 正文键盘复用切章流程，滚动保存只接受稳定正文的位置。
+        this.contentUi
+            .bindKeyboardNavigation((direction) => this.switchChapter(direction), signal)
+            .bindContentScroll(async (chapterLineNumber, lineVisibleRatio) => {
+                if (this.chapterLoading || this.returningToBookshelf || this.appearancePosition) return;
+                await this.updateProgress({ chapterLineNumber, lineVisibleRatio });
+                if (!this.isActive()) return;
+                this.readerUi.renderProgress(
+                    toBookLineNumber(this.state.chapter, chapterLineNumber),
+                    numberOfLines(this.state.toc)
+                );
+            }, signal);
 
-        // toc ui事件
+        // 选章成功回到正文；取消目录仍由原生对话框恢复入口焦点。
         this.tocUi
-            .delegateTocItemClick(async (chapterNumber) => {
-                await this.readerUi.showOverlayWhile(async () => {
-                    await this.updateProgress({
-                        chapterNumber,
-                        chapterLineNumber: 1,
-                        lineVisibleRatio: 1,
-                        updatedTime: Date.now(),
-                    });
-                    await this.loadChapter();
-                });
-            }, signal)
-            .bindTocClose(() => {
-                this.headerUi.setTocExpanded(false).focusTocToggleButton();
+            .delegateTocItemClick((chapterNumber) => this.selectChapter(chapterNumber), signal)
+            .bindTocClose((chapterSelected) => {
+                this.readerUi.setTocExpanded(false);
+                if (chapterSelected) {
+                    this.readerUi.hideReadingTools();
+                    this.contentUi.root.focus({ preventScroll: true });
+                }
             }, signal);
+
+        // 外观预览期间冻结阅读锚点，关闭后按最终布局恢复并重新同步进度。
+        bind(
+            this.readerUi.root,
+            "appearance-open",
+            () => {
+                this.contentUi.cancelPendingScroll();
+                this.appearancePosition = this.contentUi.readProgress();
+            },
+            { signal }
+        );
+        bind(
+            this.readerUi.root,
+            "appearance-close",
+            () => {
+                const position = this.appearancePosition;
+                this.appearancePosition = undefined;
+                if (position) this.contentUi.restoreProgress(position.chapterLineNumber, position.lineVisibleRatio);
+                this.contentUi.dispatchContentScroll();
+            },
+            { signal }
+        );
     }
 }

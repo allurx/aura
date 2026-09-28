@@ -1,44 +1,194 @@
-@charset "UTF-8";
-
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #reader {
     width: 800px;
-    min-width: 800px;
-    max-width: 100%;
-    height: 100%;
-    margin: 0 auto;
+    min-width: 640px;
+    max-width: min(960px, calc(100vw - 160px));
+    grid-column: 2;
+    grid-row: 1;
+    height: calc(100% - 40px);
+    margin: 20px auto;
     display: flex;
     flex-direction: column;
-    background-color: var(--reader-surface);
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
     position: relative;
-    outline: none;
     overflow: hidden;
     resize: horizontal;
+    border: 1px solid var(--appearance-border);
+    border-radius: 26px;
+    background-color: var(--reader-surface);
     color: var(--reader-color);
-    line-height: 2;
+    box-shadow: var(--appearance-shadow-raised);
+    line-height: 1.6;
 
-    /* 窄屏只限制 effective width；inline preferred width 保留，离开窄屏后可恢复。 */
-    @media (max-width: 800px) {
-        & {
-            width: 100% !important;
-            min-width: 100% !important;
-            resize: none;
+    &[data-mobile-controls] {
+        max-width: min(960px, 100%);
+    }
+
+    @media (max-width: 800px), (max-height: 500px) and (pointer: coarse) {
+        width: 100% !important;
+        min-width: 100% !important;
+        height: 100%;
+        margin: 0;
+        resize: none;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    @media (max-height: 500px) {
+        height: 100%;
+        margin-block: 0;
+        border-block: 0;
+        border-radius: 0;
+    }
+}
+
+/* 触摸布局由正文中部唤出工具；辅助入口仍在键盘和阅读顺序中。 */
+#reader > .reader-tools-entry {
+    position: absolute;
+    z-index: 4;
+    top: max(8px, env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
+    right: auto;
+    transform: none;
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+
+    &:focus-visible {
+        width: auto;
+        height: auto;
+        min-height: 44px;
+        padding: 8px 12px;
+        border: 1px solid var(--appearance-border);
+        border-radius: 12px;
+        background: var(--reader-surface);
+        color: var(--reader-color);
+        font: inherit;
+        box-shadow: var(--appearance-shadow-raised);
+        clip-path: none;
+    }
+}
+
+/* 工具覆盖正文而不参与布局，显隐时保持滚动容器尺寸和阅读位置。 */
+#reader > :is(#header, #footer) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 3;
+    opacity: 1;
+    transform: none;
+    transition:
+        opacity var(--motion-duration-normal) var(--motion-ease),
+        transform var(--motion-duration-normal) var(--motion-ease-out),
+        visibility 0s;
+}
+
+#reader > #header {
+    --tools-offset: -0.5rem;
+}
+
+#reader > #footer {
+    --tools-offset: 0.5rem;
+}
+
+#reader:not([data-reading-tools-visible]) > :is(#header, #footer) {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(var(--tools-offset));
+    pointer-events: none;
+    transition:
+        opacity var(--motion-duration-fast) var(--motion-ease),
+        transform var(--motion-duration-fast) var(--motion-ease),
+        visibility 0s linear var(--motion-duration-fast);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #reader > :is(#header, #footer),
+    #reader:not([data-reading-tools-visible]) > :is(#header, #footer) {
+        transform: none;
+        transition: none;
+    }
+}
+
+#reader[style*="background-color"] {
+    --focus-ring-color: currentColor;
+
+    > .reader-tools-entry:focus-visible {
+        background-color: inherit;
+    }
+}
+
+:is(#reader, #reader-actions) .reader-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    --icon-size: 20px;
+    gap: 6px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px;
+    border: 1px solid transparent;
+    border-radius: 13px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: 1.4;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+        background-color var(--motion-duration-fast) var(--motion-ease),
+        border-color var(--motion-duration-fast) var(--motion-ease),
+        color var(--motion-duration-fast) var(--motion-ease),
+        box-shadow var(--motion-duration-fast) var(--motion-ease),
+        transform var(--motion-duration-fast) var(--motion-ease);
+
+    @media (hover: hover) and (pointer: fine) {
+        &:hover:not(:disabled) {
+            background: color-mix(in srgb, currentColor 6%, transparent);
+            box-shadow: var(--appearance-shadow-soft);
+            transform: translateY(-1px);
+        }
+    }
+
+    &:active:not(:disabled) {
+        background: color-mix(in srgb, currentColor 10%, transparent);
+        box-shadow: none;
+        transform: scale(0.96);
+    }
+
+    &:is([aria-expanded="true"], [aria-pressed="true"]) {
+        border-color: color-mix(in srgb, currentColor 20%, transparent);
+        background: color-mix(in srgb, currentColor 10%, transparent);
+    }
+
+    @media (forced-colors: active) {
+        &:is([aria-expanded="true"], [aria-pressed="true"]) {
+            border-color: Highlight;
+            background: Highlight;
+            color: HighlightText;
+        }
+    }
+
+    &:disabled {
+        opacity: 0.35;
+        cursor: default;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        transition: none;
+
+        &:is(:hover, :active):not(:disabled) {
+            transform: none;
         }
     }
 }

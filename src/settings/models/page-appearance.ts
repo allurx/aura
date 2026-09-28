@@ -1,83 +1,65 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { UiId } from "@/components/ui-id";
 import type { StyleProperty } from "./style-property";
 import type { Theme } from "./theme";
 
 /**
- * 单个页面已经提交的不可变 Appearance 快照。
+ * 单个页面已提交的不可变外观快照，只保存主题和常规设置。
  *
- * Theme 是页面基础层；UI 样式仅保存用户显式设置的稀疏覆盖值。
- *
- * @author allurx
  */
 export default class PageAppearance {
     private constructor(
         public readonly theme: Theme,
-        private readonly styles: ReadonlyMap<UiId, ReadonlyMap<StyleProperty, string>>
+        private readonly styles: ReadonlyMap<StyleProperty, string>
     ) {}
 
     /**
-     * @param theme - 当前页面的默认 Theme
-     * @returns 不包含 UI 显式覆盖的默认快照
+     * @returns 没有常规设置覆盖的页面默认快照。
      */
     public static defaults(theme: Theme): PageAppearance {
         return new PageAppearance(theme, new Map());
     }
 
     /**
-     * @param uiId - UI 标识
-     * @param property - CSS 属性
-     * @returns 已提交的显式覆盖值；缺失时返回 `undefined`
+     * @returns 已提交的显式值；缺失时使用主题或 CSS 默认值。
      */
-    public getStyle(uiId: UiId, property: StyleProperty): string | undefined {
-        return this.styles.get(uiId)?.get(property);
+    public getStyle(property: StyleProperty): string | undefined {
+        return this.styles.get(property);
     }
 
     /**
-     * @param theme - 新的页面基础 Theme
-     * @returns 包含新 Theme 且保留全部 UI 显式覆盖的新快照
+     * 更新页面主题，保留所有常规设置。
      */
     public withTheme(theme: Theme): PageAppearance {
         return theme === this.theme ? this : new PageAppearance(theme, this.styles);
     }
 
     /**
-     * @param uiId - UI 标识
-     * @param property - CSS 属性
-     * @param value - 新的显式值
-     * @returns 更新单个 UI 属性后的新快照
+     * 更新单个常规设置，保留其他设置。
      */
-    public withStyle(uiId: UiId, property: StyleProperty, value: string): PageAppearance {
+    public withStyle(property: StyleProperty, value: string): PageAppearance {
         const styles = new Map(this.styles);
-        const uiStyles = new Map(styles.get(uiId));
-        uiStyles.set(property, value);
-        styles.set(uiId, uiStyles);
+        styles.set(property, value);
         return new PageAppearance(this.theme, styles);
     }
 
     /**
-     * @returns 可安全序列化到 page-scoped localStorage 的稳定白名单结构
+     * 移除单项显式覆盖，恢复主题或 CSS 默认值。
+     */
+    public withoutStyle(property: StyleProperty): PageAppearance {
+        if (!this.styles.has(property)) return this;
+        const styles = new Map(this.styles);
+        styles.delete(property);
+        return new PageAppearance(this.theme, styles);
+    }
+
+    /**
+     * @returns page-scoped localStorage 的白名单结构。
      */
     public toJSON(): Record<string, unknown> {
-        const ui: Record<string, Record<string, string>> = {};
-        for (const [uiId, styles] of this.styles) {
-            ui[uiId] = Object.fromEntries(styles);
-        }
-        return { theme: this.theme, ui };
+        return { theme: this.theme, general: Object.fromEntries(this.styles) };
     }
 }
