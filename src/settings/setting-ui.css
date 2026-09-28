@@ -22,8 +22,7 @@
     border: 1px solid var(--appearance-border);
     border-radius: 1.5rem;
     box-shadow: var(--appearance-shadow-floating);
-    overflow: hidden;
-    scrollbar-gutter: auto;
+    overflow: clip;
     font-size: 15px;
     font-family: var(--ui-font-family);
     line-height: 1.5;
@@ -362,15 +361,19 @@
         }
     }
 
-    /* 极矮窗口允许整个面板滚动，避免固定部分挤掉全部设置项。 */
-    @media (max-height: 16rem) {
-        overflow-y: auto;
-        scrollbar-gutter: stable;
+    /* 矮窗口收紧固定部分，仍由设置项区域独立滚动。 */
+    @media (max-height: 24rem) {
+        > header {
+            padding-block: 0.25rem;
+        }
 
         > .setting-body {
-            flex: none;
-            overflow: visible;
-            scrollbar-gutter: auto;
+            padding-block: 0.35rem;
+        }
+
+        > footer {
+            padding-top: 0.25rem;
+            padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
         }
     }
 

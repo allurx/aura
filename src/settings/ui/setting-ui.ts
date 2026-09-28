@@ -22,6 +22,7 @@ import type SettingUiListener from "./setting-ui-listener";
  */
 export default class SettingUi extends Ui implements SettingControlListener {
     declare public readonly root: HTMLDialogElement;
+    private readonly bodyElement: HTMLElement;
     private readonly themeElement: HTMLElement;
     private readonly generalElement: HTMLElement;
     private readonly itemsElement: HTMLElement;
@@ -43,6 +44,7 @@ export default class SettingUi extends Ui implements SettingControlListener {
         super(container.appendChild(createElementFromHtml<HTMLDialogElement>(SettingUi.template)));
 
         // 主题和常规设置分别就位，后续只更新控件的当前值。
+        this.bodyElement = assertExists(this.root.querySelector<HTMLElement>(".setting-body"));
         this.themeElement = assertExists(this.root.querySelector<HTMLElement>(".theme-items"));
         this.generalElement = assertExists(this.root.querySelector<HTMLElement>(".general-settings"));
         this.itemsElement = assertExists(this.root.querySelector<HTMLElement>(".items"));
@@ -201,11 +203,11 @@ export default class SettingUi extends Ui implements SettingControlListener {
             if (!this.root.open) return;
             this.restoreVisibleFocus();
             const focused = document.activeElement;
-            if (focused instanceof HTMLElement && this.root.contains(focused)) {
+            if (focused instanceof HTMLElement && this.bodyElement.contains(focused)) {
                 focused.scrollIntoView({ block: "nearest", inline: "nearest" });
             }
         });
-        observer.observe(this.root);
+        observer.observe(this.bodyElement);
         window.addEventListener(
             "resize",
             () => {
@@ -401,7 +403,7 @@ export default class SettingUi extends Ui implements SettingControlListener {
     }
 
     private static readonly template = `
-        <dialog id="setting" class="panel-scroll" aria-labelledby="setting-title" inert>
+        <dialog id="setting" aria-labelledby="setting-title" inert>
             <header>
                 <h2 id="setting-title" class="heading">设置</h2>
                 <button class="close icon-button" type="button" title="关闭" aria-label="关闭设置" autofocus>

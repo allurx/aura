@@ -9,7 +9,7 @@ import { delegate, bind } from "@/utils/event-util";
 import type TocEntry from "@/domain/toc/toc-entry";
 
 /**
- * 用章节及其可视偏移恢复位置，避免响应式换行和滚动容器切换丢失浏览上下文。
+ * 用章节及其可视偏移恢复位置，避免响应式换行丢失浏览上下文。
  */
 interface TocScrollPosition {
     chapterNumber: number | undefined;
@@ -34,7 +34,6 @@ export default class TocUi extends Ui {
     private chapterButtons: HTMLButtonElement[] = [];
     private unfilteredPosition: TocScrollPosition | undefined;
     private browsingPosition: TocScrollPosition | undefined;
-    private lastScrollContainer: HTMLElement | undefined;
     private lastLayout = "";
     private query = "";
     private selectingChapter = false;
@@ -64,16 +63,13 @@ export default class TocUi extends Ui {
             return false;
         }
 
-        // 先进入原生模态并建立焦点，再按实际滚动容器恢复浏览位置。
+        // 先进入原生模态并建立焦点，再恢复章节列表的浏览位置。
         this.dialog.inert = false;
         this.dialog.showModal();
         this.closeButton.focus({ preventScroll: true });
-        const scrollContainer = this.scrollContainer();
         if (this.browsingPosition) this.restorePosition(this.browsingPosition);
         else this.tocContentElement.querySelector('[aria-current="location"]')?.scrollIntoView({ block: "center" });
 
-        // 矮视口恢复位置后标题可能在屏外，将焦点留在可见的抽屉本体。
-        if (scrollContainer === this.dialog) this.dialog.focus({ preventScroll: true });
         this.capturePosition();
         return true;
     }
@@ -151,28 +147,21 @@ export default class TocUi extends Ui {
     public bindTocClose(handler: (chapterSelected: boolean) => void, signal: AbortSignal): this {
         let composing = false;
 
-        // 尺寸与滚动容器改变时恢复章节锚点，普通滚动才更新当前浏览快照。
+        // 尺寸改变时恢复章节锚点，普通滚动才更新当前浏览快照。
         const observer = new ResizeObserver(() => {
             this.restoreAfterResize();
         });
         observer.observe(this.dialog);
         observer.observe(this.tocContentElement);
-        for (const container of [this.dialog, this.tocContentElement]) {
-            bind(
-                container,
-                "scroll",
-                () => {
-                    // CSS 切换会先清空旧容器的 scrollTop；此时保留变更前的章节锚点。
-                    if (
-                        this.dialog.open &&
-                        this.scrollContainer() === this.lastScrollContainer &&
-                        this.layoutSignature() === this.lastLayout
-                    )
-                        this.capturePosition();
-                },
-                { signal, passive: true }
-            );
-        }
+        bind(
+            this.tocContentElement,
+            "scroll",
+            () => {
+                // 布局变化可能钳制 scrollTop；此时保留变更前的章节锚点。
+                if (this.dialog.open && this.layoutSignature() === this.lastLayout) this.capturePosition();
+            },
+            { signal, passive: true }
+        );
 
         // 关闭按钮和 Escape 统一保存位置，close 事件只负责通知页面恢复焦点。
         bind(
@@ -235,7 +224,6 @@ export default class TocUi extends Ui {
             this.query = nextQuery;
             this.renderFilteredEntries();
             this.restorePosition(this.query ? undefined : this.unfilteredPosition);
-            this.keepFocusedElementVisible();
             this.capturePosition();
         };
         bind(
@@ -295,13 +283,6 @@ export default class TocUi extends Ui {
     }
 
     /**
-     * 矮视口由整个抽屉滚动，其他尺寸只滚动章节列表。
-     */
-    private scrollContainer(): HTMLElement {
-        return getComputedStyle(this.tocContentElement).overflowY === "visible" ? this.dialog : this.tocContentElement;
-    }
-
-    /**
      * 尺寸变化后的 scroll 事件不能覆盖变化前的位置。
      */
     private layoutSignature(): string {
@@ -318,7 +299,7 @@ export default class TocUi extends Ui {
      */
     private capturePosition(): void {
         // 上缘坐标包含容器边框，查找第一个未完全滚出视口的章节。
-        const container = this.scrollContainer();
+        const container = this.tocContentElement;
         const top = container.getBoundingClientRect().top + container.clientTop;
         let low = 0;
         let high = this.chapterButtons.length;
@@ -337,8 +318,7 @@ export default class TocUi extends Ui {
             scrollTop: container.scrollTop,
         };
 
-        // 快照只适用于采集时的容器与尺寸，布局变化后的 scroll 不能覆盖它。
-        this.lastScrollContainer = container;
+        // 快照只适用于采集时的尺寸，布局变化后的 scroll 不能覆盖它。
         this.lastLayout = this.layoutSignature();
     }
 
@@ -347,7 +327,7 @@ export default class TocUi extends Ui {
      */
     private restorePosition(position: TocScrollPosition | undefined): void {
         // 以稳定章号跨筛选结果与响应式换行寻找原锚点。
-        const container = this.scrollContainer();
+        const container = this.tocContentElement;
         const button = position
             ? this.chapterButtons.find((item) => Number(item.dataset["chapterNumber"]) === position.chapterNumber)
             : undefined;
@@ -364,19 +344,18 @@ export default class TocUi extends Ui {
      */
     private restoreAfterResize(): void {
         if (!this.dialog.open) return;
-        if (this.scrollContainer() === this.lastScrollContainer && this.layoutSignature() === this.lastLayout) return;
+        if (this.layoutSignature() === this.lastLayout) return;
         this.restorePosition(this.browsingPosition);
-        this.keepFocusedElementVisible(true);
+        this.keepFocusedElementVisible();
         this.capturePosition();
     }
 
     /**
-     * 矮抽屉中搜索和章名共享滚动区，调整窗口或清空搜索后仍须看得到焦点。
-     * @param preserveBrowsing - 恢复布局时不为屏外工具栏牺牲章节浏览锚点。
+     * 尺寸变化后保持聚焦章节可见；头部和工具区始终位于列表滚动区之外。
      */
-    private keepFocusedElementVisible(preserveBrowsing = false): void {
+    private keepFocusedElementVisible(): void {
         const focused = document.activeElement;
-        const container = this.scrollContainer();
+        const container = this.tocContentElement;
         if (!(focused instanceof HTMLElement) || focused === container || !container.contains(focused)) return;
 
         // 扣除边框和滚动留白，得到聚焦控件应保持可见的实际区域。
@@ -390,18 +369,7 @@ export default class TocUi extends Ui {
             (Number.parseFloat(style.scrollPaddingBottom) || 0);
         const target = focused.getBoundingClientRect();
 
-        // 恢复章节位置时，屏外关闭按钮让位给容器焦点；搜索框仍需保持可见。
-        if (
-            preserveBrowsing &&
-            focused !== this.searchInput &&
-            !this.tocContentElement.contains(focused) &&
-            (target.top < top || target.bottom > bottom)
-        ) {
-            this.dialog.focus({ preventScroll: true });
-            return;
-        }
-
-        // 仅补偿越界部分，避免输入搜索时无必要地重置整个目录位置。
+        // 仅补偿越界部分，避免无必要地重置整个目录位置。
         if (target.top < top) container.scrollTop += target.top - top;
         else if (target.bottom > bottom) container.scrollTop += target.bottom - bottom;
     }

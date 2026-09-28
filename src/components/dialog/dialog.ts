@@ -161,7 +161,7 @@ export default class Dialog {
      */
     private template() {
         return `
-      <dialog class="dialog panel-scroll" inert>
+      <dialog class="dialog" inert>
           <header class="header">
             <span class="title"></span>
             <button type="button" class="close-btn icon-button" aria-label="关闭" title="关闭" autofocus>

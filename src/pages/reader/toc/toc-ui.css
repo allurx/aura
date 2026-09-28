@@ -24,7 +24,7 @@
     background-color: var(--appearance-panel);
     font-size: 1rem;
     line-height: 1.5;
-    overflow: hidden;
+    overflow: clip;
     scrollbar-gutter: auto;
     box-shadow: var(--appearance-shadow-floating);
     opacity: 0;
@@ -226,22 +226,35 @@
     }
 
     @media (max-height: 28rem) {
-        overflow-y: auto;
-        overscroll-behavior: contain;
-        scrollbar-gutter: stable;
-
         > header {
-            padding-block: 0.5rem;
+            padding-block: 0.25rem;
+        }
+
+        .toc-heading {
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 0 0.5rem;
         }
 
         .toc-tools {
-            padding-block: 0.6rem;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.5rem;
+            padding-block: 0.5rem;
         }
 
-        > .main {
-            flex: none;
-            overflow: visible;
-            scrollbar-gutter: auto;
+        .locate-current {
+            padding: 0.25rem 0.5rem;
+            line-height: 1.2;
+
+            .toc-current-heading {
+                gap: 0.5rem;
+            }
+
+            .toc-current-title {
+                -webkit-line-clamp: 1;
+                margin-top: 0.125rem;
+            }
         }
     }
 

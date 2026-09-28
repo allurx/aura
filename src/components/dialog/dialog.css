@@ -24,8 +24,7 @@
     /* 初始隐藏，防止闪烁 */
     display: none;
     flex-direction: column;
-    overflow: hidden;
-    scrollbar-gutter: auto;
+    overflow: clip;
 
     /* 居中显示 */
     position: fixed;
@@ -194,19 +193,17 @@
     }
 
     @media (max-height: 24rem) {
-        overflow-y: auto;
-        overscroll-behavior: contain;
-        scrollbar-gutter: stable;
-
         .header {
-            min-height: 56px;
+            min-height: 52px;
             padding-block: 0.25rem;
         }
 
         .body {
-            flex: none;
-            overflow: visible;
-            scrollbar-gutter: auto;
+            padding-block: 0.5rem;
+        }
+
+        .footer {
+            padding-block: 0.25rem;
         }
     }
 }
