@@ -166,4 +166,4 @@ jobs:
                       --verify-tag \
                       --fail-on-no-commits \
                       --generate-notes \
-                      --title "Aura $TAG_NAME"
+                      --title "$TAG_NAME"
