@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type Category from "@/domain/category/category";
+import { CATEGORIES } from "@/domain/category/category";
 import { bind, delegate } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
 import Ui from "@/components/ui";
@@ -19,13 +19,13 @@ export default class NavUi extends Ui {
     private readonly mobile = window.matchMedia("(max-width: 768px)");
 
     /**
-     * 渲染虚拟全部书籍入口以及原有分类。
+     * 渲染虚拟全部书籍入口及完整固定目录，空分类也保持可达。
      */
-    public renderNav(categories: Category[], activeId: string): void {
+    public renderNav(activeId: string): void {
         this.navigation.replaceChildren();
 
         // 虚拟“全部书籍”排在真实分类之前，保持默认浏览入口。
-        for (const category of [{ id: "", name: "全部书籍" }, ...categories.toSorted((a, b) => a.order - b.order)]) {
+        for (const category of [{ id: "", name: "全部书籍" }, ...CATEGORIES]) {
             // 按钮保存分类 ID，点击不依赖名称或装饰节点。
             const button = document.createElement("button");
             button.type = "button";

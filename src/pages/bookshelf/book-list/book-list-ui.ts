@@ -6,7 +6,7 @@
 import { delegate } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
 import Ui from "@/components/ui";
-import type Category from "@/domain/category/category";
+import { CATEGORIES } from "@/domain/category/category";
 import type { BookSummary } from "../bookshelf-service";
 
 /**
@@ -31,7 +31,7 @@ export default class BookListUi extends Ui {
      * 更新筛选结果，并保留还在书架中的操作焦点及滚动位置。
      * @param searching - 是否存在有效查询，用于区分空书架与无搜索结果
      */
-    public renderBooks(books: BookSummary[], categories: Category[], searching: boolean): void {
+    public renderBooks(books: BookSummary[], searching: boolean): void {
         // 替换 DOM 前记录操作来源，禁用的分类选择器也参与焦点恢复。
         const scrollTop = this.root.scrollTop;
         const active = document.activeElement === document.body ? this.pendingSelection : document.activeElement;
@@ -61,8 +61,7 @@ export default class BookListUi extends Ui {
         } else {
             // 先在片段中生成全部书目，再一次替换当前结果。
             const fragment = document.createDocumentFragment();
-            const sortedCategories = categories.toSorted((a, b) => a.order - b.order);
-            for (const book of books) fragment.append(this.createBookElement(book, sortedCategories));
+            for (const book of books) fragment.append(this.createBookElement(book));
             this.root.replaceChildren(fragment);
         }
 
@@ -168,9 +167,8 @@ export default class BookListUi extends Ui {
 
     /**
      * 全书名使用文本和无障碍名称，视觉书封保持有限行数。
-     * @param categories - 已按展示顺序排列的可选分类
      */
-    private createBookElement(summary: BookSummary, categories: Category[]): HTMLElement {
+    private createBookElement(summary: BookSummary): HTMLElement {
         // 书目容器携带稳定 ID，供事件委托和重渲染后的焦点定位。
         const book = document.createElement("article");
         book.className = "book";
@@ -202,7 +200,7 @@ export default class BookListUi extends Ui {
         categorySelect.dataset["categoryId"] = summary.book.categoryId;
         categorySelect.setAttribute("aria-label", `移动《${summary.title}》到分类`);
         categorySelect.title = "选择分类即可移动";
-        for (const category of categories) {
+        for (const category of CATEGORIES) {
             const option = document.createElement("option");
             option.value = category.id;
             option.textContent = category.name;

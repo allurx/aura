@@ -4,7 +4,6 @@
  */
 
 import type Book from "@/domain/book/book";
-import type Category from "@/domain/category/category";
 import type Chapter from "@/domain/chapter/chapter";
 import type BookFile from "@/domain/file/book-file";
 import type Progress from "@/domain/progress/progress";
@@ -14,7 +13,6 @@ import type Toc from "@/domain/toc/toc";
  * 当前数据库的记录类型；读取边界按本应用写入的结构收窄，不恢复类原型。
  */
 interface StoreRecords {
-    category: Category;
     file: BookFile;
     book: Book;
     toc: Toc;

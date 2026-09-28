@@ -13,13 +13,12 @@ import {
     deleteBook,
     getBookSummaries,
     importBooks,
-    initBookshelf,
     moveBook,
     type BookImportResult,
     type BookSummary,
 } from "./bookshelf-service";
-import type BookshelfState from "./bookshelf-state";
 import { bookshelfSession } from "./bookshelf-state";
+import { DEFAULT_CATEGORY_ID, getCategory } from "@/domain/category/category";
 import { bind } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
 import { themeSetting } from "@/settings/definitions/setting-catalog";
@@ -36,7 +35,6 @@ export default class BookshelfController {
     private readonly bookListUi: BookListUi;
     private readonly bookshelfUi: BookshelfUi;
     private readonly settingController: SettingController;
-    private state!: BookshelfState;
     private signal!: AbortSignal;
     private books: BookSummary[] = [];
     private refreshVersion = 0;
@@ -76,15 +74,7 @@ export default class BookshelfController {
 
         // 初次渲染会触发滚动回写，先保留进入页面时的会话位置。
         const savedScrollTop = bookshelfSession.scrollTop;
-        const state = await initBookshelf();
-        if (!this.isActive()) return;
-
-        // 会话分类可能已经不存在，此时回到全部书籍。
-        this.state = state;
-        state.categoryId = state.categories.some((category) => category.id === bookshelfSession.categoryId)
-            ? bookshelfSession.categoryId
-            : "";
-        this.navUi.renderNav(state.categories, state.categoryId);
+        this.navUi.renderNav(bookshelfSession.categoryId);
         this.bindEvent(signal);
 
         // 列表渲染完成后再恢复位置，焦点恢复本身不触发滚动。
@@ -131,18 +121,18 @@ export default class BookshelfController {
         const query = bookshelfSession.search.trim().toLocaleLowerCase();
         const books = this.books.filter(
             ({ book, title }) =>
-                (!this.state.categoryId || book.categoryId === this.state.categoryId) &&
+                (!bookshelfSession.categoryId || book.categoryId === bookshelfSession.categoryId) &&
                 title.toLocaleLowerCase().includes(query)
         );
 
         // 列表、数量与导航选中态使用同一份筛选结果。
-        this.bookListUi.renderBooks(books, this.state.categories, query.length > 0);
+        this.bookListUi.renderBooks(books, query.length > 0);
         this.headerUi.render(
-            this.state.categories.find((category) => category.id === this.state.categoryId)?.name ?? "全部书籍",
+            getCategory(bookshelfSession.categoryId)?.name ?? "全部书籍",
             books.length,
             bookshelfSession.search
         );
-        this.navUi.setActive(this.state.categoryId);
+        this.navUi.setActive(bookshelfSession.categoryId);
     }
 
     /**
@@ -154,8 +144,7 @@ export default class BookshelfController {
         // 批次开始时确定可导入文件与目标分类，执行期间不随 UI 筛选变化。
         const invalidFiles = files.filter((file) => !/\.txt$/i.test(file.name));
         const validFiles = files.filter((file) => /\.txt$/i.test(file.name));
-        const categoryId =
-            this.state.categoryId || assertExists(this.state.categories.find((category) => category.order === 1)).id;
+        const categoryId = bookshelfSession.categoryId || DEFAULT_CATEGORY_ID;
         let result: BookImportResult = { books: [], unsupportedEncodingFiles: [] };
 
         // 导入与列表刷新共用忙碌状态，避免结果尚未可见就接受下一次操作。
@@ -255,7 +244,7 @@ export default class BookshelfController {
         if (this.busy || !this.isActive()) return false;
         const summary = assertExists(this.books.find(({ book }) => book.id === bookId));
         if (summary.book.categoryId === categoryId) return true;
-        const category = assertExists(this.state.categories.find((item) => item.id === categoryId));
+        const category = assertExists(getCategory(categoryId), "Category not found");
 
         // 先提交领域操作，页面退出只停止渲染，不把已保存结果报告为失败。
         this.busy = true;
@@ -263,7 +252,7 @@ export default class BookshelfController {
             await moveBook(bookId, categoryId);
             if (!this.isActive()) return true;
 
-            summary.book.categoryId = categoryId;
+            summary.book.categoryId = category.id;
             this.renderBooks();
             this.bookshelfUi.showFeedback(`已移至${category.name}`);
             return true;
@@ -309,7 +298,6 @@ export default class BookshelfController {
             {
                 category: (categoryId) => {
                     if (this.busy) return;
-                    this.state.categoryId = categoryId;
                     bookshelfSession.categoryId = categoryId;
                     bookshelfSession.scrollTop = 0;
                     this.renderBooks();

@@ -8,6 +8,7 @@ import type BookFile from "@/domain/file/book-file";
 import type Chapter from "@/domain/chapter/chapter";
 import type Toc from "@/domain/toc/toc";
 import type Progress from "@/domain/progress/progress";
+import { getCategory, type CategoryId } from "@/domain/category/category";
 import { parseChapters } from "@/domain/chapter/chapter-parser";
 import { detectTextEncoding } from "@/domain/file/text-encoding-detector";
 import { computeHash } from "@/utils/file-util";
@@ -25,8 +26,6 @@ import {
     putRecord,
     type StoreName,
 } from "@/database/store";
-import { createCategorySeeds } from "./seeds/category-seed";
-import type BookshelfState from "./bookshelf-state";
 
 /**
  * 批量导入的已完成结果；同内容文件各自创建书籍和阅读进度。
@@ -72,21 +71,6 @@ interface PreparedFile {
 }
 
 /**
- * 首次只初始化分类，书架从空列表开始；并发页面在同一写事务中确认初始化结果。
- */
-export async function initBookshelf(): Promise<BookshelfState> {
-    const categories = await runTransaction("category", "readwrite", async (transaction) => {
-        const existing = await getAllRecords(transaction, "category");
-        if (existing.length > 0) return existing;
-
-        const seeds = createCategorySeeds();
-        await Promise.all(seeds.map((category) => addRecord(transaction, "category", category)));
-        return seeds;
-    });
-    return { categoryId: "", categories };
-}
-
-/**
  * 按内容分组导入，每组独立提交；编码不支持的组跳过，其他异常中断批次。
  * @throws {BookImportError} 保留已完成结果与未完成文件，cause 指向原始异常。
  */
@@ -99,6 +83,7 @@ export async function importBooks(
     const unfinishedFiles = new Set(files);
 
     try {
+        const category = assertExists(getCategory(categoryId), "Category not found");
         for (const [hash, groupedFiles] of await groupFilesByHash(files, reportProgress)) {
             const file = assertExists(groupedFiles[0]);
             const prepared = await prepareFile(file, hash, reportProgress);
@@ -111,7 +96,7 @@ export async function importBooks(
                     : ["book", "progress"];
                 const books = await runTransaction(storeNames, "readwrite", async (transaction) => {
                     await savePreparedFile(prepared, transaction);
-                    return addBooks(groupedFiles, categoryId, prepared.file.id, transaction);
+                    return addBooks(groupedFiles, category.id, prepared.file.id, transaction);
                 });
                 result.books.push(...books);
             }
@@ -143,7 +128,7 @@ export async function deleteBook(bookId: string): Promise<void> {
 }
 
 /**
- * 原子清空书架，保留分类。
+ * 原子清空全部书籍、共享正文和阅读进度。
  */
 export async function clearBookshelf(): Promise<void> {
     const storeNames: StoreName[] = ["file", "book", "chapter", "toc", "progress"];
@@ -183,13 +168,13 @@ export async function getBookSummaries(): Promise<BookSummary[]> {
 }
 
 /**
- * 在同一事务内核实分类并移动书籍，保留独立进度和共享正文。
+ * 核实固定分类后原子更新书籍归属，保留独立进度和共享正文。
  */
 export async function moveBook(bookId: string, categoryId: string): Promise<void> {
-    await runTransaction(["book", "category"], "readwrite", async (transaction) => {
-        assertExists(await getRecord(transaction, "category", categoryId), "Category not found");
+    const category = assertExists(getCategory(categoryId), "Category not found");
+    await runTransaction("book", "readwrite", async (transaction) => {
         const book = assertExists(await getRecord(transaction, "book", bookId), "Book not found");
-        await putRecord(transaction, "book", { ...book, categoryId });
+        await putRecord(transaction, "book", { ...book, categoryId: category.id });
     });
 }
 
@@ -258,7 +243,7 @@ async function savePreparedFile(prepared: PreparedFile, transaction: IDBTransact
  */
 async function addBooks(
     files: File[],
-    categoryId: string,
+    categoryId: CategoryId,
     fileId: string,
     transaction: IDBTransaction
 ): Promise<Book[]> {

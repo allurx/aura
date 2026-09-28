@@ -15,7 +15,6 @@ export function openDatabase(): Promise<IDBDatabase> {
 
         request.onupgradeneeded = () => {
             const database = request.result;
-            database.createObjectStore("category", { keyPath: "id" }).createIndex("name", "name", { unique: true });
             database.createObjectStore("file", { keyPath: "id" }).createIndex("hash", "hash", { unique: true });
             database.createObjectStore("book", { keyPath: "id" }).createIndex("fileId", "fileId");
             database.createObjectStore("toc", { keyPath: "fileId" });
