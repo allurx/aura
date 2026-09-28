@@ -1,36 +1,34 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import HeaderUi from "./header/header-ui";
 import NavUi from "./nav/nav-ui";
 import BookListUi from "./book-list/book-list-ui";
 import BookshelfUi from "./bookshelf-ui";
-import BookshelfService, { BookImportError, type BookImportResult, type BookSummary } from "./bookshelf-service";
+import {
+    BookImportError,
+    clearBookshelf,
+    deleteBook,
+    getBookSummaries,
+    importBooks,
+    initBookshelf,
+    moveBook,
+    type BookImportResult,
+    type BookSummary,
+} from "./bookshelf-service";
 import type BookshelfState from "./bookshelf-state";
 import { bookshelfSession } from "./bookshelf-state";
-import EventUtil from "@/utils/event-util";
+import { bind } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
-import SettingCatalog from "@/settings/definitions/setting-catalog";
+import { themeSetting } from "@/settings/definitions/setting-catalog";
 import SettingController from "@/settings/setting-controller";
 import { PageName } from "@/constants/page-name";
 import OperationError from "@/errors/operation-error";
 
 /**
  * 编排书架筛选、数据操作与页面外观，并在异步渲染前核对页面生命周期。
- * @author allurx
  */
 export default class BookshelfController {
     private readonly headerUi: HeaderUi;
@@ -38,7 +36,6 @@ export default class BookshelfController {
     private readonly bookListUi: BookListUi;
     private readonly bookshelfUi: BookshelfUi;
     private readonly settingController: SettingController;
-    private readonly bookshelfService: BookshelfService;
     private state!: BookshelfState;
     private signal!: AbortSignal;
     private books: BookSummary[] = [];
@@ -55,27 +52,17 @@ export default class BookshelfController {
         private readonly onReadBook: (bookId: string) => void
     ) {
         // 按页面区域创建 UI，书籍内容区独立滚动并保存浏览位置。
-        this.headerUi = new HeaderUi({
-            root: assertExists(bookshelfRoot.querySelector<HTMLElement>("#header")),
-        });
-        this.navUi = new NavUi({
-            root: assertExists(bookshelfRoot.querySelector<HTMLElement>("#nav")),
-        });
-        this.bookListUi = new BookListUi({
-            root: assertExists(bookshelfRoot.querySelector<HTMLElement>("#book-list")),
-        });
-        this.bookshelfUi = new BookshelfUi({
-            root: bookshelfRoot,
-        });
+        this.headerUi = new HeaderUi(assertExists(bookshelfRoot.querySelector<HTMLElement>("#header")));
+        this.navUi = new NavUi(assertExists(bookshelfRoot.querySelector<HTMLElement>("#nav")));
+        this.bookListUi = new BookListUi(assertExists(bookshelfRoot.querySelector<HTMLElement>("#book-list")));
+        this.bookshelfUi = new BookshelfUi(bookshelfRoot);
 
         // 书架只提供页面主题，阅读排版由阅读器独立设置。
         this.settingController = new SettingController({
             pageName: PageName.BOOKSHELF,
             container: this.bookshelfUi.root,
-            settings: [SettingCatalog.THEME],
+            settings: { theme: themeSetting, general: [] },
         });
-
-        this.bookshelfService = new BookshelfService();
     }
 
     /**
@@ -89,7 +76,7 @@ export default class BookshelfController {
 
         // 初次渲染会触发滚动回写，先保留进入页面时的会话位置。
         const savedScrollTop = bookshelfSession.scrollTop;
-        const state = await this.bookshelfService.init();
+        const state = await initBookshelf();
         if (!this.isActive()) return;
 
         // 会话分类可能已经不存在，此时回到全部书籍。
@@ -130,7 +117,7 @@ export default class BookshelfController {
      */
     private async refreshBooks(): Promise<void> {
         const version = ++this.refreshVersion;
-        const books = await this.bookshelfService.getBookSummaries();
+        const books = await getBookSummaries();
         if (!this.isActive() || version !== this.refreshVersion) return;
         this.books = books;
         this.renderBooks();
@@ -169,21 +156,21 @@ export default class BookshelfController {
         const validFiles = files.filter((file) => /\.txt$/i.test(file.name));
         const categoryId =
             this.state.categoryId || assertExists(this.state.categories.find((category) => category.order === 1)).id;
-        let result: BookImportResult = { books: [], duplicateFiles: [], unsupportedEncodingFiles: [] };
+        let result: BookImportResult = { books: [], unsupportedEncodingFiles: [] };
 
         // 导入与列表刷新共用忙碌状态，避免结果尚未可见就接受下一次操作。
         this.busy = true;
         try {
             await this.bookshelfUi.runBusy(`正在导入 ${String(validFiles.length)} 个 TXT 文件…`, async (setStatus) => {
-                result = await this.bookshelfService.importBooks(validFiles, categoryId, true, setStatus);
+                result = await importBooks(validFiles, categoryId, setStatus);
                 await this.refreshBooks();
             });
             if (!this.isActive()) return;
 
             // 部分跳过用结果对话框展示明细，全成功只提供短暂反馈。
-            const skipped = invalidFiles.length + result.duplicateFiles.length + result.unsupportedEncodingFiles.length;
+            const skipped = invalidFiles.length + result.unsupportedEncodingFiles.length;
             if (skipped > 0) {
-                await this.bookshelfUi.alertDialog(
+                await this.bookshelfUi.dialog.alert(
                     `已导入 ${String(result.books.length)} 本；${String(skipped)} 个文件未导入。\n\n${this.describeImport(result, invalidFiles)}`,
                     { title: "导入结果" }
                 );
@@ -227,8 +214,6 @@ export default class BookshelfController {
             messages.push(
                 `编码无法可靠识别或不受支持：${result.unsupportedEncodingFiles.map((file) => file.name).join("、")}`
             );
-        if (result.duplicateFiles.length > 0)
-            messages.push(`重复跳过：${result.duplicateFiles.map((file) => file.name).join("、")}`);
         return messages.join("\n");
     }
 
@@ -242,7 +227,7 @@ export default class BookshelfController {
         // 等待确认期间保持互斥；取消或退出页面都不能继续删除。
         this.busy = true;
         try {
-            const confirmed = await this.bookshelfUi.confirmDialog(
+            const confirmed = await this.bookshelfUi.dialog.confirm(
                 `确定删除《${summary.title}》吗？阅读进度也会删除。`,
                 {
                     title: "删除书籍",
@@ -253,7 +238,7 @@ export default class BookshelfController {
 
             // 删除提交后再刷新列表，成功提示仅投递给仍存活的页面。
             await this.bookshelfUi.runBusy("正在删除书籍…", async () => {
-                await this.bookshelfService.deleteBook(bookId);
+                await deleteBook(bookId);
                 await this.refreshBooks();
             });
             if (this.isActive()) this.bookshelfUi.showFeedback(`已删除《${summary.title}》`);
@@ -275,10 +260,10 @@ export default class BookshelfController {
         // 先提交领域操作，页面退出只停止渲染，不把已保存结果报告为失败。
         this.busy = true;
         try {
-            await this.bookshelfService.moveBook(bookId, categoryId);
+            await moveBook(bookId, categoryId);
             if (!this.isActive()) return true;
 
-            summary.book.update({ categoryId });
+            summary.book.categoryId = categoryId;
             this.renderBooks();
             this.bookshelfUi.showFeedback(`已移至${category.name}`);
             return true;
@@ -297,7 +282,7 @@ export default class BookshelfController {
         this.busy = true;
         try {
             if (
-                !(await this.bookshelfUi.confirmDialog("确定清空所有分类中的书籍和阅读进度吗？此操作无法撤销。", {
+                !(await this.bookshelfUi.dialog.confirm("确定清空所有分类中的书籍和阅读进度吗？此操作无法撤销。", {
                     confirmBtnText: "清空",
                 })) ||
                 !this.isActive()
@@ -306,7 +291,7 @@ export default class BookshelfController {
 
             // 空列表渲染后将焦点交给列表，避免停留在已删除的书目上。
             await this.bookshelfUi.runBusy("正在清空书架…", async () => {
-                await this.bookshelfService.clearBookshelf();
+                await clearBookshelf();
                 await this.refreshBooks();
             });
             if (this.isActive()) this.bookListUi.root.focus({ preventScroll: true });
@@ -316,32 +301,10 @@ export default class BookshelfController {
     }
 
     /**
-     * 帮助手册使用与普通书籍相同的阅读入口。
-     */
-    private async openHelp(): Promise<void> {
-        if (this.busy || !this.isActive()) return;
-        this.busy = true;
-        try {
-            // 手册可能已被用户删除，先按需恢复再进入普通阅读路由。
-            const id = await this.bookshelfService.getHandbookId(
-                this.state.metadata,
-                assertExists(this.state.categories.find((category) => category.order === 1))
-            );
-
-            if (this.isActive()) {
-                bookshelfSession.scrollTop = this.bookListUi.root.scrollTop;
-                this.onReadBook(id);
-            }
-        } finally {
-            this.busy = false;
-        }
-    }
-
-    /**
      * 所有页面事件受同一生命周期信号管理。
      */
     private bindEvent(signal: AbortSignal): void {
-        // 分类导航更新会话位置，帮助与清空入口复用互斥操作流程。
+        // 分类导航更新会话位置，清空入口复用互斥操作流程。
         this.navUi.bindEvents(
             {
                 category: (categoryId) => {
@@ -352,7 +315,6 @@ export default class BookshelfController {
                     this.renderBooks();
                     this.bookListUi.root.scrollTop = 0;
                 },
-                help: () => this.openHelp(),
                 clear: () => this.clearBookshelf(),
             },
             signal
@@ -384,7 +346,7 @@ export default class BookshelfController {
         );
 
         // 会话只记录滚动位置，返回书架时再由初始化流程恢复。
-        EventUtil.bind(
+        bind(
             this.bookListUi.root,
             "scroll",
             () => {

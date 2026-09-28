@@ -1,22 +1,8 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import ThemeSettingControl from "../controls/theme-setting-control";
-import type SettingControl from "../controls/setting-control";
-import type SettingControlListener from "../controls/setting-control-listener";
 import type PageAppearance from "../models/page-appearance";
 import { isTheme, Theme } from "../models/theme";
 import Setting from "./setting";
@@ -25,7 +11,6 @@ import { syncBrowserTheme } from "../application/browser-theme";
 /**
  * 页面基础主题；切换主题时保留已提交的常规设置。
  *
- * @author allurx
  */
 export default class ThemeSetting extends Setting {
     public readonly options = new Map<string, string>([
@@ -40,8 +25,8 @@ export default class ThemeSetting extends Setting {
         [Theme.OCEAN, "深海"],
     ]);
 
-    public constructor(displayOrder: number) {
-        super("theme", "主题", displayOrder);
+    public constructor() {
+        super("theme", "主题");
     }
 
     public override accepts(value: unknown): value is Theme {
@@ -71,9 +56,5 @@ export default class ThemeSetting extends Setting {
 
     public override resolveValue(value: string | undefined): string {
         return isTheme(value) ? value : Theme.SUNNY;
-    }
-
-    public override createControl(listener: SettingControlListener, signal: AbortSignal): SettingControl {
-        return new ThemeSettingControl(this, listener, signal);
     }
 }

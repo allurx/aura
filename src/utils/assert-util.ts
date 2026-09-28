@@ -1,47 +1,14 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
- * 断言工具类
- * @author allurx
+ * 确保必需值不是 null 或 undefined，失败时保留调用方提供的上下文。
  */
-export default abstract class AssertUtil {
-    /**
-     * 确保值非null/undefined,否则抛出错误
-     * @param value 需要检查的值
-     * @param message 错误提示,可选
-     * @returns value
-     */
-    public static assertExists<T>(value: T | null | undefined, message?: string): T {
-        if (value === null || value === undefined) {
-            throw new Error(message ?? "Value must not be null or undefined");
-        }
-        return value;
+export function assertExists<T>(value: T | null | undefined, message?: string): T {
+    if (value === null || value === undefined) {
+        throw new Error(message ?? "Value must not be null or undefined");
     }
-
-    /**
-     * 断言字符串至少包含一个字符；不裁剪空白或改变原值。
-     */
-    public static assertNonEmptyString(value: string, message?: string): string {
-        if (typeof value !== "string" || value.length === 0) {
-            throw new Error(message ?? "Value must be a non-empty string");
-        }
-        return value;
-    }
+    return value;
 }
-
-export const assertExists = AssertUtil.assertExists.bind(AssertUtil);
-export const assertNonEmptyString = AssertUtil.assertNonEmptyString.bind(AssertUtil);

@@ -1,27 +1,19 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import PageUi from "@/pages/page-ui";
+import Ui from "@/components/ui";
+import Dialog from "@/components/dialog/dialog";
+import Overlay from "@/components/overlay/overlay";
 import { assertExists } from "@/utils/assert-util";
 
 /**
  * 书架页面的操作状态与共用对话框。
- * @author allurx
  */
-export default class BookshelfUi extends PageUi {
+export default class BookshelfUi extends Ui {
+    public readonly dialog = new Dialog({ containerElement: this.root });
+    private readonly overlay = new Overlay(this.root);
     private feedbackTimer: number | undefined;
     private signal?: AbortSignal;
 
@@ -76,7 +68,7 @@ export default class BookshelfUi extends PageUi {
         });
 
         try {
-            await this.showOverlayWhile(() =>
+            await this.overlay.showWhile(() =>
                 handler((message) => {
                     if (this.root.isConnected) status.textContent = message;
                 })

@@ -1,22 +1,11 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import Ui from "@/components/ui";
 import { assertExists } from "@/utils/assert-util";
-import EventUtil from "@/utils/event-util";
+import { delegate, bind } from "@/utils/event-util";
 import type TocEntry from "@/domain/toc/toc-entry";
 
 /**
@@ -30,7 +19,6 @@ interface TocScrollPosition {
 
 /**
  * 目录面板
- * @author allurx
  */
 export default class TocUi extends Ui {
     private readonly dialog: HTMLDialogElement;
@@ -43,9 +31,7 @@ export default class TocUi extends Ui {
     private readonly summary: HTMLElement;
     private entries: TocEntry[] = [];
     private currentChapterNumber = 1;
-    private openedBefore = false;
     private chapterButtons: HTMLButtonElement[] = [];
-    private savedPosition: TocScrollPosition | undefined;
     private unfilteredPosition: TocScrollPosition | undefined;
     private browsingPosition: TocScrollPosition | undefined;
     private lastScrollContainer: HTMLElement | undefined;
@@ -56,10 +42,9 @@ export default class TocUi extends Ui {
     /**
      * 使用原生对话框提供焦点约束和 Escape 关闭。
      */
-    public constructor(args: ConstructorParameters<typeof Ui>[0]) {
-        super(args);
-        if (!(this.root instanceof HTMLDialogElement)) throw new Error("TOC root must be a dialog");
-        this.dialog = this.root;
+    public constructor(root: HTMLDialogElement) {
+        super(root);
+        this.dialog = root;
         this.tocContentElement = assertExists(this.root.querySelector<HTMLElement>(".main"));
         this.closeButton = assertExists(this.root.querySelector<HTMLButtonElement>(".close"));
         this.locateCurrentButton = assertExists(this.root.querySelector<HTMLButtonElement>(".locate-current"));
@@ -84,12 +69,11 @@ export default class TocUi extends Ui {
         this.dialog.showModal();
         this.closeButton.focus({ preventScroll: true });
         const scrollContainer = this.scrollContainer();
-        if (this.openedBefore) this.restorePosition(this.savedPosition);
+        if (this.browsingPosition) this.restorePosition(this.browsingPosition);
         else this.tocContentElement.querySelector('[aria-current="location"]')?.scrollIntoView({ block: "center" });
 
         // 矮视口恢复位置后标题可能在屏外，将焦点留在可见的抽屉本体。
         if (scrollContainer === this.dialog) this.dialog.focus({ preventScroll: true });
-        this.openedBefore = true;
         this.capturePosition();
         return true;
     }
@@ -100,7 +84,6 @@ export default class TocUi extends Ui {
     public close(reason: "cancel" | "chapter-selected" = "cancel"): void {
         this.restoreAfterResize();
         this.capturePosition();
-        this.savedPosition = this.browsingPosition;
         this.dialog.close(reason);
         // 退场绘制期间保留视觉连续性，但不再让已关闭的章节参与焦点遍历。
         this.dialog.inert = true;
@@ -141,7 +124,7 @@ export default class TocUi extends Ui {
      * 等待选章处理成功才收起目录；失败保留面板供重试，销毁后不再更新界面。
      */
     public delegateTocItemClick(handler: (chapterNumber: number) => Promise<void>, signal: AbortSignal): this {
-        EventUtil.delegate(
+        delegate(
             this.tocContentElement,
             "button[data-chapter-number]",
             "click",
@@ -175,7 +158,7 @@ export default class TocUi extends Ui {
         observer.observe(this.dialog);
         observer.observe(this.tocContentElement);
         for (const container of [this.dialog, this.tocContentElement]) {
-            EventUtil.bind(
+            bind(
                 container,
                 "scroll",
                 () => {
@@ -192,7 +175,7 @@ export default class TocUi extends Ui {
         }
 
         // 关闭按钮和 Escape 统一保存位置，close 事件只负责通知页面恢复焦点。
-        EventUtil.bind(
+        bind(
             this.closeButton,
             "click",
             () => {
@@ -200,7 +183,7 @@ export default class TocUi extends Ui {
             },
             { signal }
         );
-        EventUtil.bind(
+        bind(
             this.dialog,
             "cancel",
             (event) => {
@@ -209,7 +192,7 @@ export default class TocUi extends Ui {
             },
             { signal }
         );
-        EventUtil.bind(
+        bind(
             this.dialog,
             "keydown",
             (event: KeyboardEvent) => {
@@ -221,7 +204,7 @@ export default class TocUi extends Ui {
             },
             { signal }
         );
-        EventUtil.bind(
+        bind(
             this.dialog,
             "close",
             () => {
@@ -232,7 +215,7 @@ export default class TocUi extends Ui {
         );
 
         // 定位当前章会清除筛选；搜索清空则恢复搜索前的浏览位置。
-        EventUtil.bind(
+        bind(
             this.locateCurrentButton,
             "click",
             () => {
@@ -255,7 +238,7 @@ export default class TocUi extends Ui {
             this.keepFocusedElementVisible();
             this.capturePosition();
         };
-        EventUtil.bind(
+        bind(
             this.searchInput,
             "compositionstart",
             () => {
@@ -263,7 +246,7 @@ export default class TocUi extends Ui {
             },
             { signal }
         );
-        EventUtil.bind(
+        bind(
             this.searchInput,
             "compositionend",
             () => {
@@ -272,7 +255,7 @@ export default class TocUi extends Ui {
             },
             { signal }
         );
-        EventUtil.bind(
+        bind(
             this.searchInput,
             "input",
             (event) => {
@@ -308,7 +291,6 @@ export default class TocUi extends Ui {
         current?.scrollIntoView({ block: "center" });
         current?.focus({ preventScroll: true });
         this.capturePosition();
-        this.savedPosition = this.browsingPosition;
         this.unfilteredPosition = this.browsingPosition;
     }
 

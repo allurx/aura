@@ -1,5 +1,7 @@
 @charset "UTF-8";
 
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* 高频反馈更快，浮层略慢；正文不参与位移，控件共用相同节奏。 */
 :root {
     --motion-duration-fast: 120ms;

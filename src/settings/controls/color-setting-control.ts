@@ -1,30 +1,18 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import type ColorStyleSetting from "../definitions/color-style-setting";
-import EventUtil from "@/utils/event-util";
-import SettingControl from "./setting-control";
+import { bind } from "@/utils/event-util";
+import StyleSettingControl from "./style-setting-control";
 import type SettingControlListener from "./setting-control-listener";
 
 /**
  * 六位十六进制颜色控件。
  *
- * @author allurx
  */
-export default class ColorSettingControl extends SettingControl {
+export default class ColorSettingControl extends StyleSettingControl {
     private readonly inputElement = document.createElement("input");
 
     public constructor(setting: ColorStyleSetting, listener: SettingControlListener, signal: AbortSignal) {
@@ -36,7 +24,7 @@ export default class ColorSettingControl extends SettingControl {
         this.attachControl(this.inputElement);
 
         // 连续选色只预览，确认值后再由 change 提交。
-        EventUtil.bind(
+        bind(
             this.inputElement,
             "input",
             (_, input) => {
@@ -45,7 +33,7 @@ export default class ColorSettingControl extends SettingControl {
             { signal }
         );
 
-        EventUtil.bind(
+        bind(
             this.inputElement,
             "change",
             (_, input) => {

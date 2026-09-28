@@ -1,17 +1,6 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import RangeSettingControl from "../controls/range-setting-control";
@@ -28,7 +17,6 @@ export type SettingRange = readonly [minimum: number, maximum: number];
 /**
  * 具有有限数值区间和固定 CSS 单位的设置。
  *
- * @author allurx
  */
 export default class RangeStyleSetting extends StyleSetting {
     /**
@@ -42,10 +30,9 @@ export default class RangeStyleSetting extends StyleSetting {
         title: string,
         private readonly bounds: SettingRange,
         public readonly step: number,
-        public readonly unit: string,
-        displayOrder: number
+        public readonly unit: string
     ) {
-        super(element, property, title, displayOrder);
+        super(element, property, title);
         const [minimum, maximum] = bounds;
         if (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum > maximum) {
             throw new Error(`Invalid ${property} range`);

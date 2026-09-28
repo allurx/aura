@@ -1,5 +1,7 @@
 @charset "UTF-8";
 
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* 焦点与选中状态分开：浏览器判断何时显示焦点，颜色由页面主题提供。 */
 html {
     --focus-ring-color: var(--appearance-focus);

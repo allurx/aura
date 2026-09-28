@@ -1,21 +1,10 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import { PageName } from "@/constants/page-name";
-import EventUtil from "@/utils/event-util";
+import { run } from "@/utils/event-util";
 
 /**
  * 页面路由及其必需上下文；阅读器必须关联具体书籍。
@@ -26,7 +15,6 @@ export type AppRoute =
 
 /**
  * 应用Hash路由。
- * @author allurx
  */
 export default class Router {
     private static readonly READER_BOOK_ID_KEY = "aura.router.reader.bookId";
@@ -125,6 +113,6 @@ export default class Router {
      * 将页面加载异常交给统一事件错误处理路径。
      */
     private dispatch(route: AppRoute): void {
-        EventUtil.run(() => this.handler(route));
+        run(() => this.handler(route));
     }
 }

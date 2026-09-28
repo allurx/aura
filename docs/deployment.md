@@ -4,7 +4,7 @@
 
 Web 版使用 Cloudflare Workers Static Assets 托管混淆产物 `dist/web-obfuscated/`，由 [GitHub Actions](../.github/workflows/ci.yml) 验证全部四种构建后部署。环境配置见 [wrangler.jsonc](../wrangler.jsonc)。portable 作为独立 HTML 下载交付，不上传到站点。
 
-将 Web 输出目录作为同一次构建的完整产物一起部署，包括入口、资源、manifest、安装图标与 `_headers`。不要只替换 HTML 或部分资源。
+将[Web 构建输出](development.md#构建与预览)作为同一次构建的完整产物一起部署，包含随包提供的许可声明。不要只替换 HTML 或部分资源。
 
 ## 准备
 

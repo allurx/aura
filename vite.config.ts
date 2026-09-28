@@ -1,17 +1,6 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import { readFileSync } from "node:fs";
@@ -28,13 +17,12 @@ const FONT_EXTENSIONS = new Set([".woff", ".woff2", ".ttf", ".otf", ".eot"]);
 
 /**
  * vite配置
- * @author allurx
  */
 export default defineConfig(({ command, mode, isPreview }) => {
     // 从构建模式推导交付组合，每种产物写入独立目录。
     const portable = mode === "portable" || mode === "portable-obfuscated";
     const obfuscated = mode === "obfuscated" || mode === "portable-obfuscated";
-    const developmentServer = command === "serve" && !isPreview;
+    const httpsDevelopment = command === "serve" && !isPreview && mode === "https";
     const outputDirectory = `${portable ? "portable" : "web"}${obfuscated ? "-obfuscated" : ""}`;
 
     return {
@@ -48,8 +36,8 @@ export default defineConfig(({ command, mode, isPreview }) => {
             },
         },
 
-        // 仅开发服务器读取本机证书，构建与预览不依赖证书文件。
-        ...(developmentServer
+        // 默认 localhost HTTP 即可开发；显式选择 https 模式时才读取本机证书。
+        ...(httpsDevelopment
             ? {
                   server: {
                       https: {
@@ -147,9 +135,109 @@ export default defineConfig(({ command, mode, isPreview }) => {
                 }),
             portable && viteSingleFile(),
             portable && portableEntryPlugin(),
+            licensePlugin(portable),
         ],
     };
 });
+
+/**
+ * 许可维护源只保存一份；所有页面内嵌全文，Web 另提供随产物分发的文本文件。
+ */
+function licensePlugin(portable: boolean): Plugin {
+    const documents = [
+        { fileName: "LICENSE.txt", placeholder: "__AURA_LICENSE_TEXT__" },
+        { fileName: "THIRD-PARTY-NOTICES.txt", placeholder: "__AURA_THIRD_PARTY_NOTICES__" },
+    ].map((document) => {
+        const text = readFileSync(resolve(PROJECT_ROOT, document.fileName), "utf8");
+        if (!text.trim()) throw new Error(`License document is empty: ${document.fileName}`);
+        const thirdParty = document.fileName === "THIRD-PARTY-NOTICES.txt";
+        const parts = thirdParty ? text.split(/(?=^--- .+ ---\r?$)/m) : [text];
+        return {
+            ...document,
+            text,
+            parts: parts.map(escapeHtml),
+            html: thirdParty ? renderThirdPartyLicenses(parts) : escapeHtml(text),
+        };
+    });
+
+    return {
+        name: "aura:licenses",
+        transformIndexHtml: {
+            order: "pre",
+            /**
+             * 开发页和生产构建使用相同许可正文。
+             */
+            handler(html) {
+                for (const document of documents) {
+                    if (!html.includes(document.placeholder)) {
+                        throw new Error(`License placeholder is missing: ${document.fileName}`);
+                    }
+                    html = html.replace(document.placeholder, () => document.html);
+                }
+                return html;
+            },
+        },
+        generateBundle: {
+            order: "post",
+            /**
+             * 内联与混淆结束后核对全文，避免构建成功却遗漏许可；portable 不产生伴随文件。
+             */
+            handler(_options, bundle) {
+                const entry = bundle[portable ? "aura.html" : "index.html"];
+                if (entry?.type !== "asset") throw new Error("Licensed HTML entry was not generated");
+                const html = typeof entry.source === "string" ? entry.source : new TextDecoder().decode(entry.source);
+                for (const document of documents) {
+                    if (!document.parts.every((part) => html.includes(part))) {
+                        throw new Error(`Built HTML is missing license text: ${document.fileName}`);
+                    }
+                    if (!portable) this.emitFile({ type: "asset", fileName: document.fileName, source: document.text });
+                }
+            },
+        },
+    };
+}
+
+/**
+ * 从同一份声明生成名称、版本和来源概览；每段原文只嵌入一次，按需展开。
+ */
+function renderThirdPartyLicenses(parts: string[]): string {
+    const [preamble, ...components] = parts;
+    if (preamble === undefined || components.length === 0) throw new Error("Third-party notice sections are missing");
+
+    const items = components.map((text) => {
+        const heading = /^--- (.+?) (\d+\.\d+\.\d+)[^\r\n]* ---\r?$/m.exec(text);
+        const source = /^Source: (https:\/\/\S+)\r?$/m.exec(text)?.[1];
+        const license = /^License: ([\w.-]+)\r?$/m.exec(text)?.[1];
+        const name = heading?.[1];
+        const version = heading?.[2];
+        if (!name || !version || !source || !license) throw new Error("Third-party notice metadata is incomplete");
+
+        const sourceUrl = new URL(source).href;
+        const licenseUrl = `https://spdx.org/licenses/${encodeURIComponent(license)}.html`;
+        return `<li class="license-item">
+            <div class="license-item-heading">
+                <a class="license-source" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" aria-label="查看 ${escapeHtml(name)} ${escapeHtml(version)} 项目（新窗口）">
+                    <span>${escapeHtml(name)}</span><span class="license-version">${escapeHtml(version)}</span>
+                    <span class="icon icon-external-link" aria-hidden="true"></span>
+                </a>
+                <a class="license-badge" href="${licenseUrl}" target="_blank" rel="noopener noreferrer" aria-label="查看 ${escapeHtml(license)} 官方许可证（新窗口）">${escapeHtml(license)}</a>
+            </div>
+            <details class="license-disclosure">
+                <summary>版权与许可<span class="icon icon-chevron" aria-hidden="true"></span></summary>
+                <pre data-notice-part>${escapeHtml(text)}</pre>
+            </details>
+        </li>`;
+    });
+
+    return `<pre data-notice-part hidden>${escapeHtml(preamble)}</pre><ul class="license-list">${items.join("")}</ul>`;
+}
+
+/**
+ * 声明原文和来源字段只作为文本或属性值使用，不允许成为 HTML 结构。
+ */
+function escapeHtml(text: string): string {
+    return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+}
 
 /**
  * 在产物仍位于 Rollup 内存模型时重命名便携版入口，避免构建完成后再直接操作文件系统。

@@ -12,7 +12,7 @@
 
 ## 开始阅读
 
-1. 打开[在线版](https://aura.allurx.io)，或从 [GitHub Releases](https://github.com/allurx/aura/releases) 下载 portable HTML 后在浏览器中打开。
+1. 打开[在线版](https://aura.allurx.io)，或从 [GitHub Releases](https://github.com/allurx/aura/releases) 下载 portable HTML 后在浏览器中打开。首次使用时书架为空。
 2. 选择“导入 TXT”，导入自己的文本，再点击书籍开始阅读。
 3. 通过“目录”切章或“外观”调整阅读效果；手机端先轻点正文中间区域唤出工具。下次打开同一本书时会恢复阅读位置。
 
@@ -35,4 +35,4 @@
 
 ## 许可证
 
-[Apache License 2.0](LICENSE.txt)。
+[Apache License 2.0](LICENSE.txt)。第三方组件与资源的许可见[第三方声明](THIRD-PARTY-NOTICES.txt)。

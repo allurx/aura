@@ -1,17 +1,6 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import PageAppearance from "../models/page-appearance";
@@ -22,7 +11,6 @@ import type SettingConfiguration from "../models/setting-configuration";
  *
  * 只读取当前设置清单允许的值，不转换旧结构或回写读取结果。
  *
- * @author allurx
  */
 export default class AppearanceRepository {
     private readonly storageKey: string;
@@ -78,14 +66,13 @@ export default class AppearanceRepository {
         if (!this.isRecord(value)) return appearance;
 
         const theme = value["theme"];
-        if (this.configuration.themeSetting.accepts(theme)) {
-            appearance = this.configuration.themeSetting.update(appearance, theme);
+        if (this.configuration.theme.accepts(theme)) {
+            appearance = this.configuration.theme.update(appearance, theme);
         }
 
         const general = value["general"];
         if (!this.isRecord(general)) return appearance;
-        for (const setting of this.configuration.settings) {
-            if (setting === this.configuration.themeSetting) continue;
+        for (const setting of this.configuration.general) {
             const settingValue = general[setting.key];
             if (setting.accepts(settingValue)) appearance = setting.update(appearance, settingValue);
         }

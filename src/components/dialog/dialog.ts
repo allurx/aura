@@ -1,21 +1,11 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import EventUtil from "@/utils/event-util";
+import { bind } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
+import { createElementFromHtml } from "@/utils/dom-util";
 
 /**
  * 提示与确认的按钮配置；只有确认模式需要取消按钮文案。
@@ -37,7 +27,6 @@ type DialogRequest =
 
 /**
  * 可复用的原生模态对话框；同一实例需等待上次请求结束后再使用。
- * @author allurx
  */
 export default class Dialog {
     private readonly dialogElement: HTMLDialogElement;
@@ -53,7 +42,7 @@ export default class Dialog {
      */
     public constructor({ containerElement }: { containerElement: HTMLElement }) {
         // 对话框根节点与无障碍标题。
-        this.dialogElement = containerElement.appendChild(this.renderTemplate());
+        this.dialogElement = containerElement.appendChild(createElementFromHtml<HTMLDialogElement>(this.template()));
         this.titleElement = assertExists(this.dialogElement.querySelector<HTMLSpanElement>(".title"));
         this.titleElement.id = `dialog-title-${crypto.randomUUID()}`;
         this.dialogElement.setAttribute("aria-labelledby", this.titleElement.id);
@@ -117,7 +106,7 @@ export default class Dialog {
      */
     private bindEvents() {
         // 所有关闭路径先清空复用状态，再通知当前调用方。
-        EventUtil.bind(this.dialogElement, "close", () => {
+        bind(this.dialogElement, "close", () => {
             const ok = this.dialogElement.returnValue === "confirm";
             const resolve = this.resolve;
             this.resolve = null;
@@ -128,21 +117,21 @@ export default class Dialog {
         });
 
         // Escape 与显式取消使用相同的返回值。
-        EventUtil.bind(this.dialogElement, "cancel", (event) => {
+        bind(this.dialogElement, "cancel", (event) => {
             event.preventDefault();
             this.close("cancel");
         });
 
         // 显式操作入口只设置结果，继续交给统一关闭流程处理。
-        EventUtil.bind(this.confirmBtnElement, "click", () => {
+        bind(this.confirmBtnElement, "click", () => {
             this.close("confirm");
         });
 
-        EventUtil.bind(this.cancelBtnElement, "click", () => {
+        bind(this.cancelBtnElement, "click", () => {
             this.close("cancel");
         });
 
-        EventUtil.bind(this.closeButton, "click", () => {
+        bind(this.closeButton, "click", () => {
             this.close("cancel");
         });
     }
@@ -165,15 +154,6 @@ export default class Dialog {
         } else {
             this.bodyElement.textContent = content;
         }
-    }
-
-    /**
-     * 仅解析应用内置模板，外部内容通过 setBodyContent 写入。
-     */
-    private renderTemplate() {
-        const template = document.createElement("template");
-        template.innerHTML = this.template().trim();
-        return template.content.firstElementChild as HTMLDialogElement;
     }
 
     /**

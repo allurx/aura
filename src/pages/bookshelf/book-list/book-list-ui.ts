@@ -1,20 +1,9 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import EventUtil from "@/utils/event-util";
+import { delegate } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
 import Ui from "@/components/ui";
 import type Category from "@/domain/category/category";
@@ -22,7 +11,6 @@ import type { BookSummary } from "../bookshelf-service";
 
 /**
  * 渲染书籍摘要，并管理阅读、分类移动与删除操作后的焦点。
- * @author allurx
  */
 export default class BookListUi extends Ui {
     // 原生选择器禁用后可能失焦，保留来源供列表重渲染时恢复焦点。
@@ -102,7 +90,7 @@ export default class BookListUi extends Ui {
         signal: AbortSignal
     ): void {
         // 阅读委托给整块书封，避免标题子节点影响书籍定位。
-        EventUtil.delegate(
+        delegate(
             this.root,
             ".book-open",
             "click",
@@ -113,7 +101,7 @@ export default class BookListUi extends Ui {
         );
 
         // 删除完成且原控件已移除时，将焦点交给相邻书目。
-        EventUtil.delegate(
+        delegate(
             this.root,
             ".book-delete",
             "click",
@@ -132,7 +120,7 @@ export default class BookListUi extends Ui {
         );
 
         // 分类选择即时提交；保存期间禁用该选择器，失败则回滚显示值。
-        EventUtil.delegate(
+        delegate(
             this.root,
             ".book-category",
             "change",

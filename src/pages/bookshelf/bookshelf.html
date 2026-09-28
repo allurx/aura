@@ -1,17 +1,6 @@
 <!--
     Copyright 2025 allurx
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-    https://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
+    SPDX-License-Identifier: Apache-2.0
 -->
 
 <div id="bookshelf">
@@ -26,8 +15,12 @@
             </div>
             <nav id="category-navigation" class="panel-scroll" aria-label="书籍分类"></nav>
             <div class="nav-footer">
-                <button id="open-help" type="button">
-                    <span class="icon icon-help" aria-hidden="true"></span>阅读帮助
+                <a id="project-source" href="https://github.com/allurx/aura" target="_blank" rel="noopener noreferrer">
+                    <span class="icon icon-source-code" aria-hidden="true"></span>项目源码
+                    <span class="icon icon-external-link" aria-hidden="true"></span>
+                </a>
+                <button id="open-licenses" type="button" aria-haspopup="dialog" aria-controls="license-dialog">
+                    <span class="icon icon-license" aria-hidden="true"></span>开源许可
                 </button>
                 <button id="clear-btn" type="button">
                     <span class="icon icon-delete" aria-hidden="true"></span>清空书架

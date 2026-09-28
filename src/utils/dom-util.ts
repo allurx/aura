@@ -1,35 +1,18 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
- * DOM utility class
- * @author allurx
+ * 将仅包含一个根元素的可信 HTML 模板转换为节点。
+ * 调用方应按模板指定根元素类型；外部文本必须使用文本节点，不能作为模板传入。
  */
-export default abstract class DomUtil {
-    /**
-     * 将仅包含一个根元素的可信 HTML 模板转换为节点。
-     * 本方法不清洗 HTML，文件名和正文等外部数据应通过文本节点写入。
-     */
-    public static createElementFromHtml(html: string): HTMLElement {
-        const template = document.createElement("template");
-        template.innerHTML = html.trim();
+export function createElementFromHtml<T extends HTMLElement = HTMLElement>(html: string): T {
+    const template = document.createElement("template");
+    template.innerHTML = html.trim();
 
-        if (template.content.children.length === 1) {
-            return template.content.firstElementChild as HTMLElement;
-        }
-        throw new Error("HTML string must contain exactly one root element.");
+    if (template.content.children.length === 1) {
+        return template.content.firstElementChild as T;
     }
+    throw new Error("HTML string must contain exactly one root element.");
 }

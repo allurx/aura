@@ -1,27 +1,15 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import type Category from "@/domain/category/category";
-import EventUtil from "@/utils/event-util";
+import { bind, delegate } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
 import Ui from "@/components/ui";
 
 /**
  * 桌面分类侧栏与移动端原生模态抽屉。
- * @author allurx
  */
 export default class NavUi extends Ui {
     private readonly navigation = assertExists(this.root.querySelector<HTMLElement>("#category-navigation"));
@@ -75,7 +63,6 @@ export default class NavUi extends Ui {
     public bindEvents(
         handlers: {
             category: (categoryId: string) => void;
-            help: () => Promise<void>;
             clear: () => Promise<void>;
         },
         signal: AbortSignal
@@ -91,7 +78,7 @@ export default class NavUi extends Ui {
         );
 
         // 打开入口只在移动断点生效，并同步可访问的展开状态。
-        EventUtil.bind(
+        bind(
             this.opener,
             "click",
             () => {
@@ -103,7 +90,7 @@ export default class NavUi extends Ui {
         );
 
         // 关闭按钮、抽屉外沿点击与原生关闭事件共用收起状态。
-        EventUtil.bind(
+        bind(
             assertExists(this.root.querySelector("#close-navigation")),
             "click",
             () => {
@@ -113,7 +100,7 @@ export default class NavUi extends Ui {
                 signal,
             }
         );
-        EventUtil.bind(
+        bind(
             this.drawer,
             "click",
             (event) => {
@@ -121,7 +108,7 @@ export default class NavUi extends Ui {
             },
             { signal }
         );
-        EventUtil.bind(
+        bind(
             this.drawer,
             "close",
             () => {
@@ -131,7 +118,7 @@ export default class NavUi extends Ui {
         );
 
         // 切换分类后收起移动抽屉，让用户直接浏览新结果。
-        EventUtil.delegate(
+        delegate(
             this.navigation,
             "button",
             "click",
@@ -142,18 +129,18 @@ export default class NavUi extends Ui {
             { signal }
         );
 
-        // 帮助和清空流程先退出当前模态，避免遮罩与后续页面或对话框冲突。
-        EventUtil.bind(
-            assertExists(this.root.querySelector("#open-help")),
+        // 项目链接使用浏览器原生导航，打开新页面后收起移动抽屉。
+        bind(
+            assertExists(this.root.querySelector("#project-source")),
             "click",
-            async () => {
+            () => {
                 this.closeDrawer();
-                await handlers.help();
             },
             { signal }
         );
 
-        EventUtil.bind(
+        // 清空流程先退出当前模态，避免遮罩与确认对话框冲突。
+        bind(
             assertExists(this.root.querySelector("#clear-btn")),
             "click",
             async () => {
@@ -163,11 +150,46 @@ export default class NavUi extends Ui {
             { signal }
         );
 
+        // 许可全文来自构建时内嵌的静态内容，离线查看不读取书籍或外部资源。
+        const licenses = assertExists(document.querySelector<HTMLDialogElement>("#license-dialog"));
+        const licenseButton = assertExists(this.root.querySelector<HTMLButtonElement>("#open-licenses"));
+        bind(
+            licenseButton,
+            "click",
+            () => {
+                this.closeDrawer();
+                licenses.showModal();
+            },
+            { signal }
+        );
+        bind(
+            licenses,
+            "keydown",
+            (event: KeyboardEvent) => {
+                // 侧栏跨断点重新展开会干扰原生关闭请求；Escape 只关闭当前许可窗口。
+                if (event.key !== "Escape" || event.defaultPrevented) return;
+                event.preventDefault();
+                event.stopPropagation();
+                licenses.close();
+            },
+            { signal }
+        );
+        bind(
+            licenses,
+            "close",
+            () => {
+                this.syncBreakpoint();
+                (this.mobile.matches ? this.opener : licenseButton).focus();
+            },
+            { signal }
+        );
+
         // 页面退出时释放原生模态状态，不留下顶层遮罩。
         signal.addEventListener(
             "abort",
             () => {
                 this.drawer.close();
+                licenses.close();
             },
             { once: true }
         );

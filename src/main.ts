@@ -1,17 +1,6 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import "./styles/base.css";
@@ -20,6 +9,7 @@ import "./styles/panel-scroll.css";
 import "./styles/focus.css";
 import "./components/icon/icon.css";
 import "./components/dialog/dialog.css";
+import "./components/license/license.css";
 import "./components/overlay/overlay.css";
 import "./settings/setting-ui.css";
 import { PageName } from "./constants/page-name";
@@ -33,7 +23,6 @@ import OperationError from "./errors/operation-error";
 
 /**
  * SPA应用入口。
- * @author allurx
  */
 class Main {
     private readonly appRoot: HTMLElement;
@@ -79,7 +68,7 @@ class Main {
             const guidance =
                 primaryCause instanceof DOMException && primaryCause.name === "QuotaExceededError"
                     ? "浏览器存储空间不足，操作未完成。请保留原始 TXT，释放存储空间后重试。"
-                    : "操作未完成。请重试；若仍然失败，请保留原始 TXT，并检查浏览器是否允许本地存储。";
+                    : "操作未完成。请重试；若仍然失败，请保留原始 TXT。";
             const content =
                 error instanceof OperationError ? `${error.message}\n\n${guidance}\n\n${error.details}` : guidance;
             await this.errorDialog.alert(content, { title: "操作失败" });

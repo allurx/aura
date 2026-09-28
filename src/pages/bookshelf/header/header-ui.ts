@@ -1,26 +1,14 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import EventUtil from "@/utils/event-util";
+import { bind } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
 import Ui from "@/components/ui";
 
 /**
  * 分类标题、搜索和导入工具栏。
- * @author allurx
  */
 export default class HeaderUi extends Ui {
     private readonly search = assertExists(this.root.querySelector<HTMLInputElement>("#book-search"));
@@ -48,7 +36,7 @@ export default class HeaderUi extends Ui {
         signal: AbortSignal
     ): void {
         // 保留外观入口节点，面板关闭后可将焦点归还给原按钮。
-        EventUtil.bind(
+        bind(
             assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel")),
             "click",
             (_, button) => {
@@ -61,10 +49,10 @@ export default class HeaderUi extends Ui {
         const updateSearch = (): void => {
             if (this.search.value !== this.renderedQuery) onSearch(this.search.value);
         };
-        EventUtil.bind(this.search, "compositionend", updateSearch, { signal });
+        bind(this.search, "compositionend", updateSearch, { signal });
 
         // Escape 清空查询，但输入法取消候选时保留当前书名。
-        EventUtil.bind(
+        bind(
             this.search,
             "keydown",
             (event) => {
@@ -76,7 +64,7 @@ export default class HeaderUi extends Ui {
             { signal }
         );
 
-        EventUtil.bind(
+        bind(
             this.search,
             "input",
             (event) => {
@@ -86,7 +74,7 @@ export default class HeaderUi extends Ui {
         );
 
         // 可见按钮打开原生文件选择器，文件列表由其 change 事件提交。
-        EventUtil.bind(
+        bind(
             this.importButton,
             "click",
             () => {
@@ -95,7 +83,7 @@ export default class HeaderUi extends Ui {
             { signal }
         );
 
-        EventUtil.bind(
+        bind(
             this.input,
             "change",
             async () => {

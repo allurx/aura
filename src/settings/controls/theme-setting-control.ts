@@ -1,21 +1,10 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import type ThemeSetting from "../definitions/theme-setting";
-import EventUtil from "@/utils/event-util";
+import { bind } from "@/utils/event-util";
 import SettingControl from "./setting-control";
 import type SettingControlListener from "./setting-control-listener";
 
@@ -23,10 +12,10 @@ import type SettingControlListener from "./setting-control-listener";
  * 使用原生单选组切换主题，鼠标与键盘选择统一通过 change 提交。
  * 色样与页面共用主题标识和调色板，不另外维护预览颜色。
  *
- * @author allurx
  */
 export default class ThemeSettingControl extends SettingControl {
     private readonly inputByValue = new Map<string, HTMLInputElement>();
+    private readonly controlContainer = document.createElement("div");
 
     public constructor(
         private readonly themeSetting: ThemeSetting,
@@ -35,7 +24,7 @@ export default class ThemeSettingControl extends SettingControl {
     ) {
         super(themeSetting, listener, signal);
 
-        // 原生分组承载统一名称，替换单值控件的通用外壳。
+        // 主题直接使用原生单选组，不经过常规设置的单输入外壳。
         this.element.classList.add("theme-setting");
         const fieldset = document.createElement("fieldset");
         const legend = document.createElement("legend");
@@ -43,7 +32,7 @@ export default class ThemeSettingControl extends SettingControl {
         legend.textContent = themeSetting.title;
         this.controlContainer.className = "theme-options";
         fieldset.append(legend, this.controlContainer);
-        this.element.replaceChildren(fieldset, this.resetElement);
+        this.element.prepend(fieldset);
 
         for (const [value, title] of themeSetting.options) {
             // 单选输入管理选中状态，外层 label 让整个色样都可点击。
@@ -79,7 +68,7 @@ export default class ThemeSettingControl extends SettingControl {
             this.inputByValue.set(value, input);
 
             // 鼠标点击和方向键切换共用原生 change 提交路径。
-            EventUtil.bind(
+            bind(
                 input,
                 "change",
                 () => {
@@ -97,11 +86,10 @@ export default class ThemeSettingControl extends SettingControl {
         const resolvedValue = this.themeSetting.resolveValue(value);
         for (const [theme, input] of this.inputByValue) {
             const checked = theme === resolvedValue;
-            const changed = input.checked !== checked;
             input.checked = checked;
 
             // 恢复和重置也显示当前主题，只滚动本行，不拉动面板中的常规设置。
-            if (checked && changed) {
+            if (checked) {
                 const option = input.getBoundingClientRect();
                 const viewport = this.controlContainer.getBoundingClientRect();
                 if (option.left < viewport.left) this.controlContainer.scrollLeft += option.left - viewport.left;

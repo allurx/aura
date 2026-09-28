@@ -1,0 +1,208 @@
+/*
+ * Copyright 2026 allurx
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.license-dialog {
+    width: min(40rem, calc(100% - var(--dialog-left) - var(--dialog-right)));
+
+    .title {
+        font: inherit;
+    }
+    .body {
+        padding: 1.5rem;
+        white-space: normal;
+    }
+
+    .license-project {
+        border: 1px solid var(--appearance-border);
+        border-radius: 1rem;
+        padding: 1.25rem 1.25rem 0.35rem;
+        background: linear-gradient(125deg, var(--appearance-tint), transparent 75%);
+    }
+
+    .license-project-heading {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        h3 {
+            font-size: 1.4rem;
+            letter-spacing: -0.03em;
+        }
+        p {
+            margin-top: 0.15rem;
+            color: var(--appearance-muted-color);
+            font-size: 0.85rem;
+        }
+    }
+
+    .license-brand {
+        flex: none;
+        width: 42px;
+        height: 42px;
+        background: url("../../assets/images/brand.svg?inline") center / contain no-repeat;
+    }
+
+    a {
+        text-decoration: none;
+        color: var(--appearance-accent);
+        &:hover {
+            text-decoration: underline;
+            text-underline-offset: 0.2em;
+        }
+    }
+
+    .icon-external-link {
+        --icon-size: 13px;
+        flex: none;
+        opacity: 0.7;
+    }
+
+    .license-project-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem 1.5rem;
+        margin-top: 0.8rem;
+        a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            min-height: 44px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .icon-source-code {
+            --icon-size: 17px;
+        }
+    }
+
+    .license-section-heading {
+        margin: 1.65rem 0 0.8rem;
+        h3 {
+            font-size: 0.875rem;
+        }
+        p {
+            color: var(--appearance-muted-color);
+            font-size: 0.8125rem;
+            margin-top: 0.15rem;
+        }
+    }
+
+    .license-list {
+        list-style: none;
+        border: 1px solid var(--appearance-border);
+        border-radius: 1rem;
+        overflow: hidden;
+    }
+
+    .license-item {
+        padding: 0.65rem 1.15rem 0.25rem;
+        & + .license-item {
+            border-top: 1px solid var(--appearance-border);
+        }
+    }
+
+    .license-item-heading {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 0.25rem 0.8rem;
+    }
+
+    .license-source {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.3rem 0.5rem;
+        min-width: 0;
+        min-height: 44px;
+        color: var(--appearance-color);
+        font-size: 0.875rem;
+        font-weight: 600;
+        overflow-wrap: anywhere;
+    }
+
+    .license-version {
+        color: var(--appearance-muted-color);
+        font-size: 0.75rem;
+        font-weight: 400;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .license-badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 36px;
+        padding: 0 0.65rem;
+        border-radius: 0.5rem;
+        background: var(--appearance-muted-surface);
+        color: var(--appearance-muted-color);
+        font-size: 0.6875rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .license-disclosure {
+        summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            min-height: 44px;
+            padding-block: 0.5rem;
+            list-style: none;
+            cursor: pointer;
+            color: var(--appearance-muted-color);
+            font-size: 0.8125rem;
+            &::-webkit-details-marker {
+                display: none;
+            }
+            &:hover {
+                color: var(--appearance-accent);
+            }
+        }
+        .icon-chevron {
+            --icon-size: 14px;
+            transform: rotate(90deg);
+            transition: transform var(--motion-duration-fast) var(--motion-ease);
+        }
+        &[open] > summary {
+            color: var(--appearance-accent);
+            .icon-chevron {
+                transform: rotate(-90deg);
+            }
+        }
+    }
+
+    pre {
+        margin: 0.4rem 0 0.8rem;
+        padding: 1rem;
+        border-radius: 0.75rem;
+        background: var(--appearance-muted-surface);
+        color: var(--appearance-color);
+        font:
+            0.75rem/1.7 ui-monospace,
+            monospace;
+        white-space: pre-line;
+        overflow-wrap: anywhere;
+    }
+
+    .license-footnote {
+        margin-top: 1.15rem;
+        color: var(--appearance-muted-color);
+        text-align: center;
+        font-size: 0.75rem;
+    }
+
+    @media (max-width: 600px) {
+        .body {
+            padding: 1rem;
+        }
+        .license-project {
+            padding: 1rem 1rem 0.25rem;
+        }
+        .license-item {
+            padding-inline: 1rem;
+        }
+    }
+}

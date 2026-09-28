@@ -1,31 +1,20 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import PageUi from "@/pages/page-ui";
+import Ui from "@/components/ui";
+import Overlay from "@/components/overlay/overlay";
 import { assertExists } from "@/utils/assert-util";
-import EventUtil from "@/utils/event-util";
-import FullscreenUtil from "@/utils/fullscreen-util";
+import { bind } from "@/utils/event-util";
 import { SwitchChapterDirection } from "./switch-chapter-direction";
 
 /**
  * 阅读器工具分组、跨设备布局和移动沉浸状态。
- * @author allurx
  */
-export default class ReaderUi extends PageUi {
-    public readonly actions = assertExists(this.root.querySelector<HTMLElement>("#reader-actions"));
+export default class ReaderUi extends Ui {
+    public readonly overlay = new Overlay(this.root);
+    private readonly actions = assertExists(this.root.querySelector<HTMLElement>("#reader-actions"));
     private readonly previousButton = assertExists(this.actions.querySelector<HTMLButtonElement>("#previous-chapter"));
     private readonly nextButton = assertExists(this.actions.querySelector<HTMLButtonElement>("#next-chapter"));
     private readonly returnButton = assertExists(this.root.querySelector<HTMLButtonElement>("#return-bookshelf"));
@@ -34,6 +23,9 @@ export default class ReaderUi extends PageUi {
     private readonly fullscreenButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-fullscreen"));
     private readonly header = assertExists(this.root.querySelector<HTMLElement>("#header"));
     private readonly footer = assertExists(this.root.querySelector<HTMLElement>("#footer"));
+    private readonly bookTitle = assertExists(this.root.querySelector<HTMLElement>("#book-title"));
+    private readonly chapterTitle = assertExists(this.root.querySelector<HTMLElement>("#chapter-title"));
+    private readonly progressRate = assertExists(this.root.querySelector<HTMLElement>("#progress-rate"));
     private readonly content = assertExists(this.root.querySelector<HTMLElement>("#content"));
     private readonly toolsEntry = assertExists(this.root.querySelector<HTMLButtonElement>("#reading-tools-entry"));
     private mobileControls = false;
@@ -57,7 +49,6 @@ export default class ReaderUi extends PageUi {
         const mobile = window.matchMedia("(max-width: 800px), (pointer: coarse)");
         const toolbar = assertExists(this.root.querySelector<HTMLElement>(".mobile-actions"));
         const location = assertExists(this.root.querySelector<HTMLElement>(".reading-location"));
-        const progress = assertExists(location.querySelector<HTMLElement>("#progress-rate"));
         const navigation = assertExists(this.actions.querySelector<HTMLElement>(".navigation-actions"));
         const preferences = assertExists(this.actions.querySelector<HTMLElement>(".preference-actions"));
         const bookshelf = assertExists(this.actions.querySelector<HTMLElement>(".bookshelf-actions"));
@@ -89,9 +80,9 @@ export default class ReaderUi extends PageUi {
                 if (button.parentElement !== parent) parent.append(button);
             }
 
-            // 同一进度节点跟随工具区域，页脚持有的引用持续更新，避免两端显示分叉。
+            // 同一进度节点跟随工具区域，显示内容不随布局分叉。
             const progressParent = mobile.matches ? location : this.actions;
-            if (progress.parentElement !== progressParent) progressParent.append(progress);
+            if (this.progressRate.parentElement !== progressParent) progressParent.append(this.progressRate);
             this.renderToolsVisibility();
 
             // 移动原按钮后恢复焦点，移动辅助入口退出布局时归还正文。
@@ -107,7 +98,7 @@ export default class ReaderUi extends PageUi {
 
         // 响应式监听与辅助入口随页面清理，键盘打开工具后直接进入四键操作。
         mobile.addEventListener("change", sync, { signal });
-        EventUtil.bind(
+        bind(
             this.toolsEntry,
             "click",
             () => {
@@ -121,7 +112,7 @@ export default class ReaderUi extends PageUi {
         );
 
         // 模态界面拥有自己的 Escape；只有阅读工具本身收起时才归还正文焦点。
-        EventUtil.bind(
+        bind(
             document,
             "keydown",
             (event: KeyboardEvent) => {
@@ -160,8 +151,8 @@ export default class ReaderUi extends PageUi {
         handler: (direction: SwitchChapterDirection) => Promise<void>,
         signal: AbortSignal
     ): this {
-        EventUtil.bind(this.previousButton, "click", () => handler(SwitchChapterDirection.PREV), { signal });
-        EventUtil.bind(this.nextButton, "click", () => handler(SwitchChapterDirection.NEXT), { signal });
+        bind(this.previousButton, "click", () => handler(SwitchChapterDirection.PREV), { signal });
+        bind(this.nextButton, "click", () => handler(SwitchChapterDirection.NEXT), { signal });
         return this;
     }
 
@@ -191,26 +182,24 @@ export default class ReaderUi extends PageUi {
     }
 
     /**
-     * 全局原生模态弹窗及本页外观面板优先处理 Escape，沉浸工具不能同时收起。
+     * 原生模态界面优先处理 Escape，沉浸工具不能同时收起。
      */
     private hasOpenPanel(): boolean {
-        return this.root.querySelector("#setting.open") !== null || document.querySelector("dialog:modal") !== null;
+        return document.querySelector("dialog:modal") !== null;
     }
 
     /**
      * 隐藏工具同时移出焦点与辅助技术访问；工具以覆盖层显示，不改变正文尺寸。
-     * 外观面板负责保存并恢复显式 inert，原生模态的背景限制则由浏览器管理。
+     * 模态界面的背景限制由浏览器管理，不修改工具自身的隐藏状态。
      */
     private renderToolsVisibility(): void {
         // 视觉覆盖层与可访问状态使用同一结果，不能只隐藏按钮的像素。
         const hidden = !this.mobileControls || !this.toolsVisible;
-        const appearanceOpen = this.root.querySelector("#setting.open") !== null;
         this.root.toggleAttribute("data-reading-tools-visible", !hidden);
         for (const region of [this.header, this.footer]) {
             if (hidden) region.setAttribute("aria-hidden", "true");
             else region.removeAttribute("aria-hidden");
-            // 桌面区域只含信息，保持非 inert，避免浮层跨布局关闭时恢复过期的隔离状态。
-            if (!appearanceOpen) region.inert = this.mobileControls && hidden;
+            region.inert = this.mobileControls && hidden;
         }
 
         // 移动辅助入口描述下一步操作；桌面直接使用独立操作栏。
@@ -225,7 +214,7 @@ export default class ReaderUi extends PageUi {
      * 保存进度后返回书架。
      */
     public bindReturnToBookshelf(handler: () => Promise<void>, signal: AbortSignal): this {
-        EventUtil.bind(this.returnButton, "click", handler, { signal });
+        bind(this.returnButton, "click", handler, { signal });
         return this;
     }
 
@@ -233,8 +222,8 @@ export default class ReaderUi extends PageUi {
      * 浏览器退出全屏时也同步当前控件状态。
      */
     public bindToggleFullscreen(handler: () => Promise<void>, signal: AbortSignal): this {
-        EventUtil.bind(this.fullscreenButton, "click", handler, { signal });
-        EventUtil.bind(
+        bind(this.fullscreenButton, "click", handler, { signal });
+        bind(
             document,
             "fullscreenchange",
             () => {
@@ -250,7 +239,7 @@ export default class ReaderUi extends PageUi {
      * 绑定目录入口；位置改变不会重建按钮。
      */
     public bindToggleTocPanel(handler: () => void, signal: AbortSignal): this {
-        EventUtil.bind(this.tocButton, "click", handler, { signal });
+        bind(this.tocButton, "click", handler, { signal });
         return this;
     }
 
@@ -266,7 +255,7 @@ export default class ReaderUi extends PageUi {
      * 将同一外观入口交给面板，以便关闭后恢复焦点。
      */
     public bindToggleSettingPanel(handler: (opener: HTMLButtonElement) => void, signal: AbortSignal): this {
-        EventUtil.bind(
+        bind(
             this.settingButton,
             "click",
             (_, opener) => {
@@ -281,10 +270,35 @@ export default class ReaderUi extends PageUi {
      * 以浏览器实际全屏状态更新提示。
      */
     private renderFullscreenState(): void {
-        const fullscreen = FullscreenUtil.isActive();
+        const fullscreen = Boolean(document.fullscreenElement);
         const label = fullscreen ? "退出全屏" : "进入全屏";
         this.fullscreenButton.setAttribute("aria-pressed", String(fullscreen));
         this.fullscreenButton.setAttribute("aria-label", label);
         this.fullscreenButton.title = label;
+    }
+
+    /**
+     * 显示书名，完整文件名保留为悬停提示。
+     */
+    public renderBookTitle(title: string): void {
+        this.bookTitle.textContent = title.replace(/\.txt$/i, "");
+        this.bookTitle.title = title;
+    }
+
+    /**
+     * 切章后同步章名与全书进度，显示节点可随桌面或移动布局移动。
+     */
+    public renderChapterInfo(title: string, bookLineNumber: number, numberOfLines: number): void {
+        this.chapterTitle.textContent = title;
+        this.chapterTitle.title = title;
+        this.renderProgress(bookLineNumber, numberOfLines);
+    }
+
+    /**
+     * 全书物理行号换算为百分比，空书为零。
+     */
+    public renderProgress(bookLineNumber: number, numberOfLines: number): void {
+        const ratio = numberOfLines === 0 ? 0 : Math.min(Math.max(bookLineNumber / numberOfLines, 0), 1);
+        this.progressRate.textContent = `${(ratio * 100).toFixed(2)}%`;
     }
 }

@@ -1,22 +1,11 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import Ui from "@/components/ui";
-import EventUtil from "@/utils/event-util";
-import FullscreenUtil from "@/utils/fullscreen-util";
+import { run, bind } from "@/utils/event-util";
+import { toggleFullscreen } from "@/utils/fullscreen-util";
 import { SwitchChapterDirection } from "../switch-chapter-direction";
 
 /**
@@ -38,7 +27,6 @@ interface ReadingPointer {
 
 /**
  * 阅读器画布、全屏和正文指针手势。
- * @author allurx
  */
 export default class AppUi extends Ui {
     private pointer: ReadingPointer | undefined;
@@ -50,14 +38,14 @@ export default class AppUi extends Ui {
     public cleanup(): void {
         this.pointer = undefined;
         this.activePointers.clear();
-        if (FullscreenUtil.getElement() === this.root) EventUtil.run(() => FullscreenUtil.exit());
+        if (document.fullscreenElement === this.root) run(() => document.exitFullscreen());
     }
 
     /**
      * 切换整个阅读画布的全屏状态。
      */
     public async toggleFullscreen(): Promise<void> {
-        return FullscreenUtil.toggle(this.root);
+        return toggleFullscreen(this.root);
     }
 
     /**
@@ -74,7 +62,7 @@ export default class AppUi extends Ui {
         signal: AbortSignal
     ): void {
         // 只为单个主指针建立候选手势，多指或已存在的文本选区会取消本次候选。
-        EventUtil.bind(
+        bind(
             document,
             "pointerdown",
             (event: PointerEvent) => {
@@ -101,7 +89,7 @@ export default class AppUi extends Ui {
         );
 
         // 记录全程移动范围，拖动后返回起点也不能重新成为轻点。
-        EventUtil.bind(
+        bind(
             document,
             "pointermove",
             (event: PointerEvent) => {
@@ -114,7 +102,7 @@ export default class AppUi extends Ui {
         );
 
         // 浏览器滚动和系统取消均终止候选，保留原生滚动与选择行为。
-        EventUtil.bind(
+        bind(
             content,
             "scroll",
             () => {
@@ -122,7 +110,7 @@ export default class AppUi extends Ui {
             },
             { passive: true, signal }
         );
-        EventUtil.bind(
+        bind(
             document,
             "pointercancel",
             (event: PointerEvent) => {
@@ -133,7 +121,7 @@ export default class AppUi extends Ui {
         );
 
         // 正常抬起时先释放候选，再分发一次工具或切章操作。
-        EventUtil.bind(
+        bind(
             document,
             "pointerup",
             async (event: PointerEvent) => {

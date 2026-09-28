@@ -1,17 +1,6 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import type SettingControlListener from "../controls/setting-control-listener";
@@ -19,7 +8,8 @@ import type Setting from "../definitions/setting";
 import type SettingConfiguration from "../models/setting-configuration";
 import Ui from "@/components/ui";
 import { assertExists } from "@/utils/assert-util";
-import EventUtil from "@/utils/event-util";
+import { createElementFromHtml } from "@/utils/dom-util";
+import { bind, run } from "@/utils/event-util";
 import SettingControlList from "./setting-control-list";
 import SettingPreviewSession from "./setting-preview-session";
 import type SettingUiListener from "./setting-ui-listener";
@@ -29,18 +19,16 @@ import type SettingUiListener from "./setting-ui-listener";
  *
  * 协调控件、可取消的预览和模态交互，已提交状态由监听器管理。
  *
- * @author allurx
  */
 export default class SettingUi extends Ui implements SettingControlListener {
+    declare public readonly root: HTMLDialogElement;
     private readonly themeElement: HTMLElement;
     private readonly generalElement: HTMLElement;
     private readonly itemsElement: HTMLElement;
-    private readonly backdropElement = document.createElement("div");
     private readonly closeElement: HTMLButtonElement;
     private readonly resetElement: HTMLButtonElement;
     private readonly resetGeneralElement: HTMLButtonElement;
     private readonly previewSession = new SettingPreviewSession();
-    private readonly previousInert = new Map<HTMLElement, boolean>();
 
     private listener: SettingUiListener | undefined;
     private controlList: SettingControlList | undefined;
@@ -49,21 +37,10 @@ export default class SettingUi extends Ui implements SettingControlListener {
     private returnFocusTarget: HTMLElement | undefined;
 
     /**
-     * @param container - 面板与遮罩的挂载容器。
-     * @param inertElements - 容器外同样需要在模态期间隔离的页面内容。
+     * @param container - 设置对话框的挂载容器。
      */
-    public constructor(
-        container: HTMLElement,
-        private readonly inertElements: readonly HTMLElement[] = []
-    ) {
-        super({ root: { container, template: SettingUi.template } });
-
-        // 遮罩与面板同级挂载，初始不参与交互或辅助技术访问。
-        this.backdropElement.className = "setting-backdrop";
-        this.backdropElement.hidden = true;
-        this.backdropElement.inert = true;
-        this.backdropElement.setAttribute("aria-hidden", "true");
-        this.root.before(this.backdropElement);
+    public constructor(container: HTMLElement) {
+        super(container.appendChild(createElementFromHtml<HTMLDialogElement>(SettingUi.template)));
 
         // 主题和常规设置分别就位，后续只更新控件的当前值。
         this.themeElement = assertExists(this.root.querySelector<HTMLElement>(".theme-items"));
@@ -79,26 +56,53 @@ export default class SettingUi extends Ui implements SettingControlListener {
      */
     public init(configuration: SettingConfiguration, listener: SettingUiListener, signal: AbortSignal): void {
         this.listener = listener;
-        this.generalSettings = configuration.settings.filter((setting) => setting !== configuration.themeSetting);
+        this.generalSettings = configuration.general;
         this.generalElement.hidden = this.generalSettings.length === 0;
         this.controlList = new SettingControlList(this.itemsElement, this.themeElement, configuration, this, signal);
         this.refresh();
 
-        // 遮罩消费完整指针链，关闭不能穿透为正文手势。
-        for (const eventType of ["pointerdown", "pointerup", "pointercancel", "click"]) {
-            EventUtil.bind(
-                this.backdropElement,
-                eventType,
-                (event) => {
-                    event.stopPropagation();
-                    if (eventType === "click") this.close();
-                },
-                { signal }
-            );
-        }
+        // 原生 backdrop 的事件目标是 dialog；仅完整发生在外部的点击关闭面板。
+        let startedOnBackdrop = false;
+        bind(
+            this.root,
+            "pointerdown",
+            (event: PointerEvent) => {
+                event.stopPropagation();
+                startedOnBackdrop = this.isBackdrop(event);
+            },
+            { signal }
+        );
+        bind(
+            this.root,
+            "pointerup",
+            (event) => {
+                event.stopPropagation();
+            },
+            { signal }
+        );
+        bind(
+            this.root,
+            "pointercancel",
+            (event) => {
+                event.stopPropagation();
+                startedOnBackdrop = false;
+            },
+            { signal }
+        );
+        bind(
+            this.root,
+            "click",
+            (event: MouseEvent) => {
+                event.stopPropagation();
+                const dismiss = startedOnBackdrop && this.isBackdrop(event);
+                startedOnBackdrop = false;
+                if (dismiss) this.close();
+            },
+            { signal }
+        );
 
         // 页面与常规重置使用独立范围，预览先撤销，完成后回读已提交值。
-        EventUtil.bind(
+        bind(
             this.closeElement,
             "click",
             () => {
@@ -106,7 +110,7 @@ export default class SettingUi extends Ui implements SettingControlListener {
             },
             { signal }
         );
-        EventUtil.bind(
+        bind(
             this.resetElement,
             "click",
             () => {
@@ -117,7 +121,7 @@ export default class SettingUi extends Ui implements SettingControlListener {
             },
             { signal }
         );
-        EventUtil.bind(
+        bind(
             this.resetGeneralElement,
             "click",
             () => {
@@ -129,11 +133,20 @@ export default class SettingUi extends Ui implements SettingControlListener {
             },
             { signal }
         );
-        EventUtil.bind(
+        bind(
+            this.root,
+            "cancel",
+            (event) => {
+                event.preventDefault();
+                this.close();
+            },
+            { signal }
+        );
+        bind(
             this.root,
             "keydown",
-            (event) => {
-                if (event instanceof KeyboardEvent) this.handleKeydown(event);
+            (event: KeyboardEvent) => {
+                if (event.key === "Escape") event.stopPropagation();
             },
             { signal }
         );
@@ -147,7 +160,7 @@ export default class SettingUi extends Ui implements SettingControlListener {
             },
             { signal }
         );
-        EventUtil.bind(
+        bind(
             this.root,
             "focusout",
             (event: FocusEvent) => {
@@ -167,15 +180,15 @@ export default class SettingUi extends Ui implements SettingControlListener {
         );
 
         // 错误弹窗关闭后，其原始焦点可能已被响应式布局隐藏。
-        EventUtil.bind(
+        bind(
             document,
             "close",
             (event) => {
                 if (
                     event.target instanceof HTMLDialogElement &&
+                    event.target !== this.root &&
                     !event.target.open &&
-                    (document.activeElement === document.body || event.target.contains(document.activeElement)) &&
-                    !document.querySelector("dialog:modal")
+                    (document.activeElement === document.body || event.target.contains(document.activeElement))
                 ) {
                     this.restoreVisibleFocus();
                 }
@@ -185,7 +198,7 @@ export default class SettingUi extends Ui implements SettingControlListener {
 
         // 视口变化后同步范围并维持可见焦点，面板正文独立滚动。
         const observer = new ResizeObserver(() => {
-            if (!this.root.classList.contains("open")) return;
+            if (!this.root.open) return;
             this.restoreVisibleFocus();
             const focused = document.activeElement;
             if (focused instanceof HTMLElement && this.root.contains(focused)) {
@@ -196,7 +209,7 @@ export default class SettingUi extends Ui implements SettingControlListener {
         window.addEventListener(
             "resize",
             () => {
-                EventUtil.run(() => {
+                run(() => {
                     this.refresh();
                     this.restoreVisibleFocus();
                 });
@@ -209,7 +222,7 @@ export default class SettingUi extends Ui implements SettingControlListener {
             "abort",
             () => {
                 observer.disconnect();
-                this.close(false, false);
+                this.close(true);
             },
             { once: true }
         );
@@ -219,7 +232,7 @@ export default class SettingUi extends Ui implements SettingControlListener {
      * 打开或关闭面板；入口位于已收起的抽屉时，可指定另一个可见焦点目标。
      */
     public toggle(opener: HTMLElement, returnFocusTarget = opener): void {
-        if (this.root.classList.contains("open")) this.close();
+        if (this.root.open) this.close();
         else this.open(opener, returnFocusTarget);
     }
 
@@ -296,7 +309,8 @@ export default class SettingUi extends Ui implements SettingControlListener {
      * 响应式隐藏控件或关闭错误弹窗后，恢复面板中的可见焦点。
      */
     private restoreVisibleFocus(): void {
-        if (!this.root.classList.contains("open") || document.querySelector("dialog:modal")) return;
+        if (!this.root.open || [...document.querySelectorAll("dialog:modal")].some((dialog) => dialog !== this.root))
+            return;
         const focused = document.activeElement;
         if (
             focused === document.body ||
@@ -307,87 +321,59 @@ export default class SettingUi extends Ui implements SettingControlListener {
     }
 
     /**
-     * 暂存背景的 inert 状态，并通过事件让阅读页面保存当前上下文。
+     * 原生模态隔离背景，并通过事件让阅读页面保存当前上下文。
      */
     private open(opener: HTMLElement, returnFocusTarget: HTMLElement): void {
+        this.root.inert = false;
+        this.root.showModal();
         this.refresh();
         this.opener = opener;
         this.returnFocusTarget = returnFocusTarget;
         this.opener.setAttribute("aria-expanded", "true");
 
-        this.previousInert.clear();
-        const parent = assertExists(this.root.parentElement);
-        for (const child of new Set([...parent.children, ...this.inertElements])) {
-            if (!(child instanceof HTMLElement) || child === this.root || child === this.backdropElement) continue;
-            this.previousInert.set(child, child.inert);
-            child.inert = true;
-        }
-
-        this.backdropElement.hidden = false;
-        this.backdropElement.inert = false;
-        this.root.inert = false;
-        this.root.setAttribute("aria-hidden", "false");
-        this.root.classList.add("open");
-        this.closeElement.focus();
         this.root.dispatchEvent(new Event("appearance-open", { bubbles: true }));
     }
 
     /**
      * 恢复预览后关闭；即使恢复失败也释放模态状态，避免页面永久不可交互。
      *
-     * @param restoreFocus - 是否归还打开时记录的焦点。
-     * @param restorePreviews - 页面销毁时为 false，只丢弃预览且不派发关闭事件。
+     * @param discard - 页面销毁时只丢弃预览，不向旧页面派发关闭事件。
      */
-    private close(restoreFocus = true, restorePreviews = true): void {
-        if (!this.root.classList.contains("open") && this.previousInert.size === 0) return;
+    private close(discard = false): void {
+        if (!this.root.open) {
+            if (discard) this.previewSession.discard();
+            return;
+        }
         try {
-            if (restorePreviews)
+            if (!discard)
                 this.performAndRefresh(() => {
                     this.cancelPreviews();
                 });
             else this.previewSession.discard();
         } finally {
-            this.root.classList.remove("open");
-            this.root.setAttribute("aria-hidden", "true");
+            this.root.close();
             this.root.inert = true;
-            this.backdropElement.hidden = true;
-            this.backdropElement.inert = true;
-            for (const [element, inert] of this.previousInert) element.inert = inert;
-            this.previousInert.clear();
 
             this.opener?.setAttribute("aria-expanded", "false");
-            if (restoreFocus && this.returnFocusTarget?.isConnected)
-                this.returnFocusTarget.focus({ preventScroll: true });
+            if (!discard && this.returnFocusTarget?.isConnected) this.returnFocusTarget.focus({ preventScroll: true });
             this.opener = undefined;
             this.returnFocusTarget = undefined;
-            if (restorePreviews) this.root.dispatchEvent(new Event("appearance-close", { bubbles: true }));
+            if (!discard) this.root.dispatchEvent(new Event("appearance-close", { bubbles: true }));
         }
     }
 
     /**
-     * 焦点循环只包含当前可见控件，Escape 不继续触发阅读器快捷键。
+     * 区分面板空白区域与原生 backdrop，避免从控件拖出时关闭。
      */
-    private handleKeydown(event: KeyboardEvent): void {
-        if (event.key === "Escape") {
-            event.preventDefault();
-            event.stopPropagation();
-            this.close();
-            return;
-        }
-
-        if (event.key !== "Tab") return;
-        const controls = [...this.root.querySelectorAll<HTMLElement>("button, input, select, [tabindex='0']")].filter(
-            (element) => !element.matches(":disabled") && element.getClientRects().length > 0
+    private isBackdrop(event: MouseEvent): boolean {
+        if (event.target !== this.root) return false;
+        const bounds = this.root.getBoundingClientRect();
+        return (
+            event.clientX < bounds.left ||
+            event.clientX > bounds.right ||
+            event.clientY < bounds.top ||
+            event.clientY > bounds.bottom
         );
-        const first = controls[0];
-        const last = controls.at(-1);
-        if (event.shiftKey && document.activeElement === first) {
-            event.preventDefault();
-            last?.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
-            event.preventDefault();
-            first?.focus();
-        }
     }
 
     /**
@@ -415,10 +401,10 @@ export default class SettingUi extends Ui implements SettingControlListener {
     }
 
     private static readonly template = `
-        <div id="setting" class="panel-scroll" role="dialog" aria-modal="true" aria-label="页面设置" aria-hidden="true" inert>
+        <dialog id="setting" class="panel-scroll" aria-labelledby="setting-title" inert>
             <header>
-                <h2 class="heading">设置</h2>
-                <button class="close icon-button" type="button" title="关闭" aria-label="关闭设置">
+                <h2 id="setting-title" class="heading">设置</h2>
+                <button class="close icon-button" type="button" title="关闭" aria-label="关闭设置" autofocus>
                     <span class="icon icon-close" aria-hidden="true"></span>
                 </button>
             </header>
@@ -440,6 +426,6 @@ export default class SettingUi extends Ui implements SettingControlListener {
                     重置当前页面
                 </button>
             </footer>
-        </div>
+        </dialog>
     `;
 }

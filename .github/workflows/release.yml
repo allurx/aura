@@ -86,10 +86,12 @@ jobs:
                   checksum_asset="aura-$TAG_NAME-SHA256SUMS.txt"
 
                   for web_directory in dist/web dist/web-obfuscated; do
-                      if [[ ! -f "$web_directory/index.html" ]]; then
-                          echo "::error::Web build entry $web_directory/index.html was not generated"
-                          exit 1
-                      fi
+                      for required_file in index.html LICENSE.txt THIRD-PARTY-NOTICES.txt; do
+                          if [[ ! -s "$web_directory/$required_file" ]]; then
+                              echo "::error::Required Web build file $web_directory/$required_file was not generated"
+                              exit 1
+                          fi
+                      done
                   done
 
                   for portable_directory in dist/portable dist/portable-obfuscated; do
@@ -100,8 +102,6 @@ jobs:
                   done
 
                   mkdir release-assets
-                  cp LICENSE.txt dist/web/LICENSE.txt
-                  cp LICENSE.txt dist/web-obfuscated/LICENSE.txt
                   (
                       cd dist/web
                       zip -q -r "../../release-assets/$web_asset" .

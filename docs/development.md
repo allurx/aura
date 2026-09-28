@@ -14,13 +14,35 @@ npm ci
 
 ## 本地运行
 
-开发服务器使用 HTTPS。[Vite 配置](../vite.config.ts)会读取仓库父目录下的 `localhost.pem` 和 `localhost-key.pem`，启动前需准备供本机浏览器信任、适用于 `localhost` 的证书及私钥。私钥留在本机。
+开发服务器默认使用 HTTP localhost，无需准备证书：
 
 ```sh
 npm run dev
 ```
 
-访问终端显示的地址，修改源码后由开发服务器更新页面。若没有开发证书，可先构建并预览产物；构建与预览不读取上述证书，但修改源码后需要重新构建。
+访问终端显示的 localhost 地址，修改源码后由开发服务器更新页面。浏览器将 localhost 视为安全上下文，可使用本项目需要的 Web Crypto 等 API。
+
+需要 HTTPS 验证时，先在仓库父目录准备供测试浏览器信任的 `localhost.pem` 和 `localhost-key.pem`，再执行 `npm run dev -- --mode https`。[Vite 配置](../vite.config.ts)只在此模式读取证书；私钥留在本机。局域网真机访问还需使用覆盖访问地址的证书，普通局域网 HTTP 地址不具备 localhost 的安全上下文条件。
+
+## 从哪里读代码
+
+[应用入口](../src/main.ts)把路由交给书架和阅读器，页面负责挂载与销毁，Controller 协调交互、业务操作和 UI：
+
+- [书架](../src/pages/bookshelf/bookshelf-controller.ts)：导入、分类、搜索和删除；[书架业务](../src/pages/bookshelf/bookshelf-service.ts)负责去重共享正文、初始化与跨存储事务。
+- [阅读器](../src/pages/reader/reader-controller.ts)：切章、恢复位置和保存进度；[阅读业务](../src/pages/reader/reader-service.ts)读取章节并提交进度快照。
+- [TXT 解析](../src/domain/chapter/chapter-parser.ts)：在写事务外解码和分章，保留全书物理行号；解析结果是普通数据记录。
+- [数据访问](../src/database/store.ts)只包装当前需要的 IndexedDB 操作，[事务入口](../src/database/transaction.ts)等待整笔事务提交。界面不直接操作数据库。
+- [外观设置](../src/settings/setting-controller.ts)独立管理主题、常规设置、预览和提交，使用两页各自的 `localStorage`，不进入书籍数据库。
+
+例如导入一本书：Controller 接收文件并展示结果，书架业务先校验与解析，再在事务中写入共享正文、书籍和独立进度，最后刷新列表。阅读时只加载目录和当前章节。书籍与进度的数据形状由 `src/domain/` 中的类型维护，数据库结构以[建库代码](../src/database/database.ts)为准。
+
+数据库名称保持不变，不提供旧结构迁移。改变持久化形状时，使用隔离的浏览器配置验证；若测试环境已有库与当前结构不兼容，先关闭占用连接、删除旧库，再重新打开页面初始化。不要为结构变更另起库名，也不要清理日常阅读数据。
+
+## 许可声明维护
+
+完整项目许可证维护在根目录 [LICENSE.txt](../LICENSE.txt)，实际分发的第三方许可与版权声明维护在 [THIRD-PARTY-NOTICES.txt](../THIRD-PARTY-NOTICES.txt)。源码注释和版权头遵循 [AGENTS.md](../AGENTS.md#工程原则)；交付声明由构建生成，不直接编辑 `dist/` 中的副本。
+
+新增、升级或移除进入产物的运行时依赖和第三方资源时，核对实际分发内容及其版本、许可证和版权归属，同步更新第三方声明。执行 `npm run verify` 后，核对两种 Web 产物中的声明文件与维护源一致，并在两种 portable 的“开源许可”中展开全文，确认声明完整、可离线查看，且交付仍为单个 HTML。
 
 ## 构建与预览
 
@@ -31,7 +53,7 @@ npm run dev
 | `npm run build:portable`            | `dist/portable/aura.html`，普通离线版            |
 | `npm run build:portable:obfuscated` | `dist/portable-obfuscated/aura.html`，混淆离线版 |
 
-每个构建命令先执行静态检查，再只清理自身输出子目录，四种产物可以同时保留。Web 输出中的入口、资源、manifest、图标与 `_headers` 属于同一次构建，应整体使用；portable 输出为单个 HTML 文件。
+每个构建命令先执行静态检查，再只清理自身输出子目录，四种产物可以同时保留。Web 输出中的入口、资源、manifest、图标、`_headers`、`LICENSE.txt` 与 `THIRD-PARTY-NOTICES.txt` 属于同一次构建，应整体使用；portable 输出为单个 HTML 文件，许可声明已嵌入其中。
 
 开发服务器与 Web 构建共用安装元信息和图标，可在本地 HTTPS 开发页或下面的 HTTP 预览中，从浏览器地址栏或菜单验证原生安装；portable 不包含安装元信息。安装交互与状态由浏览器管理，Web 安装不依赖 Service Worker，也不增加应用资源离线缓存。
 

@@ -1,53 +1,43 @@
 /*
  * Copyright 2025 allurx
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import type Setting from "../definitions/setting";
-import ThemeSetting from "../definitions/theme-setting";
+import type StyleSetting from "../definitions/style-setting";
+import type ThemeSetting from "../definitions/theme-setting";
 import type { PageName } from "@/constants/page-name";
 import { Theme } from "./theme";
 
 /**
- * 单个页面的设置清单，供面板与持久化读取共同使用。
+ * 页面固定提供主题，阅读器另外提供常规设置；数组顺序就是控件顺序。
+ */
+export interface PageSettings {
+    readonly theme: ThemeSetting;
+    readonly general: readonly StyleSetting[];
+}
+
+/**
+ * 当前页面的外观设置清单，供控件、状态更新与持久化共用。
  *
- * @author allurx
  */
 export default class SettingConfiguration {
+    public readonly theme: ThemeSetting;
+    public readonly general: readonly StyleSetting[];
     public readonly settings: readonly Setting[];
-    public readonly themeSetting: ThemeSetting;
     public readonly defaultTheme = Theme.SUNNY;
 
     public constructor(
         public readonly pageName: PageName,
-        settings: readonly Setting[]
+        { theme, general }: PageSettings
     ) {
-        const keys = new Set<string>();
-        let themeSetting: ThemeSetting | undefined;
-
-        for (const setting of settings) {
+        const keys = new Set<string>([theme.key]);
+        for (const setting of general) {
             if (keys.has(setting.key)) throw new Error(`Duplicate setting: ${setting.key}`);
             keys.add(setting.key);
-
-            if (setting instanceof ThemeSetting) {
-                if (themeSetting) throw new Error("A page can declare only one Theme setting");
-                themeSetting = setting;
-            }
         }
-
-        if (!themeSetting) throw new Error("Setting configuration must declare a Theme setting");
-        this.settings = Object.freeze([...settings]);
-        this.themeSetting = themeSetting;
+        this.theme = theme;
+        this.general = Object.freeze([...general]);
+        this.settings = Object.freeze([theme, ...this.general]);
     }
 }

@@ -46,7 +46,7 @@ git push $releaseRemote "refs/tags/${releaseTag}:refs/tags/${releaseTag}"
 
 `Build release assets` 成功后，`Publish GitHub Release` 会再次核对远端 tag 对象未变化、检查 SHA-256，并创建公开 Release。到仓库 **Releases** 核对标题与 tag，再按[下载产物清单](usage.md#选择下载文件)确认四个构建文件和校验清单齐全，文件名均使用本次版本号。
 
-从该 Release 下载四项产物与校验清单，按[文件校验方法](usage.md#校验下载文件)逐项核对哈希。校验成功证明下载文件与清单一致，不能代替打开 Web 包与 portable 的功能验收。
+从该 Release 下载四项产物与校验清单，按[文件校验方法](usage.md#校验下载文件)逐项核对哈希。解压两种 Web 包，确认含有 `LICENSE.txt` 和 `THIRD-PARTY-NOTICES.txt`；打开两种 portable，从书架菜单的“开源许可”展开查看完整声明。校验成功证明下载文件与清单一致，不能代替功能验收。
 
 ## 失败或结果不明
 
