@@ -71,8 +71,8 @@
     --icon-image: url("../../assets/images/source-code.svg");
 }
 
-.icon-license {
-    --icon-image: url("../../assets/images/license.svg");
+.icon-about {
+    --icon-image: url("../../assets/images/about.svg");
 }
 
 .icon-external-link {

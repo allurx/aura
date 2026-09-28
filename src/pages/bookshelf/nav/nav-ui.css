@@ -47,7 +47,7 @@
         flex: 1;
         padding: 0.2rem 0.8rem;
     }
-    :is(button, .nav-footer a) {
+    button {
         display: flex;
         align-items: center;
         gap: 12px;
@@ -130,18 +130,13 @@
         padding-inline: 0.2rem;
         border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
     }
-    .nav-footer :is(button, a) {
+    .nav-footer button {
         min-height: 44px;
         opacity: 0.85;
     }
     .nav-footer .icon {
         --icon-size: 18px;
         margin-inline: 1px;
-    }
-    .nav-footer .icon-external-link {
-        --icon-size: 14px;
-        margin-left: auto;
-        opacity: 0.65;
     }
     #close-navigation {
         --icon-size: 20px;
@@ -151,7 +146,7 @@
         margin-left: auto;
     }
     @media (hover: hover) and (pointer: fine) {
-        :is(button:where(:not(:disabled)), .nav-footer a):hover {
+        button:where(:not(:disabled)):hover {
             background: color-mix(in srgb, currentColor 5%, transparent);
             transform: translateX(2px);
         }
@@ -159,7 +154,7 @@
             background: var(--appearance-selection);
         }
     }
-    :is(button:where(:not(:disabled)), .nav-footer a):active {
+    button:where(:not(:disabled)):active {
         transform: translateY(1px);
     }
     @media (max-width: 768px) {
@@ -186,9 +181,9 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-        :is(button, .nav-footer a),
-        :is(button, .nav-footer a):hover,
-        :is(button, .nav-footer a):active {
+        button,
+        button:hover,
+        button:active {
             transition: none;
             transform: none;
         }

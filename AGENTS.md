@@ -61,7 +61,7 @@ Aura 是一个轻量、离线优先的 Web 阅读器。变更应持续保护以�
 - TypeScript 变更通常至少运行 `npm run check`；影响运行时行为时还应运行对应生产构建，普通 Web 为 `npm run build`。构建脚本已包含静态门禁，最终验证无需紧邻重复运行 `npm run check`。
 - 路由、入口、模板、资源路径、Vite 配置或 portable 相关变更，应同时运行 `npm run build` 和 `npm run build:portable`；混淆流程变更再覆盖 `npm run build:obfuscated` 和 `npm run build:portable:obfuscated`。
 - Web、portable 及其混淆版本集中在统一构建输出根目录下，各自使用独立子目录；单次构建只清理自身子目录，保持其他版本产物不变。
-- Web 构建附带完整项目许可证与第三方声明文件；portable 将两者完整嵌入唯一 HTML。“开源许可”入口先展示名称、许可类型和来源链接，全文默认收起、按需展开，本地声明无需联网查看。构建、压缩和混淆不得丢失交付所需声明；实际分发的依赖或第三方资源变化时，同步核对声明维护源和四种产物。
+- Web 构建附带完整项目许可证与第三方声明文件；portable 将两者完整嵌入唯一 HTML。“关于 Aura”统一提供项目源码链接与许可信息，先展示名称、许可类型和来源链接，全文默认收起、按需展开，本地声明无需联网查看。构建、压缩和混淆不得丢失交付所需声明；实际分发的依赖或第三方资源变化时，同步核对声明维护源和四种产物。
 - `npm run verify` 执行一次静态检查，并构建验证 Web、portable 的普通版和混淆版；GitHub Actions 使用该入口验证 PR 和共享分支，只有在仓库规则中将该检查设为 required check 后才构成合并门禁。调整 Node.js 版本范围、验证脚本、构建入口或输出目录时应同步维护 CI 和发布流程。
 - 在线版使用 Cloudflare Workers Static Assets，GitHub Actions 是唯一自动部署入口；预览与正式站点均部署同一次验证生成的 Web 混淆产物，生产与预览环境隔离。自定义域名绑定由 Cloudflare 独立管理，日常 CI 不修改域名连接或要求域名写权限。站点部署与 portable 下载交付保持独立，部署配置不得破坏单文件产物。
 - 正式发布使用稳定 SemVer 形式的 annotated `vX.Y.Z` tag，tag 必须指向已集成且验证过的 `main` commit。推送匹配 tag 会自动重跑 `npm run verify`，并公开发布普通版与混淆版的 Web ZIP、portable HTML，以及覆盖四项产物的 SHA-256 校验清单；因此执行 tag push 前必须同时获得对该 GitHub Release 的明确授权。调整产物文件名时应同步更新发布流程和[使用指南中的下载说明](docs/usage.md#选择下载文件)。

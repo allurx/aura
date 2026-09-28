@@ -129,16 +129,6 @@ export default class NavUi extends Ui {
             { signal }
         );
 
-        // 项目链接使用浏览器原生导航，打开新页面后收起移动抽屉。
-        bind(
-            assertExists(this.root.querySelector("#project-source")),
-            "click",
-            () => {
-                this.closeDrawer();
-            },
-            { signal }
-        );
-
         // 清空流程先退出当前模态，避免遮罩与确认对话框冲突。
         bind(
             assertExists(this.root.querySelector("#clear-btn")),
@@ -150,36 +140,36 @@ export default class NavUi extends Ui {
             { signal }
         );
 
-        // 许可全文来自构建时内嵌的静态内容，离线查看不读取书籍或外部资源。
-        const licenses = assertExists(document.querySelector<HTMLDialogElement>("#license-dialog"));
-        const licenseButton = assertExists(this.root.querySelector<HTMLButtonElement>("#open-licenses"));
+        // 关于窗口集中展示项目链接与内嵌许可，离线查看声明不读取书籍或外部资源。
+        const about = assertExists(document.querySelector<HTMLDialogElement>("#about-dialog"));
+        const aboutButton = assertExists(this.root.querySelector<HTMLButtonElement>("#open-about"));
         bind(
-            licenseButton,
+            aboutButton,
             "click",
             () => {
                 this.closeDrawer();
-                licenses.showModal();
+                about.showModal();
             },
             { signal }
         );
         bind(
-            licenses,
+            about,
             "keydown",
             (event: KeyboardEvent) => {
-                // 侧栏跨断点重新展开会干扰原生关闭请求；Escape 只关闭当前许可窗口。
+                // 侧栏跨断点重新展开会干扰原生关闭请求；Escape 只关闭当前关于窗口。
                 if (event.key !== "Escape" || event.defaultPrevented) return;
                 event.preventDefault();
                 event.stopPropagation();
-                licenses.close();
+                about.close();
             },
             { signal }
         );
         bind(
-            licenses,
+            about,
             "close",
             () => {
                 this.syncBreakpoint();
-                (this.mobile.matches ? this.opener : licenseButton).focus();
+                (this.mobile.matches ? this.opener : aboutButton).focus();
             },
             { signal }
         );
@@ -189,7 +179,7 @@ export default class NavUi extends Ui {
             "abort",
             () => {
                 this.drawer.close();
-                licenses.close();
+                about.close();
             },
             { once: true }
         );
