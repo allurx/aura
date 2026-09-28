@@ -63,11 +63,11 @@ export class BookImportError extends Error {
 }
 
 /**
- * 写事务外准备的正文；已有内容无需再次解析，chapters 为 null。
+ * 写事务外完成解析的正文。
  */
 interface PreparedFile {
     file: BookFile;
-    chapters: Chapter[] | null;
+    chapters: Chapter[];
 }
 
 /**
@@ -86,19 +86,19 @@ export async function importBooks(
         const category = assertExists(getCategory(categoryId), "Category not found");
         for (const [hash, groupedFiles] of await groupFilesByHash(files, reportProgress)) {
             const file = assertExists(groupedFiles[0]);
-            const prepared = await prepareFile(file, hash, reportProgress);
-            if (!prepared) {
-                result.unsupportedEncodingFiles.push(...groupedFiles);
+            reportProgress?.(`正在保存：${file.name}`);
+            const existingBooks = await saveBooks(groupedFiles, category.id, hash);
+            if (existingBooks) {
+                result.books.push(...existingBooks);
             } else {
-                reportProgress?.(`正在保存：${file.name}`);
-                const storeNames: StoreName[] = prepared.chapters
-                    ? ["file", "chapter", "toc", "book", "progress"]
-                    : ["book", "progress"];
-                const books = await runTransaction(storeNames, "readwrite", async (transaction) => {
-                    await savePreparedFile(prepared, transaction);
-                    return addBooks(groupedFiles, category.id, prepared.file.id, transaction);
-                });
-                result.books.push(...books);
+                const prepared = await prepareFile(file, hash, reportProgress);
+                if (!prepared) {
+                    result.unsupportedEncodingFiles.push(...groupedFiles);
+                } else {
+                    reportProgress?.(`正在保存：${file.name}`);
+                    const books = await saveBooks(groupedFiles, category.id, hash, prepared);
+                    result.books.push(...assertExists(books));
+                }
             }
 
             // 整组提交或明确跳过后，才从未完成集合移除。
@@ -194,18 +194,13 @@ async function groupFilesByHash(files: File[], reportProgress?: (message: string
 }
 
 /**
- * 复用已有正文，或在事务外完成严格编码检测和章节解析。
+ * 在事务外完成严格编码检测和章节解析。
  */
 async function prepareFile(
     file: File,
     hash: string,
     reportProgress?: (message: string) => void
 ): Promise<PreparedFile | null> {
-    const existing = await runTransaction("file", "readonly", (transaction) =>
-        getRecordByIndex(transaction, "file", "hash", hash)
-    );
-    if (existing) return { file: existing, chapters: null };
-
     reportProgress?.(`正在识别编码：${file.name}`);
     const encoding = await detectTextEncoding(file);
     if (!encoding) return null;
@@ -216,11 +211,27 @@ async function prepareFile(
 }
 
 /**
+ * 在同一写事务中核实正文并创建书籍引用；正文不存在且尚未解析时返回 null。
+ * 解析期间其他页面可能导入或删除相同内容，最终写入必须重新按 hash 核对。
+ */
+async function saveBooks(files: File[], categoryId: CategoryId, hash: string, prepared?: PreparedFile) {
+    const storeNames: StoreName[] = prepared
+        ? ["file", "chapter", "toc", "book", "progress"]
+        : ["file", "book", "progress"];
+    return runTransaction(storeNames, "readwrite", async (transaction) => {
+        const existing = await getRecordByIndex(transaction, "file", "hash", hash);
+        if (existing) return addBooks(files, categoryId, existing.id, transaction);
+        if (!prepared) return null;
+
+        await savePreparedFile(prepared, transaction);
+        return addBooks(files, categoryId, prepared.file.id, transaction);
+    });
+}
+
+/**
  * 新正文、全部章节和轻量目录一起写入；已有正文不重复写入。
  */
 async function savePreparedFile(prepared: PreparedFile, transaction: IDBTransaction): Promise<void> {
-    if (!prepared.chapters) return;
-
     const toc: Toc = {
         fileId: prepared.file.id,
         entries: prepared.chapters.map(({ chapterNumber, title, startBookLineNumber, endBookLineNumber }) => ({

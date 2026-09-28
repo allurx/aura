@@ -97,7 +97,7 @@ export default class FontSettingControl extends StyleSettingControl {
     }
 
     /**
-     * 只处理权限与平台限制；其他异常继续交给统一错误入口。
+     * 权限与平台限制在控件中说明；其他异常结束等待反馈后交给统一错误入口。
      * 异步返回后使用最近的选择，避免覆盖等待期间发生的重置或其他设置操作。
      */
     private async readFonts(): Promise<void> {
@@ -114,8 +114,7 @@ export default class FontSettingControl extends StyleSettingControl {
             families = await readLocalFontFamilies();
         } catch (error) {
             if (this.signal.aborted) return;
-            if (!(error instanceof DOMException)) throw error;
-            switch (error.name) {
+            switch (error instanceof DOMException ? error.name : "") {
                 case "NotAllowedError":
                     this.message = "未获准读取本机字体，当前字体保持不变。";
                     break;
@@ -127,6 +126,8 @@ export default class FontSettingControl extends StyleSettingControl {
                     this.message = "已取消读取，当前字体保持不变。";
                     break;
                 default:
+                    this.message = "读取本机字体失败，请重试；当前字体保持不变。";
+                    this.render(this.value);
                     throw error;
             }
             this.render(this.value);

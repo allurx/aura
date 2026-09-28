@@ -116,16 +116,24 @@ export default class ReaderController {
     }
 
     /**
-     * 按提交顺序保存独立快照，存储成功后才更新内存进度；失败交给调用方反馈。
+     * 按提交顺序保存独立快照；已删除的书籍退出阅读，真实失败交给调用方反馈。
      */
     private async updateProgress(progress: Partial<Progress>): Promise<void> {
         const snapshot: Progress = { ...this.state.progress, ...progress };
         const write = this.progressWrite.then(() => updateProgress(snapshot));
 
         // 队列保留继续写入的能力；本次失败仍由下面的 await 抛给调用方。
-        this.progressWrite = write.catch(() => undefined);
-        await write;
-        this.state.progress = snapshot;
+        this.progressWrite = write.then(
+            () => undefined,
+            () => undefined
+        );
+        if (await write) this.state.progress = snapshot;
+        else if (!this.signal.aborted && !this.returningToBookshelf) {
+            // 复用返回状态，阻止 hash 切换完成前继续交互或重复导航。
+            this.returningToBookshelf = true;
+            this.contentUi.cancelPendingScroll();
+            this.onReturnToBookshelf();
+        }
     }
 
     /**
@@ -168,10 +176,10 @@ export default class ReaderController {
     }
 
     /**
-     * 跨异步边界重新读取页面生命周期，不沿用调用前的状态。
+     * 跨异步边界确认页面仍在阅读，已开始返回时不继续更新正文。
      */
     private isActive(): boolean {
-        return !this.signal.aborted;
+        return !this.signal.aborted && !this.returningToBookshelf;
     }
 
     /**
@@ -185,7 +193,7 @@ export default class ReaderController {
     }
 
     /**
-     * 等待最新位置写入成功后再离开，失败时留在当前正文供重试。
+     * 等待最新位置写入后离开；书籍已删除时仍可返回，真实失败时留在正文供重试。
      */
     private async returnToBookshelf(): Promise<void> {
         // 离开与切章互斥，退出流程直接保存当前位置，不等待滚动防抖。
@@ -198,8 +206,9 @@ export default class ReaderController {
             const position = this.contentUi.readProgress();
             if (position) await this.updateProgress(position);
             if (!this.signal.aborted) this.onReturnToBookshelf();
-        } finally {
+        } catch (error) {
             this.returningToBookshelf = false;
+            throw error;
         }
     }
 
@@ -260,7 +269,7 @@ export default class ReaderController {
             .bindContentScroll(async (chapterLineNumber, lineVisibleRatio) => {
                 if (this.chapterLoading || this.returningToBookshelf || this.appearancePosition) return;
                 await this.updateProgress({ chapterLineNumber, lineVisibleRatio });
-                if (signal.aborted) return;
+                if (!this.isActive()) return;
                 this.readerUi.renderProgress(
                     toBookLineNumber(this.state.chapter, chapterLineNumber),
                     numberOfLines(this.state.toc)

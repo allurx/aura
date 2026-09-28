@@ -39,11 +39,14 @@ export async function initReader(bookId: string): Promise<ReaderState> {
 }
 
 /**
- * 提交完整进度快照；事务失败由调用方反馈并保留原内存状态。
+ * 核实书籍仍存在后提交完整进度快照，避免另一页面删除后重新创建孤儿进度。
+ * 书籍已删除时返回 false；真实事务失败继续抛出，由调用方反馈并保留原内存状态。
  */
-export async function updateProgress(progress: Progress): Promise<void> {
-    await runTransaction("progress", "readwrite", async (transaction) => {
+export async function updateProgress(progress: Progress): Promise<boolean> {
+    return runTransaction(["book", "progress"], "readwrite", async (transaction) => {
+        if (!(await getRecord(transaction, "book", progress.bookId))) return false;
         await putRecord(transaction, "progress", progress);
+        return true;
     });
 }
 

@@ -80,10 +80,6 @@
             font-size: 0.875rem;
         }
     }
-    .dialog:has(.reset-warning) {
-        --appearance-accent: var(--appearance-danger);
-    }
-
     @media (prefers-reduced-motion: no-preference) {
         #shelf-feedback:not([hidden]) {
             animation: shelf-feedback-enter var(--motion-duration-normal) var(--motion-ease-out);

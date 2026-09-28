@@ -67,12 +67,14 @@ class Main {
             // 业务层只补充可读上下文，通用原因与展示仍由统一错误入口负责。
             const cause = error instanceof OperationError ? error.cause : error;
             const primaryCause = cause instanceof AggregateError ? cause.cause : cause;
-            const guidance =
+            const storageGuidance =
                 primaryCause instanceof DOMException && primaryCause.name === "QuotaExceededError"
                     ? "浏览器存储空间不足，操作未完成。请保留原始 TXT，释放存储空间后重试。"
-                    : "操作未完成。请重试；若仍然失败，请保留原始 TXT。";
+                    : undefined;
             const content =
-                error instanceof OperationError ? `${error.message}\n\n${guidance}\n\n${error.details}` : guidance;
+                error instanceof OperationError
+                    ? [error.message, error.details, storageGuidance].filter(Boolean).join("\n\n")
+                    : (storageGuidance ?? "操作未完成。请重试；若仍然失败，请保留原始 TXT。");
             await this.errorDialog.alert(content, { title: "操作失败" });
         } finally {
             this.errorVisible = false;

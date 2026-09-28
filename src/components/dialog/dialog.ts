@@ -23,6 +23,7 @@ type DialogRequest =
           title: string;
           confirmBtnText: string;
           cancelBtnText: string;
+          destructive: boolean;
       };
 
 /**
@@ -66,14 +67,14 @@ export default class Dialog {
     }
 
     /**
-     * 显示需要明确确认的操作提示。
+     * 显示需要明确确认的操作提示；不可逆操作可用 destructive 标明最终确认按钮。
      * @returns 点击确定为 true，取消、关闭或 Escape 为 false。
      */
     public async confirm(
         content: Node | string,
-        { title = "确认", confirmBtnText = "确定", cancelBtnText = "取消" } = {}
+        { title = "确认", confirmBtnText = "确定", cancelBtnText = "取消", destructive = false } = {}
     ) {
-        return this.show({ type: "confirm", content, title, confirmBtnText, cancelBtnText });
+        return this.show({ type: "confirm", content, title, confirmBtnText, cancelBtnText, destructive });
     }
 
     /**
@@ -85,7 +86,8 @@ export default class Dialog {
         this.setBodyContent(request.content);
         this.confirmBtnElement.textContent = request.confirmBtnText;
 
-        // 提示模式与确认模式共用结构，仅调整取消入口。
+        // 同步本次请求的危险语义和取消入口，不让普通提示继承上次确认的样式。
+        this.dialogElement.toggleAttribute("data-destructive", request.type === "confirm" && request.destructive);
         if (request.type === "alert") {
             this.cancelBtnElement.hidden = true;
         } else {
@@ -98,6 +100,8 @@ export default class Dialog {
             this.resolve = resolve;
             this.dialogElement.inert = false;
             this.dialogElement.showModal();
+            // 新请求从正文开头呈现，不继承上次长提示的滚动位置。
+            this.bodyElement.scrollTo(0, 0);
         });
     }
 

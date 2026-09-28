@@ -173,6 +173,11 @@
         }
     }
 
+    /* 危险色只属于最终确认按钮，其他入口和焦点仍沿用页面主题。 */
+    &[data-destructive] .confirm-btn {
+        --appearance-accent: var(--appearance-danger);
+    }
+
     @media (max-width: 600px) {
         .body {
             padding: 1.1rem;

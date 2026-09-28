@@ -116,6 +116,21 @@ export default class BookshelfController {
     }
 
     /**
+     * 数据已提交后，刷新失败只报告列表未更新，保留结果以免用户重复执行。
+     */
+    private async refreshAfterChange(result: string): Promise<void> {
+        try {
+            await this.refreshBooks();
+        } catch (error) {
+            throw new OperationError(
+                "数据操作已完成，但书架刷新失败。",
+                `${result}\n\n请重新打开书架查看，无需重复执行刚才的操作。`,
+                error
+            );
+        }
+    }
+
+    /**
      * 分类和书名搜索共用同一摘要列表，不发起并发分类查询。
      */
     private renderBooks(): void {
@@ -154,7 +169,7 @@ export default class BookshelfController {
         try {
             await this.bookshelfUi.runBusy(`正在导入 ${String(validFiles.length)} 个 TXT 文件…`, async (setStatus) => {
                 result = await importBooks(validFiles, categoryId, setStatus);
-                await this.refreshBooks();
+                await this.refreshAfterChange(this.describeImport(result, invalidFiles));
             });
             if (!this.isActive()) return;
 
@@ -223,6 +238,7 @@ export default class BookshelfController {
                 {
                     title: "删除书籍",
                     confirmBtnText: "删除",
+                    destructive: true,
                 }
             );
             if (!confirmed || !this.isActive()) return;
@@ -230,7 +246,7 @@ export default class BookshelfController {
             // 删除提交后再刷新列表，成功提示仅投递给仍存活的页面。
             await this.bookshelfUi.runBusy("正在删除书籍…", async () => {
                 await deleteBook(bookId);
-                await this.refreshBooks();
+                await this.refreshAfterChange(`已删除《${summary.title}》及其阅读进度。`);
             });
             if (this.isActive()) this.bookshelfUi.showFeedback(`已删除《${summary.title}》`);
         } finally {
@@ -274,7 +290,9 @@ export default class BookshelfController {
         try {
             if (
                 !(await this.bookshelfUi.dialog.confirm("确定清空所有分类中的书籍和阅读进度吗？此操作无法撤销。", {
+                    title: "清空书架",
                     confirmBtnText: "清空",
+                    destructive: true,
                 })) ||
                 !this.isActive()
             )
@@ -283,7 +301,7 @@ export default class BookshelfController {
             // 空列表渲染后将焦点交给列表，避免停留在已删除的书目上。
             await this.bookshelfUi.runBusy("正在清空书架…", async () => {
                 await clearBookshelf();
-                await this.refreshBooks();
+                await this.refreshAfterChange("已清空所有分类中的书籍和阅读进度，外观设置保持不变。");
             });
             if (this.isActive()) this.bookListUi.root.focus({ preventScroll: true });
         } finally {
@@ -309,7 +327,7 @@ export default class BookshelfController {
                         <p class="reset-warning-note">请先保留原始 TXT，并关闭其他 Aura 页面。<br>完成后自动刷新。</p>
                     </div>
                 `),
-                { title: "重置数据", confirmBtnText: "确认清除" }
+                { title: "重置数据", confirmBtnText: "清除全部数据", destructive: true }
             );
             if (!confirmed || !this.isActive()) return;
 
