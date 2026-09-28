@@ -1,0 +1,163 @@
+/*
+ * Copyright 2025 allurx
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+select option {
+    background: var(--appearance-canvas);
+    color: var(--appearance-color);
+}
+
+select > button {
+    display: none;
+}
+
+/* 仅增强支持定制的原生 picker，其余浏览器保留系统菜单。 */
+@supports (appearance: base-select) and selector(::picker(select)) {
+    select {
+        &,
+        &::picker(select) {
+            appearance: base-select;
+        }
+
+        > button {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            gap: 0.6rem;
+            min-width: 0;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+        }
+
+        selectedcontent {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        &::picker-icon {
+            content: "";
+            flex: none;
+            width: 0.45em;
+            height: 0.45em;
+            margin: -0.2em 0.2em 0 0;
+            border-right: 1.5px solid currentColor;
+            border-bottom: 1.5px solid currentColor;
+            transform: rotate(45deg);
+            opacity: 0.6;
+            transition: transform var(--motion-duration-normal) var(--motion-ease);
+        }
+
+        &:open {
+            background-image: linear-gradient(
+                color-mix(in srgb, currentColor 6%, transparent),
+                color-mix(in srgb, currentColor 6%, transparent)
+            );
+        }
+
+        &:open::picker-icon {
+            transform: rotate(225deg);
+        }
+
+        &::picker(select) {
+            width: anchor-size(width);
+            min-width: min(9rem, calc(100vw - 2rem));
+            max-width: calc(100vw - 2rem);
+            max-height: min(16rem, calc(100dvh - 2rem));
+            overflow-x: hidden;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scroll-padding-block: 0.35rem;
+            margin-block: 0.35rem;
+            padding: 0.35rem;
+            border: 1px solid var(--appearance-border);
+            border-radius: 0.85rem;
+            background-color: var(--appearance-canvas);
+            color: var(--appearance-color);
+            box-shadow: var(--appearance-shadow-raised);
+            font-size: max(14px, 1em);
+            line-height: 1.4;
+            scrollbar-width: thin;
+            scrollbar-color: color-mix(in srgb, currentColor 30%, transparent) transparent;
+            position-try-fallbacks:
+                flip-block,
+                flip-inline,
+                flip-block flip-inline;
+        }
+
+        hr {
+            margin: 0.3rem 0.45rem;
+            border: 0;
+            border-top: 1px solid var(--appearance-border);
+        }
+
+        option {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 0;
+            min-height: 36px;
+            padding: 0.4rem 0.65rem;
+            border-radius: 0.5rem;
+            background: transparent;
+            color: inherit;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            cursor: pointer;
+        }
+
+        option::checkmark {
+            order: 1;
+            flex: none;
+            margin-left: auto;
+            color: var(--appearance-color);
+            font-size: 0.9em;
+        }
+
+        option:checked {
+            background: color-mix(in srgb, currentColor 7%, transparent);
+            font-weight: 600;
+        }
+
+        option:focus-visible {
+            background: color-mix(in srgb, currentColor 12%, transparent);
+            outline: 2px solid var(--focus-ring-color);
+            outline-offset: -2px;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            option:hover {
+                background: color-mix(in srgb, currentColor 12%, transparent);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            &::picker-icon {
+                transition: none;
+            }
+        }
+
+        @media (forced-colors: active) {
+            &::picker(select) {
+                border-color: ButtonText;
+                scrollbar-color: auto;
+            }
+            option:checked {
+                outline: 1px solid Highlight;
+                outline-offset: -1px;
+            }
+        }
+
+        @media (any-pointer: coarse) {
+            option {
+                min-height: 44px;
+            }
+        }
+    }
+}

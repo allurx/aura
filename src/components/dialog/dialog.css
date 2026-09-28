@@ -4,6 +4,7 @@
  */
 
 .dialog {
+    font-family: var(--ui-font-family);
     --dialog-top: max(1rem, env(safe-area-inset-top));
     --dialog-right: max(1rem, env(safe-area-inset-right));
     --dialog-bottom: max(1rem, env(safe-area-inset-bottom));

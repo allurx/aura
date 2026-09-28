@@ -25,6 +25,7 @@
     overflow: hidden;
     scrollbar-gutter: auto;
     font-size: 15px;
+    font-family: var(--ui-font-family);
     line-height: 1.5;
     opacity: 0;
     transform: var(--setting-hidden-translation);
@@ -210,11 +211,8 @@
             grid-row: 1;
             grid-column: 1;
             font-size: 0.9em;
+            font-weight: 400;
             overflow-wrap: anywhere;
-        }
-
-        &[data-customized] > .title {
-            font-weight: 650;
         }
 
         > .reset-setting {
@@ -248,6 +246,15 @@
                 accent-color: var(--setting-accent-color);
                 font: inherit;
                 cursor: pointer;
+            }
+
+            > select {
+                padding: 0.4rem 0.65rem;
+                border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+                border-radius: 0.65rem;
+                background: color-mix(in srgb, currentColor 3%, transparent);
+                color: inherit;
+                text-overflow: ellipsis;
             }
 
             > input[type="color"] {
@@ -297,6 +304,50 @@
             > .reset-setting {
                 grid-row: 1;
                 grid-column: 4;
+            }
+        }
+
+        &.font-setting {
+            row-gap: 0.4rem;
+
+            > .control-container {
+                display: flex;
+                align-items: center;
+                gap: 0.35rem;
+
+                > select {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    flex: 1 1 0;
+                    overflow: hidden;
+                    white-space: nowrap;
+                }
+
+                .font-read-option {
+                    color: var(--setting-accent-color);
+                }
+            }
+
+            > .font-status {
+                grid-row: 3;
+                grid-column: 1 / -1;
+                margin: 0.3rem 0 0;
+                color: color-mix(in srgb, currentColor 70%, transparent);
+                font-size: 0.78em;
+                line-height: 1.5;
+                overflow-wrap: anywhere;
+
+                /* 常规成功反馈供读屏播报，不挤占阅读设置的垂直空间。 */
+                &[data-quiet] {
+                    position: absolute;
+                    width: 1px;
+                    height: 1px;
+                    margin: -1px;
+                    overflow: hidden;
+                    white-space: nowrap;
+                    clip-path: inset(50%);
+                }
             }
         }
     }

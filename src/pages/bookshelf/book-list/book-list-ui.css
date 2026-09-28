@@ -48,7 +48,7 @@
         min-height: calc(
             var(--book-title-lines) * 1.45 * var(--book-title-font-size) + 2 * var(--book-cover-padding-block)
         );
-        padding: var(--book-cover-padding-block) 1.2rem;
+        padding: var(--book-cover-padding-block) clamp(14px, calc(var(--book-cover-width) * 0.15), 1.2rem);
         border: 1px solid color-mix(in srgb, var(--book-cover-ink) 10%, transparent);
         border-radius: 5px 12px 12px 5px;
         background-color: var(--book-cover);
@@ -99,7 +99,6 @@
         -webkit-box-orient: vertical;
         -webkit-line-clamp: var(--book-title-lines);
         overflow: hidden;
-        font-family: "Noto Serif SC", "Songti SC", "SimSun", Georgia, serif;
         font-size: var(--book-title-font-size);
         line-height: 1.45;
         letter-spacing: 0.035em;
@@ -138,11 +137,7 @@
         cursor: pointer;
         transition: background-color var(--motion-duration-fast) var(--motion-ease);
     }
-    .book-category option {
-        background: var(--appearance-canvas);
-        color: var(--appearance-color);
-    }
-    /* 原生 picker 限高滚动；不支持定制选择器的浏览器保留系统菜单。 */
+    /* 闭合选择框贴合书封；弹出列表由共享原生 select 样式管理。 */
     @supports (appearance: base-select) and selector(::picker(select)) {
         .book-category {
             display: inline-flex;
@@ -152,105 +147,9 @@
             margin-left: -0.25rem;
             background-color: var(--appearance-canvas);
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
             opacity: 1;
-
-            &,
-            &::picker(select) {
-                appearance: base-select;
-            }
-            &::picker-icon {
-                content: "";
-                flex: none;
-                width: 0.45em;
-                height: 0.45em;
-                margin: -0.2em 0.2em 0 0;
-                border-right: 1.5px solid currentColor;
-                border-bottom: 1.5px solid currentColor;
-                transform: rotate(45deg);
-                opacity: 0.6;
-                transition: transform var(--motion-duration-normal) var(--motion-ease);
-            }
-            &:open {
-                background-image: linear-gradient(
-                    color-mix(in srgb, currentColor 6%, transparent),
-                    color-mix(in srgb, currentColor 6%, transparent)
-                );
-            }
-            &:open::picker-icon {
-                transform: rotate(225deg);
-            }
-            &::picker(select) {
-                min-width: 9rem;
-                max-width: calc(100vw - 2rem);
-                max-height: min(16rem, calc(100dvh - 2rem));
-                overflow-y: auto;
-                overscroll-behavior: contain;
-                scroll-padding-block: 0.35rem;
-                margin-block: 0.35rem;
-                padding: 0.35rem;
-                border: 1px solid var(--appearance-border);
-                border-radius: 0.85rem;
-                background-color: var(--appearance-canvas);
-                color: var(--appearance-color);
-                box-shadow: var(--appearance-shadow-raised);
-                font-size: max(14px, 1em);
-                line-height: 1.4;
-                scrollbar-width: thin;
-                scrollbar-color: color-mix(in srgb, currentColor 30%, transparent) transparent;
-            }
-            option {
-                display: flex;
-                align-items: center;
-                gap: 0.75rem;
-                min-height: 36px;
-                padding: 0.4rem 0.65rem;
-                border-radius: 0.5rem;
-                background: transparent;
-                color: inherit;
-                cursor: pointer;
-            }
-            option::checkmark {
-                order: 1;
-                margin-left: auto;
-                color: var(--appearance-color);
-                font-size: 0.9em;
-            }
-            option:checked {
-                background: color-mix(in srgb, currentColor 7%, transparent);
-                font-weight: 600;
-            }
-            option:focus-visible {
-                background: color-mix(in srgb, currentColor 12%, transparent);
-            }
-            @media (hover: hover) and (pointer: fine) {
-                option:hover {
-                    background: color-mix(in srgb, currentColor 12%, transparent);
-                }
-            }
-            option:focus-visible {
-                outline: 2px solid var(--focus-ring-color);
-                outline-offset: -2px;
-            }
-            @media (prefers-reduced-motion: reduce) {
-                &::picker-icon {
-                    transition: none;
-                }
-            }
-            @media (forced-colors: active) {
-                &::picker(select) {
-                    border-color: ButtonText;
-                    scrollbar-color: auto;
-                }
-                option:checked {
-                    outline: 1px solid Highlight;
-                    outline-offset: -1px;
-                }
-            }
-            @media (any-pointer: coarse) {
-                option {
-                    min-height: 44px;
-                }
-            }
         }
     }
     .book-delete {

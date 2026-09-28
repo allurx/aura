@@ -28,7 +28,7 @@ export default abstract class StyleSettingControl extends SettingControl {
     /**
      * 将原生输入与可访问标签关联后挂载。
      */
-    protected attachControl(control: HTMLInputElement): void {
+    protected attachControl(control: HTMLInputElement | HTMLSelectElement): void {
         control.id = `setting-control-${this.setting.key}`;
         this.titleElement.htmlFor = control.id;
         this.controlContainer.append(control);

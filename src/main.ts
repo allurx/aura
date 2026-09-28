@@ -7,6 +7,7 @@ import "./styles/base.css";
 import "./styles/motion.css";
 import "./styles/panel-scroll.css";
 import "./styles/focus.css";
+import "./styles/select.css";
 import "./components/icon/icon.css";
 import "./components/search-field/search-field.css";
 import "./components/dialog/dialog.css";

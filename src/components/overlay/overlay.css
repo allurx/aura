@@ -4,6 +4,7 @@
  */
 
 .overlay {
+    font-family: var(--ui-font-family);
     position: absolute;
     left: 0;
     top: 0;

@@ -16,7 +16,7 @@
     padding: 44px max(var(--ui-padding-right), env(safe-area-inset-right)) 32px
         max(var(--ui-padding-left), env(safe-area-inset-left));
     overscroll-behavior-y: contain;
-    font-family: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+    font-family: sans-serif;
     font-size: 19px;
     color: var(--reader-color);
     line-height: 1.9;

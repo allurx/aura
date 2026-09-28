@@ -200,6 +200,11 @@ export default class BookListUi extends Ui {
         categorySelect.dataset["categoryId"] = summary.book.categoryId;
         categorySelect.setAttribute("aria-label", `移动《${summary.title}》到分类`);
         categorySelect.title = "选择分类即可移动";
+        // 窄书封内截断分类文字，保留箭头与独立删除入口。
+        const categoryButton = document.createElement("button");
+        categoryButton.type = "button";
+        categoryButton.append(document.createElement("selectedcontent"));
+        categorySelect.append(categoryButton);
         for (const category of CATEGORIES) {
             const option = document.createElement("option");
             option.value = category.id;

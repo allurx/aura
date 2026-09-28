@@ -21,7 +21,7 @@ import { bookshelfSession } from "./bookshelf-state";
 import { DEFAULT_CATEGORY_ID, getCategory } from "@/domain/category/category";
 import { bind } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
-import { themeSetting } from "@/settings/definitions/setting-catalog";
+import { createBookshelfSettings } from "@/settings/definitions/setting-catalog";
 import SettingController from "@/settings/setting-controller";
 import { PageName } from "@/constants/page-name";
 import OperationError from "@/errors/operation-error";
@@ -55,11 +55,11 @@ export default class BookshelfController {
         this.bookListUi = new BookListUi(assertExists(bookshelfRoot.querySelector<HTMLElement>("#book-list")));
         this.bookshelfUi = new BookshelfUi(bookshelfRoot);
 
-        // 书架只提供页面主题，阅读排版由阅读器独立设置。
+        // 书架外观独立保存，阅读排版仍由阅读器设置。
         this.settingController = new SettingController({
             pageName: PageName.BOOKSHELF,
             container: this.bookshelfUi.root,
-            settings: { theme: themeSetting, general: [] },
+            settings: createBookshelfSettings(this.bookshelfUi.root, this.bookListUi.root),
         });
     }
 

@@ -10,7 +10,7 @@ import type { PageName } from "@/constants/page-name";
 import { Theme } from "./theme";
 
 /**
- * 页面固定提供主题，阅读器另外提供常规设置；数组顺序就是控件顺序。
+ * 页面固定提供主题，常规设置按页面配置；数组顺序就是控件顺序。
  */
 export interface PageSettings {
     readonly theme: ThemeSetting;
