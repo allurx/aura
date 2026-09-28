@@ -16,7 +16,7 @@
     position: relative;
     overflow: hidden;
     resize: horizontal;
-    border: 1px solid var(--appearance-highlight);
+    border: 1px solid var(--appearance-border);
     border-radius: 26px;
     background-color: var(--reader-surface);
     color: var(--reader-color);

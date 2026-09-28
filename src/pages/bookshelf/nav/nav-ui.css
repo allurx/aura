@@ -17,9 +17,7 @@
     border-radius: 1.35rem;
     background: var(--appearance-panel);
     color: var(--appearance-color);
-    box-shadow:
-        var(--appearance-shadow-soft),
-        inset 0 1px 0 var(--appearance-highlight);
+    box-shadow: var(--appearance-shadow-soft);
     font-size: 14px;
 
     .brand {
@@ -113,9 +111,7 @@
         background: var(--appearance-selection);
         color: var(--appearance-accent);
         font-weight: 600;
-        box-shadow:
-            0 4px 10px -7px var(--appearance-shadow-color),
-            inset 0 1px 0 var(--appearance-highlight);
+        box-shadow: 0 4px 10px -7px var(--appearance-shadow-color);
     }
     button.active .category-dot {
         opacity: 1;

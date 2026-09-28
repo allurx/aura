@@ -10,7 +10,7 @@
     --dialog-left: max(1rem, env(safe-area-inset-left));
     background: var(--setting-background-color);
     color: var(--setting-color);
-    border: 1px solid var(--appearance-highlight);
+    border: 1px solid var(--appearance-border);
     border-radius: 1.5rem;
     box-shadow: var(--appearance-shadow-floating);
     padding: 0;
@@ -115,7 +115,7 @@
         button {
             padding: 0.6rem 1.2rem;
             border: 1px solid transparent;
-            border-radius: 0.85rem;
+            border-radius: var(--control-radius);
             font: inherit;
             cursor: pointer;
             max-width: 100%;
@@ -129,7 +129,7 @@
             @media (hover: hover) and (pointer: fine) {
                 &:hover:enabled {
                     transform: translateY(-1px);
-                    box-shadow: var(--appearance-shadow-soft);
+                    box-shadow: var(--control-shadow);
                 }
             }
 
@@ -151,7 +151,7 @@
         .confirm-btn {
             background: var(--appearance-accent);
             color: var(--appearance-on-accent);
-            box-shadow: var(--appearance-shadow-soft);
+            box-shadow: var(--control-shadow);
 
             @media (hover: hover) and (pointer: fine) {
                 &:hover:enabled {

@@ -31,7 +31,7 @@ html[data-page="reader"] #app {
     max-height: calc(100dvh - 32px);
     margin-left: 12px;
     padding: 6px;
-    border: 1px solid var(--appearance-highlight);
+    border: 1px solid var(--appearance-border);
     border-radius: 18px;
     background: var(--appearance-panel);
     color: var(--appearance-color);

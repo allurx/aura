@@ -1,0 +1,47 @@
+/*
+ * Copyright 2025 allurx
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* 共享搜索控件的表面与边界，尺寸和布局由使用页面决定。 */
+.search-field {
+    border: 1px solid var(--appearance-control-border);
+    border-radius: var(--control-radius);
+    background: var(--appearance-panel);
+    color: var(--appearance-color);
+    cursor: text;
+    transition: border-color var(--motion-duration-fast) var(--motion-ease);
+
+    > .icon {
+        color: var(--appearance-muted-color);
+    }
+
+    &:focus-within > .icon {
+        color: var(--appearance-accent);
+    }
+
+    > input::placeholder {
+        color: var(--appearance-muted-color);
+        opacity: 1;
+    }
+
+    /* 输入保留原生焦点，整框只在原边界上显示一条主题焦点线。 */
+    &:has(> input:focus-visible) {
+        outline: 2px solid var(--focus-ring-color);
+        outline-offset: -1px;
+    }
+
+    > input:focus-visible {
+        outline: none;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+        &:hover:not(:focus-within) {
+            border-color: var(--appearance-muted-color);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        transition: none;
+    }
+}

@@ -6,6 +6,7 @@
 /* 全局变量定义 */
 :root {
     --font-size: 16px;
+    --control-radius: 12px;
 
     /* 平板及以下 */
     @media (max-width: 64rem) {

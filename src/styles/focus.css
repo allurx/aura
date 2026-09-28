@@ -9,13 +9,13 @@ html {
 }
 
 :where(button, a[href], input, select, textarea, summary, [tabindex]):focus-visible,
-:where(.book-search-field, .toc-search, .theme-option, .icon-control):has(> input:focus-visible) {
+:where(.theme-option, .icon-control):has(> input:focus-visible) {
     outline: 2px solid var(--focus-ring-color);
     outline-offset: 2px;
 }
 
 /* 包裹型控件只在完整的点击区域描边，内部原生输入继续承载焦点与键盘操作。 */
-:where(.book-search-field, .toc-search, .theme-option, .icon-control) > input:focus-visible {
+:where(.theme-option, .icon-control) > input:focus-visible {
     outline: none;
 }
 

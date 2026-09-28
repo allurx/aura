@@ -27,6 +27,8 @@
 
     --appearance-focus: var(--appearance-accent);
     --appearance-border: color-mix(in srgb, var(--appearance-color) 12%, transparent);
+    --appearance-control-border: color-mix(in srgb, var(--appearance-color) 24%, transparent);
+    --control-shadow: 0 2px 4px color-mix(in srgb, var(--appearance-shadow-color) 14%, transparent);
     --appearance-backdrop: color-mix(in srgb, var(--appearance-shadow-color) 20%, transparent);
     --appearance-shadow-soft:
         0 2px 4px color-mix(in srgb, var(--appearance-shadow-color) 5%, transparent),
@@ -35,7 +37,6 @@
         0 4px 8px color-mix(in srgb, var(--appearance-shadow-color) 9%, transparent),
         0 18px 42px color-mix(in srgb, var(--appearance-shadow-color) 14%, transparent);
     --appearance-shadow-floating:
-        0 0 0 1px color-mix(in srgb, var(--appearance-color) 4%, transparent),
         0 8px 20px color-mix(in srgb, var(--appearance-shadow-color) 12%, transparent),
         0 28px 80px color-mix(in srgb, var(--appearance-shadow-color) 22%, transparent);
 }

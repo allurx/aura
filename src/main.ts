@@ -8,6 +8,7 @@ import "./styles/motion.css";
 import "./styles/panel-scroll.css";
 import "./styles/focus.css";
 import "./components/icon/icon.css";
+import "./components/search-field/search-field.css";
 import "./components/dialog/dialog.css";
 import "./components/license/license.css";
 import "./components/overlay/overlay.css";

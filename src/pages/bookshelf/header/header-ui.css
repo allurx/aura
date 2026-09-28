@@ -5,8 +5,8 @@
 
 #bookshelf #header {
     --shelf-title-font-size: 29px;
-    --shelf-primary-font-size: 13px;
-    --shelf-secondary-font-size: 13px;
+    --shelf-primary-font-size: 14px;
+    --shelf-secondary-font-size: 14px;
     --ui-padding-left: 40px;
     --ui-padding-right: 40px;
     display: flex;
@@ -61,28 +61,9 @@
         min-height: 44px;
         padding-inline: 12px 6px;
         gap: 8px;
-        border: 1px solid var(--appearance-border);
-        border-radius: 0.95rem;
-        color: var(--appearance-color);
-        background: var(--appearance-panel);
-        box-shadow:
-            0 3px 9px -7px var(--appearance-shadow-color),
-            inset 0 1px 0 var(--appearance-highlight);
-        transition:
-            border-color var(--motion-duration-normal) var(--motion-ease),
-            box-shadow var(--motion-duration-normal) var(--motion-ease);
-    }
-    .book-search-field:focus-within {
-        border-color: var(--appearance-accent);
-        box-shadow: 0 0 0 3px var(--appearance-tint);
-    }
-    .book-search-field:focus-within > .icon {
-        opacity: 1;
-        color: var(--appearance-accent);
     }
     .book-search-field > .icon {
         --icon-size: 18px;
-        opacity: 0.55;
     }
     #book-search {
         width: 100%;
@@ -96,10 +77,6 @@
         outline: none;
         padding-inline: 0.1rem;
     }
-    #book-search::placeholder {
-        color: inherit;
-        opacity: 0.55;
-    }
     .appearance-button,
     #import-books {
         display: inline-flex;
@@ -110,10 +87,11 @@
         min-width: 44px;
         min-height: 44px;
         border: 1px solid transparent;
-        border-radius: 0.95rem;
-        padding: 0 12px;
+        border-radius: var(--control-radius);
+        padding: 0 14px;
         white-space: nowrap;
         line-height: 1.4;
+        cursor: pointer;
         transition:
             background-color var(--motion-duration-fast) var(--motion-ease),
             transform var(--motion-duration-fast) var(--motion-ease),
@@ -124,25 +102,22 @@
         background: var(--appearance-panel);
         font-size: var(--shelf-secondary-font-size);
         border-color: var(--appearance-border);
-        box-shadow: 0 3px 9px -7px var(--appearance-shadow-color);
     }
     .appearance-button .icon,
     #import-books .icon {
         --icon-size: 18px;
     }
     .appearance-button[aria-expanded="true"] {
-        border-color: var(--appearance-accent);
+        border-color: var(--appearance-border);
         background: var(--appearance-selection);
         color: var(--appearance-accent);
-        box-shadow: inset 0 1px 0 var(--appearance-highlight);
     }
     #import-books {
         background: var(--appearance-accent);
         color: var(--appearance-on-accent);
         font-size: var(--shelf-primary-font-size);
-        box-shadow:
-            0 5px 12px -6px color-mix(in srgb, var(--appearance-accent) 65%, transparent),
-            inset 0 1px 0 var(--appearance-highlight);
+        font-weight: 600;
+        box-shadow: var(--control-shadow);
     }
     #open-navigation {
         --icon-size: 20px;
@@ -151,11 +126,9 @@
     @media (hover: hover) and (pointer: fine) {
         .appearance-button:where(:not(:disabled):not([aria-expanded="true"])):hover {
             background: color-mix(in srgb, var(--appearance-panel) 92%, var(--appearance-color));
-            transform: translateY(-2px);
         }
         #import-books:where(:not(:disabled)):hover {
-            background: color-mix(in srgb, var(--appearance-accent) 92%, #000);
-            transform: translateY(-2px);
+            background: color-mix(in srgb, var(--appearance-accent) 90%, var(--appearance-color));
         }
     }
     .appearance-button:where(:not(:disabled)):active,
@@ -163,10 +136,16 @@
         transform: translateY(1px);
         box-shadow: none;
     }
+    .appearance-button:disabled,
+    #import-books:disabled {
+        opacity: 0.5;
+        box-shadow: none;
+        cursor: not-allowed;
+    }
     @media (max-width: 1024px) {
         --shelf-title-font-size: 25px;
-        --shelf-primary-font-size: 12px;
-        --shelf-secondary-font-size: 12px;
+        --shelf-primary-font-size: 13px;
+        --shelf-secondary-font-size: 13px;
     }
     @media (max-width: 1050px) and (min-width: 769px) {
         .shelf-tools {
