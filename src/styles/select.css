@@ -52,6 +52,10 @@ select > button {
             transform: rotate(45deg);
             opacity: 0.6;
             transition: transform var(--motion-duration-normal) var(--motion-ease);
+
+            @media (prefers-reduced-motion: reduce) {
+                transition: none;
+            }
         }
 
         &:open {
@@ -89,6 +93,11 @@ select > button {
                 flip-block,
                 flip-inline,
                 flip-block flip-inline;
+
+            @media (forced-colors: active) {
+                border-color: ButtonText;
+                scrollbar-color: auto;
+            }
         }
 
         hr {
@@ -110,52 +119,40 @@ select > button {
             white-space: normal;
             overflow-wrap: anywhere;
             cursor: pointer;
-        }
 
-        option::checkmark {
-            order: 1;
-            flex: none;
-            margin-left: auto;
-            color: var(--appearance-color);
-            font-size: 0.9em;
-        }
+            &::checkmark {
+                order: 1;
+                flex: none;
+                margin-left: auto;
+                color: var(--appearance-color);
+                font-size: 0.9em;
+            }
 
-        option:checked {
-            background: color-mix(in srgb, currentColor 7%, transparent);
-            font-weight: 600;
-        }
+            &:checked {
+                background: color-mix(in srgb, currentColor 7%, transparent);
+                font-weight: 600;
+            }
 
-        option:focus-visible {
-            background: color-mix(in srgb, currentColor 12%, transparent);
-            outline: 2px solid var(--focus-ring-color);
-            outline-offset: -2px;
-        }
-
-        @media (hover: hover) and (pointer: fine) {
-            option:hover {
+            &:focus-visible {
                 background: color-mix(in srgb, currentColor 12%, transparent);
+                outline: 2px solid var(--focus-ring-color);
+                outline-offset: -2px;
             }
-        }
 
-        @media (prefers-reduced-motion: reduce) {
-            &::picker-icon {
-                transition: none;
+            @media (hover: hover) and (pointer: fine) {
+                &:hover {
+                    background: color-mix(in srgb, currentColor 12%, transparent);
+                }
             }
-        }
 
-        @media (forced-colors: active) {
-            &::picker(select) {
-                border-color: ButtonText;
-                scrollbar-color: auto;
+            @media (forced-colors: active) {
+                &:checked {
+                    outline: 1px solid Highlight;
+                    outline-offset: -1px;
+                }
             }
-            option:checked {
-                outline: 1px solid Highlight;
-                outline-offset: -1px;
-            }
-        }
 
-        @media (any-pointer: coarse) {
-            option {
+            @media (any-pointer: coarse) {
                 min-height: 44px;
             }
         }

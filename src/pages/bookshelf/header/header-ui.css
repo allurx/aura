@@ -61,9 +61,10 @@
         min-height: 44px;
         padding-inline: 12px 6px;
         gap: 8px;
-    }
-    .book-search-field > .icon {
-        --icon-size: 18px;
+
+        > .icon {
+            --icon-size: 18px;
+        }
     }
     #book-search {
         width: 100%;
@@ -102,15 +103,16 @@
         background: var(--appearance-panel);
         font-size: var(--shelf-secondary-font-size);
         border-color: var(--appearance-border);
+
+        &[aria-expanded="true"] {
+            border-color: var(--appearance-border);
+            background: var(--appearance-selection);
+            color: var(--appearance-accent);
+        }
     }
     .appearance-button .icon,
     #import-books .icon {
         --icon-size: 18px;
-    }
-    .appearance-button[aria-expanded="true"] {
-        border-color: var(--appearance-border);
-        background: var(--appearance-selection);
-        color: var(--appearance-accent);
     }
     #import-books {
         background: var(--appearance-accent);

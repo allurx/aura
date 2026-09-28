@@ -46,13 +46,11 @@
     }
 
     @media (max-width: 600px) {
-        & {
-            --ui-padding-left: 24px;
-            --ui-padding-right: 24px;
-            padding-inline: max(env(safe-area-inset-left), min(var(--ui-padding-left), 12.5vw))
-                max(env(safe-area-inset-right), min(var(--ui-padding-right), 12.5vw));
-            padding-top: 28px;
-        }
+        --ui-padding-left: 24px;
+        --ui-padding-right: 24px;
+        padding-inline: max(env(safe-area-inset-left), min(var(--ui-padding-left), 12.5vw))
+            max(env(safe-area-inset-right), min(var(--ui-padding-right), 12.5vw));
+        padding-top: 28px;
 
         .chapter-heading {
             font-size: 1.37em;

@@ -64,35 +64,36 @@
         transition:
             transform var(--motion-duration-normal) var(--motion-ease-out),
             box-shadow var(--motion-duration-normal) var(--motion-ease);
-    }
-    .book-open::before,
-    .book-open::after {
-        content: "";
-        position: absolute;
-        pointer-events: none;
-    }
-    .book-open::before {
-        inset: 0 auto 0 0;
-        width: 14px;
-        border-right: 1px solid rgb(255 255 255 / 32%);
-        background: linear-gradient(
-            90deg,
-            color-mix(in srgb, var(--book-cover-ink) 14%, transparent),
-            transparent 35%,
-            rgb(255 255 255 / 14%) 65%,
-            color-mix(in srgb, var(--book-cover-ink) 8%, transparent)
-        );
-    }
-    .book-open::after {
-        inset: 5px 0 5px auto;
-        width: 5px;
-        border-radius: 2px 5px 5px 2px;
-        background: repeating-linear-gradient(
-            0deg,
-            color-mix(in srgb, var(--book-cover) 14%, #fff) 0 2px,
-            color-mix(in srgb, var(--book-cover-ink) 16%, #fff) 2px 3px
-        );
-        box-shadow: -1px 0 1px color-mix(in srgb, var(--book-cover-ink) 14%, transparent);
+
+        &::before,
+        &::after {
+            content: "";
+            position: absolute;
+            pointer-events: none;
+        }
+        &::before {
+            inset: 0 auto 0 0;
+            width: 14px;
+            border-right: 1px solid rgb(255 255 255 / 32%);
+            background: linear-gradient(
+                90deg,
+                color-mix(in srgb, var(--book-cover-ink) 14%, transparent),
+                transparent 35%,
+                rgb(255 255 255 / 14%) 65%,
+                color-mix(in srgb, var(--book-cover-ink) 8%, transparent)
+            );
+        }
+        &::after {
+            inset: 5px 0 5px auto;
+            width: 5px;
+            border-radius: 2px 5px 5px 2px;
+            background: repeating-linear-gradient(
+                0deg,
+                color-mix(in srgb, var(--book-cover) 14%, #fff) 0 2px,
+                color-mix(in srgb, var(--book-cover-ink) 16%, #fff) 2px 3px
+            );
+            box-shadow: -1px 0 1px color-mix(in srgb, var(--book-cover-ink) 14%, transparent);
+        }
     }
     .book-title {
         display: -webkit-box;
@@ -136,10 +137,9 @@
         font-size: 16px;
         cursor: pointer;
         transition: background-color var(--motion-duration-fast) var(--motion-ease);
-    }
-    /* 闭合选择框贴合书封；弹出列表由共享原生 select 样式管理。 */
-    @supports (appearance: base-select) and selector(::picker(select)) {
-        .book-category {
+
+        /* 闭合选择框贴合书封；弹出列表由共享原生 select 样式管理。 */
+        @supports (appearance: base-select) and selector(::picker(select)) {
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
@@ -165,22 +165,23 @@
         grid-column: 1 / -1;
         padding: clamp(3rem, 12vh, 9rem) 1rem;
         text-align: center;
-    }
-    .shelf-empty > .icon {
-        --icon-size: 3rem;
-        margin: 0 auto 1.5rem;
-        color: var(--appearance-accent-secondary);
-        transform: rotate(-7deg);
-    }
-    .shelf-empty h2 {
-        font-size: 1.3em;
-        font-weight: 500;
-        margin-bottom: 0.8rem;
-    }
-    .shelf-empty p {
-        font-size: 0.88em;
-        line-height: 1.7;
-        color: var(--appearance-muted-color);
+
+        > .icon {
+            --icon-size: 3rem;
+            margin: 0 auto 1.5rem;
+            color: var(--appearance-accent-secondary);
+            transform: rotate(-7deg);
+        }
+        h2 {
+            font-size: 1.3em;
+            font-weight: 500;
+            margin-bottom: 0.8rem;
+        }
+        p {
+            font-size: 0.88em;
+            line-height: 1.7;
+            color: var(--appearance-muted-color);
+        }
     }
     @media (hover: hover) and (pointer: fine) {
         .book-open:where(:not(:disabled)):hover {

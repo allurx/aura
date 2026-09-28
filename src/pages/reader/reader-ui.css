@@ -28,16 +28,14 @@
     }
 
     @media (max-width: 800px), (max-height: 500px) and (pointer: coarse) {
-        & {
-            width: 100% !important;
-            min-width: 100% !important;
-            height: 100%;
-            margin: 0;
-            resize: none;
-            border: 0;
-            border-radius: 0;
-            box-shadow: none;
-        }
+        width: 100% !important;
+        min-width: 100% !important;
+        height: 100%;
+        margin: 0;
+        resize: none;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
     }
 
     @media (max-height: 500px) {

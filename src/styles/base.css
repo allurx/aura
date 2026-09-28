@@ -13,9 +13,7 @@
 
     /* 平板及以下 */
     @media (max-width: 64rem) {
-        & {
-            --font-size: 14px;
-        }
+        --font-size: 14px;
     }
 }
 

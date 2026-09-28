@@ -90,6 +90,14 @@
         &:active {
             transform: scale(0.97);
         }
+
+        @media (prefers-reduced-motion: reduce) {
+            transition: none;
+
+            &:active {
+                transform: none;
+            }
+        }
     }
 
     .theme-caption {
@@ -180,16 +188,6 @@
         &:nth-child(3) {
             --preview-cover-hue: 255;
             height: 19px;
-        }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .theme-option {
-            transition: none;
-
-            &:active {
-                transform: none;
-            }
         }
     }
 

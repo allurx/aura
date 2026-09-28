@@ -18,6 +18,7 @@
     font-size: 13px;
     color: var(--reader-color);
     background-color: var(--reader-surface);
+    background-image: linear-gradient(105deg, transparent 30%, var(--appearance-glow));
     border-top: 1px solid color-mix(in srgb, currentColor 7%, transparent);
     box-shadow: 0 -4px 16px color-mix(in srgb, var(--appearance-shadow-color) 18%, transparent);
     user-select: none;
@@ -63,10 +64,6 @@
     font-size: 12px;
     font-weight: 650;
     white-space: nowrap;
-}
-
-#reader > #footer {
-    background-image: linear-gradient(105deg, transparent 30%, var(--appearance-glow));
 }
 
 #reader[data-mobile-controls] > #footer {

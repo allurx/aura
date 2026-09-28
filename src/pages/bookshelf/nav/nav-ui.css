@@ -68,34 +68,43 @@
         margin-bottom: 0.3rem;
         color: var(--appearance-color);
         font-size: var(--nav-category-font-size);
-    }
-    #category-navigation button:first-child {
-        margin-bottom: 0.8rem;
+
+        &:first-child {
+            margin-bottom: 0.8rem;
+        }
+
+        /* 跳过“全部书籍”，真实分类的圆点按彩虹七色循环。 */
+        &:nth-child(7n + 2) {
+            --category-dot-color: #e76f7a;
+        }
+        &:nth-child(7n + 3) {
+            --category-dot-color: #e99a51;
+        }
+        &:nth-child(7n + 4) {
+            --category-dot-color: #d8b543;
+        }
+        &:nth-child(7n + 5) {
+            --category-dot-color: #68b77b;
+        }
+        &:nth-child(7n + 6) {
+            --category-dot-color: #48b6bd;
+        }
+        &:nth-child(7n + 7) {
+            --category-dot-color: #6b91dc;
+        }
+        &:nth-child(7n + 8) {
+            --category-dot-color: #ab7bce;
+        }
+
+        &.active {
+            background: var(--appearance-selection);
+            color: var(--appearance-accent);
+            font-weight: 600;
+            box-shadow: 0 4px 10px -7px var(--appearance-shadow-color);
+        }
     }
     #category-navigation .icon {
         --icon-size: 20px;
-    }
-    /* 跳过“全部书籍”，真实分类的圆点按彩虹七色循环。 */
-    #category-navigation button:nth-child(7n + 2) {
-        --category-dot-color: #e76f7a;
-    }
-    #category-navigation button:nth-child(7n + 3) {
-        --category-dot-color: #e99a51;
-    }
-    #category-navigation button:nth-child(7n + 4) {
-        --category-dot-color: #d8b543;
-    }
-    #category-navigation button:nth-child(7n + 5) {
-        --category-dot-color: #68b77b;
-    }
-    #category-navigation button:nth-child(7n + 6) {
-        --category-dot-color: #48b6bd;
-    }
-    #category-navigation button:nth-child(7n + 7) {
-        --category-dot-color: #6b91dc;
-    }
-    #category-navigation button:nth-child(7n + 8) {
-        --category-dot-color: #ab7bce;
     }
     .category-dot {
         flex: none;
@@ -105,12 +114,6 @@
         border-radius: 50%;
         background: var(--category-dot-color);
         opacity: 0.75;
-    }
-    #category-navigation button.active {
-        background: var(--appearance-selection);
-        color: var(--appearance-accent);
-        font-weight: 600;
-        box-shadow: 0 4px 10px -7px var(--appearance-shadow-color);
     }
     button.active .category-dot {
         opacity: 1;
@@ -124,14 +127,15 @@
         padding-top: 0.8rem;
         padding-inline: 0.2rem;
         border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
-    }
-    .nav-footer button {
-        min-height: 44px;
-        opacity: 0.85;
-    }
-    .nav-footer .icon {
-        --icon-size: 18px;
-        margin-inline: 1px;
+
+        button {
+            min-height: 44px;
+            opacity: 0.85;
+        }
+        .icon {
+            --icon-size: 18px;
+            margin-inline: 1px;
+        }
     }
     #close-navigation {
         --icon-size: 20px;
@@ -174,12 +178,13 @@
             grid-template-columns: repeat(3, minmax(0, 1fr));
             margin-top: 0.35rem;
             padding-top: 0.35rem;
-        }
-        .nav-footer button {
-            flex-direction: column;
-            justify-content: center;
-            gap: 2px;
-            padding: 4px;
+
+            button {
+                flex-direction: column;
+                justify-content: center;
+                gap: 2px;
+                padding: 4px;
+            }
         }
     }
 
