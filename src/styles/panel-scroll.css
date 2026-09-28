@@ -1,6 +1,7 @@
-@charset "UTF-8";
-
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2026 allurx
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /* 滚动区域共用原生交互；容器尺寸和溢出边界由各自布局定义。 */
 .panel-scroll {

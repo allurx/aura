@@ -1,11 +1,9 @@
-@charset "UTF-8";
-
-@import "./controls/theme-setting-control.css";
-
 /*
  * Copyright 2025 allurx
  * SPDX-License-Identifier: Apache-2.0
  */
+
+@import "./controls/theme-setting-control.css";
 
 /* 面板自然适应内容高度；标题和重置固定，设置项在中部滚动。 */
 :is(#reader, #bookshelf) > #setting {
