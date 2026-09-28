@@ -5,6 +5,8 @@
 
 import type Page from "./page";
 import { createElementFromHtml } from "@/utils/dom-util";
+import { bindVisualViewport } from "./visual-viewport";
+import { bindFocusNavigation } from "./focus-navigation";
 
 /**
  * 页面基类，统一管理单个页面实例的挂载和销毁生命周期。
@@ -23,6 +25,8 @@ export default abstract class BasePage implements Page {
         if (this.pageElement) throw new Error(`${this.constructor.name} is already mounted`);
 
         this.pageElement = appRoot.appendChild(createElementFromHtml(this.template));
+        bindFocusNavigation(this.lifecycleController.signal);
+        bindVisualViewport(this.lifecycleController.signal);
         await this.init(this.pageElement, appRoot);
     }
 

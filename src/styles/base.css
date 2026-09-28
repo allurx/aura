@@ -10,6 +10,14 @@
         -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
         "WenQuanYi Micro Hei", sans-serif;
     --control-radius: 12px;
+    --viewport-height: 100dvh;
+    --viewport-top: 0px;
+    --viewport-bottom: 0px;
+
+    /* iOS 主屏幕的动态视口可能扣除状态栏，画布使用完整的大视口。 */
+    @media (display-mode: standalone) {
+        --viewport-height: 100lvh;
+    }
 
     /* 平板及以下 */
     @media (max-width: 64rem) {
@@ -35,11 +43,17 @@ html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow: hidden;
+
+    @media (display-mode: standalone) {
+        height: 100lvh;
+    }
 }
 
 #app {
+    position: relative;
+    top: var(--viewport-top);
     width: 100%;
-    height: 100dvh;
+    height: var(--viewport-height);
 }
 
 /* 选区跟随页面主题，阅读正文仍使用用户选定的颜色与排版。 */

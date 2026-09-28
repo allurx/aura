@@ -73,7 +73,7 @@ select > button {
             width: anchor-size(width);
             min-width: min(9rem, calc(100vw - 2rem));
             max-width: calc(100vw - 2rem);
-            max-height: min(16rem, calc(100dvh - 2rem));
+            max-height: min(16rem, calc(var(--viewport-height) - 2rem));
             overflow-x: hidden;
             overflow-y: auto;
             overscroll-behavior: contain;
@@ -133,7 +133,7 @@ select > button {
                 font-weight: 600;
             }
 
-            &:focus-visible {
+            :where(html[data-keyboard-navigation]) &:focus-visible {
                 background: color-mix(in srgb, currentColor 12%, transparent);
                 outline: 2px solid var(--focus-ring-color);
                 outline-offset: -2px;

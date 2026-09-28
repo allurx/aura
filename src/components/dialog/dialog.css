@@ -18,7 +18,7 @@
     width: min(30rem, calc(100% - var(--dialog-left) - var(--dialog-right)));
     height: fit-content;
     max-width: none;
-    max-height: calc(100dvh - var(--dialog-top) - var(--dialog-bottom));
+    max-height: calc(var(--viewport-height) - var(--dialog-top) - var(--dialog-bottom));
     user-select: none;
     -webkit-user-select: none;
     /* 初始隐藏，防止闪烁 */
@@ -28,7 +28,8 @@
 
     /* 居中显示 */
     position: fixed;
-    inset: var(--dialog-top) var(--dialog-right) var(--dialog-bottom) var(--dialog-left);
+    inset: calc(var(--viewport-top) + var(--dialog-top)) var(--dialog-right)
+        calc(var(--viewport-bottom) + var(--dialog-bottom)) var(--dialog-left);
     margin: auto;
 
     /* 原生 close 即刻结算结果和焦点；支持离散过渡的浏览器保留短暂退场。 */

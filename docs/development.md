@@ -14,15 +14,37 @@ npm ci
 
 ## 本地运行
 
-开发服务器默认使用 HTTP localhost，无需准备证书：
+开发服务器默认使用 HTTPS，并监听局域网。完成下面的一次性证书准备后，日常只需运行：
 
 ```sh
 npm run dev
 ```
 
-访问终端显示的 localhost 地址，修改源码后由开发服务器更新页面。浏览器将 localhost 视为安全上下文，可使用本项目需要的 Web Crypto 等 API。
+电脑访问 `https://localhost:5173/`，同一局域网的手机访问终端显示的 `Network` 地址，例如 `https://192.168.1.100:5173/`。示例 IP 需替换为开发电脑当前的局域网 IPv4 地址，可通过 `ipconfig` 查看；不要使用 VPN 或虚拟网卡地址。电脑与手机同时获得热更新，书籍与设置仍由各自浏览器独立保存。
 
-需要 HTTPS 验证时，先在仓库父目录准备供测试浏览器信任的 `localhost.pem` 和 `localhost-key.pem`，再执行 `npm run dev -- --mode https`。[Vite 配置](../vite.config.ts)只在此模式读取证书；私钥留在本机。局域网真机访问还需使用覆盖访问地址的证书，普通局域网 HTTP 地址不具备 localhost 的安全上下文条件。
+端口固定为 5173；被占用时先停止旧开发服务器，再重新启动。手机与电脑需处于可互访的局域网，Windows 防火墙应允许 Node.js 在专用网络接收入站连接；访客 Wi-Fi 的设备隔离也可能阻止访问。
+
+### 首次准备开发证书
+
+按 [mkcert 官方说明](https://github.com/FiloSottile/mkcert#installation)安装工具，然后在仓库根目录生成证书，末尾的示例 IP 替换为开发电脑当前局域网地址；已有证书时先备份再重新生成：
+
+```powershell
+New-Item -ItemType Directory -Force .certs | Out-Null
+mkcert -cert-file .certs/dev.pem -key-file .certs/dev-key.pem localhost 127.0.0.1 ::1 192.168.1.100
+```
+
+Windows 首次使用时，将 mkcert 生成的开发 CA 加入当前用户的受信任根证书，不修改整机或 Java 证书存储：
+
+```powershell
+$caDirectory = mkcert -CAROOT
+certutil -user -addstore Root "$caDirectory/rootCA.pem"
+```
+
+[Vite 配置](../vite.config.ts)只在开发时读取工程内 `.certs/` 的这两个文件，该目录已由 Git 忽略，不放入 `src/public/`，构建和生产预览不依赖本机证书。局域网 IP 变化后重新签发包含新地址的证书并重启服务器；使用同一个开发 CA 时，无需在手机重复安装 CA。
+
+iPhone 首次连接时，用 `mkcert -CAROOT` 找到 CA 目录，将其中的 `rootCA.pem` 传到自己的手机并安装描述文件，然后在“设置 → 通用 → 关于本机 → 证书信任设置”中开启对该开发 CA 的完全信任。具体步骤见 [mkcert 移动设备说明](https://github.com/FiloSottile/mkcert#mobile-devices)和 [Apple 证书信任说明](https://support.apple.com/zh-cn/102390)。仅传输 CA 公钥证书；CA 私钥 `rootCA-key.pem` 保留在 mkcert 用户目录，服务器私钥 `dev-key.pem` 留在工程的 `.certs/` 内，不传到手机或提交到仓库。
+
+手机通过受信任的 HTTPS 页面验证导入、阅读和“添加到主屏幕”。普通局域网 HTTP 地址不具备安全上下文，无法运行 Aura 使用的 Web Crypto API。
 
 ## 从哪里读代码
 

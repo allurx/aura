@@ -8,6 +8,8 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
+    /* 尺寸由外层书架网格拉伸确定，标题按真实可用高度响应软键盘。 */
+    container: bookshelf-main / size;
     overflow: hidden;
     background: inherit;
 }

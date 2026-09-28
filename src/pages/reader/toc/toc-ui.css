@@ -11,10 +11,12 @@
     --toc-left: max(var(--toc-edge), env(safe-area-inset-left));
     --toc-enter-transform: translateX(0.8rem);
     position: fixed;
-    inset: var(--toc-top) var(--toc-right) var(--toc-bottom) auto;
+    inset: calc(var(--viewport-top) + var(--toc-top)) var(--toc-right) calc(var(--viewport-bottom) + var(--toc-bottom))
+        auto;
     margin: 0;
     width: min(26rem, calc(100% - var(--toc-left) - var(--toc-right)));
-    height: calc(100dvh - var(--toc-top) - var(--toc-bottom));
+    height: calc(var(--viewport-height) - var(--toc-top) - var(--toc-bottom));
+    container: toc / size;
     max-width: none;
     max-height: none;
     padding: 0;
@@ -233,7 +235,8 @@
     opacity: 0.65;
 }
 
-@media (max-height: 28rem) {
+/* 目录跟随软键盘缩短时，布局视口可能不变，按面板可用高度收紧工具区。 */
+@container toc (max-height: 28rem) {
     #reader > #toc > header {
         padding-block: 0.25rem;
     }
@@ -282,10 +285,10 @@
 
 #reader[data-mobile-controls] > #toc {
     --toc-enter-transform: translateY(0.8rem);
-    inset: auto 0 0;
+    inset: auto 0 var(--viewport-bottom);
     width: 100%;
-    height: 90dvh;
-    max-height: min(90dvh, calc(100dvh - env(safe-area-inset-top)));
+    height: calc(var(--viewport-height) * 0.9);
+    max-height: calc(var(--viewport-height) - env(safe-area-inset-top));
     border-radius: 1.5rem 1.5rem 0 0;
     border-bottom: 0;
 

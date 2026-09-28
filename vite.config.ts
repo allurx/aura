@@ -22,7 +22,7 @@ export default defineConfig(({ command, mode, isPreview }) => {
     // 从构建模式推导交付组合，每种产物写入独立目录。
     const portable = mode === "portable" || mode === "portable-obfuscated";
     const obfuscated = mode === "obfuscated" || mode === "portable-obfuscated";
-    const httpsDevelopment = command === "serve" && !isPreview && mode === "https";
+    const development = command === "serve" && !isPreview;
     const outputDirectory = `${portable ? "portable" : "web"}${obfuscated ? "-obfuscated" : ""}`;
 
     return {
@@ -36,13 +36,16 @@ export default defineConfig(({ command, mode, isPreview }) => {
             },
         },
 
-        // 默认 localhost HTTP 即可开发；显式选择 https 模式时才读取本机证书。
-        ...(httpsDevelopment
+        // 开发时电脑与局域网手机共用 HTTPS 和热更新；构建与预览不读取本机证书。
+        ...(development
             ? {
                   server: {
+                      host: "0.0.0.0",
+                      port: 5173,
+                      strictPort: true,
                       https: {
-                          key: readFileSync(resolve(PROJECT_ROOT, "../localhost-key.pem")),
-                          cert: readFileSync(resolve(PROJECT_ROOT, "../localhost.pem")),
+                          key: readFileSync(resolve(PROJECT_ROOT, ".certs/dev-key.pem")),
+                          cert: readFileSync(resolve(PROJECT_ROOT, ".certs/dev.pem")),
                       },
                   },
               }
@@ -107,6 +110,21 @@ export default defineConfig(({ command, mode, isPreview }) => {
                             {
                                 tag: "meta",
                                 attrs: { name: "apple-mobile-web-app-title", content: "Aura" },
+                                injectTo: "head",
+                            },
+                            {
+                                tag: "meta",
+                                attrs: { name: "apple-mobile-web-app-capable", content: "yes" },
+                                injectTo: "head",
+                            },
+                            {
+                                tag: "meta",
+                                attrs: { name: "mobile-web-app-capable", content: "yes" },
+                                injectTo: "head",
+                            },
+                            {
+                                tag: "meta",
+                                attrs: { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
                                 injectTo: "head",
                             },
                             {

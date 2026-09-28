@@ -3,13 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* 焦点与选中状态分开：浏览器判断何时显示焦点，颜色由页面主题提供。 */
+/* 焦点与选中状态分开：键盘导航显示描边，指针操作仍保留真实焦点和选中状态。 */
 html {
     --focus-ring-color: var(--appearance-focus);
 }
 
-:where(button, a[href], input, select, textarea, summary, [tabindex]):focus-visible,
-:where(.theme-option, .icon-control):has(> input:focus-visible) {
+:where(button, a[href], input, select, textarea, summary, [tabindex]):focus {
+    outline: none;
+}
+
+:where(html[data-keyboard-navigation])
+    :where(button, a[href], input, select, textarea, summary, [tabindex]):focus-visible,
+:where(html[data-keyboard-navigation]) :where(.theme-option, .icon-control):has(> input:focus-visible) {
     outline: 2px solid var(--focus-ring-color);
     outline-offset: 2px;
 }
