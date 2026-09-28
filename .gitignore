@@ -4,6 +4,7 @@
 .vite/
 .wrangler/
 .vscode/
+.certs/
 node_modules/
 dist/
 /work/
