@@ -204,7 +204,17 @@ export default class SettingUi extends Ui implements SettingControlListener {
             this.restoreVisibleFocus();
             const focused = document.activeElement;
             if (focused instanceof HTMLElement && this.bodyElement.contains(focused)) {
-                focused.scrollIntoView({ block: "nearest", inline: "nearest" });
+                const viewport = this.bodyElement.getBoundingClientRect();
+                const control = focused.getBoundingClientRect();
+                const style = getComputedStyle(this.bodyElement);
+                const top = viewport.top + this.bodyElement.clientTop + Number.parseFloat(style.scrollPaddingTop);
+                const bottom =
+                    viewport.top +
+                    this.bodyElement.clientTop +
+                    this.bodyElement.clientHeight -
+                    Number.parseFloat(style.scrollPaddingBottom);
+                if (control.top < top) this.bodyElement.scrollTop += control.top - top;
+                else if (control.bottom > bottom) this.bodyElement.scrollTop += control.bottom - bottom;
             }
         });
         observer.observe(this.bodyElement);
@@ -318,7 +328,7 @@ export default class SettingUi extends Ui implements SettingControlListener {
             focused === document.body ||
             (focused instanceof HTMLElement && this.root.contains(focused) && focused.getClientRects().length === 0)
         ) {
-            this.closeElement.focus();
+            this.closeElement.focus({ preventScroll: true });
         }
     }
 

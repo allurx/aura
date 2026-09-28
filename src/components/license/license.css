@@ -46,9 +46,11 @@
     a {
         text-decoration: none;
         color: var(--appearance-accent);
-        &:hover {
-            text-decoration: underline;
-            text-underline-offset: 0.2em;
+        @media (hover: hover) and (pointer: fine) {
+            &:hover {
+                text-decoration: underline;
+                text-underline-offset: 0.2em;
+            }
         }
     }
 
@@ -157,8 +159,10 @@
             &::-webkit-details-marker {
                 display: none;
             }
-            &:hover {
-                color: var(--appearance-accent);
+            @media (hover: hover) and (pointer: fine) {
+                &:hover {
+                    color: var(--appearance-accent);
+                }
             }
         }
         .icon-chevron {

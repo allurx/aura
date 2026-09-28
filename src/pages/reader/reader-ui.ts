@@ -36,6 +36,7 @@ export default class ReaderUi extends Ui {
      * 移动工具默认收起；进入移动布局时保留正在使用的入口及浮层返回路径。
      */
     public bindResponsiveControls(signal: AbortSignal): void {
+        this.renderFullscreenState();
         this.root.after(this.actions);
         signal.addEventListener(
             "abort",
@@ -267,10 +268,12 @@ export default class ReaderUi extends Ui {
     }
 
     /**
-     * 以浏览器实际全屏状态更新提示。
+     * 按实际能力显示入口；主屏幕应用模式不等同于 Fullscreen API 状态。
      */
     private renderFullscreenState(): void {
         const fullscreen = Boolean(document.fullscreenElement);
+        this.fullscreenButton.hidden =
+            !fullscreen && (!document.fullscreenEnabled || typeof this.root.requestFullscreen !== "function");
         const label = fullscreen ? "退出全屏" : "进入全屏";
         this.fullscreenButton.setAttribute("aria-pressed", String(fullscreen));
         this.fullscreenButton.setAttribute("aria-label", label);

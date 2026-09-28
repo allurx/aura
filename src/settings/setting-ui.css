@@ -9,12 +9,17 @@
 :is(#reader, #bookshelf) > #setting {
     --setting-hidden-translation: translateX(0.65rem);
     position: fixed;
-    inset: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) auto auto;
+    inset: calc(var(--viewport-top) + max(1rem, env(safe-area-inset-top))) max(1rem, env(safe-area-inset-right)) auto
+        auto;
     display: none;
     flex-direction: column;
     width: min(25rem, calc(100% - max(1rem, env(safe-area-inset-left)) - max(1rem, env(safe-area-inset-right))));
     max-width: none;
-    max-height: calc(100dvh - max(1rem, env(safe-area-inset-top)) - max(1rem, env(safe-area-inset-bottom)));
+    /* 覆盖原生 dialog 的 fit-content，内容参与面板自然高度计算。 */
+    height: auto;
+    max-height: calc(
+        var(--viewport-height) - max(1rem, env(safe-area-inset-top)) - max(1rem, env(safe-area-inset-bottom))
+    );
     margin: 0;
     padding: 0;
     background-color: var(--setting-background-color);
@@ -99,7 +104,7 @@
     }
 
     > .setting-body {
-        flex: 1;
+        flex: 1 1 auto;
         min-width: 0;
         min-height: 0;
         overflow-y: auto;
@@ -250,6 +255,7 @@
         }
 
         > select {
+            font-size: max(1em, 16px);
             padding: 0.4rem 0.65rem;
             border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
             border-radius: 0.65rem;
@@ -396,9 +402,9 @@
 /* 阅读器工具在移动布局中位于底部，设置沿同一方向展开。 */
 #reader[data-mobile-controls] > #setting {
     --setting-hidden-translation: translateY(0.65rem);
-    inset: auto 0 0;
+    inset: auto 0 var(--viewport-bottom);
     width: 100%;
-    max-height: min(90dvh, calc(100dvh - env(safe-area-inset-top)));
+    max-height: min(calc(var(--viewport-height) * 0.9), calc(var(--viewport-height) - env(safe-area-inset-top)));
     border-radius: 1.25rem 1.25rem 0 0;
     border-bottom: 0;
 
@@ -413,9 +419,9 @@
 @media (max-width: 560px) {
     :is(#reader, #bookshelf) > #setting {
         --setting-hidden-translation: translateY(0.65rem);
-        inset: auto 0 0;
+        inset: auto 0 var(--viewport-bottom);
         width: 100%;
-        max-height: min(90dvh, calc(100dvh - env(safe-area-inset-top)));
+        max-height: min(calc(var(--viewport-height) * 0.9), calc(var(--viewport-height) - env(safe-area-inset-top)));
         border-radius: 1.25rem 1.25rem 0 0;
         border-bottom: 0;
 

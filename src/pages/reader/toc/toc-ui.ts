@@ -68,7 +68,7 @@ export default class TocUi extends Ui {
         this.dialog.showModal();
         this.closeButton.focus({ preventScroll: true });
         if (this.browsingPosition) this.restorePosition(this.browsingPosition);
-        else this.tocContentElement.querySelector('[aria-current="location"]')?.scrollIntoView({ block: "center" });
+        else this.centerCurrentChapter();
 
         this.capturePosition();
         return true;
@@ -275,11 +275,27 @@ export default class TocUi extends Ui {
         this.renderFilteredEntries();
 
         // 将当前章放入视口并更新恢复锚点，不改变正文的阅读进度。
-        const current = this.tocContentElement.querySelector<HTMLButtonElement>('[aria-current="location"]');
-        current?.scrollIntoView({ block: "center" });
+        const current = this.centerCurrentChapter();
         current?.focus({ preventScroll: true });
         this.capturePosition();
         this.unfilteredPosition = this.browsingPosition;
+    }
+
+    /**
+     * 当前章只在章节列表内居中，避免 scrollIntoView 连带滚动阅读器或页面根节点。
+     */
+    private centerCurrentChapter(): HTMLButtonElement | null {
+        const current = this.tocContentElement.querySelector<HTMLButtonElement>('[aria-current="location"]');
+        if (current) {
+            const viewport = this.tocContentElement.getBoundingClientRect();
+            const row = current.getBoundingClientRect();
+            this.tocContentElement.scrollTop +=
+                row.top -
+                viewport.top -
+                this.tocContentElement.clientTop -
+                (this.tocContentElement.clientHeight - row.height) / 2;
+        }
+        return current;
     }
 
     /**

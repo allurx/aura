@@ -63,7 +63,7 @@
     clip-path: inset(50%);
     white-space: nowrap;
 
-    &:focus-visible {
+    :where(html[data-keyboard-navigation]) &:focus-visible {
         width: auto;
         height: auto;
         min-height: 44px;
@@ -151,6 +151,10 @@
         color var(--motion-duration-fast) var(--motion-ease),
         box-shadow var(--motion-duration-fast) var(--motion-ease),
         transform var(--motion-duration-fast) var(--motion-ease);
+
+    &[hidden] {
+        display: none;
+    }
 
     @media (hover: hover) and (pointer: fine) {
         &:hover:not(:disabled) {

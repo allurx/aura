@@ -168,7 +168,7 @@
         }
     }
     /* 矮窗口压缩固定区域，分类仍在自己的区域内滚动。 */
-    @media (max-height: 24rem) {
+    @container bookshelf-navigation (max-height: 24rem) {
         padding-block: 0.35rem;
 
         .brand {
@@ -184,6 +184,23 @@
                 justify-content: center;
                 gap: 2px;
                 padding: 4px;
+            }
+        }
+    }
+
+    /* 横屏键盘只剩很矮的侧栏时，让出品牌占位，保留分类和底部操作。 */
+    @media (min-width: 769px) {
+        @container bookshelf-navigation (max-height: 12rem) {
+            padding-block: 0;
+
+            .brand {
+                display: none;
+            }
+
+            .nav-footer {
+                margin-inline: 0;
+                padding-inline: 0;
+                font-size: 12px;
             }
         }
     }

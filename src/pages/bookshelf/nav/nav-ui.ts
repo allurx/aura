@@ -175,7 +175,7 @@ export default class NavUi extends Ui {
             "close",
             () => {
                 this.syncBreakpoint();
-                (this.mobile.matches ? this.opener : aboutButton).focus();
+                (this.mobile.matches ? this.opener : aboutButton).focus({ preventScroll: true });
             },
             { signal }
         );
@@ -198,7 +198,7 @@ export default class NavUi extends Ui {
         if (!this.mobile.matches || !this.drawer.open) return;
         this.drawer.close();
         this.opener.setAttribute("aria-expanded", "false");
-        this.opener.focus();
+        this.opener.focus({ preventScroll: true });
     }
 
     /**
@@ -209,7 +209,7 @@ export default class NavUi extends Ui {
         this.opener.setAttribute("aria-expanded", "false");
         if (this.mobile.matches) {
             this.drawer.close();
-            if (focusedInside) this.opener.focus();
+            if (focusedInside) this.opener.focus({ preventScroll: true });
         } else {
             if (this.drawer.matches(":modal")) this.drawer.close();
             // 桌面仅作侧栏展示，避免非模态 show() 自动移动当前焦点。

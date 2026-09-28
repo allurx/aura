@@ -8,6 +8,15 @@ import Ui from "@/components/ui";
 import { bind, run } from "@/utils/event-util";
 
 /**
+ * 同一章排版变化前的临时视觉锚点，不写入阅读进度。
+ */
+interface ContentPosition {
+    readonly element: Element;
+    readonly top: number;
+    readonly height: number;
+}
+
+/**
  * 阅读器正文界面
  */
 export default class ContentUi extends Ui {
@@ -38,6 +47,34 @@ export default class ContentUi extends Ui {
 
         // 操作按钮由外部工具栏持有，正文只保留自然块布局。
         this.root.replaceChildren(fragment);
+        return this;
+    }
+
+    /**
+     * 保存视口上缘附近的标题或段落，保留部分标题和段前空白。
+     * 锚点仅用于同一章的外观调整或全屏切换，不替代持久化进度。
+     */
+    public readPosition(): ContentPosition | undefined {
+        const top = this.root.getBoundingClientRect().top;
+        let position: ContentPosition | undefined;
+        for (const element of this.root.children) {
+            const bounds = element.getBoundingClientRect();
+            if (bounds.height <= 0) continue;
+            position = { element, top: bounds.top - top, height: bounds.height };
+            if (bounds.bottom > top) break;
+        }
+        return position;
+    }
+
+    /**
+     * 按最终排版恢复临时锚点；节点内部保留比例，节点前的空白保留像素距离。
+     * 章节已被替换时不把旧锚点应用到新正文。
+     */
+    public restorePosition(position: ContentPosition): this {
+        if (position.element.parentElement !== this.root) return this;
+        const bounds = position.element.getBoundingClientRect();
+        const offset = position.top < 0 ? (position.top / position.height) * bounds.height : position.top;
+        this.root.scrollTop += bounds.top - this.root.getBoundingClientRect().top - offset;
         return this;
     }
 

@@ -113,6 +113,21 @@ export default defineConfig(({ command, mode, isPreview }) => {
                                 injectTo: "head",
                             },
                             {
+                                tag: "meta",
+                                attrs: { name: "apple-mobile-web-app-capable", content: "yes" },
+                                injectTo: "head",
+                            },
+                            {
+                                tag: "meta",
+                                attrs: { name: "mobile-web-app-capable", content: "yes" },
+                                injectTo: "head",
+                            },
+                            {
+                                tag: "meta",
+                                attrs: { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+                                injectTo: "head",
+                            },
+                            {
                                 tag: "link",
                                 attrs: { rel: "canonical", href: "https://aura.allurx.io/" },
                                 injectTo: "head",

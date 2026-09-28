@@ -34,8 +34,13 @@ export default class ReaderController {
     private signal!: AbortSignal;
     private chapterLoading = false;
     private returningToBookshelf = false;
-    // 外观预览会改变换行；关闭前以原位置为准，避免把预览布局写成阅读进度。
-    private appearancePosition: ReturnType<ContentUi["readProgress"]>;
+    // 外观预览分别保留视觉锚点和持久化进度，避免压缩的进度丢失标题与段间留白。
+    private appearancePosition:
+        | {
+              readonly visual: ReturnType<ContentUi["readPosition"]>;
+              readonly progress: ReturnType<ContentUi["readProgress"]>;
+          }
+        | undefined;
     private progressWrite: Promise<void> = Promise.resolve();
 
     /**
@@ -72,10 +77,7 @@ export default class ReaderController {
             "abort",
             () => {
                 // 路由离开时 DOM 尚在；保存最后一次滚动，但不再更新已销毁页面。
-                if (this.initialized && !this.chapterLoading && !this.returningToBookshelf) {
-                    const position = this.appearancePosition ?? this.contentUi.readProgress();
-                    if (position) run(() => this.updateProgress(position));
-                }
+                run(() => this.saveReadingPosition());
                 this.appUi.cleanup();
             },
             { once: true }
@@ -133,6 +135,24 @@ export default class ReaderController {
             this.returningToBookshelf = true;
             this.contentUi.cancelPendingScroll();
             this.onReturnToBookshelf();
+        }
+    }
+
+    /**
+     * 离开页面或切入后台时立即提交有效锚点，避免依赖可能暂停的滚动防抖。
+     * 切章和返回流程已自行保存；外观预览期间仍使用预览前的位置。
+     */
+    private async saveReadingPosition(): Promise<void> {
+        if (!this.initialized || this.chapterLoading || this.returningToBookshelf) return;
+        this.contentUi.cancelPendingScroll();
+        const position = this.appearancePosition ? this.appearancePosition.progress : this.contentUi.readProgress();
+        if (!position) return;
+        await this.updateProgress(position);
+        if (this.isActive()) {
+            this.readerUi.renderProgress(
+                toBookLineNumber(this.state.chapter, position.chapterLineNumber),
+                numberOfLines(this.state.toc)
+            );
         }
     }
 
@@ -216,6 +236,16 @@ export default class ReaderController {
      * 为当前页面注册可随生命周期清理的交互。
      */
     private bindEvent(signal: AbortSignal): void {
+        // 移动端切后台或锁屏可能直接冻结页面，不等待路由卸载或防抖计时器。
+        bind(
+            document,
+            "visibilitychange",
+            async () => {
+                if (document.visibilityState === "hidden") await this.saveReadingPosition();
+            },
+            { signal }
+        );
+
         // 仅移动布局接受正文切章手势，中部轻点保留给工具显隐。
         this.appUi.bindReadingGestures(
             this.contentUi.root,
@@ -229,13 +259,13 @@ export default class ReaderController {
             signal
         );
 
-        // 返回先提交进度；全屏切换前后用同一段落锚点保持阅读位置。
+        // 返回先提交进度；全屏切换前后用同一视觉锚点保持阅读位置。
         this.readerUi
             .bindChapterNavigation((direction) => this.switchChapter(direction), signal)
             .bindReturnToBookshelf(() => this.returnToBookshelf(), signal)
             .bindToggleFullscreen(async () => {
                 if (this.chapterLoading || this.returningToBookshelf) return;
-                const position = this.contentUi.readProgress();
+                const position = this.contentUi.readPosition();
                 try {
                     await this.appUi.toggleFullscreen();
                 } catch (error) {
@@ -247,7 +277,7 @@ export default class ReaderController {
                     );
                 }
                 if (signal.aborted) return;
-                if (position) this.contentUi.restoreProgress(position.chapterLineNumber, position.lineVisibleRatio);
+                if (position) this.contentUi.restorePosition(position);
                 this.contentUi.dispatchContentScroll();
             }, signal);
 
@@ -293,7 +323,10 @@ export default class ReaderController {
             "appearance-open",
             () => {
                 this.contentUi.cancelPendingScroll();
-                this.appearancePosition = this.contentUi.readProgress();
+                this.appearancePosition = {
+                    visual: this.contentUi.readPosition(),
+                    progress: this.contentUi.readProgress(),
+                };
             },
             { signal }
         );
@@ -303,7 +336,7 @@ export default class ReaderController {
             () => {
                 const position = this.appearancePosition;
                 this.appearancePosition = undefined;
-                if (position) this.contentUi.restoreProgress(position.chapterLineNumber, position.lineVisibleRatio);
+                if (position?.visual) this.contentUi.restorePosition(position.visual);
                 this.contentUi.dispatchContentScroll();
             },
             { signal }
