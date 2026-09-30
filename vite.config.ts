@@ -15,9 +15,6 @@ const SOURCE_ROOT = resolve(PROJECT_ROOT, "src");
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif"]);
 const FONT_EXTENSIONS = new Set([".woff", ".woff2", ".ttf", ".otf", ".eot"]);
 
-/**
- * vite配置
- */
 export default defineConfig(({ command, mode, isPreview }) => {
     // 从构建模式推导交付组合，每种产物写入独立目录。
     const portable = mode === "portable" || mode === "portable-obfuscated";
@@ -65,7 +62,6 @@ export default defineConfig(({ command, mode, isPreview }) => {
             outDir: resolve(PROJECT_ROOT, "dist", outputDirectory),
             emptyOutDir: true,
             ...(portable ? { modulePreload: false } : {}),
-            // https://cn.rollupjs.org/configuration-options
             rollupOptions: {
                 output: {
                     entryFileNames: "assets/js/[name]-[hash].js",
@@ -136,7 +132,6 @@ export default defineConfig(({ command, mode, isPreview }) => {
                     },
                 },
             },
-            // https://github.com/elmeet/vite-plugin-javascript-obfuscator
             obfuscated &&
                 obfuscatorPlugin({
                     apply: "build",
@@ -144,7 +139,7 @@ export default defineConfig(({ command, mode, isPreview }) => {
                         compact: true,
                         identifierNamesGenerator: "mangled",
                         renameGlobals: false,
-                        // 固定种子使相同源码产生相同内容哈希，保证构建可复现并保留长期缓存。
+                        // 固定混淆随机性，避免相同输入仅因随机变换而改变产物哈希。
                         seed: 0x41555241,
                         sourceMap: false,
                         stringArray: true,
@@ -258,7 +253,7 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * 在产物仍位于 Rollup 内存模型时重命名便携版入口，避免构建完成后再直接操作文件系统。
+ * 在生成文件前重命名 portable 入口，让后续许可校验使用最终文件名。
  */
 function portableEntryPlugin(): Plugin {
     return {

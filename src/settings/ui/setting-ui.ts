@@ -18,7 +18,6 @@ import type SettingUiListener from "./setting-ui-listener";
  * 当前页面的主题与常规设置面板。
  *
  * 协调控件、可取消的预览和模态交互，已提交状态由监听器管理。
- *
  */
 export default class SettingUi extends Ui implements SettingControlListener {
     declare public readonly root: HTMLDialogElement;
@@ -280,7 +279,7 @@ export default class SettingUi extends Ui implements SettingControlListener {
     }
 
     /**
-     * 单项重置结束当前预览，并保留其他已提交设置。
+     * 先撤销全部未提交预览，再重置指定项；其他已提交设置保持不变。
      */
     public resetSetting(setting: Setting): void {
         this.performAndRefresh(() => {
@@ -290,7 +289,7 @@ export default class SettingUi extends Ui implements SettingControlListener {
     }
 
     /**
-     * 忽略取消之后迟到的 change，提交成功或失败都刷新当前控件。
+     * 忽略取消之后迟到的 change，提交成功或失败都刷新面板控件。
      */
     public commit(setting: Setting, value: string): void {
         if (this.previewSession.isCancelled(setting)) return;
@@ -301,7 +300,7 @@ export default class SettingUi extends Ui implements SettingControlListener {
     }
 
     /**
-     * 已提交状态与刷新都失败时保留两个错误，避免刷新掩盖原始保存失败。
+     * 操作结束后刷新面板；两者都失败时保留两个错误，避免刷新掩盖原始失败。
      */
     private performAndRefresh(action: () => void): void {
         try {

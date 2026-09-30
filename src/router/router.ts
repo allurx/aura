@@ -14,7 +14,7 @@ export type AppRoute =
     | { readonly pageName: PageName.READER; readonly bookId: string };
 
 /**
- * 应用Hash路由。
+ * Hash 路由；阅读器地址共用当前标签页保存的书籍标识，历史记录不携带书籍快照。
  */
 export default class Router {
     private static readonly READER_BOOK_ID_KEY = "aura.router.reader.bookId";
@@ -29,7 +29,6 @@ export default class Router {
     public start(): void {
         if (this.listenerController) return;
 
-        // 同一生命周期内复用一个监听器，stop 可以统一撤销。
         this.listenerController = new AbortController();
         window.addEventListener(
             "hashchange",
@@ -105,7 +104,7 @@ export default class Router {
             }
         }
 
-        // 非法路由或缺少阅读上下文时替换为书架，避免污染浏览器历史记录。
+        // 替换无效地址，不为纠正路由增加一条历史记录。
         this.navigateToBookshelf(true);
     }
 

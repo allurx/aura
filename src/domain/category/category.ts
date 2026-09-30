@@ -37,7 +37,7 @@ export const CATEGORIES = [
 ] as const;
 
 /**
- * 固定目录中的有效分类标识。
+ * 预设分类的持久化标识。
  */
 export type CategoryId = (typeof CATEGORIES)[number]["id"];
 
@@ -45,7 +45,7 @@ export type CategoryId = (typeof CATEGORIES)[number]["id"];
 export const DEFAULT_CATEGORY_ID: CategoryId = "collection";
 
 /**
- * 从统一目录查找分类，供页面展示和业务写入校验使用。
+ * 查找预设分类，未知标识返回 undefined，供展示和写入校验使用。
  */
 export function getCategory(id: string) {
     return CATEGORIES.find((category) => category.id === id);

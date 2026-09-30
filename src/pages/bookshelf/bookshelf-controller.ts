@@ -351,7 +351,7 @@ export default class BookshelfController {
             signal
         );
 
-        // 查询变化从列表顶部开始，导入与外观继续交给各自控制器。
+        // 查询变化从列表顶部开始，导入和外观入口复用各自的处理流程。
         this.headerUi.bindEvents(
             (query) => {
                 bookshelfSession.search = query;
@@ -376,7 +376,7 @@ export default class BookshelfController {
             signal
         );
 
-        // 会话只记录滚动位置，返回书架时再由初始化流程恢复。
+        // 将滚动位置写入内存会话，返回书架时由初始化流程恢复。
         bind(
             this.bookListUi.root,
             "scroll",

@@ -24,7 +24,7 @@ import Dialog from "./components/dialog/dialog";
 import OperationError from "./errors/operation-error";
 
 /**
- * SPA应用入口。
+ * 管理页面替换和统一错误提示，页面实例随路由切换创建与销毁。
  */
 class Main {
     private readonly appRoot: HTMLElement;
@@ -53,7 +53,6 @@ class Main {
             void this.showError(event.reason);
         });
 
-        // 错误处理就绪后再加载初始路由。
         this.router.start();
     }
 

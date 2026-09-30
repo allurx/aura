@@ -11,8 +11,7 @@ import Setting from "./setting";
 import { syncBrowserTheme } from "../application/browser-theme";
 
 /**
- * 将阅读设置直接应用到对应元素的 CSS 属性。
- *
+ * 将当前页面的常规设置映射到目标元素的 CSS 属性。
  */
 export default abstract class StyleSetting extends Setting {
     /**
@@ -38,7 +37,7 @@ export default abstract class StyleSetting extends Setting {
     }
 
     /**
-     * 移除显式样式，让阅读内容重新使用主题和 CSS 默认值。
+     * 从快照中移除显式值；调用 apply 后才恢复目标元素的主题或 CSS 默认样式。
      */
     public override reset(appearance: PageAppearance): PageAppearance {
         return appearance.withoutStyle(this.property);

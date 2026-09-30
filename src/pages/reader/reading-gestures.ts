@@ -48,11 +48,11 @@ export default function bindReadingGestures(
     };
 
     /**
-     * 轻点要求 450ms 内且两轴全程位移小于 8px；触摸轻扫至少横移 48px，偏角不超过 30°。
+     * 轻点要求 450ms 内且两轴全程位移小于 8px；触摸或触笔轻扫至少横移 48px，偏角不超过 30°。
      * 选区、多指、取消及正文滚动均忽略，鼠标拖选不作为轻扫。
      */
     const readGesture = (current: ReadingPointer, event: PointerEvent): SwitchChapterDirection => {
-        // 排除长按、选区和已交给浏览器处理的操作，避免把取消路径当成点击。
+        // 先排除选区、多指、取消与滚动后的操作，再判断轻点或轻扫。
         if (
             current.cancelled ||
             !event.isPrimary ||
@@ -180,7 +180,7 @@ export default function bindReadingGestures(
 }
 
 /**
- * 正文中的非交互元素可触发手势，章节按钮等控件保留自身行为。
+ * 仅正文内的非交互元素可触发手势，链接与控件保留自身行为。
  */
 function isReadingTarget(target: EventTarget | null, content: HTMLElement): boolean {
     return (

@@ -1,43 +1,60 @@
 # 部署指南
 
-本文面向维护 Aura 在线站点的人员，负责 Cloudflare 环境准备、部署、域名与回滚。分支协作见[开发指南](development.md#分支协作)，GitHub Release 分发见[发布指南](releasing.md)。
+本文说明如何配置、部署和回滚 Aura 在线站点。日常通过 GitHub Actions 部署；分支集成见[开发指南](development.md#分支协作)，下载文件分发见[发布指南](releasing.md)。
 
-Web 版使用 Cloudflare Workers Static Assets 托管混淆产物 `dist/web-obfuscated/`，由 [GitHub Actions](../.github/workflows/ci.yml) 验证全部四种构建后部署。环境配置见 [wrangler.jsonc](../wrangler.jsonc)。portable 作为独立 HTML 下载交付，不上传到站点。
+站点使用 Cloudflare Workers Static Assets 托管 `dist/web-obfuscated/`，环境由 [wrangler.jsonc](../wrangler.jsonc) 定义：
 
-将[Web 构建输出](development.md#构建与预览)作为同一次构建的完整产物一起部署，包含随包提供的许可声明。不要只替换 HTML 或部分资源。
+| 分支   | GitHub / Wrangler 环境 | Worker         | 站点                                       |
+| ------ | ---------------------- | -------------- | ------------------------------------------ |
+| `dev`  | `preview`              | `aura-preview` | [预览站点](https://aura-preview.allurx.io) |
+| `main` | `production`           | `aura`         | [正式站点](https://aura.allurx.io)         |
 
-## 准备
+部署完整 Web 目录，包括资源和许可声明。portable 通过独立 HTML 下载交付，不上传到站点。
 
-1. 本机操作先完成[开发环境准备](development.md#环境准备)。
-2. 按 [Cloudflare CI 身份验证说明](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/#1-authentication)取得 Account ID，并创建限定到目标账号的账户 API token。首次创建 Worker 需要 Workers 产品范围的 `Admin`；已有 Worker 的部署权限按 [Workers 权限说明](https://developers.cloudflare.com/workers/authorization/workers/)配置。日常 CI 不修改域名绑定，无需域名写权限。
-3. 在 GitHub 仓库的 **Settings → Secrets and variables → Actions → Variables** 添加 `CLOUDFLARE_ACCOUNT_ID`。
-4. 在 **Settings → Environments** 创建 `preview` 和 `production`，分别添加 secret `CLOUDFLARE_API_TOKEN`；部署分支分别限制为 `dev` 和 `main`。
+## 首次配置
 
-Cloudflare 端由 Actions 调用 Wrangler 部署，无需启用 Workers Builds 的 Git 集成。
+1. 按 [Cloudflare CI 身份验证说明](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/#1-authentication)取得 Account ID 并创建限定到目标账号的 API token。首次创建 Worker 与日常部署所需权限不同，按 [Workers 权限说明](https://developers.cloudflare.com/workers/authorization/workers/)配置。日常 CI 不修改域名绑定，无需域名写权限。
+2. 在 GitHub 仓库的 **Settings → Secrets and variables → Actions → Variables** 添加 `CLOUDFLARE_ACCOUNT_ID`。
+3. 在 **Settings → Environments** 创建 `preview` 和 `production`，分别添加 secret `CLOUDFLARE_API_TOKEN`；部署分支分别限制为 `dev` 和 `main`。
+4. 首次部署创建 Worker 后，完成下文的[域名绑定](#域名绑定)，再检查站点。
+
+[CI 工作流](../.github/workflows/ci.yml)已包含验证与部署步骤，Cloudflare 端无需再启用 Workers Builds 的 Git 集成。
 
 ## 自动部署与结果查看
 
-| 操作          | 行为                                    | 部署目标                                         |
-| ------------- | --------------------------------------- | ------------------------------------------------ |
-| 创建或更新 PR | 完整验证和两个环境的部署 dry-run        | 不部署                                           |
-| 推送 `dev`    | 验证后部署同一次运行的混淆 Web artifact | `aura-preview`，`https://aura-preview.allurx.io` |
-| 推送 `main`   | 验证后部署同一次运行的混淆 Web artifact | `aura`，`https://aura.allurx.io`                 |
+- **创建或更新 PR**：运行 `npm run verify` 和两个环境的部署 dry-run，不部署。
+- **推送 `dev` 或 `main`**：完成相同验证后，将本次运行的混淆 Web 产物部署到对应环境。
 
-部署任务下载同一次 `verify` 上传的 artifact，不重新构建；开始部署前会核对远端分支的最新提交。若分支已有更新，旧运行会跳过部署，因此 CI 成功不等于该提交已上线。
+部署任务下载同一次 `verify` 上传的 artifact，不重新构建。部署前若发现分支已有新提交，旧运行会跳过部署。
 
-在仓库 **Actions → CI** 查看对应提交的验证、artifact 和部署步骤；在 Cloudflare **Workers & Pages → 对应 Worker → Deployments** 核对当前版本，并打开表中的目标站点验收。发布 tag 的 GitHub Release 流程独立运行。
+1. 在仓库 [Actions → CI](https://github.com/allurx/aura/actions/workflows/ci.yml) 找到目标提交，确认验证和部署步骤均成功，且部署未被跳过。
+2. 在 Cloudflare **Workers & Pages → 对应 Worker → Deployments** 核对当前版本。
+3. 打开目标站点，检查 TXT 导入、章节导航、刷新后的进度与外观，以及入口和静态资源响应头。
+
+CI 成功不等于目标提交已上线；GitHub Release 的 tag 流程也不会触发站点部署。
 
 ## 本机部署
 
-需要从本机部署时，先通过 Wrangler 登录目标账号，或在当前进程中安全配置 `CLOUDFLARE_ACCOUNT_ID` 与 `CLOUDFLARE_API_TOKEN`。在目标提交上执行：
+先完成[开发环境准备](development.md#环境准备)，通过 Wrangler 登录目标账号，或在当前进程中配置上述环境变量。确认当前源码是要部署的版本后构建并检查目标环境。以下以预览环境为例：
 
 ```sh
 npm run verify
 npm run deploy:preview -- --dry-run
-npm run deploy:production -- --dry-run
 ```
 
-确认产物与环境正确后，选择 `npm run deploy:preview` 或 `npm run deploy:production`，分别部署到 `aura-preview` 和 `aura`。始终显式选择环境；直接运行 `wrangler deploy` 会使用顶层名称 `aura`，指向正式 Worker。这两个部署脚本只上传已有 `dist/web-obfuscated/`，不会重新构建；dry-run 不验证远端凭据、域名绑定或实际访问结果。
+核对 dry-run 的 Worker 名称和资源目录，再执行：
+
+```sh
+npm run deploy:preview
+```
+
+部署正式环境时，将两条 `deploy:preview` 命令都换成 `deploy:production`。完成后按[自动部署与结果查看](#自动部署与结果查看)中的站点检查步骤验收。
+
+### 注意事项
+
+- 部署脚本只上传已有 `dist/web-obfuscated/`，不会重新构建。
+- 始终显式选择环境。直接运行 `wrangler deploy` 会使用顶层名称 `aura`，指向正式 Worker。
+- dry-run 只检查本地配置和打包结果，不验证远端凭据、域名绑定或站点访问。
 
 ## 域名绑定
 
@@ -45,7 +62,7 @@ npm run deploy:production -- --dry-run
 
 域名通过 Cloudflare 控制台或 API 管理。Wrangler 保持 `workers_dev: false`、`preview_urls: false`，不设置 `route` 或 `routes`，从而保留已有绑定；不要在 CI 中重复创建域名。参见 [Wrangler 配置与控制台的职责划分](https://developers.cloudflare.com/workers/wrangler/configuration/#source-of-truth)。
 
-绑定后检查 HTTPS、TXT 导入、章节导航、刷新后的进度与外观，并核对入口和静态资源响应头。两个域名的浏览器存储相互隔离；改变域名不会自动迁移已有书库。
+绑定后检查 HTTPS 和站点功能。两个域名的浏览器存储相互隔离；改变域名不会自动迁移已有书库。
 
 ## 回滚
 

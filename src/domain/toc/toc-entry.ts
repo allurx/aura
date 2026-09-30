@@ -4,18 +4,17 @@
  */
 
 /**
- * 目录只保留导航所需字段，不包含章节正文。
+ * 章节的导航摘要；行号范围与 Chapter 一致，包含显式标题行。
  */
 export default interface TocEntry {
-    // 章节序号，从 1 开始
+    // 章节序号，从 1 开始。
     chapterNumber: number;
 
-    // 目录标题
     title: string;
 
-    // 章节在整本书中的起始物理行号
+    // 从 1 开始的全书物理行号。
     startBookLineNumber: number;
 
-    // 章节在整本书中的结束物理行号
+    // 章节最后一行的全书物理行号；空文件为 0。
     endBookLineNumber: number;
 }

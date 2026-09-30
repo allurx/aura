@@ -21,7 +21,7 @@ import { PageName } from "@/constants/page-name";
 import OperationError from "@/errors/operation-error";
 
 /**
- * 阅读器控制器
+ * 编排章节加载、进度写入与阅读交互，跨异步边界核对页面生命周期。
  */
 export default class ReaderController {
     private readonly appUi: AppUi;
@@ -108,7 +108,7 @@ export default class ReaderController {
             .restoreProgress(this.state.progress.chapterLineNumber, this.state.progress.lineVisibleRatio);
         this.readerUi.renderChapterNavigation(this.state.progress.chapterNumber, this.state.toc.entries.length);
 
-        // 底栏与目录显示同一份已提交进度。
+        // 进度显示与目录标记使用同一份已提交进度。
         this.readerUi.renderChapterInfo(
             this.state.chapter.title,
             toBookLineNumber(this.state.chapter, this.state.progress.chapterLineNumber),
@@ -157,7 +157,7 @@ export default class ReaderController {
     }
 
     /**
-     * 先保存旧位置，再获取并保存目标章；存储成功且页面仍有效时才重绘正文。
+     * 先保存旧位置，再加载目标章并保存其初始进度；写入成功且页面仍有效时才重绘正文。
      */
     private async selectChapter(chapterNumber: number): Promise<void> {
         // 拒绝重入与无效章序，避免无效操作覆盖当前进度。

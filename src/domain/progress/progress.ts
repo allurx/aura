@@ -9,6 +9,8 @@
 export default interface Progress {
     bookId: string;
     chapterNumber: number;
+
+    // 从 1 开始的章内原始文本行号，不是排版后的视觉行号。
     chapterLineNumber: number;
 
     // 段落在视口上缘以下的剩余比例（0～1），用于恢复段内阅读位置。

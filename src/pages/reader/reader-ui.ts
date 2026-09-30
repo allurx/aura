@@ -34,7 +34,7 @@ export default class ReaderUi extends Ui {
     private cancelReadingGesture: (() => void) | undefined;
 
     /**
-     * 四键在桌面外侧栏与移动端底部间移动原节点，保留事件、展开状态和自然 Tab 顺序。
+     * 目录、外观、全屏与书架入口在桌面侧栏和移动底部间复用原节点，保留事件与 Tab 顺序。
      * 移动工具默认收起；进入移动布局时保留正在使用的入口及浮层返回路径。
      */
     public bindResponsiveControls(signal: AbortSignal): void {
@@ -101,7 +101,7 @@ export default class ReaderUi extends Ui {
             }
         };
 
-        // 响应式监听与辅助入口随页面清理，键盘打开工具后直接进入四键操作。
+        // 响应式监听与辅助入口随页面清理，键盘打开工具后聚焦第一个操作入口。
         mobile.addEventListener("change", sync, { signal });
         bind(
             this.toolsEntry,
@@ -234,7 +234,7 @@ export default class ReaderUi extends Ui {
     }
 
     /**
-     * 原生模态界面优先处理 Escape，沉浸工具不能同时收起。
+     * 任意原生模态界面打开时，暂停背景切章、手势和工具显隐操作。
      */
     private hasOpenPanel(): boolean {
         return document.querySelector("dialog:modal") !== null;
@@ -263,7 +263,7 @@ export default class ReaderUi extends Ui {
     }
 
     /**
-     * 保存进度后返回书架。
+     * 绑定返回入口，进度保存与路由切换由调用方处理。
      */
     public bindReturnToBookshelf(handler: () => Promise<void>, signal: AbortSignal): this {
         bind(this.returnButton, "click", handler, { signal });
