@@ -8,7 +8,7 @@ import type Toc from "@/domain/toc/toc";
 import type Progress from "@/domain/progress/progress";
 
 /**
- * 阅读器状态
+ * 当前书籍、完整目录、已提交进度与已加载章节，由阅读控制器协调更新。
  */
 export default interface ReaderState {
     book: Book;

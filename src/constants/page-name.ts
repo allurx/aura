@@ -4,7 +4,7 @@
  */
 
 /**
- * Page names used in the application.
+ * 页面标识，同时用于路由片段和页面外观作用域。
  */
 export enum PageName {
     BOOKSHELF = "bookshelf",

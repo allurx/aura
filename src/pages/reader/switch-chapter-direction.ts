@@ -4,7 +4,7 @@
  */
 
 /**
- * Chapter switching directions.
+ * 相对切章方向；INVALID 表示本次输入不触发切章。
  */
 export enum SwitchChapterDirection {
     PREV = "prev",

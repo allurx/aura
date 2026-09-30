@@ -7,10 +7,6 @@ import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 import { defineConfig } from "eslint/config";
 
-/**
- * ESLint configuration with TypeScript support.
- * @see https://typescript-eslint.io/
- */
 export default defineConfig(
     eslint.configs.recommended,
     tseslint.configs.strictTypeChecked,
@@ -26,7 +22,7 @@ export default defineConfig(
         rules: {
             // DOM 模板和事件入口允许调用方明确指定元素、事件类型。
             "@typescript-eslint/no-unnecessary-type-parameters": "off",
-            // Keep type-only dependencies out of the runtime module graph
+            // 类型依赖不进入运行时模块关系，避免仅导入类型也保留模块副作用。
             "@typescript-eslint/consistent-type-imports": [
                 "error",
                 {

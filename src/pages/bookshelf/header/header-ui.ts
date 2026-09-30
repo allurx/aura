@@ -51,7 +51,7 @@ export default class HeaderUi extends Ui {
         };
         bind(this.search, "compositionend", updateSearch, { signal });
 
-        // Escape 清空查询，但输入法取消候选时保留当前书名。
+        // Escape 清空查询，但输入法取消候选时保留搜索框内容。
         bind(
             this.search,
             "keydown",

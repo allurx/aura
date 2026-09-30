@@ -21,7 +21,6 @@ import { bookshelfSession } from "./bookshelf-state";
 import { DEFAULT_CATEGORY_ID, getCategory } from "@/domain/category/category";
 import { bind } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
-import { createElementFromHtml } from "@/utils/dom-util";
 import { createBookshelfSettings } from "@/settings/definitions/setting-catalog";
 import SettingController from "@/settings/setting-controller";
 import { PageName } from "@/constants/page-name";
@@ -317,18 +316,7 @@ export default class BookshelfController {
 
         this.busy = true;
         try {
-            const confirmed = await this.bookshelfUi.dialog.confirm(
-                createElementFromHtml(`
-                    <div class="reset-warning">
-                        <p class="reset-warning-title">
-                            <span class="icon icon-warning" aria-hidden="true"></span><strong>此操作无法撤销</strong>
-                        </p>
-                        <p>将清除全部本地数据，包括书籍、阅读进度和外观设置。</p>
-                        <p class="reset-warning-note">请先保留原始 TXT，并关闭其他 Aura 页面。<br>完成后自动刷新。</p>
-                    </div>
-                `),
-                { title: "重置数据", confirmBtnText: "清除全部数据", destructive: true }
-            );
+            const confirmed = await this.bookshelfUi.confirmDataReset();
             if (!confirmed || !this.isActive()) return;
 
             await this.bookshelfUi.runBusy("正在重置数据，完成后将自动刷新…", async (setStatus) => {
@@ -363,7 +351,7 @@ export default class BookshelfController {
             signal
         );
 
-        // 查询变化从列表顶部开始，导入与外观继续交给各自控制器。
+        // 查询变化从列表顶部开始，导入和外观入口复用各自的处理流程。
         this.headerUi.bindEvents(
             (query) => {
                 bookshelfSession.search = query;
@@ -388,7 +376,7 @@ export default class BookshelfController {
             signal
         );
 
-        // 会话只记录滚动位置，返回书架时再由初始化流程恢复。
+        // 将滚动位置写入内存会话，返回书架时由初始化流程恢复。
         bind(
             this.bookListUi.root,
             "scroll",

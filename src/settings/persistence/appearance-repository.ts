@@ -10,7 +10,6 @@ import type SettingConfiguration from "../models/setting-configuration";
  * 页面外观的同步 localStorage 仓库。
  *
  * 只读取当前设置清单允许的值，不转换旧结构或回写读取结果。
- *
  */
 export default class AppearanceRepository {
     private readonly storageKey: string;
@@ -59,7 +58,7 @@ export default class AppearanceRepository {
     }
 
     /**
-     * 根据当前页面设置清单过滤快照，不读取废弃区域和面板布局。
+     * 按当前页面的设置清单逐项校验；未知字段和非法值不进入快照。
      */
     private decode(value: unknown): PageAppearance {
         let appearance = PageAppearance.defaults(this.configuration.defaultTheme);

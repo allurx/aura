@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* 全局变量定义 */
 :root {
     --font-size: 16px;
     --ui-font-family:
@@ -19,7 +18,7 @@
         --viewport-height: 100lvh;
     }
 
-    /* 平板及以下 */
+    /* 可用宽度较小时使用更紧凑的基础字号。 */
     @media (max-width: 64rem) {
         --font-size: 14px;
     }
@@ -28,7 +27,6 @@
 *,
 *::before,
 *::after {
-    /* 统一盒模型 */
     box-sizing: border-box;
     margin: 0;
     padding: 0;

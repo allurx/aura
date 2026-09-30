@@ -23,7 +23,7 @@ export default class Overlay {
     }
 
     /**
-     * 让浏览器处理遮罩显示后执行操作，成功或失败均结束遮罩。
+     * 显示遮罩并等待一次动画帧回调后执行操作，成功或失败均隐藏遮罩。
      */
     public async showWhile(handler: () => Promise<void>): Promise<void> {
         this.root.hidden = false;

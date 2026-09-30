@@ -25,7 +25,7 @@
     user-select: none;
     -webkit-user-select: none;
 
-    /* 隐藏遮罩层 */
+    /* 显式覆盖 display: flex，让 hidden 属性控制遮罩的显示。 */
     &[hidden] {
         display: none;
     }
@@ -38,7 +38,6 @@
         color: var(--appearance-muted-color);
     }
 
-    /* loading动画小圆圈 */
     .spinner {
         width: 2.5rem;
         height: 2.5rem;

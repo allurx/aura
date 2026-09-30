@@ -21,7 +21,7 @@ import { PageName } from "@/constants/page-name";
 import OperationError from "@/errors/operation-error";
 
 /**
- * 阅读器控制器
+ * 编排章节加载、进度写入与阅读交互，跨异步边界核对页面生命周期。
  */
 export default class ReaderController {
     private readonly appUi: AppUi;
@@ -108,7 +108,7 @@ export default class ReaderController {
             .restoreProgress(this.state.progress.chapterLineNumber, this.state.progress.lineVisibleRatio);
         this.readerUi.renderChapterNavigation(this.state.progress.chapterNumber, this.state.toc.entries.length);
 
-        // 底栏与目录显示同一份已提交进度。
+        // 进度显示与目录标记使用同一份已提交进度。
         this.readerUi.renderChapterInfo(
             this.state.chapter.title,
             toBookLineNumber(this.state.chapter, this.state.progress.chapterLineNumber),
@@ -157,7 +157,7 @@ export default class ReaderController {
     }
 
     /**
-     * 先保存旧位置，再获取并保存目标章；存储成功且页面仍有效时才重绘正文。
+     * 先保存旧位置，再加载目标章并保存其初始进度；写入成功且页面仍有效时才重绘正文。
      */
     private async selectChapter(chapterNumber: number): Promise<void> {
         // 拒绝重入与无效章序，避免无效操作覆盖当前进度。
@@ -206,7 +206,6 @@ export default class ReaderController {
      * 将按钮、手势和键盘统一到同一切章流程。
      */
     private async switchChapter(direction: SwitchChapterDirection): Promise<void> {
-        if (this.readerUi.root.querySelector("#setting[open], #toc[open]")) return;
         if (direction === SwitchChapterDirection.PREV) await this.selectChapter(this.state.progress.chapterNumber - 1);
         else if (direction === SwitchChapterDirection.NEXT)
             await this.selectChapter(this.state.progress.chapterNumber + 1);
@@ -246,12 +245,9 @@ export default class ReaderController {
             { signal }
         );
 
-        // 仅移动布局接受正文切章手势，中部轻点保留给工具显隐。
-        this.appUi.bindReadingGestures(
-            this.contentUi.root,
-            async (direction) => {
-                if (this.readerUi.root.hasAttribute("data-mobile-controls")) await this.switchChapter(direction);
-            },
+        // UI 将各输入方式转换为同一切章意图，业务状态决定能否切换工具。
+        this.readerUi.bindReadingNavigation(
+            (direction) => this.switchChapter(direction),
             () => {
                 if (this.chapterLoading || this.returningToBookshelf) return;
                 this.readerUi.toggleReadingTools();
@@ -261,7 +257,6 @@ export default class ReaderController {
 
         // 返回先提交进度；全屏切换前后用同一视觉锚点保持阅读位置。
         this.readerUi
-            .bindChapterNavigation((direction) => this.switchChapter(direction), signal)
             .bindReturnToBookshelf(() => this.returnToBookshelf(), signal)
             .bindToggleFullscreen(async () => {
                 if (this.chapterLoading || this.returningToBookshelf) return;
@@ -293,18 +288,16 @@ export default class ReaderController {
                 this.readerUi.setTocExpanded(this.tocUi.toggleToc());
             }, signal);
 
-        // 正文键盘复用切章流程，滚动保存只接受稳定正文的位置。
-        this.contentUi
-            .bindKeyboardNavigation((direction) => this.switchChapter(direction), signal)
-            .bindContentScroll(async (chapterLineNumber, lineVisibleRatio) => {
-                if (this.chapterLoading || this.returningToBookshelf || this.appearancePosition) return;
-                await this.updateProgress({ chapterLineNumber, lineVisibleRatio });
-                if (!this.isActive()) return;
-                this.readerUi.renderProgress(
-                    toBookLineNumber(this.state.chapter, chapterLineNumber),
-                    numberOfLines(this.state.toc)
-                );
-            }, signal);
+        // 滚动保存只接受稳定正文的位置。
+        this.contentUi.bindContentScroll(async (chapterLineNumber, lineVisibleRatio) => {
+            if (this.chapterLoading || this.returningToBookshelf || this.appearancePosition) return;
+            await this.updateProgress({ chapterLineNumber, lineVisibleRatio });
+            if (!this.isActive()) return;
+            this.readerUi.renderProgress(
+                toBookLineNumber(this.state.chapter, chapterLineNumber),
+                numberOfLines(this.state.toc)
+            );
+        }, signal);
 
         // 选章成功回到正文；取消目录仍由原生对话框恢复入口焦点。
         this.tocUi

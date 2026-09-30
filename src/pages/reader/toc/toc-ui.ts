@@ -18,7 +18,7 @@ interface TocScrollPosition {
 }
 
 /**
- * 目录面板
+ * 可搜索的目录面板，独立保存目录浏览位置，不随正文进度强制滚动。
  */
 export default class TocUi extends Ui {
     private readonly dialog: HTMLDialogElement;
@@ -54,7 +54,7 @@ export default class TocUi extends Ui {
     }
 
     /**
-     * 显示目录；首次定位当前章节，后续恢复目录自身的滚动位置。
+     * 切换目录显隐；首次打开定位当前章节，后续恢复目录自身的滚动位置。
      * @returns 切换后目录是否打开。
      */
     public toggleToc(): boolean {
@@ -299,7 +299,7 @@ export default class TocUi extends Ui {
     }
 
     /**
-     * 尺寸变化后的 scroll 事件不能覆盖变化前的位置。
+     * 用面板和列表尺寸识别布局变化，防止其触发的 scroll 事件覆盖旧浏览锚点。
      */
     private layoutSignature(): string {
         return [
@@ -394,7 +394,7 @@ export default class TocUi extends Ui {
      * 根据标题筛选目录，保留总章数和当前章标记。
      */
     private renderFilteredEntries(): void {
-        // 先得到匹配结果，再离线构造按钮；外部章名始终作为文本写入。
+        // 在未挂载的片段中构造匹配章节，外部章名始终作为文本写入。
         const entries = this.entries.filter((entry) => entry.title.toLocaleLowerCase().includes(this.query));
         const fragment = document.createDocumentFragment();
         this.chapterButtons = [];

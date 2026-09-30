@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { SwitchChapterDirection } from "../switch-chapter-direction";
 import Ui from "@/components/ui";
 import { bind, run } from "@/utils/event-util";
 
@@ -17,17 +16,17 @@ interface ContentPosition {
 }
 
 /**
- * 阅读器正文界面
+ * 安全渲染章节正文，并分别维护临时视觉锚点和可持久化的行号位置。
  */
 export default class ContentUi extends Ui {
     private scrollTimer: number | undefined;
 
     /**
-     * 标题与正文使用文本节点渲染，段落行号继续对应已有进度模型。
+     * 标题与正文使用文本节点渲染，排版换行不改变用于恢复进度的原始行号。
      * @param lines - 当前章的原始文本行，索引加一作为恢复进度的行号。
      */
     public renderChapter(title: string, lines: string[]): this {
-        // 停止旧正文的延迟读取，在离线片段中组装新章节。
+        // 停止旧正文的延迟读取，在未挂载的片段中组装新章节。
         this.cancelPendingScroll();
         const fragment = document.createDocumentFragment();
 
@@ -152,7 +151,7 @@ export default class ContentUi extends Ui {
     }
 
     /**
-     * 在滚动停止后提交进度，页面销毁时清理定时器。
+     * 滚动停止后向调用方报告当前位置，页面销毁时清理定时器。
      */
     public bindContentScroll(
         handler: (chapterLineNumber: number, lineVisibleRatio: number) => Promise<void>,
@@ -183,47 +182,6 @@ export default class ContentUi extends Ui {
                 this.cancelPendingScroll();
             },
             { once: true }
-        );
-        return this;
-    }
-
-    /**
-     * 绑定正文中的左右键，保留控件自身键盘行为。
-     */
-    public bindKeyboardNavigation(
-        handler: (direction: SwitchChapterDirection) => Promise<void>,
-        signal: AbortSignal
-    ): this {
-        // 只有普通正文焦点接受方向键，控件编辑、修饰键与长按重复均保留原行为。
-        bind(
-            document,
-            "keydown",
-            async (event: KeyboardEvent) => {
-                if (
-                    event.defaultPrevented ||
-                    event.altKey ||
-                    event.ctrlKey ||
-                    event.metaKey ||
-                    event.shiftKey ||
-                    event.repeat
-                )
-                    return;
-                const target = event.target;
-                if (!(target instanceof HTMLElement)) return;
-                if (target !== document.body && target !== this.root && !this.root.contains(target)) return;
-                if (target.closest("button, a, input, textarea, select, summary, [contenteditable], [role=dialog]"))
-                    return;
-                const direction =
-                    event.key === "ArrowLeft"
-                        ? SwitchChapterDirection.PREV
-                        : event.key === "ArrowRight"
-                          ? SwitchChapterDirection.NEXT
-                          : SwitchChapterDirection.INVALID;
-                if (direction === SwitchChapterDirection.INVALID) return;
-                event.preventDefault();
-                await handler(direction);
-            },
-            { signal }
         );
         return this;
     }

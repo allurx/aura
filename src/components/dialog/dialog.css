@@ -21,18 +21,18 @@
     max-height: calc(var(--viewport-height) - var(--dialog-top) - var(--dialog-bottom));
     user-select: none;
     -webkit-user-select: none;
-    /* 初始隐藏，防止闪烁 */
+    /* 仅打开时采用 flex 布局，正文滚动不带走标题和操作区。 */
     display: none;
     flex-direction: column;
     overflow: clip;
 
-    /* 居中显示 */
+    /* 在安全区域与软键盘之外的可用视口中居中。 */
     position: fixed;
     inset: calc(var(--viewport-top) + var(--dialog-top)) var(--dialog-right)
         calc(var(--viewport-bottom) + var(--dialog-bottom)) var(--dialog-left);
     margin: auto;
 
-    /* 原生 close 即刻结算结果和焦点；支持离散过渡的浏览器保留短暂退场。 */
+    /* 关闭结果与焦点由原生 dialog 处理，离散过渡只延续退场绘制。 */
     opacity: 0;
     transform: translateY(8px) scale(0.985);
     transition:
@@ -41,7 +41,6 @@
         display var(--motion-duration-normal) allow-discrete,
         overlay var(--motion-duration-normal) allow-discrete;
 
-    /* 通过[open]控制显示dialog(open是dialog原生特性) */
     &[open] {
         display: flex;
         opacity: 1;
@@ -52,7 +51,6 @@
         pointer-events: none;
     }
 
-    /* 模态弹窗的背景遮罩样式 */
     &::backdrop {
         background: var(--appearance-backdrop);
         backdrop-filter: blur(5px);

@@ -7,8 +7,7 @@ import type { StyleProperty } from "./style-property";
 import type { Theme } from "./theme";
 
 /**
- * 单个页面已提交的不可变外观快照，只保存主题和常规设置。
- *
+ * 单个页面的不可变外观快照，只保存主题和常规设置；应用与持久化由控制器负责。
  */
 export default class PageAppearance {
     private constructor(
@@ -24,21 +23,21 @@ export default class PageAppearance {
     }
 
     /**
-     * @returns 已提交的显式值；缺失时使用主题或 CSS 默认值。
+     * @returns 快照中的显式值；未设置时返回 undefined，由设置定义解析默认表现。
      */
     public getStyle(property: StyleProperty): string | undefined {
         return this.styles.get(property);
     }
 
     /**
-     * 更新页面主题，保留所有常规设置。
+     * 返回指定主题的快照，保留所有常规设置。
      */
     public withTheme(theme: Theme): PageAppearance {
         return theme === this.theme ? this : new PageAppearance(theme, this.styles);
     }
 
     /**
-     * 更新单个常规设置，保留其他设置。
+     * 返回更新单个常规设置后的快照，保留其他设置。
      */
     public withStyle(property: StyleProperty, value: string): PageAppearance {
         const styles = new Map(this.styles);
@@ -47,7 +46,7 @@ export default class PageAppearance {
     }
 
     /**
-     * 移除单项显式覆盖，恢复主题或 CSS 默认值。
+     * 返回移除单项显式值后的快照，不直接修改页面样式。
      */
     public withoutStyle(property: StyleProperty): PageAppearance {
         if (!this.styles.has(property)) return this;
@@ -57,7 +56,7 @@ export default class PageAppearance {
     }
 
     /**
-     * @returns page-scoped localStorage 的白名单结构。
+     * @returns 页面外观的存储结构，只包含主题和显式常规设置。
      */
     public toJSON(): Record<string, unknown> {
         return { theme: this.theme, general: Object.fromEntries(this.styles) };

@@ -4,6 +4,6 @@
  */
 
 /**
- * Aura支持并可交由TextDecoderStream严格解码的TXT编码。
+ * Aura 支持的 TXT 编码，标签可直接传给 TextDecoderStream。
  */
 export type SupportedTextEncoding = "utf-8" | "utf-16le" | "utf-16be" | "gb18030" | "big5";

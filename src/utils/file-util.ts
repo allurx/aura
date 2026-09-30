@@ -4,7 +4,7 @@
  */
 
 /**
- * 计算文件的 SHA-256 哈希值；crypto.subtle 需要安全上下文。
+ * 计算文件的 SHA-256 哈希值；需一次读取完整文件，且 crypto.subtle 要求安全上下文。
  */
 export async function computeHash(file: File): Promise<string> {
     return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer())))

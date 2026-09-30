@@ -8,6 +8,7 @@ import Overlay from "@/components/overlay/overlay";
 import { assertExists } from "@/utils/assert-util";
 import { bind } from "@/utils/event-util";
 import { SwitchChapterDirection } from "./switch-chapter-direction";
+import bindReadingGestures from "./reading-gestures";
 
 /**
  * 阅读器工具分组、跨设备布局和移动沉浸状态。
@@ -30,9 +31,10 @@ export default class ReaderUi extends Ui {
     private readonly toolsEntry = assertExists(this.root.querySelector<HTMLButtonElement>("#reading-tools-entry"));
     private mobileControls = false;
     private toolsVisible = false;
+    private cancelReadingGesture: (() => void) | undefined;
 
     /**
-     * 四键在桌面外侧栏与移动端底部间移动原节点，保留事件、展开状态和自然 Tab 顺序。
+     * 目录、外观、全屏与书架入口在桌面侧栏和移动底部间复用原节点，保留事件与 Tab 顺序。
      * 移动工具默认收起；进入移动布局时保留正在使用的入口及浮层返回路径。
      */
     public bindResponsiveControls(signal: AbortSignal): void {
@@ -64,6 +66,8 @@ export default class ReaderUi extends Ui {
          * 同步排布和焦点，仅在移动端需要接续操作时展开工具。
          */
         const sync = (): void => {
+            // 布局切换后不沿用旧输入过程，即使同一次操作又切回原布局。
+            if (this.mobileControls !== mobile.matches) this.cancelReadingGesture?.();
             const focused = document.activeElement;
             const focusedControl = focused instanceof HTMLElement && controls.some(({ button }) => button === focused);
             const focusedChapter = focused === this.previousButton || focused === this.nextButton;
@@ -97,7 +101,7 @@ export default class ReaderUi extends Ui {
             }
         };
 
-        // 响应式监听与辅助入口随页面清理，键盘打开工具后直接进入四键操作。
+        // 响应式监听与辅助入口随页面清理，键盘打开工具后聚焦第一个操作入口。
         mobile.addEventListener("change", sync, { signal });
         bind(
             this.toolsEntry,
@@ -146,14 +150,61 @@ export default class ReaderUi extends Ui {
     }
 
     /**
-     * 显式切章入口与手势、键盘复用同一业务处理器。
+     * 将按钮、正文键盘与有效手势统一为阅读意图，浮层打开时不接受背景切章。
      */
-    public bindChapterNavigation(
-        handler: (direction: SwitchChapterDirection) => Promise<void>,
+    public bindReadingNavigation(
+        onChapter: (direction: SwitchChapterDirection) => Promise<void>,
+        onCenterTap: () => void,
         signal: AbortSignal
     ): this {
-        bind(this.previousButton, "click", () => handler(SwitchChapterDirection.PREV), { signal });
-        bind(this.nextButton, "click", () => handler(SwitchChapterDirection.NEXT), { signal });
+        /**
+         * 所有相对切章入口遵守同一浮层约束，业务层不依赖具体面板结构。
+         */
+        const navigate = async (direction: SwitchChapterDirection): Promise<void> => {
+            if (!this.hasOpenPanel()) await onChapter(direction);
+        };
+        bind(this.previousButton, "click", () => navigate(SwitchChapterDirection.PREV), { signal });
+        bind(this.nextButton, "click", () => navigate(SwitchChapterDirection.NEXT), { signal });
+
+        // 只有普通正文焦点接受方向键，控件编辑、修饰键与长按重复均保留原行为。
+        bind(
+            document,
+            "keydown",
+            async (event: KeyboardEvent) => {
+                if (
+                    event.defaultPrevented ||
+                    event.altKey ||
+                    event.ctrlKey ||
+                    event.metaKey ||
+                    event.shiftKey ||
+                    event.repeat ||
+                    this.hasOpenPanel()
+                )
+                    return;
+                const target = event.target;
+                if (!(target instanceof HTMLElement)) return;
+                if (target !== document.body && target !== this.content && !this.content.contains(target)) return;
+                if (target.closest("button, a, input, textarea, select, summary, [contenteditable], [role=dialog]"))
+                    return;
+                const direction =
+                    event.key === "ArrowLeft"
+                        ? SwitchChapterDirection.PREV
+                        : event.key === "ArrowRight"
+                          ? SwitchChapterDirection.NEXT
+                          : SwitchChapterDirection.INVALID;
+                if (direction === SwitchChapterDirection.INVALID) return;
+                event.preventDefault();
+                await navigate(direction);
+            },
+            { signal }
+        );
+
+        // 手势只在移动工具布局下有效，中心轻点交由控制器确认业务是否空闲。
+        this.cancelReadingGesture = bindReadingGestures(
+            this.content,
+            { isEnabled: () => this.mobileControls && !this.hasOpenPanel(), onChapter: navigate, onCenterTap },
+            signal
+        );
         return this;
     }
 
@@ -183,7 +234,7 @@ export default class ReaderUi extends Ui {
     }
 
     /**
-     * 原生模态界面优先处理 Escape，沉浸工具不能同时收起。
+     * 任意原生模态界面打开时，暂停背景切章、手势和工具显隐操作。
      */
     private hasOpenPanel(): boolean {
         return document.querySelector("dialog:modal") !== null;
@@ -212,7 +263,7 @@ export default class ReaderUi extends Ui {
     }
 
     /**
-     * 保存进度后返回书架。
+     * 绑定返回入口，进度保存与路由切换由调用方处理。
      */
     public bindReturnToBookshelf(handler: () => Promise<void>, signal: AbortSignal): this {
         bind(this.returnButton, "click", handler, { signal });

@@ -31,7 +31,7 @@ export default abstract class BasePage implements Page {
     }
 
     /**
-     * 先结束异步与事件生命周期，再移除页面节点；销毁后的实例不可复用。
+     * 先通知生命周期结束，再移除页面节点；已开始的数据操作由控制器收尾，实例不可复用。
      */
     public dispose(): void {
         this.lifecycleController.abort();

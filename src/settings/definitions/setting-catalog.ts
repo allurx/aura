@@ -18,7 +18,7 @@ import WidthSetting from "./width-setting";
 export const themeSetting = new ThemeSetting();
 
 /**
- * 书架主题、字体和书封尺寸独立保存，尺寸调整沿用自适应网格。
+ * 将书架字体绑定到页面，封面大小与书名字号绑定到书目列表。
  */
 export function createBookshelfSettings(bookshelf: HTMLElement, bookList: HTMLElement): PageSettings {
     return {
@@ -32,8 +32,7 @@ export function createBookshelfSettings(bookshelf: HTMLElement, bookList: HTMLEl
 }
 
 /**
- * 将阅读常规设置直接绑定到当前阅读器和正文。
- *
+ * 将阅读常规设置绑定到阅读器或正文，避免修改工具栏与浮层的排版。
  */
 export function createReaderSettings(reader: HTMLElement, content: HTMLElement): PageSettings {
     return {
