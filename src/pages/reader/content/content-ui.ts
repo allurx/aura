@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { SwitchChapterDirection } from "../switch-chapter-direction";
 import Ui from "@/components/ui";
 import { bind, run } from "@/utils/event-util";
 
@@ -183,47 +182,6 @@ export default class ContentUi extends Ui {
                 this.cancelPendingScroll();
             },
             { once: true }
-        );
-        return this;
-    }
-
-    /**
-     * 绑定正文中的左右键，保留控件自身键盘行为。
-     */
-    public bindKeyboardNavigation(
-        handler: (direction: SwitchChapterDirection) => Promise<void>,
-        signal: AbortSignal
-    ): this {
-        // 只有普通正文焦点接受方向键，控件编辑、修饰键与长按重复均保留原行为。
-        bind(
-            document,
-            "keydown",
-            async (event: KeyboardEvent) => {
-                if (
-                    event.defaultPrevented ||
-                    event.altKey ||
-                    event.ctrlKey ||
-                    event.metaKey ||
-                    event.shiftKey ||
-                    event.repeat
-                )
-                    return;
-                const target = event.target;
-                if (!(target instanceof HTMLElement)) return;
-                if (target !== document.body && target !== this.root && !this.root.contains(target)) return;
-                if (target.closest("button, a, input, textarea, select, summary, [contenteditable], [role=dialog]"))
-                    return;
-                const direction =
-                    event.key === "ArrowLeft"
-                        ? SwitchChapterDirection.PREV
-                        : event.key === "ArrowRight"
-                          ? SwitchChapterDirection.NEXT
-                          : SwitchChapterDirection.INVALID;
-                if (direction === SwitchChapterDirection.INVALID) return;
-                event.preventDefault();
-                await handler(direction);
-            },
-            { signal }
         );
         return this;
     }

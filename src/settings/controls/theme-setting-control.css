@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-:is(#reader, #bookshelf) > #setting {
+#setting {
     .theme-setting {
         position: relative;
         padding: 0 0 0.4rem;

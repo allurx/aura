@@ -36,6 +36,10 @@
         border: 0;
         border-radius: 0;
         box-shadow: none;
+
+        > #setting .width-setting {
+            display: none !important;
+        }
     }
 
     @media (max-height: 500px) {
@@ -44,6 +48,21 @@
         border-block: 0;
         border-radius: 0;
     }
+}
+
+/* 工具移到底部时，设置沿入口所在边展开；面板内部呈现仍由设置组件负责。 */
+#reader[data-mobile-controls] > #setting {
+    --setting-hidden-translation: translateY(0.65rem);
+    --setting-inset: auto 0 var(--viewport-bottom);
+    --setting-width: 100%;
+    --setting-max-height: min(
+        calc(var(--viewport-height) * 0.9),
+        calc(var(--viewport-height) - env(safe-area-inset-top))
+    );
+    --setting-border-radius: 1.25rem 1.25rem 0 0;
+    --setting-border-bottom: 0;
+    --setting-padding-left: max(1.35rem, env(safe-area-inset-left));
+    --setting-padding-right: max(1.35rem, env(safe-area-inset-right));
 }
 
 /* 触摸布局由正文中部唤出工具；辅助入口仍在键盘和阅读顺序中。 */

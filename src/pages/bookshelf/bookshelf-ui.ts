@@ -7,6 +7,7 @@ import Ui from "@/components/ui";
 import Dialog from "@/components/dialog/dialog";
 import Overlay from "@/components/overlay/overlay";
 import { assertExists } from "@/utils/assert-util";
+import { createElementFromHtml } from "@/utils/dom-util";
 
 /**
  * 书架页面的操作状态与共用对话框。
@@ -33,6 +34,24 @@ export default class BookshelfUi extends Ui {
                     dialog.close("cancel");
             },
             { once: true }
+        );
+    }
+
+    /**
+     * 确认清除全部本地数据，以危险语义和分段内容说明操作后果。
+     */
+    public confirmDataReset(): Promise<boolean> {
+        return this.dialog.confirm(
+            createElementFromHtml(`
+                <div class="reset-warning">
+                    <p class="reset-warning-title">
+                        <span class="icon icon-warning" aria-hidden="true"></span><strong>此操作无法撤销</strong>
+                    </p>
+                    <p>将清除全部本地数据，包括书籍、阅读进度和外观设置。</p>
+                    <p class="reset-warning-note">请先保留原始 TXT，并关闭其他 Aura 页面。<br>完成后自动刷新。</p>
+                </div>
+            `),
+            { title: "重置数据", confirmBtnText: "清除全部数据", destructive: true }
         );
     }
 

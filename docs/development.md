@@ -51,7 +51,7 @@ iPhone 首次连接时，用 `mkcert -CAROOT` 找到 CA 目录，将其中的 `r
 [应用入口](../src/main.ts)把路由交给书架和阅读器，页面负责挂载与销毁，Controller 协调交互、业务操作和 UI：
 
 - [书架](../src/pages/bookshelf/bookshelf-controller.ts)：导入、分类、搜索和删除；[书架业务](../src/pages/bookshelf/bookshelf-service.ts)负责去重共享正文与跨存储事务。[预设分类](../src/domain/category/category.ts)由代码维护，数据库只保存书籍的分类归属。
-- [阅读器](../src/pages/reader/reader-controller.ts)：切章、恢复位置和保存进度；[阅读业务](../src/pages/reader/reader-service.ts)读取章节并提交进度快照。
+- [阅读器](../src/pages/reader/reader-controller.ts)：切章、恢复位置和保存进度；[阅读界面](../src/pages/reader/reader-ui.ts)统一按钮、键盘和[正文手势](../src/pages/reader/reading-gestures.ts)，负责响应式工具与浮层交互边界；[阅读业务](../src/pages/reader/reader-service.ts)读取章节并提交进度快照。
 - [TXT 解析](../src/domain/chapter/chapter-parser.ts)：在写事务外解码和分章，保留全书物理行号；解析结果是普通数据记录。
 - [数据访问](../src/database/store.ts)只包装当前需要的 IndexedDB 操作，[事务入口](../src/database/transaction.ts)等待整笔事务提交。界面不直接操作数据库。
 - [外观设置](../src/settings/setting-controller.ts)独立管理主题、常规设置、预览和提交，使用两页各自的 `localStorage`，不进入书籍数据库。

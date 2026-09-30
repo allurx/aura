@@ -46,7 +46,7 @@ html {
     }
 
     /* 系统高对比模式会移除填充和阴影，用双线保留选中状态，外环仍专用于焦点。 */
-    :is(#reader, #bookshelf) > #setting .theme-options .theme-option:has(input:checked) {
+    #setting .theme-options .theme-option:has(input:checked) {
         border: 3px double Highlight;
         padding: calc(0.5rem - 2px);
     }
