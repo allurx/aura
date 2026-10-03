@@ -154,6 +154,7 @@ export default class SettingController implements SettingUiListener {
                 }
             }
             if (restoreErrors.length > 0) {
+                // eslint-disable-next-line preserve-caught-error -- AggregateError.errors 已按顺序保留原始异常与全部恢复异常。
                 throw new AggregateError([error, ...restoreErrors], "Failed to save and restore appearance settings");
             }
             throw error;

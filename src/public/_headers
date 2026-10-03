@@ -10,6 +10,3 @@
 
 /manifest.webmanifest
   Cache-Control: no-cache
-
-https://aura-preview.allurx.io/*
-  X-Robots-Tag: noindex

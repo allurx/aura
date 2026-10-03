@@ -59,6 +59,7 @@ export default defineConfig(({ command, mode, isPreview }) => {
 
         // 单次构建只清理当前交付目录，其他版本的产物仍保留。
         build: {
+            target: "es2023",
             outDir: resolve(PROJECT_ROOT, "dist", outputDirectory),
             emptyOutDir: true,
             ...(portable ? { modulePreload: false } : {}),

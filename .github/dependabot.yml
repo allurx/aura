@@ -8,3 +8,20 @@ updates:
       target-branch: "dev"
       schedule:
           interval: "weekly"
+    - package-ecosystem: "npm"
+      directory: "/"
+      target-branch: "dev"
+      schedule:
+          interval: "weekly"
+      groups:
+          routine-updates:
+              update-types:
+                  - "minor"
+                  - "patch"
+      ignore:
+          # 当前 typed lint 的支持范围：https://typescript-eslint.io/users/dependency-versions/
+          - dependency-name: "typescript"
+            versions: [">=6.1.0"]
+          # Node 类型声明随 .node-version 指定的运行时主版本升级。
+          - dependency-name: "@types/node"
+            update-types: ["version-update:semver-major"]
