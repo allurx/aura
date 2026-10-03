@@ -165,5 +165,5 @@ jobs:
                       --repo "$GITHUB_REPOSITORY" \
                       --verify-tag \
                       --fail-on-no-commits \
-                      --generate-notes \
+                      --notes-from-tag \
                       --title "$TAG_NAME"

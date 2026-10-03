@@ -81,6 +81,7 @@ Aura 是一个轻量、离线优先的 Web 阅读器。变更应持续保护以�
 
 - `dev` 是开发分支，`main` 是正式发布分支。开发修改进入 `dev` 或以它为基线的任务分支，不在 `main` 上直接开发或向远端 `main` 直接推送。
 - 日常发布通过 `dev → main` PR 集成；合并前核对最新提交的 CI、必要的本地运行时验证和实际差异。保留 `main` 的 push 触发器，用于验证并部署 PR 合并后的实际提交，不在 CI 中额外限制 PR 的来源分支。
+- PR 标题可使用英文，手写正文使用中文；Release 标题使用版本 tag，说明使用中文并由 annotated tag 正文提供。技术标识及 Dependabot 等机器人的原始正文保留原文。
 - 长期分支 `dev → main` 使用 Create a merge commit，保留祖先关系；不使用 squash、rebase 或线性历史要求。合并后按祖先关系把 `main` 同步回 `dev`，不重写历史或删除长期分支。
 - `main` 的远端保护在 GitHub 中配置，要求 PR、GitHub Actions 的 `verify` 检查通过，并禁止强推和删除。保护规则必须在 GitHub 端确认已启用；CI 检查和本地约定不能代替服务器端保护。
 - 本地与 CI 使用 `.node-version` 指定的 Node.js 版本线；CI 的部署令牌由 GitHub 的 `production` Environment 提供，并限制为 `main` 使用。
