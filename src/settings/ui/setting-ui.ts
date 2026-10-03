@@ -309,6 +309,7 @@ export default class SettingUi extends Ui implements SettingControlListener {
             try {
                 this.refresh();
             } catch (refreshError) {
+                // eslint-disable-next-line preserve-caught-error -- AggregateError.errors 同时保留操作异常与刷新异常。
                 throw new AggregateError([error, refreshError], "Setting update and refresh failed");
             }
             throw error;

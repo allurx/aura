@@ -4,35 +4,34 @@
     "private": true,
     "type": "module",
     "engines": {
-        "node": ">=22.12.0"
+        "node": ">=24"
     },
     "scripts": {
         "dev": "vite --open",
         "format": "prettier . --write",
         "format:check": "prettier . --check",
-        "lint": "eslint src vite.config.ts",
-        "type-check": "tsc --noEmit",
+        "lint": "eslint . --max-warnings 0",
+        "type-check": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
         "check": "npm run format:check && npm run lint && npm run type-check",
         "verify": "npm run check && vite build && vite build --mode portable && vite build --mode obfuscated && vite build --mode portable-obfuscated",
         "build": "npm run check && vite build",
         "build:portable": "npm run check && vite build --mode portable",
         "build:obfuscated": "npm run check && vite build --mode obfuscated",
         "build:portable:obfuscated": "npm run check && vite build --mode portable-obfuscated",
-        "preview": "vite preview --open",
-        "deploy:preview": "wrangler deploy --env preview",
-        "deploy:production": "wrangler deploy --env production"
+        "preview": "wrangler dev",
+        "deploy": "wrangler deploy"
     },
     "devDependencies": {
-        "@eslint/js": "9.38.0",
-        "@types/node": "^24.9.2",
-        "eslint": "9.38.0",
-        "prettier": "3.6.2",
-        "typescript": "5.9.3",
-        "typescript-eslint": "8.46.2",
+        "@eslint/js": "10.0.1",
+        "@types/node": "24.19.1",
+        "eslint": "10.12.0",
+        "prettier": "3.9.9",
+        "typescript": "6.0.3",
+        "typescript-eslint": "8.71.0",
         "vite": "7.3.6",
         "vite-plugin-javascript-obfuscator": "3.1.0",
         "vite-plugin-singlefile": "^2.3.3",
-        "wrangler": "4.136.3"
+        "wrangler": "4.145.0"
     },
     "prettier": {
         "tabWidth": 4,

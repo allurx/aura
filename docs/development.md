@@ -4,13 +4,19 @@
 
 ## 环境准备
 
-Aura 使用原生 HTML、CSS 和 TypeScript。安装符合 [package.json](../package.json) 中 `engines.node` 要求的 Node.js，并使用 npm 和仓库的锁文件安装依赖。
+Aura 使用原生 HTML、CSS 和 TypeScript。本地与 CI 使用 [.node-version](../.node-version) 指定的 Node.js LTS 版本线，最低版本要求见 [package.json](../package.json) 的 `engines.node`；使用 npm 和仓库的锁文件安装依赖。
 
 在仓库根目录安装依赖：
 
 ```sh
 npm ci
 ```
+
+### 浏览器与类型环境
+
+支持桌面和移动端主流常青浏览器的当前及前一个稳定大版本。构建使用显式 ES2023 语法目标，避免 Vite 升级时默认目标变化；该目标不会补齐 Web API，也不等于完整的浏览器兼容保证。平台可选能力仍按实际支持情况检测，交互修改按受影响浏览器和输入方式验证。
+
+[TypeScript 配置](../tsconfig.json)分别检查浏览器源码与 Node.js 构建配置，共享严格检查选项。浏览器侧只引入 DOM 与 Vite 客户端类型，构建侧使用与 Node.js 运行时对应的类型声明。Vite 配置由打包器加载，因此两侧均使用 bundler 模块解析；类型库包含现代运行环境已支持的 ES2025 API，语法编译目标与 API 类型范围分别维护。
 
 ## 本地运行
 
@@ -77,17 +83,14 @@ npm run dev
 
 开发服务器与 Web 构建共用安装元信息。可在本地 HTTPS 开发页或 `localhost` 预览中验证浏览器原生安装；安装和离线使用的区别见[使用指南](usage.md)。
 
-构建对应版本后，选择一种预览方式：
+先构建正式站点使用的混淆 Web 版，再启动本地预览：
 
 ```sh
-# 普通 Web 版
+npm run build:obfuscated
 npm run preview
-
-# 混淆 Web 版
-npm run preview -- --mode obfuscated
 ```
 
-预览仅提供本地 HTTP 服务，不会部署站点。portable 直接通过浏览器打开对应 HTML，验证地址应为 `file://`。
+访问 `http://127.0.0.1:4173/`。预览由 Wrangler 读取正式部署配置和静态产物，可检查 Cloudflare 的 `_headers` 等规则；它只提供本地 HTTP 服务，不会部署站点。并行预览其他项目时，可用 `npm run preview -- --port 4175` 临时选择其他端口。修改后重新构建并重启预览。仅检查普通 Web 产物时，可在 `npm run build` 后运行 `npx vite preview --open`；该服务不模拟 Cloudflare 的响应头规则。portable 直接通过浏览器打开对应 HTML，验证地址应为 `file://`。
 
 ## 检查与验证
 
@@ -103,7 +106,7 @@ npm run preview -- --mode obfuscated
 
 构建不能代替运行时检查。页面交互变更应实际验证导航、关闭与取消、焦点和位置恢复、错误反馈及持久化；涉及 portable 时还需实际打开 `file://` 产物。只改文档时检查内容、链接、示例和格式，不运行无关构建。
 
-[CI 工作流](../.github/workflows/ci.yml)对 PR 和 `dev`、`main` 的推送执行 `npm run verify`，并检查两个环境的部署 dry-run。到仓库 [Actions → CI](https://github.com/allurx/aura/actions/workflows/ci.yml) 查看对应提交；上线结果另按[部署指南](deployment.md#自动部署与结果查看)核对。
+[CI 工作流](../.github/workflows/ci.yml)对 PR 和 `dev`、`main` 的推送执行 `npm run verify`，并检查正式环境的部署 dry-run。只有 `main` 的推送会部署站点。到仓库 [Actions → CI](https://github.com/allurx/aura/actions/workflows/ci.yml) 查看对应提交；上线结果另按[部署指南](deployment.md#自动部署与结果查看)核对。
 
 ### 许可声明维护
 
@@ -114,7 +117,7 @@ npm run preview -- --mode obfuscated
 ## 分支协作
 
 1. 在 `dev` 或以其为基线的任务分支开发，不在 `main` 上直接修改或推送。
-2. 改动进入 `dev` 后，核对 CI 和预览站点。日常通过 `dev → main` PR 集成，检查最新提交、实际差异与验证结果。
+2. 改动进入 `dev` 后，核对 CI 并按改动完成本地运行时验证。日常通过 `dev → main` PR 集成，检查最新提交、实际差异与验证结果。
 3. 对长期分支 `dev → main` 使用 **Create a merge commit**，保留祖先关系。
 4. 合并后按祖先关系将 `main` 同步回 `dev`：可快进时快进，分叉时普通合并，不重写历史或删除长期分支。同步前先确认目标 checkout 与本地修改状态。
 
@@ -126,6 +129,8 @@ npm run preview -- --mode obfuscated
 
 私有仓库的规则支持取决于 GitHub 套餐，见 [rulesets 可用范围](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)。本地约定或 CI 成功不代表服务器端保护已经启用。
 
-### Actions 依赖更新
+### 依赖更新
 
-Actions 使用完整 commit SHA 固定，并保留同一行版本注释。[Dependabot 配置](../.github/dependabot.yml)由默认分支 `main` 提供，每周向 `dev` 提交 Actions 更新 PR。维护者核对更新、运行验证并审核后合并，再随开发成果集成到 `main`。
+Actions 使用完整 commit SHA 固定，并保留同一行版本注释。[Dependabot 配置](../.github/dependabot.yml)由默认分支 `main` 提供，每周向 `dev` 提交 Actions 与 npm 更新 PR。npm 的 minor 和 patch 更新合并为一组，major 更新单独评估；均由维护者核对并通过验证后合并，再随开发成果集成到 `main`。
+
+TypeScript 更新须在 [typescript-eslint 的正式支持范围](https://typescript-eslint.io/users/dependency-versions/)内；调整限制前先核对兼容声明，再验证完整工具链。Node.js 类型声明随运行时主版本一起调整。`Prettier` 负责排版，ESLint 负责语义检查，两者独立执行，见 [Prettier 与 linter 的分工](https://prettier.io/docs/integrating-with-linters)。

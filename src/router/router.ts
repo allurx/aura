@@ -10,8 +10,7 @@ import { run } from "@/utils/event-util";
  * 页面路由及其必需上下文；阅读器必须关联具体书籍。
  */
 export type AppRoute =
-    | { readonly pageName: PageName.BOOKSHELF }
-    | { readonly pageName: PageName.READER; readonly bookId: string };
+    { readonly pageName: PageName.BOOKSHELF } | { readonly pageName: PageName.READER; readonly bookId: string };
 
 /**
  * Hash 路由；阅读器地址共用当前标签页保存的书籍标识，历史记录不携带书籍快照。

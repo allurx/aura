@@ -126,7 +126,7 @@ export default function bindReadingGestures(
         document,
         "pointermove",
         (event: PointerEvent) => {
-            if (!pointer || pointer.id !== event.pointerId) return;
+            if (pointer?.id !== event.pointerId) return;
             pointer.maxX = Math.max(pointer.maxX, Math.abs(event.clientX - pointer.startX));
             pointer.maxY = Math.max(pointer.maxY, Math.abs(event.clientY - pointer.startY));
         },
@@ -159,7 +159,7 @@ export default function bindReadingGestures(
         async (event: PointerEvent) => {
             activePointers.delete(event.pointerId);
             const current = pointer;
-            if (!current || current.id !== event.pointerId) return;
+            if (current?.id !== event.pointerId) return;
             cancel();
             if (!handlers.isEnabled()) return;
             const direction = readGesture(current, event);

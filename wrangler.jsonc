@@ -7,15 +7,17 @@
     "compatibility_date": "2026-09-23",
     "workers_dev": false,
     "preview_urls": false,
+    "dev": {
+        "port": 4173,
+    },
     "assets": {
         "directory": "./dist/web-obfuscated",
     },
-    "env": {
-        "preview": {
-            "name": "aura-preview",
+    "routes": [
+        {
+            "pattern": "aura.allurx.io",
+            "zone_name": "allurx.io",
+            "custom_domain": true,
         },
-        "production": {
-            "name": "aura",
-        },
-    },
+    ],
 }
