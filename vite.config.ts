@@ -48,23 +48,21 @@ export default defineConfig(({ command, mode, isPreview }) => {
               }
             : {}),
 
-        // 生产构建统一移除调试输出。
-        ...(command === "build"
-            ? {
-                  esbuild: {
-                      drop: ["console", "debugger"],
-                  },
-              }
-            : {}),
-
         // 单次构建只清理当前交付目录，其他版本的产物仍保留。
         build: {
             target: "es2023",
             outDir: resolve(PROJECT_ROOT, "dist", outputDirectory),
             emptyOutDir: true,
             ...(portable ? { modulePreload: false } : {}),
-            rollupOptions: {
+            rolldownOptions: {
                 output: {
+                    // 生产构建统一移除调试输出。
+                    minify: {
+                        compress: {
+                            dropConsole: true,
+                            dropDebugger: true,
+                        },
+                    },
                     entryFileNames: "assets/js/[name]-[hash].js",
                     chunkFileNames: "assets/js/[name]-[hash].js",
                     assetFileNames: (assetInfo) => {
@@ -270,8 +268,7 @@ function portableEntryPlugin(): Plugin {
                 if (entry?.type !== "asset") throw new Error("Portable HTML entry was not generated");
 
                 delete bundle["index.html"];
-                entry.fileName = "aura.html";
-                bundle[entry.fileName] = entry;
+                this.emitFile({ type: "asset", fileName: "aura.html", source: entry.source });
             },
         },
     };
