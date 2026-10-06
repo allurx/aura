@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
     site:
-        uses: allurx/web-foundation/.github/workflows/static-site.yml@v1.0.1
+        uses: allurx/web-foundation/.github/workflows/static-site.yml@v1.0.2
         secrets: inherit
         with:
             asset-directory: dist/web-obfuscated/
