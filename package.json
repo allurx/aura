@@ -22,7 +22,7 @@
         "deploy": "wrangler deploy"
     },
     "devDependencies": {
-        "@allurx/web-foundation": "git+https://github.com/allurx/web-foundation.git#v1.0.0",
+        "@allurx/web-foundation": "git+https://github.com/allurx/web-foundation.git#v1.0.1",
         "vite-plugin-javascript-obfuscator": "3.1.0",
         "vite-plugin-singlefile": "^2.3.3"
     },

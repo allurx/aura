@@ -19,7 +19,9 @@ concurrency:
 
 jobs:
     site:
-        uses: allurx/web-foundation/.github/workflows/static-site.yml@e32472d639aa24562baa026a233a8cfac2d27d7c # v1.0.0
+        uses: allurx/web-foundation/.github/workflows/static-site.yml@v1.0.1
+        secrets:
+            CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         with:
             asset-directory: dist/web-obfuscated/
             production-url: https://aura.allurx.io

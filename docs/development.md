@@ -131,6 +131,6 @@ npm run preview
 
 ### 依赖更新
 
-Actions 使用完整 commit SHA 固定，并保留同一行版本注释。[Dependabot 配置](../.github/dependabot.yml)由默认分支 `main` 提供，每周向 `dev` 提交 Actions 与 npm 更新 PR。npm 的 minor 和 patch 更新合并为一组，major 更新单独评估；均由维护者核对并通过验证后合并，再随开发成果集成到 `main`。
+第三方 Actions 使用完整 commit SHA 固定，并保留同一行版本注释。[Dependabot 配置](../.github/dependabot.yml)由默认分支 `main` 提供，每周向 `dev` 提交 Actions 与 npm 更新 PR。npm 的 minor 和 patch 更新合并为一组，major 更新单独评估；均由维护者核对并通过验证后合并，再随开发成果集成到 `main`。
 
-共享工具升级先在 Web Foundation 验证，再更新 Aura 的基础包 Git 版本标签及锁文件，并将 CI 的共享工作流 SHA 更新为同一次发布。两条更新路径由 Dependabot 分别检查，合并前仍需核对版本对应关系。Node.js 运行时按基础包要求同步 `.node-version` 与 `engines.node`。具体更新约束见 [Web Foundation 依赖与更新](https://github.com/allurx/web-foundation/blob/main/docs/dependencies.md)。
+共享工具升级先在 Web Foundation 验证，再将 Aura 的基础包 Git 引用和 CI 共享工作流引用统一更新到同一 Immutable Release 的具体 `vX.Y.Z` 标签，并更新锁文件。两条更新路径由 Dependabot 分别检查，合并前仍需核对版本对应关系。Node.js 运行时按基础包要求同步 `.node-version` 与 `engines.node`。具体更新约束见 [Web Foundation 依赖与更新](https://github.com/allurx/web-foundation/blob/main/docs/dependencies.md)。
