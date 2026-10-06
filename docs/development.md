@@ -4,7 +4,7 @@
 
 ## 环境准备
 
-Aura 使用原生 HTML、CSS 和 TypeScript。本地与 CI 使用 [.node-version](../.node-version) 指定的 Node.js LTS 版本线，最低版本要求见 [package.json](../package.json) 的 `engines.node`；使用 npm 和仓库的锁文件安装依赖。
+Aura 使用原生 HTML、CSS 和 TypeScript。本地与 CI 使用 [.node-version](../.node-version) 指定的完整 Node.js LTS 版本，版本约束见 [package.json](../package.json) 的 `engines.node`；使用 npm 和仓库的锁文件安装依赖。检查工具、工具版本和基础构建配置由 [Web Foundation](https://github.com/allurx/web-foundation) 统一维护，Aura 只声明基础包和自身需要的依赖。
 
 在仓库根目录安装依赖：
 
@@ -14,9 +14,9 @@ npm ci
 
 ### 浏览器与类型环境
 
-支持桌面和移动端主流常青浏览器的当前及前一个稳定大版本。构建使用显式 ES2023 语法目标，避免 Vite 升级时默认目标变化；该目标不会补齐 Web API，也不等于完整的浏览器兼容保证。平台可选能力仍按实际支持情况检测，交互修改按受影响浏览器和输入方式验证。
+支持桌面和移动端主流常青浏览器的当前及前一个稳定大版本。Vite 继承 Web Foundation 的 `baseline-widely-available` 构建目标，具体浏览器范围随固定的 Vite 版本确定；该目标不会补齐 Web API，也不等于完整的浏览器兼容保证。平台可选能力仍按实际支持情况检测，交互修改按受影响浏览器和输入方式验证。
 
-[TypeScript 配置](../tsconfig.json)分别检查浏览器源码与 Node.js 构建配置，共享严格检查选项。浏览器侧只引入 DOM 与 Vite 客户端类型，构建侧使用与 Node.js 运行时对应的类型声明。Vite 配置由打包器加载，因此两侧均使用 bundler 模块解析；类型库包含现代运行环境已支持的 ES2025 API，语法编译目标与 API 类型范围分别维护。
+[TypeScript 配置](../tsconfig.json)分别检查浏览器源码与 Node.js 构建配置，共享严格检查选项。浏览器侧只引入 DOM 与 Vite 客户端类型，构建侧使用与 Node.js 运行时对应的类型声明。浏览器配置继承共享 `browser`；工具配置继承共享 `base` 并添加 Node.js 类型。Vite/jiti 加载工具配置，因此这部分使用 bundler 模块解析，兼容现有混淆插件的 CommonJS 声明。Vite 在共享构建配置上保留 Hash Router、资源路径、许可声明、混淆和 portable 插件；这些交付规则由 Aura 维护。
 
 ## 本地运行
 
@@ -125,12 +125,12 @@ npm run preview
 
 ### 仓库保护配置
 
-仓库管理员在 **Settings → Rules → Rulesets → New ruleset → New branch ruleset** 配置 `main` 保护，确认状态为 **Active**、目标为 `main`：要求通过 PR 和 GitHub Actions 的 `verify`，以最新 `main` 验证，并禁止强推和删除。允许 merge commit，不启用线性历史要求；单人项目不强制取得他人 approval。
+仓库管理员在 **Settings → Rules → Rulesets → New ruleset → New branch ruleset** 配置 `main` 保护，确认状态为 **Active**、目标为 `main`：要求通过 PR 和 GitHub Actions 的 `site / verify`，以最新 `main` 验证，并禁止强推和删除。允许 merge commit，不启用线性历史要求；单人项目不强制取得他人 approval。
 
 私有仓库的规则支持取决于 GitHub 套餐，见 [rulesets 可用范围](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)。本地约定或 CI 成功不代表服务器端保护已经启用。
 
 ### 依赖更新
 
-Actions 使用完整 commit SHA 固定，并保留同一行版本注释。[Dependabot 配置](../.github/dependabot.yml)由默认分支 `main` 提供，每周向 `dev` 提交 Actions 与 npm 更新 PR。npm 的 minor 和 patch 更新合并为一组，major 更新单独评估；均由维护者核对并通过验证后合并，再随开发成果集成到 `main`。
+第三方 Actions 使用完整 commit SHA 固定，并保留同一行版本注释。[Dependabot 配置](../.github/dependabot.yml)由默认分支 `main` 提供，每周向 `dev` 提交 Actions 与 npm 更新 PR。npm 的 minor 和 patch 更新合并为一组，major 更新单独评估；均由维护者核对并通过验证后合并，再随开发成果集成到 `main`。
 
-TypeScript 更新须在 [typescript-eslint 的正式支持范围](https://typescript-eslint.io/users/dependency-versions/)内；调整限制前先核对兼容声明，再验证完整工具链。Node.js 类型声明随运行时主版本一起调整。`Prettier` 负责排版，ESLint 负责语义检查，两者独立执行，见 [Prettier 与 linter 的分工](https://prettier.io/docs/integrating-with-linters)。
+共享工具升级先在 Web Foundation 验证，再将 Aura 的基础包 Git 引用和 CI 共享工作流引用统一更新到同一 Immutable Release 的具体 `vX.Y.Z` 标签，并更新锁文件。两条更新路径由 Dependabot 分别检查，合并前仍需核对版本对应关系。Node.js 运行时按基础包要求同步 `.node-version` 与 `engines.node`。具体更新约束见 [Web Foundation 依赖与更新](https://github.com/allurx/web-foundation/blob/main/docs/dependencies.md)。
