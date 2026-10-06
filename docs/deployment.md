@@ -14,7 +14,7 @@
 
 按 [Web Foundation 部署说明](https://github.com/allurx/web-foundation/blob/main/docs/deployment.md#保存部署凭据)准备 GitHub `production` Environment、Account ID 和 API token，并将允许部署的分支限制为 `main`。Account ID 和 API token 均保存在 `production` Environment，分别使用 variable 和 secret。首次部署前核对下文的[域名配置](#域名配置)。
 
-[CI 工作流](../.github/workflows/ci.yml)与基础包固定同一 Immutable Release 的具体版本标签，传入混淆 Web 目录和正式站点地址，并显式映射 `CLOUDFLARE_API_TOKEN`。部署 job 从 `production` Environment 读取 token；PR 和 `dev` 的验证不需要生产凭据。保持 Cloudflare Workers Builds 的 Git 集成关闭，避免同一提交从两个入口部署。
+[CI 工作流](../.github/workflows/ci.yml)与基础包固定同一 Immutable Release 的具体版本标签，传入混淆 Web 目录和正式站点地址，并通过 `secrets: inherit` 继承调用方可用的 secrets。部署 job 从 `production` Environment 读取 token；PR 和 `dev` 的验证不需要生产凭据。保持 Cloudflare Workers Builds 的 Git 集成关闭，避免同一提交从两个入口部署。
 
 ## 自动部署与结果查看
 
