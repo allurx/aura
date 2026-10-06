@@ -5,7 +5,8 @@
 
 import { readFileSync } from "node:fs";
 import { extname, resolve } from "node:path";
-import { defineConfig, type HtmlTagDescriptor, type Plugin } from "vite";
+import { defineConfig, mergeConfig, type HtmlTagDescriptor, type Plugin, type UserConfig } from "vite";
+import foundation from "@allurx/web-foundation/vite";
 import obfuscatorPlugin from "vite-plugin-javascript-obfuscator";
 import { viteSingleFile } from "vite-plugin-singlefile";
 
@@ -22,7 +23,9 @@ export default defineConfig(({ command, mode, isPreview }) => {
     const development = command === "serve" && !isPreview;
     const outputDirectory = `${portable ? "portable" : "web"}${obfuscated ? "-obfuscated" : ""}`;
 
-    return {
+    return mergeConfig(foundation, {
+        // Hash Router 继续由单一入口处理导航。
+        appType: "spa",
         // portable 内联资源并使用相对路径，Web 版按站点根路径部署。
         root: SOURCE_ROOT,
         base: portable ? "./" : "/",
@@ -50,7 +53,6 @@ export default defineConfig(({ command, mode, isPreview }) => {
 
         // 单次构建只清理当前交付目录，其他版本的产物仍保留。
         build: {
-            target: "es2023",
             outDir: resolve(PROJECT_ROOT, "dist", outputDirectory),
             emptyOutDir: true,
             ...(portable ? { modulePreload: false } : {}),
@@ -149,7 +151,7 @@ export default defineConfig(({ command, mode, isPreview }) => {
             portable && portableEntryPlugin(),
             licensePlugin(portable),
         ],
-    };
+    } satisfies UserConfig);
 });
 
 /**

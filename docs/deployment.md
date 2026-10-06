@@ -12,12 +12,9 @@
 
 ## 首次配置
 
-1. 按 [Cloudflare CI 身份验证说明](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/#1-authentication)取得 Account ID，并为本项目创建独立 API token。按目标账号和 `allurx.io` zone 限定 Worker 部署及自定义域名所需的权限。Custom Domains 当前不支持按单个 Worker 限定角色，具体范围见 [Workers 权限说明](https://developers.cloudflare.com/workers/authorization/workers/)。首次创建 Worker 所需的管理权限与日常部署权限分开配置。
-2. 在 GitHub 仓库的 **Settings → Secrets and variables → Actions → Variables** 添加 `CLOUDFLARE_ACCOUNT_ID`。
-3. 在 **Settings → Environments** 创建 `production`，添加 secret `CLOUDFLARE_API_TOKEN`，部署分支限制为 `main`。
-4. 核对下文的[域名配置](#域名配置)，完成首次部署后再检查站点。
+按 [Web Foundation 部署说明](https://github.com/allurx/web-foundation/blob/main/docs/deployment.md#保存部署凭据)准备 GitHub `production` Environment、Account ID 和 API token，并将允许部署的分支限制为 `main`。Account ID 也可沿用已有仓库级 variable；API token 保存在 `production` Environment。首次部署前核对下文的[域名配置](#域名配置)。
 
-[CI 工作流](../.github/workflows/ci.yml)包含验证与部署步骤。保持 Cloudflare Workers Builds 的 Git 集成关闭，避免同一提交从两个入口部署。
+[CI 工作流](../.github/workflows/ci.yml)调用与基础包同次发布的共享工作流，传入混淆 Web 目录和正式站点地址。保持 Cloudflare Workers Builds 的 Git 集成关闭，避免同一提交从两个入口部署。
 
 ## 自动部署与结果查看
 
@@ -26,7 +23,7 @@
 
 部署任务下载同一次 `verify` 上传的 artifact，不重新构建。部署前若发现分支已有新提交，旧运行会跳过部署；部署时将 commit SHA 和 Actions 运行链接写入 Cloudflare 版本信息。
 
-1. 在仓库 [Actions → CI](https://github.com/allurx/aura/actions/workflows/ci.yml) 找到目标提交，确认验证和部署步骤均成功，且部署未被跳过。
+1. 在仓库 [Actions → CI](https://github.com/allurx/aura/actions/workflows/ci.yml) 找到目标提交，确认 `site / verify` 和 `site / deploy` 均成功，且部署未被跳过。
 2. 在 Cloudflare **Workers & Pages → aura → Deployments** 核对当前版本的 commit SHA 和 Actions 运行链接。
 3. 打开正式站点，检查 TXT 导入、章节导航、刷新后的进度与外观，以及入口和静态资源响应头。
 

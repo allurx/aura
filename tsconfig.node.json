@@ -1,10 +1,11 @@
 {
-    "extends": "./tsconfig.base.json",
+    "extends": "@allurx/web-foundation/tsconfig/base",
     "compilerOptions": {
+        // Vite 与 ESLint 的配置由 Vite/jiti 加载，按打包器解析插件入口。
         "module": "ESNext",
         "moduleResolution": "bundler",
-        "lib": ["ES2025"],
-        "types": ["node"]
+        "types": ["node"],
+        "erasableSyntaxOnly": true
     },
-    "include": ["vite.config.ts"]
+    "include": ["*.ts"]
 }
