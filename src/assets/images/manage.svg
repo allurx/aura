@@ -1,0 +1,16 @@
+<!--
+    Copyright 2026 allurx
+    SPDX-License-Identifier: Apache-2.0
+-->
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#000"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+>
+    <path d="M18.66 9.84 L20.86 10.44 L20.86 13.56 L18.66 14.16 L17.2 16.68 L17.79 18.89 L15.08 20.46 L13.46 18.85 L10.54 18.85 L8.92 20.46 L6.21 18.89 L6.8 16.68 L5.34 14.16 L3.14 13.56 L3.14 10.44 L5.34 9.84 L6.8 7.32 L6.21 5.11 L8.92 3.54 L10.54 5.15 L13.46 5.15 L15.08 3.54 L17.79 5.11 L17.2 7.32 Z" />
+    <circle cx="12" cy="12" r="3" />
+</svg>
