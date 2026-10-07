@@ -61,8 +61,7 @@ export default class BookshelfUi extends Ui {
             "abort",
             () => {
                 window.clearTimeout(this.feedbackTimer);
-                for (const dialog of this.root.querySelectorAll<HTMLDialogElement>(".dialog[open]"))
-                    dialog.close("cancel");
+                this.dialog.cancel();
             },
             { once: true }
         );
@@ -106,11 +105,6 @@ export default class BookshelfUi extends Ui {
         }));
         const previousFocus = document.activeElement;
 
-        // 复用遮罩中的单一播报区域，避免批次进度被 inert 区域屏蔽或重复朗读。
-        const status = assertExists(this.root.querySelector<HTMLElement>(".overlay .overlay-message"));
-        const previousStatus = status.textContent;
-        status.textContent = message;
-
         // 仅内容区域进入 busy 状态，进度播报留在其外，不等待整批操作结束。
         regions.forEach((element) => {
             element.inert = true;
@@ -118,18 +112,13 @@ export default class BookshelfUi extends Ui {
         });
 
         try {
-            await this.overlay.showWhile(() =>
-                handler((message) => {
-                    if (this.root.isConnected) status.textContent = message;
-                })
-            );
+            await this.overlay.showWhile(handler, message);
         } finally {
             previousStates.forEach(({ element, inert, busy }) => {
                 element.inert = inert;
                 if (busy === null) element.removeAttribute("aria-busy");
                 else element.setAttribute("aria-busy", busy);
             });
-            status.textContent = previousStatus;
 
             // 用户主动移动过焦点或页面已退出时，不再归还旧焦点。
             if (

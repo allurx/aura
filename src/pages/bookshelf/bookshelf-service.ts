@@ -16,6 +16,7 @@ import { parseEpub, EpubImportError } from "@/domain/file/epub";
 import { computeHash } from "@/utils/file-util";
 import { assertExists } from "@/utils/assert-util";
 import { runTransaction } from "@/database/transaction";
+import type { StoreName } from "@/database/database-schema";
 import {
     addRecord,
     clearRecords,
@@ -26,7 +27,6 @@ import {
     getRecord,
     getRecordByIndex,
     putRecord,
-    type StoreName,
 } from "@/database/store";
 
 /**
@@ -118,11 +118,11 @@ export async function importBooks(
 export async function deleteBook(bookId: string): Promise<void> {
     await runTransaction(["file", "book", "chapter", "toc", "progress"], "readwrite", async (transaction) => {
         const book = assertExists(await getRecord(transaction, "book", bookId), `Book[${bookId}] not found`);
-        if ((await countRecordsByIndex(transaction, "book", "fileId", book.fileId)) === 1) {
+        if ((await countRecordsByIndex(transaction, "book", "byFileId", book.fileId)) === 1) {
             await Promise.all([
                 deleteRecord(transaction, "file", book.fileId),
                 deleteRecord(transaction, "toc", book.fileId),
-                deleteRecordsByIndex(transaction, "chapter", "fileId", book.fileId),
+                deleteRecordsByIndex(transaction, "chapter", "byFileId", book.fileId),
             ]);
         }
         await Promise.all([deleteRecord(transaction, "book", bookId), deleteRecord(transaction, "progress", bookId)]);
@@ -267,7 +267,7 @@ async function saveBooks(
         ? ["file", "chapter", "toc", "book", "progress"]
         : ["file", "book", "progress"];
     return runTransaction(storeNames, "readwrite", async (transaction) => {
-        const existing = await getRecordByIndex(transaction, "file", "formatHash", [format, hash]);
+        const existing = await getRecordByIndex(transaction, "file", "byFormatAndHash", [format, hash]);
         if (existing) return addBooks(files, categoryId, existing, transaction);
         if (!prepared) return null;
 

@@ -4,7 +4,7 @@
  */
 
 import { openDatabase } from "./database";
-import type { StoreName } from "./store";
+import type { StoreName } from "./database-schema";
 
 /**
  * 请求和事务均成功后才返回；任一操作失败则中止整笔事务并保留原始异常。
