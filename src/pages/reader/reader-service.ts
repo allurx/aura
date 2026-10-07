@@ -13,7 +13,7 @@ import { assertExists } from "@/utils/assert-util";
  * 在同一事务快照中加载完整阅读状态，必需记录缺失时保留错误上下文。
  */
 export async function initReader(bookId: string): Promise<ReaderState> {
-    return runTransaction(["book", "toc", "chapter", "progress"], "readonly", async (transaction) => {
+    return runTransaction(["book", "file", "toc", "chapter", "progress"], "readonly", async (transaction) => {
         const [book, progress] = await Promise.all([
             getRecord(transaction, "book", bookId),
             getRecord(transaction, "progress", bookId),
@@ -22,12 +22,14 @@ export async function initReader(bookId: string): Promise<ReaderState> {
         const currentProgress = assertExists(progress, `Progress[bookId=${bookId}] not found`);
 
         // 目录与目标章节依赖正文标识和进度，其余读取彼此独立。
-        const [toc, chapter] = await Promise.all([
+        const [file, toc, chapter] = await Promise.all([
+            getRecord(transaction, "file", currentBook.fileId),
             getRecord(transaction, "toc", currentBook.fileId),
             getRecord(transaction, "chapter", [currentBook.fileId, currentProgress.chapterNumber]),
         ]);
         return {
             book: currentBook,
+            file: assertExists(file, `File[${currentBook.fileId}] not found`),
             progress: currentProgress,
             toc: assertExists(toc, `Toc[fileId=${currentBook.fileId}] not found`),
             chapter: assertExists(

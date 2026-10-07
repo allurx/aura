@@ -16,6 +16,8 @@ export default class NavUi extends Ui {
     private readonly drawer = assertExists(this.root.closest<HTMLDialogElement>("dialog"));
     private readonly page = assertExists(this.root.closest<HTMLElement>("#bookshelf"));
     private readonly opener = assertExists(this.page.querySelector<HTMLButtonElement>("#open-navigation"));
+    private readonly moreButton = assertExists(this.root.querySelector<HTMLButtonElement>("#open-more"));
+    private readonly moreActions = assertExists(this.root.querySelector<HTMLElement>("#bookshelf-more-actions"));
     private readonly mobile = window.matchMedia("(max-width: 768px)");
 
     /**
@@ -78,12 +80,37 @@ export default class NavUi extends Ui {
             { signal }
         );
 
+        // 原生 popover 管理显隐、外部点击和 Escape；定位跟随入口与可视区域。
+        bind(
+            this.moreActions,
+            "beforetoggle",
+            (event: ToggleEvent) => {
+                if (event.newState === "open") this.positionMoreActions();
+            },
+            { signal }
+        );
+        bind(
+            this.moreActions,
+            "toggle",
+            () => {
+                if (this.moreActions.matches(":popover-open")) this.moreActions.scrollTop = 0;
+            },
+            { signal }
+        );
+        const repositionMoreActions = () => {
+            if (this.moreActions.matches(":popover-open")) this.positionMoreActions();
+        };
+        window.addEventListener("resize", repositionMoreActions, { signal });
+        window.visualViewport?.addEventListener("resize", repositionMoreActions, { signal });
+        window.visualViewport?.addEventListener("scroll", repositionMoreActions, { signal });
+
         // 打开入口只在移动断点生效，并同步可访问的展开状态。
         bind(
             this.opener,
             "click",
             () => {
                 if (!this.mobile.matches || this.drawer.open) return;
+                this.drawer.inert = false;
                 this.drawer.showModal();
                 this.opener.setAttribute("aria-expanded", "true");
             },
@@ -111,8 +138,20 @@ export default class NavUi extends Ui {
         );
         bind(
             this.drawer,
+            "cancel",
+            (event) => {
+                event.preventDefault();
+                this.closeDrawer();
+            },
+            { signal }
+        );
+        bind(
+            this.drawer,
             "close",
             () => {
+                if (this.drawer.open) return;
+                this.closeMoreActions();
+                this.drawer.inert = this.mobile.matches;
                 this.opener.setAttribute("aria-expanded", "false");
             },
             { signal }
@@ -124,6 +163,7 @@ export default class NavUi extends Ui {
             "button",
             "click",
             (_, button) => {
+                this.closeMoreActions();
                 handlers.category(assertExists(button.dataset["id"]));
                 this.closeDrawer();
             },
@@ -139,8 +179,23 @@ export default class NavUi extends Ui {
                 assertExists(this.root.querySelector(selector)),
                 "click",
                 async () => {
+                    this.closeMoreActions();
                     this.closeDrawer();
-                    await handler();
+                    this.focusMoreEntry();
+                    try {
+                        await handler();
+                    } finally {
+                        // 旧入口隐藏时，关闭中的 dialog 可能仍短暂持有焦点；成功后的列表焦点保持不变。
+                        const focused = document.activeElement;
+                        if (
+                            !signal.aborted &&
+                            ([document.body, this.opener, this.moreButton].some((element) => element === focused) ||
+                                (focused instanceof HTMLElement && focused.closest("dialog:not([open])")))
+                        ) {
+                            this.syncBreakpoint();
+                            this.focusMoreEntry();
+                        }
+                    }
                 },
                 { signal }
             );
@@ -153,7 +208,9 @@ export default class NavUi extends Ui {
             aboutButton,
             "click",
             () => {
+                this.closeMoreActions();
                 this.closeDrawer();
+                this.focusMoreEntry();
                 about.showModal();
             },
             { signal }
@@ -175,7 +232,7 @@ export default class NavUi extends Ui {
             "close",
             () => {
                 this.syncBreakpoint();
-                (this.mobile.matches ? this.opener : aboutButton).focus({ preventScroll: true });
+                this.focusMoreEntry();
             },
             { signal }
         );
@@ -184,6 +241,7 @@ export default class NavUi extends Ui {
         signal.addEventListener(
             "abort",
             () => {
+                this.closeMoreActions();
                 this.drawer.close();
                 about.close();
             },
@@ -196,7 +254,9 @@ export default class NavUi extends Ui {
      */
     private closeDrawer(): void {
         if (!this.mobile.matches || !this.drawer.open) return;
+        this.closeMoreActions();
         this.drawer.close();
+        this.drawer.inert = true;
         this.opener.setAttribute("aria-expanded", "false");
         this.opener.focus({ preventScroll: true });
     }
@@ -206,16 +266,50 @@ export default class NavUi extends Ui {
      */
     private syncBreakpoint(): void {
         const focusedInside = this.drawer.contains(document.activeElement);
+        this.closeMoreActions();
         this.opener.setAttribute("aria-expanded", "false");
         if (this.mobile.matches) {
             this.drawer.close();
+            this.drawer.inert = true;
             if (focusedInside) this.opener.focus({ preventScroll: true });
         } else {
             if (this.drawer.matches(":modal")) this.drawer.close();
+            this.drawer.inert = false;
             // 桌面仅作侧栏展示，避免非模态 show() 自动移动当前焦点。
             this.drawer.open = true;
             if (document.activeElement === this.opener)
                 this.navigation.querySelector<HTMLButtonElement>(".active")?.focus();
         }
+    }
+
+    /**
+     * 更多操作沿入口上方展开，矮窗口只压缩并滚动操作内容。
+     */
+    private positionMoreActions(): void {
+        const button = this.moreButton.getBoundingClientRect();
+        const viewport = window.visualViewport;
+        const viewportLeft = viewport?.offsetLeft ?? 0;
+        const viewportTop = viewport?.offsetTop ?? 0;
+        const viewportWidth = viewport?.width ?? document.documentElement.clientWidth;
+        const width = Math.min(Math.max(button.width, 200), viewportWidth - 16);
+
+        this.moreActions.style.width = `${width}px`;
+        this.moreActions.style.left = `${Math.max(viewportLeft + 8, Math.min(button.left, viewportLeft + viewportWidth - width - 8))}px`;
+        this.moreActions.style.bottom = `${window.innerHeight - button.top + 8}px`;
+        this.moreActions.style.maxHeight = `${Math.max(0, button.top - viewportTop - 16)}px`;
+    }
+
+    /**
+     * 操作弹窗不保留菜单层，也不把焦点还给其中已隐藏的按钮。
+     */
+    private closeMoreActions(): void {
+        if (this.moreActions.matches(":popover-open")) this.moreActions.hidePopover();
+    }
+
+    /**
+     * 关闭关于或数据确认后，焦点返回当前布局中可见的入口。
+     */
+    private focusMoreEntry(): void {
+        (this.mobile.matches ? this.opener : this.moreButton).focus({ preventScroll: true });
     }
 }

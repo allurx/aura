@@ -29,7 +29,7 @@
     /* 保留原生横向滚动与整卡单选焦点，鼠标、触摸和方向键共用同一组控件。 */
     .theme-options {
         display: flex;
-        gap: 0.5rem;
+        gap: 8px;
         overflow-x: auto;
         overscroll-behavior-x: contain;
         scroll-snap-type: x proximity;
@@ -43,16 +43,16 @@
     .theme-option {
         position: relative;
         display: flex;
-        flex: 0 0 94px;
+        flex: 0 0 84px;
         flex-direction: column;
         align-items: stretch;
-        gap: 0.4rem;
+        gap: 6px;
         min-width: 0;
-        padding: 0.5rem;
+        padding: 6px;
         scroll-snap-align: start;
-        border: 1px solid color-mix(in srgb, currentColor 9%, transparent);
-        border-radius: 8px;
-        background: color-mix(in srgb, currentColor 3%, transparent);
+        border: 1px solid transparent;
+        border-radius: 10px;
+        background: transparent;
         cursor: pointer;
         transition:
             background-color var(--motion-duration-fast) var(--motion-ease),
@@ -71,9 +71,8 @@
         }
 
         &:has(input:checked) {
-            border-color: color-mix(in srgb, var(--setting-accent-color) 48%, transparent);
-            background: color-mix(in srgb, var(--setting-accent-color) 10%, transparent);
-            box-shadow: 0 2px 7px color-mix(in srgb, var(--setting-accent-color) 12%, transparent);
+            border-color: color-mix(in srgb, var(--setting-accent-color) 52%, transparent);
+            background: var(--appearance-selection);
 
             .theme-caption::before {
                 background-color: var(--setting-accent-color);
@@ -81,14 +80,18 @@
         }
 
         @media (hover: hover) and (pointer: fine) {
-            &:hover:not(:has(input:checked)) {
-                background-color: color-mix(in srgb, currentColor 7%, transparent);
-                box-shadow: 0 3px 8px color-mix(in srgb, currentColor 7%, transparent);
+            &:hover:not(:has(input:checked, input:disabled)) {
+                background-color: var(--appearance-highlight);
             }
         }
 
-        &:active {
-            transform: scale(0.97);
+        &:active:not(:has(input:disabled)) {
+            transform: translateY(1px);
+        }
+
+        &:has(input:disabled) {
+            opacity: 0.4;
+            cursor: default;
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -107,7 +110,7 @@
         justify-content: center;
         gap: 0.35rem;
         min-height: 1.5em;
-        font-size: 0.8em;
+        font-size: 12px;
         line-height: 1.5;
         text-align: center;
         overflow-wrap: anywhere;
@@ -127,7 +130,7 @@
         position: relative;
         display: block;
         flex: none;
-        height: 44px;
+        height: 42px;
         overflow: hidden;
         border: 1px solid var(--appearance-border);
         border-radius: 5px;

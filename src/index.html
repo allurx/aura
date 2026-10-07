@@ -14,7 +14,7 @@
         <title>Aura</title>
         <meta
             name="description"
-            content="Aura 是一个轻量、离线优先的 TXT 阅读器，支持本地导入、书架分类与搜索、章节导航、阅读进度恢复和主题排版设置。书籍与阅读进度保存在当前浏览器本地。"
+            content="Aura 是一个轻量、离线优先的电子书阅读器，可导入 TXT 和 EPUB，提供本地书架、章节导航、阅读进度恢复和原文件导出。书籍与阅读进度保存在当前浏览器本地。"
         />
         <meta name="application-name" content="Aura" />
         <meta name="author" content="allurx" />
@@ -22,18 +22,22 @@
         <script>
             // 在样式加载前同步恢复页面主题，避免首次绘制闪现默认配色。
             (() => {
-                const page =
-                    window.location.hash === "#/reader" && sessionStorage.getItem("aura.router.reader.bookId")
-                        ? "reader"
-                        : "bookshelf";
-                const appearance = JSON.parse(localStorage.getItem(`aura.${page}.appearance`) ?? "{}");
-                const theme = appearance.theme ?? "sunny";
-                Object.assign(document.documentElement.dataset, { page, theme });
+                const root = document.documentElement;
+                Object.assign(root.dataset, { page: "bookshelf", theme: "sunny" });
+                try {
+                    const page =
+                        window.location.hash === "#/reader" && sessionStorage.getItem("aura.router.reader.bookId")
+                            ? "reader"
+                            : "bookshelf";
+                    root.dataset.page = page;
+                    const appearance = JSON.parse(localStorage.getItem(`aura.${page}.appearance`) ?? "{}");
+                    if (typeof appearance?.theme === "string") root.dataset.theme = appearance.theme;
+                } catch {
+                    // 与外观仓库一致：读取受限或快照损坏时保留默认主题，不阻断首屏。
+                }
             })();
         </script>
-        <link rel="stylesheet" href="./styles/appearance-preference.css" />
-        <link rel="stylesheet" href="./pages/bookshelf/bookshelf.css" />
-        <link rel="stylesheet" href="./pages/reader/reader.css" />
+        <link rel="stylesheet" href="./styles/app.css" />
         <script src="./main.ts" type="module"></script>
     </head>
     <body>
@@ -53,7 +57,7 @@
                         <span class="license-brand" aria-hidden="true"></span>
                         <div>
                             <h3 id="license-project-name">Aura</h3>
-                            <p>轻量、离线优先的 TXT 阅读器</p>
+                            <p>轻量、离线优先的电子书阅读器</p>
                         </div>
                     </div>
                     <div class="license-project-links">

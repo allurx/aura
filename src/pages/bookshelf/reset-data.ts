@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { deleteDatabase } from "./database/database";
-import OperationError from "./errors/operation-error";
+import { deleteDatabase } from "@/database/database";
+import OperationError from "@/errors/operation-error";
 
 /**
  * 删除 Aura 数据库，再清空当前站点的 localStorage 和当前标签页的 sessionStorage。

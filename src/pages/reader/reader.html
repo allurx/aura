@@ -85,15 +85,29 @@
                 <h2 id="toc-title">目录</h2>
                 <p id="toc-summary" class="toc-summary" role="status" aria-atomic="true"></p>
             </div>
-            <button class="close icon-button" type="button" aria-label="关闭目录" title="关闭" autofocus>
-                <span class="icon icon-close" aria-hidden="true"></span>
-            </button>
+            <div class="toc-actions" role="group" aria-label="目录操作">
+                <button
+                    class="locate-current icon-button"
+                    type="button"
+                    aria-label="定位当前章节"
+                    aria-controls="toc-chapters"
+                    title="定位当前章节"
+                >
+                    <span class="icon" aria-hidden="true"></span>
+                </button>
+                <span class="toc-action-divider" aria-hidden="true"></span>
+                <button
+                    class="close icon-button icon-button-edge-right"
+                    type="button"
+                    aria-label="关闭目录"
+                    title="关闭目录"
+                    autofocus
+                >
+                    <span class="icon icon-close" aria-hidden="true"></span>
+                </button>
+            </div>
         </header>
         <div class="toc-tools">
-            <button class="locate-current" type="button" aria-label="定位当前章节">
-                <span class="toc-current-heading"><span>正在阅读</span><span>定位</span></span>
-                <span class="toc-current-title"></span>
-            </button>
             <label class="search-field toc-search">
                 <span class="icon icon-search" aria-hidden="true"></span>
                 <input

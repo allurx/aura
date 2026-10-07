@@ -3,24 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type Book from "@/domain/book/book";
-import type Chapter from "@/domain/chapter/chapter";
-import type BookFile from "@/domain/file/book-file";
-import type Progress from "@/domain/progress/progress";
-import type Toc from "@/domain/toc/toc";
-
-/**
- * 当前数据库的记录类型；读取边界按本应用写入的结构收窄，不恢复类原型。
- */
-interface StoreRecords {
-    file: BookFile;
-    book: Book;
-    toc: Toc;
-    chapter: Chapter;
-    progress: Progress;
-}
-
-export type StoreName = keyof StoreRecords;
+import type { IndexName, StoreName, StoreRecords } from "./database-schema";
 
 /**
  * 将请求转为 Promise；请求成功不代表事务已经提交。
@@ -50,7 +33,7 @@ export async function getRecord<S extends StoreName>(transaction: IDBTransaction
 export async function getRecordByIndex<S extends StoreName>(
     transaction: IDBTransaction,
     store: S,
-    index: string,
+    index: IndexName<NoInfer<S>>,
     key: IDBValidKey
 ) {
     const record = await requestResult<unknown>(transaction.objectStore(store).index(index).get(key));
@@ -89,7 +72,12 @@ export function deleteRecord(transaction: IDBTransaction, store: StoreName, key:
 /**
  * 统计索引命中的记录，用于判断共享正文是否仍被引用。
  */
-export function countRecordsByIndex(transaction: IDBTransaction, store: StoreName, index: string, key: IDBValidKey) {
+export function countRecordsByIndex<S extends StoreName>(
+    transaction: IDBTransaction,
+    store: S,
+    index: IndexName<NoInfer<S>>,
+    key: IDBValidKey
+) {
     return requestResult(transaction.objectStore(store).index(index).count(key));
 }
 
@@ -103,10 +91,10 @@ export function clearRecords(transaction: IDBTransaction, store: StoreName) {
 /**
  * 入队删除索引命中的全部记录；实际提交和回滚由外层事务确认。
  */
-export function deleteRecordsByIndex(
+export function deleteRecordsByIndex<S extends StoreName>(
     transaction: IDBTransaction,
-    store: StoreName,
-    index: string,
+    store: S,
+    index: IndexName<NoInfer<S>>,
     key: IDBValidKey
 ): Promise<void> {
     return new Promise<void>((resolve, reject) => {

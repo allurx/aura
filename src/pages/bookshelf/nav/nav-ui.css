@@ -11,48 +11,50 @@
     height: 100%;
     min-height: 0;
     overflow: clip;
-    padding: 1.5rem 0 1rem;
+    padding: 8px 0 12px;
     border: 1px solid var(--appearance-border);
-    border-radius: 1.35rem;
+    border-radius: 24px;
     background: var(--appearance-panel);
-    color: var(--appearance-color);
     box-shadow: var(--appearance-shadow-soft);
+    color: var(--appearance-color);
     font-size: 14px;
 
     .brand {
         display: flex;
         flex: none;
         align-items: center;
-        gap: 12px;
-        padding: 0 1.5rem 1.8rem;
+        gap: 10px;
+        min-height: var(--shelf-header-height);
+        padding: 0 24px;
+        margin-bottom: 12px;
     }
     .brand-mark {
         flex: none;
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
         background: url("../../../assets/images/brand.svg?inline") center / contain no-repeat;
     }
     .brand-name {
         font:
-            italic 500 2.25rem/1 Georgia,
+            italic 500 34px/1.2 Georgia,
             serif;
-        letter-spacing: -0.07em;
+        letter-spacing: -0.045em;
     }
     #category-navigation {
         min-height: 0;
         overflow-y: auto;
         flex: 1;
-        padding: 0.2rem 0.8rem;
+        padding: 0 8px;
     }
     button {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         width: 100%;
         min-height: 44px;
-        padding: 8px 12px;
+        padding: 8px 10px;
         border: 0;
-        border-radius: 0.9rem;
+        border-radius: 10px;
         background: transparent;
         color: inherit;
         text-align: left;
@@ -60,17 +62,16 @@
         line-height: 1.45;
         overflow-wrap: anywhere;
         transition:
-            background-color var(--motion-duration-normal) var(--motion-ease),
-            transform var(--motion-duration-normal) var(--motion-ease),
-            box-shadow var(--motion-duration-normal) var(--motion-ease);
+            background-color var(--motion-duration-fast) var(--motion-ease),
+            color var(--motion-duration-fast) var(--motion-ease);
     }
     #category-navigation button {
-        margin-bottom: 0.3rem;
-        color: var(--appearance-color);
+        margin-bottom: 2px;
+        color: var(--appearance-muted-color);
         font-size: var(--nav-category-font-size);
 
         &:first-child {
-            margin-bottom: 0.8rem;
+            margin-bottom: 8px;
         }
 
         /* 跳过“全部书籍”，真实分类的圆点按彩虹七色循环。 */
@@ -100,17 +101,16 @@
             background: var(--appearance-selection);
             color: var(--appearance-accent);
             font-weight: 600;
-            box-shadow: 0 4px 10px -7px var(--appearance-shadow-color);
         }
     }
     #category-navigation .icon {
-        --icon-size: 20px;
+        --icon-size: 18px;
     }
     .category-dot {
         flex: none;
         width: 6px;
         height: 6px;
-        margin-inline: 7px;
+        margin-inline: 6px;
         border-radius: 50%;
         background: var(--category-dot-color);
         opacity: 0.75;
@@ -120,71 +120,88 @@
     }
     .nav-footer {
         flex: none;
-        display: grid;
-        gap: 0.1rem;
-        margin-top: 0.8rem;
-        margin-inline: 0.8rem;
-        padding-top: 0.8rem;
-        padding-inline: 0.2rem;
-        border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+        margin-top: 8px;
+        margin-inline: 8px;
+        padding-top: 8px;
+        border-top: 1px solid var(--appearance-border);
 
         button {
             min-height: 44px;
-            opacity: 0.85;
+            color: var(--appearance-muted-color);
         }
         .icon {
             --icon-size: 18px;
-            margin-inline: 1px;
+        }
+    }
+    .icon-manage {
+        --icon-image: url("../../../assets/images/manage.svg");
+    }
+    #open-more:has(+ :popover-open) {
+        background: var(--appearance-selection);
+        color: var(--appearance-accent);
+    }
+    #bookshelf-more-actions {
+        position: fixed;
+        inset: auto;
+        margin: 0;
+        overflow-y: auto;
+        padding: 0.4rem;
+        border: 1px solid var(--appearance-border);
+        border-radius: 1rem;
+        background: var(--appearance-panel);
+        color: var(--appearance-color);
+        box-shadow: var(--appearance-shadow-floating);
+
+        button {
+            color: inherit;
+        }
+        .data-actions {
+            margin-top: 0.35rem;
+            padding-top: 0.35rem;
+            border-top: 1px solid var(--appearance-border);
         }
     }
     #close-navigation {
-        --icon-size: 20px;
+        --icon-size: 18px;
         display: none;
         width: 44px;
         padding: 0;
         margin-left: auto;
     }
     @media (hover: hover) and (pointer: fine) {
-        button:where(:not(:disabled)):hover {
+        button:where(:not(:disabled):not(.icon-button)):hover {
             background: color-mix(in srgb, currentColor 5%, transparent);
-            transform: translateX(2px);
         }
         #category-navigation button.active:hover {
             background: var(--appearance-selection);
         }
     }
-    button:where(:not(:disabled)):active {
-        transform: translateY(1px);
+    button:where(:not(:disabled):not(.icon-button)):active {
+        background: var(--appearance-selection);
     }
     @media (max-width: 768px) {
         --nav-category-font-size: 13px;
         font-size: 13px;
-        padding-top: 1.25rem;
+        background: var(--appearance-panel);
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
         .brand {
-            padding-bottom: 1.25rem;
+            padding-inline: 20px;
         }
         #close-navigation {
             display: inline-grid;
         }
     }
     /* 矮窗口压缩固定区域，分类仍在自己的区域内滚动。 */
-    @container bookshelf-navigation (max-height: 24rem) {
-        padding-block: 0.35rem;
-
+    @container bookshelf-navigation (max-height: 28rem) {
         .brand {
-            padding-bottom: 0.35rem;
+            min-height: 56px;
+            margin-bottom: 6px;
         }
         .nav-footer {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
             margin-top: 0.35rem;
             padding-top: 0.35rem;
-
-            button {
-                flex-direction: column;
-                justify-content: center;
-                gap: 2px;
-                padding: 4px;
-            }
         }
     }
 

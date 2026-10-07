@@ -17,6 +17,26 @@ export default class BookshelfUi extends Ui {
     private readonly overlay = new Overlay(this.root);
     private feedbackTimer: number | undefined;
     private signal?: AbortSignal;
+    private readonly downloads = new Map<string, number>();
+
+    /**
+     * 浏览器负责保存位置与取消；保留短暂 URL 生命周期，让下载读取原始 Blob。
+     */
+    public download(source: Blob, name: string): void {
+        const url = URL.createObjectURL(source);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = name;
+        link.hidden = true;
+        this.root.append(link);
+        link.click();
+        link.remove();
+        const timer = window.setTimeout(() => {
+            URL.revokeObjectURL(url);
+            this.downloads.delete(url);
+        }, 60_000);
+        this.downloads.set(url, timer);
+    }
 
     /**
      * 将反馈计时器绑定到页面生命周期。
@@ -24,14 +44,24 @@ export default class BookshelfUi extends Ui {
      */
     public bindLifecycle(signal: AbortSignal): void {
         this.signal = signal;
+        signal.addEventListener(
+            "abort",
+            () => {
+                for (const [url, timer] of this.downloads) {
+                    window.clearTimeout(timer);
+                    URL.revokeObjectURL(url);
+                }
+                this.downloads.clear();
+            },
+            { once: true }
+        );
 
         // 页面销毁统一清理反馈和仍在等待用户确认的对话框。
         signal.addEventListener(
             "abort",
             () => {
                 window.clearTimeout(this.feedbackTimer);
-                for (const dialog of this.root.querySelectorAll<HTMLDialogElement>(".dialog[open]"))
-                    dialog.close("cancel");
+                this.dialog.cancel();
             },
             { once: true }
         );
@@ -48,7 +78,7 @@ export default class BookshelfUi extends Ui {
                         <span class="icon icon-warning" aria-hidden="true"></span><strong>此操作无法撤销</strong>
                     </p>
                     <p>将清除全部本地数据，包括书籍、阅读进度和外观设置。</p>
-                    <p class="reset-warning-note">请先保留原始 TXT，并关闭其他 Aura 页面。<br>完成后自动刷新。</p>
+                    <p class="reset-warning-note">请先保留原始书籍文件，并关闭其他 Aura 页面。<br>完成后自动刷新。</p>
                 </div>
             `),
             { title: "重置数据", confirmBtnText: "清除全部数据", destructive: true }
@@ -75,11 +105,6 @@ export default class BookshelfUi extends Ui {
         }));
         const previousFocus = document.activeElement;
 
-        // 复用遮罩中的单一播报区域，避免批次进度被 inert 区域屏蔽或重复朗读。
-        const status = assertExists(this.root.querySelector<HTMLElement>(".overlay .overlay-message"));
-        const previousStatus = status.textContent;
-        status.textContent = message;
-
         // 仅内容区域进入 busy 状态，进度播报留在其外，不等待整批操作结束。
         regions.forEach((element) => {
             element.inert = true;
@@ -87,18 +112,13 @@ export default class BookshelfUi extends Ui {
         });
 
         try {
-            await this.overlay.showWhile(() =>
-                handler((message) => {
-                    if (this.root.isConnected) status.textContent = message;
-                })
-            );
+            await this.overlay.showWhile(handler, message);
         } finally {
             previousStates.forEach(({ element, inert, busy }) => {
                 element.inert = inert;
                 if (busy === null) element.removeAttribute("aria-busy");
                 else element.setAttribute("aria-busy", busy);
             });
-            status.textContent = previousStatus;
 
             // 用户主动移动过焦点或页面已退出时，不再归还旧焦点。
             if (

@@ -16,7 +16,7 @@ npm ci
 
 支持桌面和移动端主流常青浏览器的当前及前一个稳定大版本。Vite 继承 Web Foundation 的 `baseline-widely-available` 构建目标，具体浏览器范围随固定的 Vite 版本确定；该目标不会补齐 Web API，也不等于完整的浏览器兼容保证。平台可选能力仍按实际支持情况检测，交互修改按受影响浏览器和输入方式验证。
 
-[TypeScript 配置](../tsconfig.json)分别检查浏览器源码与 Node.js 构建配置，共享严格检查选项。浏览器侧只引入 DOM 与 Vite 客户端类型，构建侧使用与 Node.js 运行时对应的类型声明。浏览器配置继承共享 `browser`；工具配置继承共享 `base` 并添加 Node.js 类型。Vite/jiti 加载工具配置，因此这部分使用 bundler 模块解析，兼容现有混淆插件的 CommonJS 声明。Vite 在共享构建配置上保留 Hash Router、资源路径、许可声明、混淆和 portable 插件；这些交付规则由 Aura 维护。
+[TypeScript 配置](../tsconfig.json)分别检查浏览器源码与 Node.js 构建配置，共享严格检查选项。浏览器侧只引入 DOM 与 Vite 客户端类型，构建侧使用与 Node.js 运行时对应的类型声明。浏览器配置继承共享 `browser`；工具配置继承共享 `base` 并添加 Node.js 类型。Vite/jiti 加载工具配置，因此这部分使用 bundler 模块解析。Vite 在共享构建配置上保留 Hash Router、资源路径、许可声明和 portable 插件；这些交付规则由 Aura 维护。
 
 ## 本地运行
 
@@ -60,51 +60,56 @@ npm run dev
 
 [应用入口](../src/main.ts)根据路由创建页面，[页面生命周期](../src/pages/base-page.ts)管理挂载与销毁。按要修改的功能进入对应模块：
 
-| 功能     | 入口与职责                                                                                                                                                           |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 书架     | [Controller](../src/pages/bookshelf/bookshelf-controller.ts)协调导入、分类、搜索和删除；[Service](../src/pages/bookshelf/bookshelf-service.ts)处理正文去重与写入事务 |
-| 阅读     | [Controller](../src/pages/reader/reader-controller.ts)协调切章和进度；[UI](../src/pages/reader/reader-ui.ts)处理按钮、键盘、手势与浮层                               |
-| TXT 解析 | [parseChapters](../src/domain/chapter/chapter-parser.ts)在写事务前完成解码与分章，按源文件物理行定位内容                                                             |
-| 持久化   | [数据库结构](../src/database/database.ts)、[存储操作](../src/database/store.ts)与[事务入口](../src/database/transaction.ts)管理领域数据                              |
-| 外观     | [SettingController](../src/settings/setting-controller.ts)管理主题、常规设置、预览与提交；两页外观各自保存到 `localStorage`                                          |
+| 功能      | 入口与职责                                                                                                                                                                                                                 |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 书架      | [Controller](../src/pages/bookshelf/bookshelf-controller.ts)协调导入、导出、分类、搜索和删除；[Service](../src/pages/bookshelf/bookshelf-service.ts)处理文件去重与写入事务                                                 |
+| 阅读      | [Controller](../src/pages/reader/reader-controller.ts)协调切章和进度；[UI](../src/pages/reader/reader-ui.ts)处理按钮、键盘、手势与浮层                                                                                     |
+| TXT 解析  | [parseChapters](../src/domain/chapter/chapter-parser.ts)在写事务前完成解码与分章，按源文件物理行定位内容                                                                                                                   |
+| EPUB 解析 | [归档读取](../src/domain/file/epub-archive.ts)按需解压与校验资源；[内容解析](../src/domain/file/epub.ts)按阅读顺序和目录建立安全内容模型；[正文渲染](../src/pages/reader/content/epub-content.ts)处理书内图片与链接        |
+| 持久化    | [数据库 schema](../src/database/database-schema.ts)集中定义元信息与记录类型映射；[连接与初始化](../src/database/database.ts)、[存储操作](../src/database/store.ts)和[事务入口](../src/database/transaction.ts)管理领域数据 |
+| 外观      | [SettingController](../src/settings/setting-controller.ts)管理主题、常规设置、预览与提交；两页外观各自保存到 `localStorage`                                                                                                |
 
-修改数据结构时使用隔离的浏览器配置。项目当前不迁移旧数据；测试库与新结构不兼容时，确认只含可丢弃的测试数据，再从书架执行“重置数据”。清除范围见[使用指南](usage.md#本地数据与-portable-注意事项)。
+数据库名、版本、store 主键、索引 `keyPath` 和 `unique` 由数据库 schema 统一维护，初始化直接读取这份描述。`StoreRecords` 将 store 名称关联到[领域记录类型](../src/domain/)，具体字段由领域类型定义；存储 API 在编译期约束所选 store 与索引名的组合。命名约束见 [AGENTS.md 的工程原则](../AGENTS.md#工程原则)。
+
+修改数据结构时使用隔离的浏览器配置，保留用户常用配置中的数据。项目当前只初始化当前结构，不迁移旧数据；测试库与新结构不兼容时，确认只含可丢弃的测试数据，并取得重置确认，再从书架执行“重置数据”。清除范围见[使用指南](usage.md#本地数据与-portable-注意事项)。
+
+文件记录保留原始 `Blob`，书籍记录保留导入文件名；导出直接读取它们，不从章节重建或重新编码。相同格式和内容 hash 共享文件与解析结果，分类和进度按书籍分别保存。TXT 使用原始文本行、EPUB 使用内容块定位阅读进度；视口内位置另按块内比例恢复。
 
 ## 构建与预览
 
-| 命令                                | 输出                                             |
-| ----------------------------------- | ------------------------------------------------ |
-| `npm run build`                     | `dist/web/`，普通 Web 版                         |
-| `npm run build:obfuscated`          | `dist/web-obfuscated/`，混淆 Web 版              |
-| `npm run build:portable`            | `dist/portable/aura.html`，普通离线版            |
-| `npm run build:portable:obfuscated` | `dist/portable-obfuscated/aura.html`，混淆离线版 |
+| 命令                     | 输出                                    |
+| ------------------------ | --------------------------------------- |
+| `npm run build`          | `dist/web/`，Web 版                     |
+| `npm run build:portable` | `dist/portable/aura.html`，单文件离线版 |
 
 每个构建命令先执行静态检查，只清理自身输出子目录。Web 目录包含入口、资源、安装元信息、响应头配置和许可声明，需整体使用；portable 将应用资源与许可声明嵌入单个 HTML。
 
 开发服务器与 Web 构建共用安装元信息。可在本地 HTTPS 开发页或 `localhost` 预览中验证浏览器原生安装；安装和离线使用的区别见[使用指南](usage.md)。
 
-先构建正式站点使用的混淆 Web 版，再启动本地预览：
+先构建 Web 版，再启动本地预览：
 
 ```sh
-npm run build:obfuscated
+npm run build
 npm run preview
 ```
 
-访问 `http://127.0.0.1:4173/`。预览由 Wrangler 读取正式部署配置和静态产物，可检查 Cloudflare 的 `_headers` 等规则；它只提供本地 HTTP 服务，不会部署站点。并行预览其他项目时，可用 `npm run preview -- --port 4175` 临时选择其他端口。修改后重新构建并重启预览。仅检查普通 Web 产物时，可在 `npm run build` 后运行 `npx vite preview --open`；该服务不模拟 Cloudflare 的响应头规则。portable 直接通过浏览器打开对应 HTML，验证地址应为 `file://`。
+访问 `http://127.0.0.1:4173/`。预览由 Wrangler 读取正式部署配置和静态产物，可检查 Cloudflare 的 `_headers` 等规则；它只提供本地 HTTP 服务，不会部署站点。并行预览其他项目时，可用 `npm run preview -- --port 4175` 临时选择其他端口。修改后重新构建并重启预览。portable 直接通过浏览器打开对应 HTML，验证地址应为 `file://`。
 
 ## 检查与验证
 
-| 命令                   | 用途                                 |
-| ---------------------- | ------------------------------------ |
-| `npm run format:check` | 只检查格式                           |
-| `npm run lint`         | 检查 ESLint 规则                     |
-| `npm run type-check`   | 检查 TypeScript 类型                 |
-| `npm run check`        | 依次执行上述三项只读检查             |
-| `npm run verify`       | 执行一次静态检查，再构建四种交付版本 |
+| 命令                   | 用途                                     |
+| ---------------------- | ---------------------------------------- |
+| `npm run format:check` | 只检查格式                               |
+| `npm run lint`         | 检查 ESLint 规则                         |
+| `npm run type-check`   | 检查 TypeScript 类型                     |
+| `npm run check`        | 依次执行上述三项只读检查                 |
+| `npm run verify`       | 执行一次静态检查，再构建 Web 和 portable |
 
-`npm run format` 会改写 Prettier 支持且未被排除的文件，运行后应审查实际 diff。迭代时先运行与改动有关的检查，需要完整验证四种产物时执行 `npm run verify`。
+`npm run format` 会改写 Prettier 支持且未被排除的文件，运行后应审查实际 diff。迭代时先运行与改动有关的检查，需要完整验证两种产物时执行 `npm run verify`。
 
 构建不能代替运行时检查。页面交互变更应实际验证导航、关闭与取消、焦点和位置恢复、错误反馈及持久化；涉及 portable 时还需实际打开 `file://` 产物。只改文档时检查内容、链接、示例和格式，不运行无关构建。
+
+文件流程变更需覆盖各格式的有效文件、明确拒绝的内容和大文件，并核对失败时已完成的导入结果。EPUB 检查目录锚点、书内链接、图片、资源限制和不可信内容。导出使用包含不同 TXT 编码及二进制资源的样本，对比导入文件和实际下载文件的 SHA-256，同时检查文件名；不能用重新解析后的正文相同代替字节一致。
 
 [CI 工作流](../.github/workflows/ci.yml)对 PR 和 `dev`、`main` 的推送执行 `npm run verify`，并检查正式环境的部署 dry-run。只有 `main` 的推送会部署站点。到仓库 [Actions → CI](https://github.com/allurx/aura/actions/workflows/ci.yml) 查看对应提交；上线结果另按[部署指南](deployment.md#自动部署与结果查看)核对。
 
@@ -112,7 +117,7 @@ npm run preview
 
 项目许可证和第三方声明分别维护在 [LICENSE.txt](../LICENSE.txt) 与 [THIRD-PARTY-NOTICES.txt](../THIRD-PARTY-NOTICES.txt)，产物中的副本由构建生成。源码版权头遵循 [AGENTS.md](../AGENTS.md#工程原则)。
 
-分发的依赖或第三方资源变化时，核对实际进入产物的版本、许可证和版权归属，更新声明后运行 `npm run verify`。检查两种 Web 产物的声明文件与维护源一致，并在两种 portable 的“关于 Aura”中展开全文，确认可离线查看且仍为单个 HTML。
+分发的依赖或第三方资源变化时，核对实际进入产物的版本、许可证和版权归属，更新声明后运行 `npm run verify`。检查 Web 产物的声明文件与维护源一致，并在 portable 的“关于 Aura”中展开全文，确认可离线查看且仍为单个 HTML。
 
 ## 分支协作
 

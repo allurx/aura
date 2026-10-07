@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-const DATABASE_NAME = "aura";
+import { DATABASE_SCHEMA, type IndexDefinition } from "./database-schema";
+
 let connectionPromise: Promise<IDBDatabase> | undefined;
 
 /**
@@ -11,18 +12,21 @@ let connectionPromise: Promise<IDBDatabase> | undefined;
  */
 export function openDatabase(): Promise<IDBDatabase> {
     connectionPromise ??= new Promise<IDBDatabase>((resolve, reject) => {
-        const request = indexedDB.open(DATABASE_NAME, 1);
+        const request = indexedDB.open(DATABASE_SCHEMA.name, DATABASE_SCHEMA.version);
         let blocked = false;
 
         request.onupgradeneeded = () => {
             const database = request.result;
-            database.createObjectStore("file", { keyPath: "id" }).createIndex("hash", "hash", { unique: true });
-            database.createObjectStore("book", { keyPath: "id" }).createIndex("fileId", "fileId");
-            database.createObjectStore("toc", { keyPath: "fileId" });
-            database
-                .createObjectStore("chapter", { keyPath: ["fileId", "chapterNumber"] })
-                .createIndex("fileId", "fileId");
-            database.createObjectStore("progress", { keyPath: "bookId" });
+            for (const [name, definition] of Object.entries(DATABASE_SCHEMA.stores)) {
+                const store = database.createObjectStore(name, {
+                    keyPath: typeof definition.keyPath === "string" ? definition.keyPath : [...definition.keyPath],
+                });
+                const indexes: Readonly<Record<string, IndexDefinition>> = definition.indexes;
+                for (const [indexName, index] of Object.entries(indexes)) {
+                    const keyPath = typeof index.keyPath === "string" ? index.keyPath : [...index.keyPath];
+                    store.createIndex(indexName, keyPath, { unique: index.unique });
+                }
+            }
         };
 
         request.onsuccess = () => {
@@ -64,7 +68,7 @@ export function openDatabase(): Promise<IDBDatabase> {
  */
 export function deleteDatabase(onBlocked: () => void): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase(DATABASE_NAME);
+        const request = indexedDB.deleteDatabase(DATABASE_SCHEMA.name);
         request.onblocked = onBlocked;
         request.onsuccess = () => {
             resolve();

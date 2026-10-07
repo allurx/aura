@@ -7,7 +7,6 @@ import { readFileSync } from "node:fs";
 import { extname, resolve } from "node:path";
 import { defineConfig, mergeConfig, type HtmlTagDescriptor, type Plugin, type UserConfig } from "vite";
 import foundation from "@allurx/web-foundation/vite";
-import obfuscatorPlugin from "vite-plugin-javascript-obfuscator";
 import { viteSingleFile } from "vite-plugin-singlefile";
 
 const PROJECT_ROOT = import.meta.dirname;
@@ -17,11 +16,10 @@ const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".svg", ".web
 const FONT_EXTENSIONS = new Set([".woff", ".woff2", ".ttf", ".otf", ".eot"]);
 
 export default defineConfig(({ command, mode, isPreview }) => {
-    // 从构建模式推导交付组合，每种产物写入独立目录。
-    const portable = mode === "portable" || mode === "portable-obfuscated";
-    const obfuscated = mode === "obfuscated" || mode === "portable-obfuscated";
+    // Web 与 portable 分别写入独立目录。
+    const portable = mode === "portable";
     const development = command === "serve" && !isPreview;
-    const outputDirectory = `${portable ? "portable" : "web"}${obfuscated ? "-obfuscated" : ""}`;
+    const outputDirectory = portable ? "portable" : "web";
 
     return mergeConfig(foundation, {
         // Hash Router 继续由单一入口处理导航。
@@ -78,7 +76,7 @@ export default defineConfig(({ command, mode, isPreview }) => {
             },
         },
 
-        // 按交付方式组合 HTML 声明、混淆与 portable 内联。
+        // 按交付方式组合 HTML 声明与 portable 内联。
         plugins: [
             // 开发服务器和 Web 构建共用安装声明，portable 不引用外部安装资源。
             !portable && {
@@ -133,20 +131,6 @@ export default defineConfig(({ command, mode, isPreview }) => {
                     },
                 },
             },
-            obfuscated &&
-                obfuscatorPlugin({
-                    apply: "build",
-                    options: {
-                        compact: true,
-                        identifierNamesGenerator: "mangled",
-                        renameGlobals: false,
-                        // 固定混淆随机性，避免相同输入仅因随机变换而改变产物哈希。
-                        seed: 0x41555241,
-                        sourceMap: false,
-                        stringArray: true,
-                        stringArrayThreshold: 0.5,
-                    },
-                }),
             portable && viteSingleFile(),
             portable && portableEntryPlugin(),
             licensePlugin(portable),
@@ -194,7 +178,7 @@ function licensePlugin(portable: boolean): Plugin {
         generateBundle: {
             order: "post",
             /**
-             * 内联与混淆结束后核对全文，避免构建成功却遗漏许可；portable 不产生伴随文件。
+             * 内联结束后核对全文，避免构建成功却遗漏许可；portable 不产生伴随文件。
              */
             handler(_options, bundle) {
                 const entry = bundle[portable ? "aura.html" : "index.html"];

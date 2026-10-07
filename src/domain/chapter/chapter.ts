@@ -3,26 +3,25 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type { EpubNode } from "@/domain/file/epub";
+
 /**
- * 以正文标识和从 1 开始的章节序号共同定位的章节。
- * lines 保留原始空行，不包含已识别的章节标题行。
+ * 一次加载的章节；全书位置依次按 TXT 原始行或 EPUB 内容块累计。
  */
-export default interface Chapter {
+type Chapter = {
     fileId: string;
     chapterNumber: number;
     title: string;
-    lines: string[];
+    startPosition: number;
+    endPosition: number;
+} & ({ kind: "text"; lines: string[] } | { kind: "epub"; path: string; anchors: string[]; blocks: EpubNode[] });
 
-    // 从 1 开始的全书物理行号，包含显式标题行。
-    startBookLineNumber: number;
-
-    // 章节最后一行的全书物理行号；空文件为 0。
-    endBookLineNumber: number;
-}
+export type { Chapter as default };
 
 /**
- * 将从 1 开始的章节正文行号转换为全书物理行号，保留标题行占用的位置。
+ * 将章内内容块转换为全书位置；TXT 保留显式标题占用的物理行。
  */
-export function toBookLineNumber(chapter: Chapter, chapterLineNumber: number): number {
-    return chapter.endBookLineNumber - chapter.lines.length + chapterLineNumber;
+export function toBookPosition(chapter: Chapter, blockNumber: number): number {
+    const length = chapter.kind === "text" ? chapter.lines.length : chapter.blocks.length;
+    return chapter.endPosition - length + blockNumber;
 }

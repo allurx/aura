@@ -12,12 +12,14 @@ import {
     clearBookshelf,
     deleteBook,
     getBookSummaries,
+    getBookExport,
     importBooks,
     moveBook,
     type BookImportResult,
     type BookSummary,
 } from "./bookshelf-service";
 import { bookshelfSession } from "./bookshelf-state";
+import { resetData } from "./reset-data";
 import { DEFAULT_CATEGORY_ID, getCategory } from "@/domain/category/category";
 import { bind } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
@@ -25,7 +27,7 @@ import { createBookshelfSettings } from "@/settings/definitions/setting-catalog"
 import SettingController from "@/settings/setting-controller";
 import { PageName } from "@/constants/page-name";
 import OperationError from "@/errors/operation-error";
-import { resetData } from "@/reset-data";
+import { BOOK_FILE_ACCEPT, getBookFormat } from "@/domain/file/book-format";
 
 /**
  * 编排书架筛选、数据操作与页面外观，并在异步渲染前核对页面生命周期。
@@ -55,6 +57,7 @@ export default class BookshelfController {
         this.navUi = new NavUi(assertExists(bookshelfRoot.querySelector<HTMLElement>("#nav")));
         this.bookListUi = new BookListUi(assertExists(bookshelfRoot.querySelector<HTMLElement>("#book-list")));
         this.bookshelfUi = new BookshelfUi(bookshelfRoot);
+        assertExists(bookshelfRoot.querySelector<HTMLInputElement>("#book-input")).accept = BOOK_FILE_ACCEPT;
 
         // 书架外观独立保存，阅读排版仍由阅读器设置。
         this.settingController = new SettingController({
@@ -158,22 +161,22 @@ export default class BookshelfController {
         if (files.length === 0 || this.busy || !this.isActive()) return;
 
         // 批次开始时确定可导入文件与目标分类，执行期间不随 UI 筛选变化。
-        const invalidFiles = files.filter((file) => !/\.txt$/i.test(file.name));
-        const validFiles = files.filter((file) => /\.txt$/i.test(file.name));
+        const invalidFiles = files.filter((file) => !getBookFormat(file.name));
+        const validFiles = files.filter((file) => getBookFormat(file.name));
         const categoryId = bookshelfSession.categoryId || DEFAULT_CATEGORY_ID;
-        let result: BookImportResult = { books: [], unsupportedEncodingFiles: [] };
+        let result: BookImportResult = { books: [], rejectedFiles: [] };
 
         // 导入与列表刷新共用忙碌状态，避免结果尚未可见就接受下一次操作。
         this.busy = true;
         try {
-            await this.bookshelfUi.runBusy(`正在导入 ${String(validFiles.length)} 个 TXT 文件…`, async (setStatus) => {
+            await this.bookshelfUi.runBusy(`正在导入 ${String(validFiles.length)} 个书籍文件…`, async (setStatus) => {
                 result = await importBooks(validFiles, categoryId, setStatus);
                 await this.refreshAfterChange(this.describeImport(result, invalidFiles));
             });
             if (!this.isActive()) return;
 
             // 部分跳过用结果对话框展示明细，全成功只提供短暂反馈。
-            const skipped = invalidFiles.length + result.unsupportedEncodingFiles.length;
+            const skipped = invalidFiles.length + result.rejectedFiles.length;
             if (skipped > 0) {
                 await this.bookshelfUi.dialog.alert(
                     `已导入 ${String(result.books.length)} 本；${String(skipped)} 个文件未导入。\n\n${this.describeImport(result, invalidFiles)}`,
@@ -214,12 +217,26 @@ export default class BookshelfController {
     private describeImport(result: BookImportResult, invalidFiles: File[]): string {
         const messages = [`已导入 ${String(result.books.length)} 本书。`];
         if (result.books.length > 0) messages.push(`成功：${result.books.map((book) => book.fileName).join("、")}`);
-        if (invalidFiles.length > 0) messages.push(`非 TXT 文件：${invalidFiles.map((file) => file.name).join("、")}`);
-        if (result.unsupportedEncodingFiles.length > 0)
-            messages.push(
-                `编码无法可靠识别或不受支持：${result.unsupportedEncodingFiles.map((file) => file.name).join("、")}`
-            );
+        if (invalidFiles.length > 0)
+            messages.push(`格式不支持（支持 TXT、EPUB）：${invalidFiles.map((file) => file.name).join("、")}`);
+        messages.push(...result.rejectedFiles.map(({ file, reason }) => `${file.name}：${reason}`));
         return messages.join("\n");
+    }
+
+    /**
+     * 读取原文件后交给浏览器下载；取消保存由浏览器处理，不改变书架或阅读进度。
+     */
+    private async exportBook(bookId: string): Promise<void> {
+        if (this.busy || !this.isActive()) return;
+        this.busy = true;
+        try {
+            const file = await getBookExport(bookId);
+            if (!this.isActive()) return;
+            this.bookshelfUi.download(file.source, file.name);
+            this.bookshelfUi.showFeedback("原文件已交给浏览器下载");
+        } finally {
+            this.busy = false;
+        }
     }
 
     /**
@@ -373,6 +390,7 @@ export default class BookshelfController {
             },
             (bookId) => this.deleteBook(bookId),
             (bookId, categoryId) => this.moveBook(bookId, categoryId),
+            (bookId) => this.exportBook(bookId),
             signal
         );
 

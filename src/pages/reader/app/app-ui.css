@@ -10,8 +10,12 @@ html[data-page="reader"] #app {
     background-color: var(--reader-backdrop);
 
     background-image:
-        radial-gradient(ellipse at 4% 8%, var(--appearance-tint), transparent 48%),
-        radial-gradient(ellipse at 96% 88%, var(--appearance-glow), transparent 48%);
+        radial-gradient(ellipse at 4% 8%, color-mix(in srgb, var(--appearance-tint) 58%, transparent), transparent 48%),
+        radial-gradient(
+            ellipse at 96% 88%,
+            color-mix(in srgb, var(--appearance-glow) 58%, transparent),
+            transparent 48%
+        );
 
     &:has(> #reader[data-mobile-controls]) {
         display: flow-root;
@@ -26,16 +30,16 @@ html[data-page="reader"] #app {
     justify-self: start;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     width: 64px;
     max-height: calc(var(--viewport-height) - 32px);
     margin-left: 12px;
-    padding: 6px;
+    padding: 8px 6px;
     border: 1px solid var(--appearance-border);
-    border-radius: 18px;
+    border-radius: 16px;
     background: var(--appearance-panel);
     color: var(--appearance-color);
-    box-shadow: var(--appearance-shadow-soft);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--appearance-shadow-color) 9%, transparent);
     overflow-y: auto;
     scrollbar-gutter: auto;
     font-size: 12px;
@@ -48,7 +52,7 @@ html[data-page="reader"] #app {
         display: flex;
         flex: none;
         flex-direction: column;
-        gap: 6px;
+        gap: 2px;
         min-width: 0;
 
         + .reader-action-group {
@@ -62,20 +66,14 @@ html[data-page="reader"] #app {
         flex-direction: column;
         gap: 4px;
         width: 100%;
-        min-height: 56px;
-        padding: 6px 2px;
+        min-height: 52px;
+        padding: 5px 2px;
         white-space: normal;
         overflow-wrap: anywhere;
     }
 
-    .appearance-mark {
-        font-family: Georgia, serif;
-        font-size: 22px;
-        line-height: 20px;
-    }
-
     #progress-rate {
-        padding-top: 6px;
+        padding-block: 8px 2px;
         border-top: 1px solid var(--appearance-border);
         text-align: center;
         line-height: 1.5;

@@ -4,59 +4,70 @@
  */
 
 #bookshelf #header {
-    --shelf-title-font-size: 29px;
+    --shelf-title-font-size: 28px;
     --shelf-primary-font-size: 14px;
     --shelf-secondary-font-size: 14px;
-    --ui-padding-left: 40px;
-    --ui-padding-right: 40px;
+    --ui-padding-left: var(--shelf-content-inset);
+    --ui-padding-right: var(--shelf-content-inset);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 1.35rem;
+    gap: 24px;
     min-width: 0;
+    min-height: var(--shelf-header-height);
     flex-shrink: 0;
-    padding: 2.2rem var(--ui-padding-right) 1.8rem var(--ui-padding-left);
-    background-color: var(--appearance-canvas);
+    padding: 24px var(--ui-padding-right) 16px var(--ui-padding-left);
+    background: transparent;
     color: var(--appearance-color);
     font-size: 1rem;
 
-    .shelf-heading,
-    .shelf-tools {
+    .shelf-heading {
         display: flex;
         align-items: center;
         min-width: 0;
-        gap: 0.75rem;
+        flex: 0 1 auto;
+        gap: 10px;
     }
-    .shelf-heading {
-        flex-wrap: wrap;
-        gap: 12px;
+    .shelf-heading-text {
+        display: flex;
+        align-items: baseline;
+        min-width: 0;
+        gap: 10px;
     }
     #category-title {
+        min-width: 0;
         color: var(--appearance-color);
         font-size: var(--shelf-title-font-size);
         font-weight: 600;
         line-height: 1.35;
         letter-spacing: -0.035em;
-        overflow-wrap: anywhere;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     #book-count {
-        padding: 0.3rem 0.6rem;
-        border-radius: 0.65rem;
-        background: var(--appearance-tint);
+        flex: none;
+        padding: 4px 8px;
+        border-radius: 9px;
         color: var(--appearance-accent);
-        font-size: 0.76em;
+        background: color-mix(in srgb, var(--appearance-selection) 70%, transparent);
+        font-size: 12px;
         white-space: nowrap;
     }
     .shelf-tools {
-        flex-wrap: wrap;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex: 0 1 auto;
+        min-width: 0;
         gap: 8px;
     }
     .book-search-field {
         display: flex;
         align-items: center;
-        width: 13.5rem;
-        max-width: 100%;
+        width: clamp(180px, 18vw, 280px);
+        flex: 1 1 240px;
+        max-width: 280px;
         min-width: 0;
         min-height: 44px;
         padding-inline: 12px 6px;
@@ -86,7 +97,7 @@
         flex: none;
         gap: 8px;
         min-width: 44px;
-        min-height: 44px;
+        height: 44px;
         border: 1px solid transparent;
         border-radius: var(--control-radius);
         padding: 0 14px;
@@ -99,13 +110,12 @@
             box-shadow var(--motion-duration-fast) var(--motion-ease);
     }
     .appearance-button {
-        color: var(--appearance-color);
-        background: var(--appearance-panel);
-        font-size: var(--shelf-secondary-font-size);
+        color: var(--appearance-muted-color);
+        background: color-mix(in srgb, var(--appearance-panel) 85%, transparent);
         border-color: var(--appearance-border);
+        font-size: var(--shelf-secondary-font-size);
 
         &[aria-expanded="true"] {
-            border-color: var(--appearance-border);
             background: var(--appearance-selection);
             color: var(--appearance-accent);
         }
@@ -115,6 +125,7 @@
         --icon-size: 18px;
     }
     #import-books {
+        min-width: 80px;
         background: var(--appearance-accent);
         color: var(--appearance-on-accent);
         font-size: var(--shelf-primary-font-size);
@@ -122,8 +133,16 @@
         box-shadow: var(--control-shadow);
     }
     #open-navigation {
-        --icon-size: 20px;
+        --icon-size: 18px;
         display: none;
+        border: 1px solid var(--appearance-border);
+        border-radius: var(--control-radius);
+        background: color-mix(in srgb, var(--appearance-panel) 85%, transparent);
+        color: var(--appearance-muted-color);
+        &[aria-expanded="true"] {
+            background: var(--appearance-selection);
+            color: var(--appearance-accent);
+        }
     }
     @media (hover: hover) and (pointer: fine) {
         .appearance-button:where(:not(:disabled):not([aria-expanded="true"])):hover {
@@ -149,62 +168,76 @@
         --shelf-primary-font-size: 13px;
         --shelf-secondary-font-size: 13px;
     }
-    @media (max-width: 1050px) and (min-width: 769px) {
-        .shelf-tools {
-            width: 100%;
-        }
-        .book-search-field {
-            flex: 1;
-        }
-    }
     @media (max-width: 768px) {
-        --shelf-title-font-size: 20px;
-        --ui-padding-left: 18px;
-        --ui-padding-right: 18px;
+        --shelf-title-font-size: 22px;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto auto;
-        padding-top: 1rem;
-        padding-bottom: 1.4rem;
-        gap: 12px 4px;
+        grid-template-columns: minmax(0, 1fr) 44px auto;
+        gap: 8px;
+        padding-top: 12px;
+        padding-bottom: 12px;
         .shelf-heading {
-            min-width: 0;
-            gap: 4px;
-            flex-wrap: nowrap;
+            grid-column: 1;
+            grid-row: 1;
+            gap: 6px;
         }
-        #category-title {
-            display: -webkit-box;
-            min-width: 0;
-            -webkit-box-orient: vertical;
-            -webkit-line-clamp: 2;
-            overflow: hidden;
+        .shelf-heading-text {
+            gap: 8px;
         }
         #book-count {
-            /* 移动端让出标题空间，但仍保留搜索结果数量的播报。 */
-            position: absolute;
-            width: 1px;
-            height: 1px;
             padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip-path: inset(50%);
-            white-space: nowrap;
+            background: transparent;
+            color: var(--appearance-muted-color);
         }
         .shelf-tools {
             display: contents;
         }
         .book-search-field {
-            grid-row: 2;
             grid-column: 1 / -1;
+            grid-row: 2;
             width: 100%;
+            max-width: none;
         }
         #open-navigation {
             display: inline-grid;
-            margin-left: -12px;
         }
         .appearance-button,
         #import-books {
             padding: 0 10px;
         }
+        .appearance-button {
+            grid-column: 2;
+            grid-row: 1;
+            width: 44px;
+            padding: 0;
+        }
+        #import-books {
+            grid-column: 3;
+            grid-row: 1;
+        }
+        .appearance-label {
+            display: none;
+        }
+    }
+    /* 工具作为完整一组换行，搜索与动作之间不产生弹性空轨。 */
+    @container bookshelf-main (max-width: 720px) {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+
+        .shelf-tools {
+            width: 100%;
+        }
+        .book-search-field {
+            width: 100%;
+            max-width: none;
+        }
+    }
+    /* 软键盘可能只缩短可视区域，按书架内容区高度为搜索结果保留空间。 */
+    @container bookshelf-main (max-height: 28rem) {
+        --shelf-title-font-size: 18px;
+        min-height: 0;
+        gap: 6px;
+        padding-block: 6px;
         .appearance-button {
             width: 44px;
             padding: 0;
@@ -212,66 +245,43 @@
         .appearance-label {
             display: none;
         }
-        .import-label {
-            font-size: inherit;
-        }
-        @media (max-width: 360px) {
-            .import-label {
-                display: none;
+
+        /* 横屏有足够宽度时合并为一行，核心操作与 44px 点击区全部保留。 */
+        @container bookshelf-main (min-width: 480px) {
+            flex-direction: row;
+            align-items: center;
+            gap: 16px;
+            grid-template-columns: minmax(0, 1fr) minmax(8rem, 1.4fr) 44px auto;
+
+            .shelf-tools {
+                width: auto;
+                flex: 1;
+            }
+            .book-search-field {
+                max-width: 280px;
+                grid-column: 2;
+                grid-row: 1;
+            }
+            .appearance-button {
+                grid-column: 3;
             }
             #import-books {
-                width: 44px;
-                padding: 0;
+                grid-column: 4;
             }
         }
     }
-    /* 软键盘可能只缩短可视区域，按书架内容区高度为搜索结果保留空间。 */
-    @container bookshelf-main (max-height: 28rem) {
-        --shelf-title-font-size: 18px;
-        --ui-padding-left: 12px;
-        --ui-padding-right: 12px;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 44px 44px;
-        gap: 6px;
-        padding-block: 4px;
-
-        .shelf-heading {
-            flex-wrap: nowrap;
-            gap: 4px;
-        }
-        #category-title {
-            display: block;
-            min-width: 0;
+    @media (max-width: 380px) {
+        #book-count {
+            position: absolute;
+            width: 1px;
+            height: 1px;
             overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            clip-path: inset(50%);
         }
-        .shelf-tools {
-            display: contents;
-        }
-        .book-search-field {
-            grid-row: 2;
-            grid-column: 1 / -1;
-            width: 100%;
-        }
-        .appearance-button,
         #import-books {
-            width: 44px;
-            padding: 0;
-        }
-        .appearance-label,
-        .import-label {
-            display: none;
-        }
-
-        /* 横屏有足够宽度时合并为一行，核心操作与 44px 点击区全部保留。 */
-        @container bookshelf-main (min-width: 30rem) {
-            grid-template-columns: minmax(0, 1fr) minmax(8rem, 1.4fr) 44px 44px;
-
-            .book-search-field {
-                grid-row: 1;
-                grid-column: 2;
-            }
+            min-width: 72px;
+            gap: 5px;
+            padding-inline: 8px;
         }
     }
     @media (prefers-reduced-motion: reduce) {

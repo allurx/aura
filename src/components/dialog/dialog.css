@@ -4,6 +4,7 @@
  */
 
 .dialog {
+    --dialog-padding: 20px;
     font-family: var(--ui-font-family);
     --dialog-top: max(1rem, env(safe-area-inset-top));
     --dialog-right: max(1rem, env(safe-area-inset-right));
@@ -12,7 +13,7 @@
     background: var(--setting-background-color);
     color: var(--setting-color);
     border: 1px solid var(--appearance-border);
-    border-radius: 1.5rem;
+    border-radius: 20px;
     box-shadow: var(--appearance-shadow-floating);
     padding: 0;
     width: min(30rem, calc(100% - var(--dialog-left) - var(--dialog-right)));
@@ -34,7 +35,7 @@
 
     /* 关闭结果与焦点由原生 dialog 处理，离散过渡只延续退场绘制。 */
     opacity: 0;
-    transform: translateY(8px) scale(0.985);
+    transform: translateY(6px) scale(0.99);
     transition:
         opacity var(--motion-duration-normal) var(--motion-ease),
         transform var(--motion-duration-normal) var(--motion-ease-out),
@@ -53,7 +54,7 @@
 
     &::backdrop {
         background: var(--appearance-backdrop);
-        backdrop-filter: blur(5px);
+        backdrop-filter: blur(3px);
         opacity: 0;
         transition:
             opacity var(--motion-duration-normal) var(--motion-ease),
@@ -68,25 +69,26 @@
     .header {
         flex: 0 0 auto;
         min-height: 68px;
-        padding: 0.625rem 1.25rem;
-        font-size: 1.0625rem;
+        padding: 12px var(--dialog-padding);
+        font-size: 18px;
         font-weight: 600;
         border-bottom: 1px solid var(--appearance-border);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 0.5rem;
-        background-image: linear-gradient(110deg, var(--appearance-tint), var(--appearance-glow));
+        gap: 12px;
 
         .title {
             min-width: 0;
+            letter-spacing: -0.02em;
             overflow-wrap: anywhere;
         }
 
         .close-btn {
-            --icon-size: 20px;
-            border-radius: 13px;
-            background: var(--appearance-highlight);
+            --icon-size: 18px;
+            margin-right: -8px;
+            border-radius: 10px;
+            color: var(--appearance-muted-color);
         }
     }
 
@@ -94,31 +96,35 @@
         user-select: text;
         -webkit-user-select: text;
         min-height: 0;
-        padding: 1.5rem;
+        padding: 20px var(--dialog-padding);
         overflow: auto;
         white-space: pre-wrap;
         overflow-wrap: anywhere;
         line-height: 1.7;
+        font-size: 14px;
         overscroll-behavior: contain;
     }
 
     .footer {
-        padding: 1rem 1.5rem;
+        padding: 12px var(--dialog-padding);
         display: flex;
         justify-content: flex-end;
-        gap: 0.75rem;
+        gap: 8px;
         border-top: 1px solid var(--appearance-border);
         flex: 0 0 auto;
         flex-wrap: wrap;
 
         button {
-            padding: 0.6rem 1.2rem;
+            padding: 10px 18px;
             border: 1px solid transparent;
             border-radius: var(--control-radius);
             font: inherit;
+            font-size: 14px;
+            font-weight: 500;
             cursor: pointer;
             max-width: 100%;
             min-height: 44px;
+            min-width: 80px;
             overflow-wrap: anywhere;
             transition:
                 background-color var(--motion-duration-fast) var(--motion-ease),
@@ -127,13 +133,18 @@
 
             @media (hover: hover) and (pointer: fine) {
                 &:hover:enabled {
-                    transform: translateY(-1px);
-                    box-shadow: var(--control-shadow);
+                    box-shadow: none;
                 }
             }
 
             &:active:enabled {
-                transform: scale(0.98);
+                transform: translateY(1px);
+                box-shadow: none;
+            }
+
+            &:disabled {
+                opacity: 0.4;
+                cursor: default;
                 box-shadow: none;
             }
 
@@ -160,7 +171,7 @@
         }
 
         .cancel-btn {
-            background: var(--appearance-muted-surface);
+            background: transparent;
             color: inherit;
             border-color: var(--appearance-border);
 
@@ -178,12 +189,11 @@
     }
 
     @media (max-width: 600px) {
-        .body {
-            padding: 1.1rem;
-        }
+        --dialog-padding: 16px;
+        border-radius: 16px;
 
         .footer {
-            padding: 0.85rem 1.1rem;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
         }
     }
 
@@ -215,7 +225,7 @@
 @starting-style {
     .dialog[open] {
         opacity: 0;
-        transform: translateY(8px) scale(0.985);
+        transform: translateY(6px) scale(0.99);
     }
 
     .dialog[open]::backdrop {

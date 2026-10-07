@@ -2,7 +2,7 @@
 
 本文说明如何配置、部署和回滚 Aura 在线站点。日常通过 GitHub Actions 部署；分支集成见[开发指南](development.md#分支协作)，下载文件分发见[发布指南](releasing.md)。
 
-站点使用 Cloudflare Workers Static Assets 托管 `dist/web-obfuscated/`。只维护一个正式 Worker，名称、资源目录和自定义域名由 [wrangler.jsonc](../wrangler.jsonc) 统一管理：
+站点使用 Cloudflare Workers Static Assets 托管 `dist/web/`。只维护一个正式 Worker，名称、资源目录和自定义域名由 [wrangler.jsonc](../wrangler.jsonc) 统一管理：
 
 | 部署分支 | GitHub Environment | Worker | 站点                               |
 | -------- | ------------------ | ------ | ---------------------------------- |
@@ -14,12 +14,12 @@
 
 按 [Web Foundation 部署说明](https://github.com/allurx/web-foundation/blob/main/docs/deployment.md#保存部署凭据)准备 GitHub `production` Environment、Account ID 和 API token，并将允许部署的分支限制为 `main`。Account ID 和 API token 均保存在 `production` Environment，分别使用 variable 和 secret。首次部署前核对下文的[域名配置](#域名配置)。
 
-[CI 工作流](../.github/workflows/ci.yml)与基础包固定同一 Immutable Release 的具体版本标签，传入混淆 Web 目录和正式站点地址，并通过 `secrets: inherit` 继承调用方可用的 secrets。部署 job 从 `production` Environment 读取 token；PR 和 `dev` 的验证不需要生产凭据。保持 Cloudflare Workers Builds 的 Git 集成关闭，避免同一提交从两个入口部署。
+[CI 工作流](../.github/workflows/ci.yml)与基础包固定同一 Immutable Release 的具体版本标签，传入 Web 目录和正式站点地址，并通过 `secrets: inherit` 继承调用方可用的 secrets。部署 job 从 `production` Environment 读取 token；PR 和 `dev` 的验证不需要生产凭据。保持 Cloudflare Workers Builds 的 Git 集成关闭，避免同一提交从两个入口部署。
 
 ## 自动部署与结果查看
 
 - **创建或更新 PR、推送 `dev`**：运行 `npm run verify` 和正式环境的部署 dry-run，不部署。
-- **推送 `main`**：完成相同验证后，上传本次运行的混淆 Web 产物并部署到正式环境。
+- **推送 `main`**：完成相同验证后，上传本次运行的 Web 产物并部署到正式环境。
 
 部署任务下载同一次 `verify` 上传的 artifact，不重新构建。部署前若发现分支已有新提交，旧运行会跳过部署；部署时将 commit SHA 和 Actions 运行链接写入 Cloudflare 版本信息。
 
@@ -48,7 +48,7 @@ npm run deploy
 
 ### 注意事项
 
-- 部署脚本只上传已有 `dist/web-obfuscated/`，不会重新构建。
+- 部署脚本只上传已有 `dist/web/`，不会重新构建。
 - `npm run deploy` 指向唯一的正式 Worker；GitHub 的 `production` Environment 用于隔离部署凭据，不对应额外的 Wrangler 环境。
 - dry-run 只检查本地配置和打包结果，不验证远端凭据、域名绑定或站点访问。
 

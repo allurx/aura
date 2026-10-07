@@ -44,48 +44,50 @@ select > button {
         &::picker-icon {
             content: "";
             flex: none;
-            width: 0.45em;
-            height: 0.45em;
-            margin: -0.2em 0.2em 0 0;
-            border-right: 1.5px solid currentColor;
-            border-bottom: 1.5px solid currentColor;
-            transform: rotate(45deg);
-            opacity: 0.6;
+            width: 12px;
+            height: 12px;
+            margin: 0 2px;
+            background: currentColor;
+            mask: url("../assets/images/chevron.svg") center / contain no-repeat;
+            transform: rotate(90deg);
+            opacity: 0.75;
             transition: transform var(--motion-duration-normal) var(--motion-ease);
 
             @media (prefers-reduced-motion: reduce) {
                 transition: none;
             }
+
+            @media (forced-colors: active) {
+                background: ButtonText;
+                forced-color-adjust: none;
+            }
         }
 
         &:open {
-            background-image: linear-gradient(
-                color-mix(in srgb, currentColor 6%, transparent),
-                color-mix(in srgb, currentColor 6%, transparent)
-            );
+            background-image: linear-gradient(var(--appearance-selection), var(--appearance-selection));
         }
 
         &:open::picker-icon {
-            transform: rotate(225deg);
+            transform: rotate(-90deg);
         }
 
         &::picker(select) {
             width: anchor-size(width);
-            min-width: min(9rem, calc(100vw - 2rem));
+            min-width: min(176px, calc(100vw - 2rem));
             max-width: calc(100vw - 2rem);
-            max-height: min(16rem, calc(var(--viewport-height) - 2rem));
+            max-height: min(320px, calc(var(--viewport-height) - 2rem));
             overflow-x: hidden;
             overflow-y: auto;
             overscroll-behavior: contain;
             scroll-padding-block: 0.35rem;
             margin-block: 0.35rem;
-            padding: 0.35rem;
+            padding: 6px;
             border: 1px solid var(--appearance-border);
-            border-radius: 0.85rem;
-            background-color: var(--appearance-canvas);
+            border-radius: 14px;
+            background-color: var(--appearance-panel);
             color: var(--appearance-color);
-            box-shadow: var(--appearance-shadow-raised);
-            font-size: max(14px, 1em);
+            box-shadow: var(--appearance-shadow-floating);
+            font-size: 14px;
             line-height: 1.4;
             scrollbar-width: thin;
             scrollbar-color: color-mix(in srgb, currentColor 30%, transparent) transparent;
@@ -112,8 +114,8 @@ select > button {
             gap: 0.75rem;
             min-width: 0;
             min-height: 36px;
-            padding: 0.4rem 0.65rem;
-            border-radius: 0.5rem;
+            padding: 8px 10px;
+            border-radius: 8px;
             background: transparent;
             color: inherit;
             white-space: normal;
@@ -124,12 +126,13 @@ select > button {
                 order: 1;
                 flex: none;
                 margin-left: auto;
-                color: var(--appearance-color);
+                color: var(--appearance-accent);
                 font-size: 0.9em;
             }
 
             &:checked {
-                background: color-mix(in srgb, currentColor 7%, transparent);
+                background: var(--appearance-selection);
+                color: var(--appearance-accent);
                 font-weight: 600;
             }
 
@@ -140,8 +143,8 @@ select > button {
             }
 
             @media (hover: hover) and (pointer: fine) {
-                &:hover {
-                    background: color-mix(in srgb, currentColor 12%, transparent);
+                &:hover:not(:checked) {
+                    background: var(--appearance-muted-surface);
                 }
             }
 

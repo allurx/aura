@@ -8,5 +8,3 @@
 node_modules/
 dist/
 /work/
-.dev.vars*
-.env*

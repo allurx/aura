@@ -15,15 +15,28 @@
             </div>
             <nav id="category-navigation" class="panel-scroll" aria-label="书籍分类"></nav>
             <div class="nav-footer">
-                <button id="open-about" type="button" aria-haspopup="dialog" aria-controls="about-dialog">
-                    <span class="icon icon-about" aria-hidden="true"></span>关于 Aura
+                <button id="open-more" type="button" popovertarget="bookshelf-more-actions">
+                    <span class="icon icon-manage" aria-hidden="true"></span>管理与帮助
                 </button>
-                <button id="clear-btn" type="button">
-                    <span class="icon icon-delete" aria-hidden="true"></span>清空书架
-                </button>
-                <button id="reset-data" type="button" aria-haspopup="dialog">
-                    <span class="icon icon-reset" aria-hidden="true"></span>重置数据
-                </button>
+                <div
+                    id="bookshelf-more-actions"
+                    class="panel-scroll"
+                    popover="auto"
+                    role="group"
+                    aria-label="管理与帮助"
+                >
+                    <button id="open-about" type="button" aria-haspopup="dialog" aria-controls="about-dialog" autofocus>
+                        <span class="icon icon-about" aria-hidden="true"></span>关于 Aura
+                    </button>
+                    <div class="data-actions" role="group" aria-label="数据操作">
+                        <button id="clear-btn" type="button" aria-haspopup="dialog">
+                            <span class="icon icon-delete" aria-hidden="true"></span>清空书架
+                        </button>
+                        <button id="reset-data" type="button" aria-haspopup="dialog">
+                            <span class="icon icon-reset" aria-hidden="true"></span>重置全部数据
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </dialog>
@@ -41,8 +54,10 @@
                 >
                     <span class="icon icon-menu" aria-hidden="true"></span>
                 </button>
-                <h1 id="category-title">全部书籍</h1>
-                <span id="book-count" role="status" aria-atomic="true"></span>
+                <div class="shelf-heading-text">
+                    <h1 id="category-title">全部书籍</h1>
+                    <span id="book-count" role="status" aria-atomic="true"></span>
+                </div>
             </div>
             <div class="shelf-tools">
                 <label class="search-field book-search-field">
@@ -72,10 +87,10 @@
                 >
                     <span class="icon icon-setting" aria-hidden="true"></span><span class="appearance-label">外观</span>
                 </button>
-                <button id="import-books" type="button" aria-label="导入 TXT" title="导入 TXT">
-                    <span class="icon icon-add" aria-hidden="true"></span><span class="import-label">导入 TXT</span>
+                <button id="import-books" type="button" aria-label="导入书籍" title="导入 TXT、EPUB">
+                    <span class="icon icon-add" aria-hidden="true"></span><span class="import-label">导入</span>
                 </button>
-                <input id="book-input" type="file" accept=".txt" multiple hidden />
+                <input id="book-input" type="file" multiple hidden />
             </div>
         </header>
         <section id="book-list" class="panel-scroll" aria-label="书籍列表" tabindex="-1"></section>

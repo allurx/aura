@@ -25,7 +25,6 @@ export default class TocUi extends Ui {
     private readonly tocContentElement: HTMLElement;
     private readonly closeButton: HTMLButtonElement;
     private readonly locateCurrentButton: HTMLButtonElement;
-    private readonly currentChapterTitle: HTMLElement;
     private readonly searchInput: HTMLInputElement;
     private readonly emptyMessage: HTMLElement;
     private readonly summary: HTMLElement;
@@ -47,7 +46,6 @@ export default class TocUi extends Ui {
         this.tocContentElement = assertExists(this.root.querySelector<HTMLElement>(".main"));
         this.closeButton = assertExists(this.root.querySelector<HTMLButtonElement>(".close"));
         this.locateCurrentButton = assertExists(this.root.querySelector<HTMLButtonElement>(".locate-current"));
-        this.currentChapterTitle = assertExists(this.root.querySelector<HTMLElement>(".toc-current-title"));
         this.searchInput = assertExists(this.root.querySelector<HTMLInputElement>("#toc-search"));
         this.emptyMessage = assertExists(this.root.querySelector<HTMLElement>(".toc-empty"));
         this.summary = assertExists(this.root.querySelector<HTMLElement>(".toc-summary"));
@@ -91,12 +89,8 @@ export default class TocUi extends Ui {
     public highlightCurrentChapter(chapterNumber: number): this {
         this.currentChapterNumber = chapterNumber;
 
-        // 顶部入口从完整目录读取当前章，搜索隐藏该行时仍能识别并定位。
-        const currentEntry = this.entries.find((entry) => entry.chapterNumber === chapterNumber);
-        this.currentChapterTitle.textContent = currentEntry?.title ?? "";
-        this.locateCurrentButton.title = currentEntry?.title ?? "";
-        this.locateCurrentButton.hidden = !currentEntry;
-        this.locateCurrentButton.setAttribute("aria-label", `定位当前章节：${currentEntry?.title ?? ""}`);
+        // 搜索可能隐藏当前章，定位入口仍依据完整目录判断是否可用。
+        this.locateCurrentButton.disabled = !this.entries.some((entry) => entry.chapterNumber === chapterNumber);
 
         for (const button of this.tocContentElement.querySelectorAll("button")) {
             const current = Number(button.dataset["chapterNumber"]) === chapterNumber;

@@ -10,36 +10,34 @@
         font: inherit;
     }
     .body {
-        padding: 1.5rem;
+        padding: 20px var(--dialog-padding);
         white-space: normal;
     }
 
     .license-project {
-        border: 1px solid var(--appearance-border);
-        border-radius: 1rem;
-        padding: 1.25rem 1.25rem 0.35rem;
-        background: linear-gradient(125deg, var(--appearance-tint), transparent 75%);
+        padding: 0 0 12px;
+        border-bottom: 1px solid var(--appearance-border);
     }
 
     .license-project-heading {
         display: flex;
         align-items: center;
-        gap: 0.9rem;
+        gap: 14px;
         h3 {
-            font-size: 1.4rem;
+            font-size: 24px;
             letter-spacing: -0.03em;
         }
         p {
             margin-top: 0.15rem;
             color: var(--appearance-muted-color);
-            font-size: 0.85rem;
+            font-size: 13px;
         }
     }
 
     .license-brand {
         flex: none;
-        width: 42px;
-        height: 42px;
+        width: 44px;
+        height: 44px;
         background: url("../../assets/images/brand.svg?inline") center / contain no-repeat;
     }
 
@@ -55,7 +53,7 @@
     }
 
     .icon-external-link {
-        --icon-size: 13px;
+        --icon-size: 18px;
         flex: none;
         opacity: 0.7;
     }
@@ -63,42 +61,41 @@
     .license-project-links {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.3rem 1.5rem;
-        margin-top: 0.8rem;
+        gap: 4px 20px;
+        margin-top: 12px;
         a {
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
             min-height: 44px;
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-size: 13px;
+            font-weight: 500;
         }
         .icon-source-code {
-            --icon-size: 17px;
+            --icon-size: 18px;
         }
     }
 
     .license-section-heading {
-        margin: 1.65rem 0 0.8rem;
+        margin: 20px 0 8px;
         h3 {
-            font-size: 0.875rem;
+            font-size: 14px;
         }
         p {
             color: var(--appearance-muted-color);
-            font-size: 0.8125rem;
+            font-size: 12px;
             margin-top: 0.15rem;
         }
     }
 
     .license-list {
         list-style: none;
-        border: 1px solid var(--appearance-border);
-        border-radius: 1rem;
-        overflow: hidden;
+        margin: 0;
+        padding: 0;
     }
 
     .license-item {
-        padding: 0.65rem 1.15rem 0.25rem;
+        padding: 8px 0;
         & + .license-item {
             border-top: 1px solid var(--appearance-border);
         }
@@ -108,7 +105,7 @@
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         align-items: center;
-        gap: 0.25rem 0.8rem;
+        gap: 4px 12px;
     }
 
     .license-source {
@@ -119,14 +116,14 @@
         min-width: 0;
         min-height: 44px;
         color: var(--appearance-color);
-        font-size: 0.875rem;
-        font-weight: 600;
+        font-size: 14px;
+        font-weight: 500;
         overflow-wrap: anywhere;
     }
 
     .license-version {
         color: var(--appearance-muted-color);
-        font-size: 0.75rem;
+        font-size: 12px;
         font-weight: 400;
         font-variant-numeric: tabular-nums;
     }
@@ -134,13 +131,13 @@
     .license-badge {
         display: inline-flex;
         align-items: center;
-        min-height: 36px;
-        padding: 0 0.65rem;
-        border-radius: 0.5rem;
-        background: var(--appearance-muted-surface);
+        min-height: 44px;
+        padding: 0 8px;
+        border-radius: 8px;
+        background: transparent;
         color: var(--appearance-muted-color);
-        font-size: 0.6875rem;
-        font-weight: 600;
+        font-size: 11px;
+        font-weight: 500;
         white-space: nowrap;
     }
 
@@ -155,7 +152,7 @@
             list-style: none;
             cursor: pointer;
             color: var(--appearance-muted-color);
-            font-size: 0.8125rem;
+            font-size: 12px;
             &::-webkit-details-marker {
                 display: none;
             }
@@ -166,7 +163,7 @@
             }
         }
         .icon-chevron {
-            --icon-size: 14px;
+            --icon-size: 18px;
             transform: rotate(90deg);
             transition: transform var(--motion-duration-fast) var(--motion-ease);
         }
@@ -179,9 +176,9 @@
     }
 
     pre {
-        margin: 0.4rem 0 0.8rem;
-        padding: 1rem;
-        border-radius: 0.75rem;
+        margin: 4px 0 12px;
+        padding: 12px;
+        border-radius: 10px;
         background: var(--appearance-muted-surface);
         color: var(--appearance-color);
         font:
@@ -192,21 +189,21 @@
     }
 
     .license-footnote {
-        margin-top: 1.15rem;
+        margin-top: 16px;
         color: var(--appearance-muted-color);
         text-align: center;
         font-size: 0.75rem;
     }
 
-    @media (max-width: 600px) {
+    @media (max-height: 24rem) {
         .body {
-            padding: 1rem;
+            padding-block: 8px;
         }
-        .license-project {
-            padding: 1rem 1rem 0.25rem;
-        }
-        .license-item {
-            padding-inline: 1rem;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .license-disclosure .icon-chevron {
+            transition: none;
         }
     }
 }

@@ -85,6 +85,7 @@ export default function bindReadingGestures(
             if (horizontalPosition > 2 / 3) return SwitchChapterDirection.NEXT;
             handlers.onCenterTap();
         } else if (
+            !hasHorizontalScroll(current.target, content) &&
             (current.type === "touch" || current.type === "pen") &&
             Math.abs(deltaX) >= 48 &&
             maxY / Math.abs(deltaX) <= Math.tan(Math.PI / 6)
@@ -177,6 +178,25 @@ export default function bindReadingGestures(
         { once: true }
     );
     return cancel;
+}
+
+/**
+ * 横向滚动区域优先保留自身操作，包括正文内的表格；触笔未触发原生滚动时也不切章。
+ */
+function hasHorizontalScroll(target: EventTarget | null, content: HTMLElement): boolean {
+    if (!(target instanceof HTMLElement)) return false;
+    for (
+        let element: HTMLElement | null = target;
+        element && content.contains(element);
+        element = element.parentElement
+    ) {
+        if (
+            element.scrollWidth > element.clientWidth + 1 &&
+            ["auto", "scroll"].includes(getComputedStyle(element).overflowX)
+        )
+            return true;
+    }
+    return false;
 }
 
 /**

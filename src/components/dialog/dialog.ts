@@ -78,6 +78,13 @@ export default class Dialog {
     }
 
     /**
+     * 取消当前请求；结果仍由 close 事件结算，已关闭时不产生新的请求结果。
+     */
+    public cancel(): void {
+        this.close("cancel");
+    }
+
+    /**
      * 为当前请求配置内容，结果由原生 close 事件统一结算。
      */
     private async show(request: DialogRequest): Promise<boolean> {
@@ -123,7 +130,7 @@ export default class Dialog {
         // Escape 与显式取消使用相同的返回值。
         bind(this.dialogElement, "cancel", (event) => {
             event.preventDefault();
-            this.close("cancel");
+            this.cancel();
         });
 
         // 显式操作入口只设置结果，继续交给统一关闭流程处理。
@@ -132,11 +139,11 @@ export default class Dialog {
         });
 
         bind(this.cancelBtnElement, "click", () => {
-            this.close("cancel");
+            this.cancel();
         });
 
         bind(this.closeButton, "click", () => {
-            this.close("cancel");
+            this.cancel();
         });
     }
 

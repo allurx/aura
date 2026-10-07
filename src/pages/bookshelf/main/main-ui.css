@@ -11,5 +11,15 @@
     /* 尺寸由外层书架网格拉伸确定，标题按真实可用高度响应软键盘。 */
     container: bookshelf-main / size;
     overflow: hidden;
-    background: inherit;
+    border: 1px solid var(--appearance-border);
+    border-radius: 24px;
+    background: color-mix(in srgb, var(--appearance-panel) 62%, var(--appearance-canvas));
+    box-shadow: var(--appearance-shadow-soft);
+
+    @media (max-width: 768px) {
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+    }
 }
