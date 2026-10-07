@@ -133,12 +133,14 @@
             --icon-size: 18px;
         }
     }
-    .icon-more {
-        --icon-image: url("../../../assets/images/more.svg");
-    }
-    #open-more:has(+ :popover-open) {
-        background: var(--appearance-selection);
-        color: var(--appearance-accent);
+    #open-more {
+        /* 去掉装饰图标后，文字仍与上方分类名称对齐。 */
+        padding-left: 38px;
+
+        &:has(+ :popover-open) {
+            background: var(--appearance-selection);
+            color: var(--appearance-accent);
+        }
     }
     #bookshelf-more-actions {
         position: fixed;
