@@ -46,9 +46,9 @@ git push $releaseRemote "refs/tags/${releaseTag}:refs/tags/${releaseTag}"
 
 1. **Build release assets** 核对 tag 格式、annotated 类型、检出 commit 及其是否已包含在远端 `main` 中，执行 `npm run verify` 后打包。
 2. **Publish GitHub Release** 再次核对远端 tag 对象与 SHA-256，通过 [`gh release create --generate-notes`](https://cli.github.com/manual/gh_release_create) 自动生成英文说明并创建公开 Release。
-3. 打开 [Releases](https://github.com/allurx/aura/releases)，核对标题等于版本 tag、英文说明符合实际发布范围，以及[下载文件清单](usage.md#选择下载文件)。四个构建文件与校验清单应齐全，版本号应一致。
+3. 打开 [Releases](https://github.com/allurx/aura/releases)，核对标题等于版本 tag、英文说明符合实际发布范围，以及[下载文件清单](usage.md#选择下载文件)。两个构建文件与校验清单应齐全，版本号应一致。
 
-从该 Release 下载四项产物与校验清单，按[文件校验方法](usage.md#校验下载文件)逐项核对哈希。解压两种 Web 包，确认含有 `LICENSE.txt` 和 `THIRD-PARTY-NOTICES.txt`；打开两种 portable，从书架菜单的“关于 Aura”展开查看完整声明。校验成功证明下载文件与清单一致，不能代替功能验收。
+从该 Release 下载两项产物与校验清单，按[文件校验方法](usage.md#校验下载文件)逐项核对哈希。解压 Web 包，确认含有 `LICENSE.txt` 和 `THIRD-PARTY-NOTICES.txt`；打开 portable，从书架菜单的“关于 Aura”展开查看完整声明。校验成功证明下载文件与清单一致，不能代替功能验收。
 
 ## 故障处理
 

@@ -7,24 +7,21 @@
         "node": "24.21.0"
     },
     "scripts": {
-        "dev": "vite --open",
+        "dev": "vite --open --host 0.0.0.0",
         "format": "prettier . --write",
         "format:check": "prettier . --check",
         "lint": "eslint . --max-warnings 0",
         "type-check": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
         "check": "npm run format:check && npm run lint && npm run type-check",
-        "verify": "npm run check && vite build && vite build --mode portable && vite build --mode obfuscated && vite build --mode portable-obfuscated",
+        "verify": "npm run check && vite build && vite build --mode portable",
         "build": "npm run check && vite build",
         "build:portable": "npm run check && vite build --mode portable",
-        "build:obfuscated": "npm run check && vite build --mode obfuscated",
-        "build:portable:obfuscated": "npm run check && vite build --mode portable-obfuscated",
         "preview": "wrangler dev",
         "deploy": "wrangler deploy"
     },
     "devDependencies": {
         "@allurx/web-foundation": "git+https://github.com/allurx/web-foundation.git#v1.0.2",
-        "vite-plugin-javascript-obfuscator": "3.1.0",
-        "vite-plugin-singlefile": "^2.3.3"
+        "vite-plugin-singlefile": "2.3.3"
     },
     "prettier": "@allurx/web-foundation/prettier",
     "dependencies": {

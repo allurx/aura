@@ -20,17 +20,15 @@ Aura 用于阅读自己导入的 TXT 和 EPUB 文件。无需账户，书籍、�
 
 ### 选择下载文件
 
-个人离线阅读选择普通 portable 版即可。下表中的 `vX.Y.Z` 为所选 Release 的版本号，下载时以附件的实际文件名为准。
+个人离线阅读选择 portable 版即可。下表中的 `vX.Y.Z` 为所选 Release 的版本号，下载时以附件的实际文件名为准。
 
-| 文件                                   | 用途                              |
-| -------------------------------------- | --------------------------------- |
-| `aura-portable-vX.Y.Z.html`            | 普通单文件版，用浏览器直接打开。  |
-| `aura-portable-obfuscated-vX.Y.Z.html` | 混淆单文件版，打开方式相同。      |
-| `aura-web-vX.Y.Z.zip`                  | 普通 Web 包，用于部署网站。       |
-| `aura-web-obfuscated-vX.Y.Z.zip`       | 混淆 Web 包，部署方式相同。       |
-| `aura-vX.Y.Z-SHA256SUMS.txt`           | 上述四个文件的 SHA-256 校验清单。 |
+| 文件                         | 用途                              |
+| ---------------------------- | --------------------------------- |
+| `aura-portable-vX.Y.Z.html`  | 单文件版，用浏览器直接打开。      |
+| `aura-web-vX.Y.Z.zip`        | Web 包，用于部署网站。            |
+| `aura-vX.Y.Z-SHA256SUMS.txt` | 上述两个文件的 SHA-256 校验清单。 |
 
-普通版与混淆版提供相同的阅读功能。GitHub 自动提供的 `Source code (zip)` 和 `Source code (tar.gz)` 是源码包，不能作为 portable HTML 直接使用。
+GitHub 自动提供的 `Source code (zip)` 和 `Source code (tar.gz)` 是源码包，不能作为 portable HTML 直接使用。
 
 Web ZIP 需要解压并通过 HTTPS 提供访问，本机预览可使用 `localhost` HTTP。完整内容应部署在站点根路径，当前不支持站点子路径。自行部署见[部署指南](deployment.md)。
 

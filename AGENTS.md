@@ -40,7 +40,7 @@ Aura 是一个轻量、离线优先的 Web 阅读器。变更应持续保护以�
 - 自主命名的目录和文件使用小写 kebab-case，工具或平台约定的名称保持原样。集合容器目录使用复数，功能、子系统和业务概念目录按语义命名；相关文件按功能共置，不因文件数量或单复数统一而拆散职责边界。
 - 自定义类、接口、类型别名和枚举使用 PascalCase，变量、函数和普通成员使用 camelCase；缩写按普通单词参与大小写转换。常量和枚举成员可使用 UPPER_SNAKE_CASE；平台、第三方 API 和协议约定的名称保持原样。
 - TypeScript 保持严格类型安全。避免 `any`、`@ts-ignore`、无必要的类型断言，以及为模仿 Java 而引入的样板类和多层抽象。
-- 共享检查配置、基础 Vite 配置和工具版本由 Web Foundation 统一维护；本库只组合文件范围、路径、插件和自身交付规则。基础包与共享部署工作流固定同一 Immutable Release 的具体 `vX.Y.Z` 标签；升级时成套核对，并验证四种交付产物。
+- 共享检查配置、基础 Vite 配置和工具版本由 Web Foundation 统一维护；本库只组合文件范围、路径、插件和自身交付规则。基础包与共享部署工作流固定同一 Immutable Release 的具体 `vX.Y.Z` 标签；升级时成套核对，并验证 Web 与 portable 两种交付产物。
 - 浏览器源码与 Node.js 构建代码分别检查类型，避免运行环境的全局 API 相互泄漏。支持桌面与移动端主流常青浏览器的当前及前一个稳定大版本；构建语法目标不代表 Web API 可用性，按平台能力处理可选功能，不自动引入 polyfill。
 - CSS 按职责组织：独立组件和全局规则平级，同一对象的状态、伪元素及局部条件浅层嵌套，跨对象的响应式协调集中分组；先写自身声明，再写嵌套规则，避免逐层复刻 DOM。归并或调整嵌套时核对实际匹配范围、选择器权重与覆盖顺序，不为形式统一改写合理结构。
 - 优先选择简洁、惯用、职责清晰的实现。抽象应解决真实的复用、边界或类型问题，不为设计模式本身增加复杂度。
@@ -70,12 +70,12 @@ Aura 是一个轻量、离线优先的 Web 阅读器。变更应持续保护以�
 - 开发循环先运行最小相关检查；实现稳定后复查实际 diff，非平凡修改进行独立 review。修复确认的问题后只重跑受影响的检查，最终状态再执行完整验证。
 - 使用 `npm` 和 `package-lock.json`；`package.json` 是脚本定义的事实来源。`npm run format` 会改写 Prettier 支持且未被 `.prettierignore` 排除的项目文件；最终只读静态门禁 `npm run check` 依次执行格式、lint 和类型检查，开发循环或定位单项问题时可分别运行对应命令。
 - TypeScript 变更通常至少运行 `npm run check`；影响运行时行为时还应运行对应生产构建，普通 Web 为 `npm run build`。构建脚本已包含静态门禁，最终验证无需紧邻重复运行 `npm run check`。
-- 路由、入口、模板、资源路径、Vite 配置或 portable 相关变更，应同时运行 `npm run build` 和 `npm run build:portable`；混淆流程变更再覆盖 `npm run build:obfuscated` 和 `npm run build:portable:obfuscated`。
-- Web、portable 及其混淆版本集中在统一构建输出根目录下，各自使用独立子目录；单次构建只清理自身子目录，保持其他版本产物不变。
-- Web 构建附带完整项目许可证与第三方声明文件；portable 将两者完整嵌入唯一 HTML。“关于 Aura”统一提供项目源码链接与许可信息，先展示名称、许可类型和来源链接，全文默认收起、按需展开，本地声明无需联网查看。构建、压缩和混淆不得丢失交付所需声明；实际分发的依赖或第三方资源变化时，同步核对声明维护源和四种产物。
-- `npm run verify` 执行一次静态检查，并构建验证 Web、portable 的普通版和混淆版；GitHub Actions 使用该入口验证 PR 和共享分支，只有在仓库规则中将该检查设为 required check 后才构成合并门禁。调整 Node.js 版本范围、验证脚本、构建入口或输出目录时应同步维护 CI 和发布流程。
-- 在线版使用 Cloudflare Workers Static Assets，GitHub Actions 是唯一自动部署入口；仅 `main` 的推送部署同一次验证生成的 Web 混淆产物，`dev` 和 PR 只执行验证。只维护一个正式 Worker，Worker、资源目录和自定义域名由 Wrangler 配置统一管理；`npm run deploy` 只部署已有产物，不重新构建。站点部署与 portable 下载交付保持独立，部署配置不得破坏单文件产物。
-- 正式发布使用稳定 SemVer 形式的 annotated `vX.Y.Z` tag，tag 必须指向已集成且验证过的 `main` commit。推送匹配 tag 会自动重跑 `npm run verify`，并公开发布普通版与混淆版的 Web ZIP、portable HTML，以及覆盖四项产物的 SHA-256 校验清单；因此执行 tag push 前必须同时获得对该 GitHub Release 的明确授权。调整产物文件名时应同步更新发布流程和[使用指南中的下载说明](docs/usage.md#选择下载文件)。
+- 路由、入口、模板、资源路径、Vite 配置或 portable 相关变更，应同时运行 `npm run build` 和 `npm run build:portable`。
+- 只维护 Web 和 portable 两种交付，不提供混淆版本。两种产物集中在统一构建输出根目录下，各自使用独立子目录；单次构建只清理自身子目录，保持另一种产物不变。
+- Web 构建附带完整项目许可证与第三方声明文件；portable 将两者完整嵌入唯一 HTML。“关于 Aura”统一提供项目源码链接与许可信息，先展示名称、许可类型和来源链接，全文默认收起、按需展开，本地声明无需联网查看。构建和压缩不得丢失交付所需声明；实际分发的依赖或第三方资源变化时，同步核对声明维护源和两种产物。
+- `npm run verify` 执行一次静态检查，并构建验证 Web 和 portable；GitHub Actions 使用该入口验证 PR 和共享分支，只有在仓库规则中将该检查设为 required check 后才构成合并门禁。调整 Node.js 版本范围、验证脚本、构建入口或输出目录时应同步维护 CI 和发布流程。
+- 在线版使用 Cloudflare Workers Static Assets，GitHub Actions 是唯一自动部署入口；仅 `main` 的推送部署同一次验证生成的 Web 产物，`dev` 和 PR 只执行验证。只维护一个正式 Worker，Worker、资源目录和自定义域名由 Wrangler 配置统一管理；`npm run deploy` 只部署已有产物，不重新构建。站点部署与 portable 下载交付保持独立，部署配置不得破坏单文件产物。
+- 正式发布使用稳定 SemVer 形式的 annotated `vX.Y.Z` tag，tag 必须指向已集成且验证过的 `main` commit。推送匹配 tag 会自动重跑 `npm run verify`，并公开发布 Web ZIP、portable HTML，以及覆盖两项产物的 SHA-256 校验清单；因此执行 tag push 前必须同时获得对该 GitHub Release 的明确授权。调整产物文件名时应同步更新发布流程和[使用指南中的下载说明](docs/usage.md#选择下载文件)。
 - 构建成功只证明静态构建通过。导航、页面生命周期、移动端交互、持久化和 `file://` portable 行为等浏览器问题，必须在对应运行环境中验证后才能宣称已解决。
 - 默认本地预览使用 Wrangler 读取正式部署的静态资源和响应头配置；修改后重新构建并重启预览，使浏览器验证对应最新产物。
 - 导入、解析、去重、事务或批量写入逻辑变更，除功能正确性外，还应使用有代表性的大文件和数据场景检查性能与内存。
