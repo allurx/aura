@@ -5,75 +5,21 @@
 
 #reader > #footer {
     bottom: 0;
-    --ui-padding-left: 28px;
-    --ui-padding-right: 28px;
+    --ui-padding-left: 12px;
+    --ui-padding-right: 12px;
     display: grid;
-    grid-template-columns: 100px minmax(0, 1fr) 100px;
-    flex: 0 0 auto;
-    min-height: 76px;
+    grid-template-columns: minmax(0, 1fr);
+    max-height: 100%;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     padding: 8px max(var(--ui-padding-right), env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom))
         max(var(--ui-padding-left), env(safe-area-inset-left));
     font-size: 13px;
     color: var(--reader-color);
     background-color: var(--reader-surface);
-    background-image: linear-gradient(105deg, transparent 30%, var(--appearance-glow));
     border-top: 1px solid color-mix(in srgb, currentColor 7%, transparent);
-    box-shadow: 0 -4px 16px color-mix(in srgb, var(--appearance-shadow-color) 18%, transparent);
+    box-shadow: 0 -6px 20px color-mix(in srgb, var(--appearance-shadow-color) 8%, transparent);
     user-select: none;
-
-    .mobile-actions {
-        display: none;
-    }
-
-    .reader-action {
-        flex: 0 0 auto;
-        font-size: inherit;
-        padding-inline: 12px;
-        border-color: color-mix(in srgb, currentColor 8%, transparent);
-        background-color: var(--appearance-highlight);
-        box-shadow: var(--appearance-shadow-soft);
-    }
-    .appearance-mark {
-        display: inline-flex;
-        flex: 0 0 24px;
-        align-items: center;
-        justify-content: center;
-        width: 24px;
-        height: 24px;
-        font-family: Georgia, serif;
-        font-size: 22px;
-        line-height: 1;
-    }
-    .reading-location {
-        min-width: 0;
-        text-align: center;
-    }
-    #chapter-title {
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-    }
-}
-
-/* 桌面侧栏与移动页脚复用同一进度元素和排版规则。 */
-:is(#reader, #reader-actions) #progress-rate {
-    color: var(--appearance-accent);
-    font-variant-numeric: tabular-nums;
-    font-size: 12px;
-    font-weight: 650;
-    white-space: nowrap;
-}
-
-#reader[data-mobile-controls] > #footer {
-    --ui-padding-left: 12px;
-    --ui-padding-right: 12px;
-    bottom: 0;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 6px;
-    min-height: 0;
-    max-height: 100%;
     overflow-y: auto;
 
     .reading-location {
@@ -81,14 +27,20 @@
         flex-wrap: wrap;
         align-items: baseline;
         justify-content: center;
-        gap: 8px;
+        gap: 12px;
+        min-width: 0;
+        padding-inline: 8px;
         line-height: 1.4;
+        text-align: center;
     }
 
     #chapter-title {
         flex: 1 1 0;
         min-width: 0;
         max-width: max-content;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
     }
 
     #progress-rate {
@@ -105,17 +57,10 @@
             flex-direction: column;
             width: 100%;
             min-width: 44px;
-            min-height: 58px;
+            min-height: 56px;
             padding: 6px 2px;
             gap: 3px;
         }
-    }
-
-    .appearance-mark {
-        flex-basis: 20px;
-        width: 20px;
-        height: 20px;
-        font-size: 20px;
     }
 
     @media (max-height: 500px) {
@@ -129,4 +74,13 @@
             gap: 1px;
         }
     }
+}
+
+/* 桌面侧栏与移动页脚复用同一进度元素和排版规则。 */
+:is(#reader, #reader-actions) #progress-rate {
+    color: var(--appearance-accent);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
 }

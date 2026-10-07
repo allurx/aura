@@ -24,15 +24,12 @@ html {
     outline: none;
 }
 
-/* 滚动容器和紧邻的导航行向内描边，避免被父容器裁切。 */
+/* 滚动容器、贴边按钮和导航行向内描边，避免被父容器裁切。 */
 :where(.panel-scroll[tabindex], #book-list):focus-visible,
+.icon-button:is(.icon-button-edge-left, .icon-button-edge-right):focus-visible,
 #bookshelf #category-navigation button:focus-visible,
 #reader #toc > .main > button:focus-visible {
     outline-offset: -2px;
-}
-
-#bookshelf #book-list :is(.book-category, .book-delete):focus-visible {
-    opacity: 1;
 }
 
 :where(input[type="range"]):focus-visible {
@@ -48,6 +45,6 @@ html {
     /* 系统高对比模式会移除填充和阴影，用双线保留选中状态，外环仍专用于焦点。 */
     #setting .theme-options .theme-option:has(input:checked) {
         border: 3px double Highlight;
-        padding: calc(0.5rem - 2px);
+        padding: 4px;
     }
 }

@@ -23,23 +23,13 @@
     background-color: transparent;
 
     .chapter-heading {
-        margin-bottom: 1.2em;
-        font-size: 1.58em;
+        margin-bottom: 1.4em;
+        font-size: 1.5em;
         color: inherit;
         line-height: 1.45;
         font-weight: 500;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.02em;
         overflow-wrap: anywhere;
-
-        &::before {
-            display: block;
-            width: 32px;
-            height: 4px;
-            margin-bottom: 0.8em;
-            border-radius: 999px;
-            background: var(--appearance-accent);
-            content: "";
-        }
     }
     > p {
         margin-bottom: var(--reader-paragraph-spacing);
@@ -54,6 +44,13 @@
         h6 {
             margin-block: 1em 0.6em;
             line-height: 1.4;
+            font-weight: 600;
+        }
+        h1 {
+            font-size: 1.5em;
+        }
+        h2 {
+            font-size: 1.3em;
         }
         p,
         blockquote,

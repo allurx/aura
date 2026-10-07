@@ -44,7 +44,7 @@ export interface BookImportResult {
 export interface BookSummary {
     book: Book;
     title: string;
-    progress: string;
+    progress: { chapterNumber: number; chapterCount: number } | null;
 }
 
 /**
@@ -161,9 +161,7 @@ export async function getBookSummaries(): Promise<BookSummary[]> {
                     book,
                     title: getBookTitle(book.fileName),
                     progress:
-                        position && chapters
-                            ? `第 ${String(position.chapterNumber)} / ${String(chapters)} 章`
-                            : "暂无阅读位置",
+                        position && chapters ? { chapterNumber: position.chapterNumber, chapterCount: chapters } : null,
                 };
             });
     });

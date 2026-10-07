@@ -6,8 +6,8 @@
 .icon,
 .icon-control::before {
     display: block;
-    width: var(--icon-size, 20px);
-    height: var(--icon-size, 20px);
+    width: var(--icon-size, 18px);
+    height: var(--icon-size, 18px);
     flex: 0 0 auto;
     background-color: currentColor;
     mask: var(--icon-image) center / contain no-repeat;
@@ -149,14 +149,14 @@
     display: inline-grid;
     flex: 0 0 var(--icon-button-size);
     /* 图形与反馈区域同心，点击区保留独立尺寸。 */
-    grid-template: 32px / 32px;
+    grid-template: 36px / 36px;
     place-content: center;
     appearance: none;
     width: var(--icon-button-size);
     height: var(--icon-button-size);
     padding: 0;
     border: 0;
-    border-radius: 8px;
+    border-radius: 10px;
     background: transparent;
     line-height: 0;
 
@@ -175,7 +175,7 @@
     }
 
     &:active:enabled:not([aria-disabled="true"]) > .icon {
-        transform: scale(0.92);
+        transform: scale(0.96);
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -191,14 +191,14 @@
     /* 按图形边缘对齐，按钮外扩不超过容器的可用内边距。 */
     &.icon-button-edge-left {
         margin-left: max(
-            calc((var(--icon-size, 20px) - var(--icon-button-size)) / 2),
+            calc((var(--icon-size, 18px) - var(--icon-button-size)) / 2),
             calc(-1 * var(--ui-padding-left, 0px))
         );
     }
 
     &.icon-button-edge-right {
         margin-right: max(
-            calc((var(--icon-size, 20px) - var(--icon-button-size)) / 2),
+            calc((var(--icon-size, 18px) - var(--icon-button-size)) / 2),
             calc(-1 * var(--ui-padding-right, 0px))
         );
     }

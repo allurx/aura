@@ -3,17 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import "./styles/base.css";
-import "./styles/motion.css";
-import "./styles/panel-scroll.css";
-import "./styles/focus.css";
-import "./styles/select.css";
-import "./components/icon/icon.css";
-import "./components/search-field/search-field.css";
-import "./components/dialog/dialog.css";
-import "./components/license/license.css";
-import "./components/overlay/overlay.css";
-import "./settings/setting-ui.css";
 import { PageName } from "./constants/page-name";
 import type Page from "./pages/page";
 import Bookshelf from "./pages/bookshelf/bookshelf";
@@ -30,6 +19,7 @@ class Main {
     private readonly appRoot: HTMLElement;
     private readonly router: Router;
     private currentPage: Page | null = null;
+    private renderVersion = 0;
     private readonly errorDialog = new Dialog({ containerElement: document.body });
     private errorVisible = false;
 
@@ -53,16 +43,8 @@ class Main {
             void this.showError(event.reason);
         });
 
-        // 默认外观读取计算样式；部分浏览器会先执行模块，再完成后置样式表的加载。
-        if (document.readyState === "complete") this.router.start();
-        else
-            window.addEventListener(
-                "load",
-                () => {
-                    this.router.start();
-                },
-                { once: true }
-            );
+        // 首屏样式由 HTML 加载，原生 module 执行前已就绪，无需等待整页 load。
+        this.router.start();
     }
 
     /**
@@ -93,9 +75,26 @@ class Main {
      * 页面替换前结束旧生命周期，避免遗留监听器和异步任务继续操作界面。
      */
     private async render(route: AppRoute): Promise<void> {
-        this.currentPage?.dispose();
-        this.currentPage = this.createPage(route);
-        await this.currentPage.mount(this.appRoot);
+        const version = ++this.renderVersion;
+        const replacePage = async (): Promise<void> => {
+            // 原生过渡会延迟 DOM 更新，快速导航时只挂载最新请求。
+            if (version !== this.renderVersion) return;
+            this.currentPage?.dispose();
+            this.currentPage = this.createPage(route);
+            await this.currentPage.mount(this.appRoot);
+        };
+
+        // 新页面和阅读位置准备好后再淡入，首次加载与减少动效模式直接呈现。
+        if (
+            this.currentPage &&
+            typeof document.startViewTransition === "function" &&
+            !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ) {
+            const transition = document.startViewTransition(replacePage);
+            // 快速导航或视口变化可能取消快照动画；DOM 更新失败仍由下面两个 Promise 传播。
+            void transition.ready.catch(() => undefined);
+            await Promise.all([transition.updateCallbackDone, transition.finished]);
+        } else await replacePage();
     }
 
     /**

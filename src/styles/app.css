@@ -1,0 +1,20 @@
+/*
+ * Copyright 2026 allurx
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* 首屏所需样式统一从 HTML 加载，开发与生产使用相同级联顺序。 */
+@import "./appearance-preference.css";
+@import "../pages/bookshelf/bookshelf.css";
+@import "../pages/reader/reader.css";
+@import "./base.css";
+@import "./motion.css";
+@import "./panel-scroll.css";
+@import "./focus.css";
+@import "./select.css";
+@import "../components/icon/icon.css";
+@import "../components/search-field/search-field.css";
+@import "../components/dialog/dialog.css";
+@import "../components/license/license.css";
+@import "../components/overlay/overlay.css";
+@import "../settings/setting-ui.css";

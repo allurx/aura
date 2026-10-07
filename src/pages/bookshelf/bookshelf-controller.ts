@@ -19,6 +19,7 @@ import {
     type BookSummary,
 } from "./bookshelf-service";
 import { bookshelfSession } from "./bookshelf-state";
+import { resetData } from "./reset-data";
 import { DEFAULT_CATEGORY_ID, getCategory } from "@/domain/category/category";
 import { bind } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
@@ -27,7 +28,6 @@ import SettingController from "@/settings/setting-controller";
 import { PageName } from "@/constants/page-name";
 import OperationError from "@/errors/operation-error";
 import { BOOK_FILE_ACCEPT, getBookFormat } from "@/domain/file/book-format";
-import { resetData } from "@/reset-data";
 
 /**
  * 编排书架筛选、数据操作与页面外观，并在异步渲染前核对页面生命周期。

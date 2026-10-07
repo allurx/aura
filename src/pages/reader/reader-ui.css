@@ -17,10 +17,10 @@
     overflow: hidden;
     resize: horizontal;
     border: 1px solid var(--appearance-border);
-    border-radius: 26px;
+    border-radius: 20px;
     background-color: var(--reader-surface);
     color: var(--reader-color);
-    box-shadow: var(--appearance-shadow-raised);
+    box-shadow: var(--appearance-shadow-soft);
     line-height: 1.6;
 
     &[data-mobile-controls] {
@@ -52,7 +52,7 @@
 
 /* 工具移到底部时，设置沿入口所在边展开；面板内部呈现仍由设置组件负责。 */
 #reader[data-mobile-controls] > #setting {
-    --setting-hidden-translation: translateY(0.65rem);
+    --setting-hidden-translation: translateY(100%);
     --setting-inset: auto 0 var(--viewport-bottom);
     --setting-width: 100%;
     --setting-max-height: min(
@@ -61,8 +61,8 @@
     );
     --setting-border-radius: 1.25rem 1.25rem 0 0;
     --setting-border-bottom: 0;
-    --setting-padding-left: max(1.35rem, env(safe-area-inset-left));
-    --setting-padding-right: max(1.35rem, env(safe-area-inset-right));
+    --setting-padding-left: max(16px, env(safe-area-inset-left));
+    --setting-padding-right: max(16px, env(safe-area-inset-right));
 }
 
 /* 触摸布局由正文中部唤出工具；辅助入口仍在键盘和阅读顺序中。 */
@@ -112,11 +112,11 @@
 }
 
 #reader > #header {
-    --tools-offset: -0.5rem;
+    --tools-offset: -100%;
 }
 
 #reader > #footer {
-    --tools-offset: 0.5rem;
+    --tools-offset: 100%;
 }
 
 #reader:not([data-reading-tools-visible]) > :is(#header, #footer) {
@@ -150,13 +150,13 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    --icon-size: 20px;
+    --icon-size: 18px;
     gap: 6px;
     min-width: 44px;
     min-height: 44px;
     padding: 8px;
     border: 1px solid transparent;
-    border-radius: 13px;
+    border-radius: 10px;
     background: transparent;
     color: inherit;
     font: inherit;
@@ -167,9 +167,7 @@
     transition:
         background-color var(--motion-duration-fast) var(--motion-ease),
         border-color var(--motion-duration-fast) var(--motion-ease),
-        color var(--motion-duration-fast) var(--motion-ease),
-        box-shadow var(--motion-duration-fast) var(--motion-ease),
-        transform var(--motion-duration-fast) var(--motion-ease);
+        color var(--motion-duration-fast) var(--motion-ease);
 
     &[hidden] {
         display: none;
@@ -177,21 +175,19 @@
 
     @media (hover: hover) and (pointer: fine) {
         &:hover:not(:disabled) {
-            background: color-mix(in srgb, currentColor 6%, transparent);
-            box-shadow: var(--appearance-shadow-soft);
-            transform: translateY(-1px);
+            background: var(--appearance-selection);
+            color: var(--appearance-accent);
         }
     }
 
     &:active:not(:disabled) {
-        background: color-mix(in srgb, currentColor 10%, transparent);
-        box-shadow: none;
-        transform: scale(0.96);
+        background: color-mix(in srgb, var(--appearance-accent) 14%, var(--appearance-panel));
+        color: var(--appearance-accent);
     }
 
     &:is([aria-expanded="true"], [aria-pressed="true"]) {
-        border-color: color-mix(in srgb, currentColor 20%, transparent);
-        background: color-mix(in srgb, currentColor 10%, transparent);
+        background: var(--appearance-tint);
+        color: var(--appearance-accent);
     }
 
     @media (forced-colors: active) {
@@ -203,15 +199,24 @@
     }
 
     &:disabled {
-        opacity: 0.35;
-        cursor: default;
+        opacity: 0.4;
+        cursor: not-allowed;
     }
 
     @media (prefers-reduced-motion: reduce) {
         transition: none;
-
-        &:is(:hover, :active):not(:disabled) {
-            transform: none;
-        }
     }
+}
+
+/* 文字式外观符号与相邻图标共用视觉高度，不随工具所在布局改变大小。 */
+:is(#reader, #reader-actions) .appearance-mark {
+    display: inline-flex;
+    flex: 0 0 22px;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 18px;
+    font-family: Georgia, serif;
+    font-size: 18px;
+    line-height: 1;
 }

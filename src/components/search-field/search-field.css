@@ -5,15 +5,20 @@
 
 /* 共享搜索控件的表面与边界，尺寸和布局由使用页面决定。 */
 .search-field {
-    border: 1px solid var(--appearance-control-border);
+    border: 1px solid color-mix(in srgb, var(--appearance-color) 16%, transparent);
     border-radius: var(--control-radius);
-    background: var(--appearance-panel);
+    background: color-mix(in srgb, var(--appearance-panel) 80%, transparent);
     color: var(--appearance-color);
     cursor: text;
     transition: border-color var(--motion-duration-fast) var(--motion-ease);
 
     > .icon {
         color: var(--appearance-muted-color);
+        transition: color var(--motion-duration-fast) var(--motion-ease);
+    }
+
+    &:focus-within {
+        border-color: color-mix(in srgb, var(--appearance-accent) 65%, transparent);
     }
 
     &:focus-within > .icon {
@@ -37,7 +42,7 @@
 
     @media (hover: hover) and (pointer: fine) {
         &:hover:not(:focus-within) {
-            border-color: var(--appearance-muted-color);
+            border-color: color-mix(in srgb, var(--appearance-color) 28%, transparent);
         }
     }
 

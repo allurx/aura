@@ -22,18 +22,22 @@
         <script>
             // 在样式加载前同步恢复页面主题，避免首次绘制闪现默认配色。
             (() => {
-                const page =
-                    window.location.hash === "#/reader" && sessionStorage.getItem("aura.router.reader.bookId")
-                        ? "reader"
-                        : "bookshelf";
-                const appearance = JSON.parse(localStorage.getItem(`aura.${page}.appearance`) ?? "{}");
-                const theme = appearance.theme ?? "sunny";
-                Object.assign(document.documentElement.dataset, { page, theme });
+                const root = document.documentElement;
+                Object.assign(root.dataset, { page: "bookshelf", theme: "sunny" });
+                try {
+                    const page =
+                        window.location.hash === "#/reader" && sessionStorage.getItem("aura.router.reader.bookId")
+                            ? "reader"
+                            : "bookshelf";
+                    root.dataset.page = page;
+                    const appearance = JSON.parse(localStorage.getItem(`aura.${page}.appearance`) ?? "{}");
+                    if (typeof appearance?.theme === "string") root.dataset.theme = appearance.theme;
+                } catch {
+                    // 与外观仓库一致：读取受限或快照损坏时保留默认主题，不阻断首屏。
+                }
             })();
         </script>
-        <link rel="stylesheet" href="./styles/appearance-preference.css" />
-        <link rel="stylesheet" href="./pages/bookshelf/bookshelf.css" />
-        <link rel="stylesheet" href="./pages/reader/reader.css" />
+        <link rel="stylesheet" href="./styles/app.css" />
         <script src="./main.ts" type="module"></script>
     </head>
     <body>

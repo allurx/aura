@@ -6,16 +6,16 @@
 /* 页面与主题色样共用调色板；显式 UI 外观仍由 inline style 优先覆盖。 */
 :where(html, .theme-swatch) {
     color-scheme: light;
-    --appearance-canvas: #f3f8ff;
+    --appearance-canvas: #eaf0f9;
     --appearance-surface: #fffefa;
-    --appearance-muted-surface: #edf3fc;
+    --appearance-muted-surface: #e3eaf5;
     --appearance-panel: #ffffff;
     --appearance-color: #263653;
     --appearance-muted-color: #5c6d86;
     --appearance-accent: #365acb;
     --appearance-accent-secondary: #aa4b28;
     --appearance-on-accent: #ffffff;
-    --appearance-selection: #e0eaff;
+    --appearance-selection: #d5e2ff;
     --appearance-tint: #dcecff;
     --appearance-glow: #ffeccf;
     --appearance-danger: #b4324d;
@@ -26,31 +26,31 @@
     --appearance-cover-ink: #27354b;
 
     --appearance-focus: var(--appearance-accent);
-    --appearance-border: color-mix(in srgb, var(--appearance-color) 12%, transparent);
+    --appearance-border: color-mix(in srgb, var(--appearance-color) 14%, transparent);
     --appearance-control-border: color-mix(in srgb, var(--appearance-color) 24%, transparent);
-    --control-shadow: 0 2px 4px color-mix(in srgb, var(--appearance-shadow-color) 14%, transparent);
+    --control-shadow: 0 1px 2px color-mix(in srgb, var(--appearance-shadow-color) 10%, transparent);
     --appearance-backdrop: color-mix(in srgb, var(--appearance-shadow-color) 20%, transparent);
     --appearance-shadow-soft:
-        0 2px 4px color-mix(in srgb, var(--appearance-shadow-color) 5%, transparent),
-        0 8px 24px color-mix(in srgb, var(--appearance-shadow-color) 9%, transparent);
+        0 1px 3px color-mix(in srgb, var(--appearance-shadow-color) 5%, transparent),
+        0 6px 18px color-mix(in srgb, var(--appearance-shadow-color) 7%, transparent);
     --appearance-shadow-raised:
-        0 4px 8px color-mix(in srgb, var(--appearance-shadow-color) 9%, transparent),
-        0 18px 42px color-mix(in srgb, var(--appearance-shadow-color) 14%, transparent);
+        0 3px 6px color-mix(in srgb, var(--appearance-shadow-color) 6%, transparent),
+        0 12px 32px color-mix(in srgb, var(--appearance-shadow-color) 11%, transparent);
     --appearance-shadow-floating:
-        0 8px 20px color-mix(in srgb, var(--appearance-shadow-color) 12%, transparent),
-        0 28px 80px color-mix(in srgb, var(--appearance-shadow-color) 22%, transparent);
+        0 4px 12px color-mix(in srgb, var(--appearance-shadow-color) 8%, transparent),
+        0 20px 48px color-mix(in srgb, var(--appearance-shadow-color) 16%, transparent);
 }
 
 :where(html, .theme-swatch)[data-theme="breeze"] {
-    --appearance-canvas: #edf9fb;
+    --appearance-canvas: #e1f0f2;
     --appearance-surface: #fafffe;
-    --appearance-muted-surface: #e4f3f5;
+    --appearance-muted-surface: #d9ebed;
     --appearance-panel: #f9fffe;
     --appearance-color: #223e4b;
     --appearance-muted-color: #526d78;
     --appearance-accent: #126c7b;
     --appearance-accent-secondary: #a34c4a;
-    --appearance-selection: #d1eef0;
+    --appearance-selection: #c7e7ea;
     --appearance-tint: #c9edf2;
     --appearance-glow: #fde7db;
     --appearance-shadow-color: #387986;
@@ -60,15 +60,15 @@
 }
 
 :where(html, .theme-swatch)[data-theme="meadow"] {
-    --appearance-canvas: #f2f8ee;
+    --appearance-canvas: #e7eedf;
     --appearance-surface: #fcfff7;
-    --appearance-muted-surface: #e9f1df;
+    --appearance-muted-surface: #dde7d3;
     --appearance-panel: #fdfff9;
     --appearance-color: #2e4134;
-    --appearance-muted-color: #5d715f;
-    --appearance-accent: #36734d;
+    --appearance-muted-color: #596b5b;
+    --appearance-accent: #2e6744;
     --appearance-accent-secondary: #8b5c1b;
-    --appearance-selection: #dbedce;
+    --appearance-selection: #d2e4c3;
     --appearance-tint: #d8edce;
     --appearance-glow: #fff0bd;
     --appearance-shadow-color: #5e7e50;
@@ -78,15 +78,15 @@
 }
 
 :where(html, .theme-swatch)[data-theme="peach"] {
-    --appearance-canvas: #fff5ee;
+    --appearance-canvas: #f5e7de;
     --appearance-surface: #fffdf8;
-    --appearance-muted-surface: #f9eade;
+    --appearance-muted-surface: #efddd1;
     --appearance-panel: #fffaf5;
     --appearance-color: #4b3432;
     --appearance-muted-color: #80615a;
-    --appearance-accent: #a3452e;
+    --appearance-accent: #993d28;
     --appearance-accent-secondary: #42775f;
-    --appearance-selection: #fbe1d1;
+    --appearance-selection: #f3d6c4;
     --appearance-tint: #ffe1cb;
     --appearance-glow: #f9edb8;
     --appearance-shadow-color: #a27056;
@@ -96,15 +96,15 @@
 }
 
 :where(html, .theme-swatch)[data-theme="blossom"] {
-    --appearance-canvas: #faf2fb;
+    --appearance-canvas: #eee4f0;
     --appearance-surface: #fffaff;
-    --appearance-muted-surface: #f1e5f4;
+    --appearance-muted-surface: #e6d9eb;
     --appearance-panel: #fffbff;
     --appearance-color: #45324f;
-    --appearance-muted-color: #79617e;
-    --appearance-accent: #8b4793;
+    --appearance-muted-color: #735b78;
+    --appearance-accent: #7e3c86;
     --appearance-accent-secondary: #a34764;
-    --appearance-selection: #edd9f0;
+    --appearance-selection: #e4cde9;
     --appearance-tint: #ebdafa;
     --appearance-glow: #ffe2e4;
     --appearance-shadow-color: #896494;
@@ -114,16 +114,16 @@
 }
 
 :where(html, .theme-swatch)[data-theme="paper"] {
-    --appearance-canvas: #f5f0e5;
+    --appearance-canvas: #eae2d2;
     --appearance-surface: #fffaf0;
-    --appearance-muted-surface: #ebe4d4;
+    --appearance-muted-surface: #e1d7c3;
     --appearance-panel: #fbf7ee;
     --appearance-color: #443b2f;
     --appearance-muted-color: #6e614e;
-    --appearance-accent: #7c571f;
+    --appearance-accent: #704c17;
     --appearance-accent-secondary: #526e64;
     --appearance-on-accent: #ffffff;
-    --appearance-selection: #e9ddc4;
+    --appearance-selection: #ded0b5;
     --appearance-tint: #e8ddc6;
     --appearance-glow: #f5e8ce;
     --appearance-danger: #a83e45;

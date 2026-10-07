@@ -33,14 +33,15 @@ export default class EpubContent {
             block.append(this.createNode(node));
             fragment.append(block);
         });
-        root.replaceChildren(fragment);
-
-        // 所有图片具备最终尺寸后才恢复阅读锚点，避免迟到的图片推走正文。
+        // 在片段中等图片解码完成，再整体挂载并恢复锚点，避免先绘制章首或未定高的图片。
         try {
             await Promise.all(this.images.map((image) => image.decode()));
         } catch (error) {
             // 页面退出会主动撤销图片 URL；已取消的呈现不再向新页面报告解码失败。
             if (!signal.aborted) throw error;
+        } finally {
+            // 解码失败时也保持正文对应已提交的目标章，原始错误继续向上传递。
+            if (!signal.aborted) root.replaceChildren(fragment);
         }
     }
 
