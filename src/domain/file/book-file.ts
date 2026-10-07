@@ -3,10 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type { EpubResource } from "./epub";
+
 /**
- * 共享正文的来源标识；hash 用于去重，正文只保存在章节中。
+ * 同内容书籍共享原文件与阅读资源；source 的原始字节用于无损导出。
  */
-export default interface BookFile {
+type BookFile = {
     id: string;
     hash: string;
-}
+    source: Blob;
+} & ({ format: "txt" } | { format: "epub"; resources: EpubResource[] });
+
+export type { BookFile as default };

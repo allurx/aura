@@ -14,8 +14,8 @@ export default interface Toc {
 }
 
 /**
- * 从最后一章取得全书物理总行数。
+ * 从最后一个阅读单元取得全书位置总数。
  */
-export function numberOfLines(toc: Toc): number {
-    return toc.entries[toc.entries.length - 1]?.endBookLineNumber ?? 0;
+export function numberOfPositions(toc: Toc): number {
+    return toc.entries[toc.entries.length - 1]?.endPosition ?? 0;
 }

@@ -35,6 +35,10 @@
     --icon-image: url("../../assets/images/bookshelf-clear.svg");
 }
 
+.icon-download {
+    --icon-image: url("../../assets/images/download.svg");
+}
+
 .icon-close {
     --icon-image: url("../../assets/images/close.svg");
 }

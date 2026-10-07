@@ -7,8 +7,8 @@ import { run, bind } from "@/utils/event-util";
 import AppUi from "./app/app-ui";
 import ReaderUi from "./reader-ui";
 import type Progress from "@/domain/progress/progress";
-import { toBookLineNumber } from "@/domain/chapter/chapter";
-import { numberOfLines } from "@/domain/toc/toc";
+import { toBookPosition } from "@/domain/chapter/chapter";
+import { numberOfPositions } from "@/domain/toc/toc";
 import { initReader, updateProgress, getChapter } from "./reader-service";
 import ContentUi from "./content/content-ui";
 import TocUi from "./toc/toc-ui";
@@ -91,28 +91,30 @@ export default class ReaderController {
         const state = await initReader(bookId);
         if (signal.aborted) return;
         this.state = state;
-        this.initialized = true;
         this.readerUi.renderBookTitle(state.book.fileName);
         this.tocUi.renderEntries(state.toc.entries);
-        this.renderCurrentChapter();
+        this.contentUi.init(state.file, signal);
+        await this.renderCurrentChapter();
+        if (!this.isActive()) return;
+        this.initialized = true;
         this.bindEvent(signal);
     }
 
     /**
      * 渲染当前章、工具栏切章状态和阅读进度。
      */
-    private renderCurrentChapter(): void {
+    private async renderCurrentChapter(): Promise<void> {
         // 正文先重建，再按段落锚点恢复位置，不能沿用旧章节的像素偏移。
-        this.contentUi
-            .renderChapter(this.state.chapter.title, this.state.chapter.lines)
-            .restoreProgress(this.state.progress.chapterLineNumber, this.state.progress.lineVisibleRatio);
+        await this.contentUi.renderChapter(this.state.chapter);
+        if (!this.isActive()) return;
+        this.contentUi.restoreProgress(this.state.progress.blockNumber, this.state.progress.blockVisibleRatio);
         this.readerUi.renderChapterNavigation(this.state.progress.chapterNumber, this.state.toc.entries.length);
 
         // 进度显示与目录标记使用同一份已提交进度。
         this.readerUi.renderChapterInfo(
             this.state.chapter.title,
-            toBookLineNumber(this.state.chapter, this.state.progress.chapterLineNumber),
-            numberOfLines(this.state.toc)
+            toBookPosition(this.state.chapter, this.state.progress.blockNumber),
+            numberOfPositions(this.state.toc)
         );
         this.tocUi.highlightCurrentChapter(this.state.progress.chapterNumber);
     }
@@ -150,8 +152,8 @@ export default class ReaderController {
         await this.updateProgress(position);
         if (this.isActive()) {
             this.readerUi.renderProgress(
-                toBookLineNumber(this.state.chapter, position.chapterLineNumber),
-                numberOfLines(this.state.toc)
+                toBookPosition(this.state.chapter, position.blockNumber),
+                numberOfPositions(this.state.toc)
             );
         }
     }
@@ -182,12 +184,13 @@ export default class ReaderController {
                 // 新章进度先持久化，再将正文和工具状态切换到目标章。
                 await this.updateProgress({
                     chapterNumber,
-                    chapterLineNumber: 1,
-                    lineVisibleRatio: 1,
+                    blockNumber: 1,
+                    blockVisibleRatio: 1,
                 });
                 if (!this.isActive()) return;
                 this.state.chapter = chapter;
-                this.renderCurrentChapter();
+                await this.renderCurrentChapter();
+                if (!this.isActive()) return;
                 this.readerUi.hideReadingTools();
             });
         } finally {
@@ -289,14 +292,27 @@ export default class ReaderController {
             }, signal);
 
         // 滚动保存只接受稳定正文的位置。
-        this.contentUi.bindContentScroll(async (chapterLineNumber, lineVisibleRatio) => {
+        this.contentUi.bindContentScroll(async (blockNumber, blockVisibleRatio) => {
             if (this.chapterLoading || this.returningToBookshelf || this.appearancePosition) return;
-            await this.updateProgress({ chapterLineNumber, lineVisibleRatio });
+            await this.updateProgress({ blockNumber, blockVisibleRatio });
             if (!this.isActive()) return;
             this.readerUi.renderProgress(
-                toBookLineNumber(this.state.chapter, chapterLineNumber),
-                numberOfLines(this.state.toc)
+                toBookPosition(this.state.chapter, blockNumber),
+                numberOfPositions(this.state.toc)
             );
+        }, signal);
+
+        this.contentUi.bindBookLinks(async (path, fragment) => {
+            if (this.chapterLoading || this.returningToBookshelf) return;
+            const target = this.state.toc.entries.find(
+                (entry) => entry.path === path && (!fragment || entry.anchors?.includes(fragment))
+            );
+            if (!target) return;
+            await this.selectChapter(target.chapterNumber);
+            if (this.isActive() && this.state.progress.chapterNumber === target.chapterNumber) {
+                this.contentUi.scrollToFragment(fragment);
+                await this.saveReadingPosition();
+            }
         }, signal);
 
         // 选章成功回到正文；取消目录仍由原生对话框恢复入口焦点。

@@ -4,6 +4,7 @@
  */
 
 import Ui from "@/components/ui";
+import { getBookTitle } from "@/domain/file/book-format";
 import Overlay from "@/components/overlay/overlay";
 import { assertExists } from "@/utils/assert-util";
 import { bind } from "@/utils/event-util";
@@ -335,24 +336,24 @@ export default class ReaderUi extends Ui {
      * 显示书名，完整文件名保留为悬停提示。
      */
     public renderBookTitle(title: string): void {
-        this.bookTitle.textContent = title.replace(/\.txt$/i, "");
+        this.bookTitle.textContent = getBookTitle(title);
         this.bookTitle.title = title;
     }
 
     /**
      * 切章后同步章名与全书进度，显示节点可随桌面或移动布局移动。
      */
-    public renderChapterInfo(title: string, bookLineNumber: number, numberOfLines: number): void {
+    public renderChapterInfo(title: string, bookPosition: number, positionCount: number): void {
         this.chapterTitle.textContent = title;
         this.chapterTitle.title = title;
-        this.renderProgress(bookLineNumber, numberOfLines);
+        this.renderProgress(bookPosition, positionCount);
     }
 
     /**
-     * 全书物理行号换算为百分比，空书为零。
+     * 按全书稳定位置换算百分比，空书为零。
      */
-    public renderProgress(bookLineNumber: number, numberOfLines: number): void {
-        const ratio = numberOfLines === 0 ? 0 : Math.min(Math.max(bookLineNumber / numberOfLines, 0), 1);
+    public renderProgress(bookPosition: number, positionCount: number): void {
+        const ratio = positionCount === 0 ? 0 : Math.min(Math.max(bookPosition / positionCount, 0), 1);
         this.progressRate.textContent = `${(ratio * 100).toFixed(2)}%`;
     }
 }

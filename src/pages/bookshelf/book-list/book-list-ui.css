@@ -115,7 +115,8 @@
         overflow-wrap: anywhere;
     }
     .book-tools {
-        display: flex;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
         flex-wrap: wrap;
         align-items: center;
         justify-content: space-between;
@@ -124,6 +125,7 @@
         margin-top: 0.1rem;
     }
     .book-category {
+        grid-column: 1 / -1;
         display: block;
         flex: 1 1 44px;
         min-width: 44px;
@@ -160,6 +162,11 @@
             opacity var(--motion-duration-fast) var(--motion-ease),
             color var(--motion-duration-fast) var(--motion-ease),
             background-color var(--motion-duration-fast) var(--motion-ease);
+    }
+    .book-export {
+        --icon-size: 18px;
+        justify-self: start;
+        color: var(--appearance-muted-color);
     }
     .shelf-empty {
         grid-column: 1 / -1;

@@ -28,6 +28,7 @@
     },
     "prettier": "@allurx/web-foundation/prettier",
     "dependencies": {
-        "chardet": "2.2.0"
+        "chardet": "2.2.0",
+        "fflate": "0.8.3"
     }
 }

@@ -54,7 +54,7 @@ export default class BookListUi extends Ui {
             const title = document.createElement("h2");
             title.textContent = searching ? "没有找到这本书" : "给书架添一本书吧";
             const hint = document.createElement("p");
-            hint.textContent = searching ? "试试其他书名，或清除搜索。" : "导入一本 TXT，让故事从这里开始。";
+            hint.textContent = searching ? "试试其他书名，或清除搜索。" : "导入 TXT 或 EPUB，开始阅读。";
 
             empty.append(symbol, title, hint);
             this.root.replaceChildren(empty);
@@ -86,8 +86,17 @@ export default class BookListUi extends Ui {
         onRead: (id: string) => void,
         onDelete: (id: string) => Promise<void>,
         onMove: (id: string, categoryId: string) => Promise<boolean>,
+        onExport: (id: string) => Promise<void>,
         signal: AbortSignal
     ): void {
+        delegate(
+            this.root,
+            ".book-export",
+            "click",
+            (_, button) => onExport(assertExists(button.closest<HTMLElement>(".book")?.dataset["id"])),
+            { signal }
+        );
+
         // 阅读委托给整块书封，避免标题子节点影响书籍定位。
         delegate(
             this.root,
@@ -179,7 +188,7 @@ export default class BookListUi extends Ui {
         const open = document.createElement("button");
         open.type = "button";
         open.className = "book-open";
-        open.title = summary.title;
+        open.title = summary.book.fileName;
         open.setAttribute("aria-label", `阅读《${summary.title}》，${summary.progress}`);
         const title = document.createElement("span");
         title.className = "book-title";
@@ -224,8 +233,18 @@ export default class BookListUi extends Ui {
         icon.setAttribute("aria-hidden", "true");
         remove.append(icon);
 
+        const exportButton = document.createElement("button");
+        exportButton.type = "button";
+        exportButton.className = "book-export icon-button";
+        exportButton.title = "导出原文件";
+        exportButton.setAttribute("aria-label", `导出《${summary.title}》原文件`);
+        const exportIcon = document.createElement("span");
+        exportIcon.className = "icon icon-download";
+        exportIcon.setAttribute("aria-hidden", "true");
+        exportButton.append(exportIcon);
+
         // 按阅读、进度和就近操作的顺序组装书目。
-        tools.append(categorySelect, remove);
+        tools.append(categorySelect, exportButton, remove);
         book.append(open, progress, tools);
         return book;
     }

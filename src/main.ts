@@ -53,7 +53,16 @@ class Main {
             void this.showError(event.reason);
         });
 
-        this.router.start();
+        // 默认外观读取计算样式；部分浏览器会先执行模块，再完成后置样式表的加载。
+        if (document.readyState === "complete") this.router.start();
+        else
+            window.addEventListener(
+                "load",
+                () => {
+                    this.router.start();
+                },
+                { once: true }
+            );
     }
 
     /**
@@ -68,12 +77,12 @@ class Main {
             const primaryCause = cause instanceof AggregateError ? cause.cause : cause;
             const storageGuidance =
                 primaryCause instanceof DOMException && primaryCause.name === "QuotaExceededError"
-                    ? "浏览器存储空间不足，操作未完成。请保留原始 TXT，释放存储空间后重试。"
+                    ? "浏览器存储空间不足，操作未完成。请保留原始书籍文件，释放存储空间后重试。"
                     : undefined;
             const content =
                 error instanceof OperationError
                     ? [error.message, error.details, storageGuidance].filter(Boolean).join("\n\n")
-                    : (storageGuidance ?? "操作未完成。请重试；若仍然失败，请保留原始 TXT。");
+                    : (storageGuidance ?? "操作未完成。请重试；若仍然失败，请保留原始书籍文件。");
             await this.errorDialog.alert(content, { title: "操作失败" });
         } finally {
             this.errorVisible = false;

@@ -44,16 +44,17 @@ export async function parseChapters(file: File, fileId: string, encoding: Suppor
      */
     const appendChapter = (title: string, lines: string[], hasExplicitTitleLine: boolean) => {
         const chapter: Chapter = {
+            kind: "text",
             fileId,
             chapterNumber: chapters.length + 1,
             title,
             lines,
-            startBookLineNumber: currentBookLineNumber,
-            endBookLineNumber: currentBookLineNumber + lines.length + Number(hasExplicitTitleLine) - 1,
+            startPosition: currentBookLineNumber,
+            endPosition: currentBookLineNumber + lines.length + Number(hasExplicitTitleLine) - 1,
         };
 
         chapters.push(chapter);
-        currentBookLineNumber = chapter.endBookLineNumber + 1;
+        currentBookLineNumber = chapter.endPosition + 1;
     };
 
     for await (const line of readLines(file, encoding)) {

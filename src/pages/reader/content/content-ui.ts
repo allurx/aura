@@ -5,6 +5,9 @@
 
 import Ui from "@/components/ui";
 import { bind, run } from "@/utils/event-util";
+import type Chapter from "@/domain/chapter/chapter";
+import type BookFile from "@/domain/file/book-file";
+import EpubContent from "./epub-content";
 
 /**
  * 同一章排版变化前的临时视觉锚点，不写入阅读进度。
@@ -16,37 +19,87 @@ interface ContentPosition {
 }
 
 /**
- * 安全渲染章节正文，并分别维护临时视觉锚点和可持久化的行号位置。
+ * 安全渲染章节正文，并分别维护临时视觉锚点和可持久化的内容位置。
  */
 export default class ContentUi extends Ui {
     private scrollTimer: number | undefined;
+    private epub: EpubContent | undefined;
+    private signal!: AbortSignal;
 
     /**
-     * 标题与正文使用文本节点渲染，排版换行不改变用于恢复进度的原始行号。
-     * @param lines - 当前章的原始文本行，索引加一作为恢复进度的行号。
+     * 一次阅读会话共享图片 URL；销毁后不再接受异步呈现。
      */
-    public renderChapter(title: string, lines: string[]): this {
+    public init(file: BookFile, signal: AbortSignal): void {
+        this.signal = signal;
+        signal.addEventListener(
+            "abort",
+            () => {
+                this.epub?.destroy();
+            },
+            { once: true }
+        );
+        if (file.format === "epub") this.epub = new EpubContent(file.resources);
+    }
+
+    /**
+     * 各格式按自己的内容语义呈现，所有异步资源就绪后才允许恢复进度。
+     */
+    public async renderChapter(chapter: Chapter): Promise<void> {
         // 停止旧正文的延迟读取，在未挂载的片段中组装新章节。
         this.cancelPendingScroll();
+        if (this.signal.aborted) return;
+        if (chapter.kind === "epub" && this.epub) {
+            await this.epub.render(this.root, chapter.blocks, this.signal);
+            return;
+        }
+        if (chapter.kind !== "text") throw new Error("Content format does not match the opened book");
         const fragment = document.createDocumentFragment();
 
         // 章节标题独立于正文行号，不参与持久化进度定位。
         const heading = document.createElement("h2");
         heading.className = "chapter-heading";
-        heading.textContent = title;
+        heading.textContent = chapter.title;
         fragment.appendChild(heading);
 
         // 每个原始行对应一个安全文本节点，换行布局变化不改变行号契约。
-        lines.forEach((line, index) => {
+        chapter.lines.forEach((line, index) => {
             const paragraph = document.createElement("p");
-            paragraph.dataset["chapterLineNumber"] = String(index + 1);
+            paragraph.dataset["blockNumber"] = String(index + 1);
             paragraph.textContent = line;
             fragment.appendChild(paragraph);
         });
 
         // 操作按钮由外部工具栏持有，正文只保留自然块布局。
         this.root.replaceChildren(fragment);
-        return this;
+    }
+
+    /**
+     * 将书内链接交给阅读控制器，保留同章与跨章的统一进度保存路径。
+     */
+    public bindBookLinks(handler: (path: string, fragment: string) => Promise<void>, signal: AbortSignal): void {
+        bind(
+            this.root,
+            "click",
+            async (event: MouseEvent) => {
+                if (!(event.target instanceof Element)) return;
+                const link = event.target.closest<HTMLElement>("a[data-book-path]");
+                if (!link || !this.root.contains(link)) return;
+                event.preventDefault();
+                await handler(link.dataset["bookPath"] ?? "", link.dataset["bookFragment"] ?? "");
+            },
+            { signal }
+        );
+    }
+
+    /**
+     * 根据受控锚点映射定位，空片段表示文档开头。
+     */
+    public scrollToFragment(fragment: string): void {
+        const element = this.epub?.findAnchor(fragment);
+        if (!fragment) this.root.scrollTop = 0;
+        else if (element)
+            this.root.scrollTop += element.getBoundingClientRect().top - this.root.getBoundingClientRect().top;
+        this.dispatchContentScroll();
     }
 
     /**
@@ -59,7 +112,11 @@ export default class ContentUi extends Ui {
         for (const element of this.root.children) {
             const bounds = element.getBoundingClientRect();
             if (bounds.height <= 0) continue;
-            position = { element, top: bounds.top - top, height: bounds.height };
+            position = {
+                element,
+                top: bounds.top - top,
+                height: bounds.height,
+            };
             if (bounds.bottom > top) break;
         }
         return position;
@@ -78,40 +135,38 @@ export default class ContentUi extends Ui {
     }
 
     /**
-     * 按原始行号和段内比例恢复位置，不依赖旧字号下的像素偏移。
-     * @param chapterLineNumber - 当前章内从 1 开始的原始文本行号。
-     * @param lineVisibleRatio - 段落在视口上缘以下的剩余比例；1 表示从段首开始。
+     * 按内容块和块内比例恢复位置，不依赖旧排版的像素偏移。
+     * @param blockNumber - 当前阅读单元内从 1 开始的内容块序号。
+     * @param blockVisibleRatio - 内容块在视口上缘以下的剩余比例；1 表示从段首开始。
      */
-    public restoreProgress(chapterLineNumber: number, lineVisibleRatio: number): this {
+    public restoreProgress(blockNumber: number, blockVisibleRatio: number): this {
         // 首行完整可见代表章首；保留标题与正文之间的阅读留白。
-        if (chapterLineNumber === 1 && lineVisibleRatio === 1) {
+        if (blockNumber === 1 && blockVisibleRatio === 1) {
             this.root.scrollTop = 0;
             return this;
         }
 
         // 用新布局下的段落高度换算偏移，目标缺失时保持现有滚动位置。
-        const paragraph = this.root.querySelector<HTMLParagraphElement>(
-            `p[data-chapter-line-number="${String(chapterLineNumber)}"]`
-        );
+        const paragraph = this.root.querySelector<HTMLElement>(`[data-block-number="${String(blockNumber)}"]`);
         if (paragraph) {
             const top = paragraph.getBoundingClientRect().top - this.root.getBoundingClientRect().top;
-            this.root.scrollTop += top + paragraph.offsetHeight * (1 - lineVisibleRatio);
+            this.root.scrollTop += top + paragraph.offsetHeight * (1 - blockVisibleRatio);
         }
         return this;
     }
 
     /**
-     * 获取视口上缘所在行；超长段落使用上缘比例以支持准确恢复。
-     * @returns 行号与段内剩余比例；当前章没有正文行时返回 undefined。
+     * 获取视口上缘所在内容块；超长段落使用上缘比例恢复位置。
+     * @returns 内容块序号与可见比例；当前阅读单元没有正文时返回 undefined。
      */
-    public readProgress(): { chapterLineNumber: number; lineVisibleRatio: number } | undefined {
+    public readProgress(): { blockNumber: number; blockVisibleRatio: number } | undefined {
         const viewport = this.root.getBoundingClientRect();
-        const paragraphs = this.root.querySelectorAll<HTMLParagraphElement>("p[data-chapter-line-number]");
+        const paragraphs = this.root.querySelectorAll<HTMLElement>("[data-block-number]");
 
         // 标题可能因长文本或大字号占满视口，此时仍是章首而非章末。
         const firstParagraph = paragraphs[0];
         if (firstParagraph && firstParagraph.getBoundingClientRect().top >= viewport.top) {
-            return { chapterLineNumber: 1, lineVisibleRatio: 1 };
+            return { blockNumber: 1, blockVisibleRatio: 1 };
         }
 
         // 以首个可见段落为锚点，比例只描述视口上缘切入段落的位置。
@@ -119,8 +174,8 @@ export default class ContentUi extends Ui {
             const rect = paragraph.getBoundingClientRect();
             if (rect.height <= 0 || rect.bottom <= viewport.top || rect.top >= viewport.bottom) continue;
             return {
-                chapterLineNumber: Number(paragraph.dataset["chapterLineNumber"]),
-                lineVisibleRatio: Math.min(1, Math.max(0, (rect.bottom - viewport.top) / rect.height)),
+                blockNumber: Number(paragraph.dataset["blockNumber"]),
+                blockVisibleRatio: Math.min(1, Math.max(0, (rect.bottom - viewport.top) / rect.height)),
             };
         }
 
@@ -128,8 +183,8 @@ export default class ContentUi extends Ui {
         const lastParagraph = paragraphs[paragraphs.length - 1];
         return lastParagraph
             ? {
-                  chapterLineNumber: Number(lastParagraph.dataset["chapterLineNumber"]),
-                  lineVisibleRatio: 0,
+                  blockNumber: Number(lastParagraph.dataset["blockNumber"]),
+                  blockVisibleRatio: 0,
               }
             : undefined;
     }
@@ -154,7 +209,7 @@ export default class ContentUi extends Ui {
      * 滚动停止后向调用方报告当前位置，页面销毁时清理定时器。
      */
     public bindContentScroll(
-        handler: (chapterLineNumber: number, lineVisibleRatio: number) => Promise<void>,
+        handler: (blockNumber: number, blockVisibleRatio: number) => Promise<void>,
         signal: AbortSignal
     ): this {
         // 滚动停止后再读取当前几何位置，避免每次滚动事件都提交存储。
@@ -168,7 +223,7 @@ export default class ContentUi extends Ui {
                     run(async () => {
                         if (signal.aborted) return;
                         const progress = this.readProgress();
-                        if (progress) await handler(progress.chapterLineNumber, progress.lineVisibleRatio);
+                        if (progress) await handler(progress.blockNumber, progress.blockVisibleRatio);
                     });
                 }, 300);
             },

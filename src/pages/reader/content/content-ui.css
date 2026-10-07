@@ -44,6 +44,70 @@
     > p {
         margin-bottom: var(--reader-paragraph-spacing);
     }
+    .epub-block {
+        margin-bottom: var(--reader-paragraph-spacing);
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            margin-block: 1em 0.6em;
+            line-height: 1.4;
+        }
+        p,
+        blockquote,
+        pre,
+        ul,
+        ol,
+        dl,
+        figure {
+            margin-block: 0.7em;
+        }
+        ul,
+        ol {
+            padding-inline-start: 1.5em;
+        }
+        blockquote {
+            padding-inline-start: 1em;
+            border-inline-start: 3px solid var(--appearance-accent);
+        }
+        img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin-inline: auto;
+        }
+        a {
+            color: var(--appearance-accent);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        pre {
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        table {
+            display: block;
+            max-width: 100%;
+            overflow-x: auto;
+            border-collapse: collapse;
+        }
+        td,
+        th {
+            padding: 0.35em 0.6em;
+            border: 1px solid var(--appearance-muted-color);
+        }
+        figcaption {
+            font-size: 0.85em;
+            text-align: center;
+        }
+        hr {
+            border: 0;
+            border-top: 1px solid var(--appearance-muted-color);
+            margin-block: 1em;
+        }
+    }
 
     @media (max-width: 600px) {
         --ui-padding-left: 24px;
