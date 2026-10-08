@@ -16,7 +16,7 @@ npm ci
 
 支持桌面和移动端主流常青浏览器的当前及前一个稳定大版本。Vite 继承 Web Foundation 的 `baseline-widely-available` 构建目标，具体浏览器范围随固定的 Vite 版本确定；该目标不会补齐 Web API，也不等于完整的浏览器兼容保证。平台可选能力仍按实际支持情况检测，交互修改按受影响浏览器和输入方式验证。
 
-[TypeScript 配置](../tsconfig.json)分别检查浏览器源码与 Node.js 构建配置，共享严格检查选项。浏览器侧只引入 DOM 与 Vite 客户端类型，构建侧使用与 Node.js 运行时对应的类型声明。浏览器配置继承共享 `browser`；工具配置继承共享 `base` 并添加 Node.js 类型。Vite/jiti 加载工具配置，因此这部分使用 bundler 模块解析。Vite 在共享构建配置上保留 Hash Router、资源路径、许可声明和 portable 插件；这些交付规则由 Aura 维护。
+[TypeScript 配置](../tsconfig.json)分别检查浏览器源码、Node.js 构建配置和测试，共享严格检查选项。浏览器侧只引入 DOM 与 Vite 客户端类型，构建侧使用 Node.js 类型；测试驱动同时描述 Node.js 操作和浏览器中的回调，使用独立配置，不向应用或构建配置泄漏全局 API。Vite/jiti 加载工具配置，因此这部分使用 bundler 模块解析。Vite 在共享构建配置上保留 Hash Router、资源路径、许可声明和 portable 插件；这些交付规则由 Aura 维护。
 
 ## 本地运行
 
@@ -107,15 +107,20 @@ npm run preview
 
 ## 检查与验证
 
-| 命令                   | 用途                                     |
-| ---------------------- | ---------------------------------------- |
-| `npm run format:check` | 只检查格式                               |
-| `npm run lint`         | 检查 ESLint 规则                         |
-| `npm run type-check`   | 检查 TypeScript 类型                     |
-| `npm run check`        | 依次执行上述三项只读检查                 |
-| `npm run verify`       | 执行一次静态检查，再构建 Web 和 portable |
+| 命令                   | 用途                                 |
+| ---------------------- | ------------------------------------ |
+| `npm run format:check` | 只检查格式                           |
+| `npm run lint`         | 检查 ESLint 规则                     |
+| `npm run type-check`   | 检查 TypeScript 类型                 |
+| `npm run check`        | 依次执行上述三项只读检查             |
+| `npm test`             | 构建两种产物，再执行服务与浏览器回归 |
+| `npm run verify`       | 执行一次静态检查，再执行 `npm test`  |
 
 `npm run format` 会改写 Prettier 支持且未被排除的文件，运行后应审查实际 diff。迭代时先运行与改动有关的检查，需要完整验证两种产物时执行 `npm run verify`。
+
+回归测试使用 Node.js 内置测试运行器和 Playwright 浏览器驱动。运行前安装 Google Chrome；测试会启动独立的无界面浏览器和隔离上下文，不连接日常浏览器资料，也不下载浏览器。GitHub Actions 的 Ubuntu runner 已提供 Chrome。[测试目录](../tests/)只保留核心契约：两种交付中的原文件字节与文件名、共享正文删除后的可用性、跨章和重排后的阅读定位，以及导入预算与批次错误结果。具体控件、布局和一次性边界使用临时脚本验证，完成后清理。
+
+浏览器回归用 Vite 的预览 API 在临时端口提供已构建 Web 文件，服务和浏览器随测试结束关闭。它检查应用行为，不代替下文默认 Wrangler 预览中的正式响应头、部署配置及实际设备检查。
 
 构建不能代替运行时检查。页面交互变更应实际验证导航、关闭与取消、焦点和位置恢复、错误反馈及持久化；涉及 portable 时还需实际打开 `file://` 产物。只改文档时检查内容、链接、示例和格式，不运行无关构建。
 

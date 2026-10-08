@@ -12,7 +12,7 @@ export default defineConfig(
 
     // 页面与构建配置共享类型检查规则，文件范围由 Aura 维护。
     {
-        files: ["src/**/*.ts", "*.ts"],
+        files: ["src/**/*.ts", "*.ts", "tests/**/*.ts"],
         extends: [typeChecked],
         languageOptions: {
             parserOptions: { tsconfigRootDir: import.meta.dirname },

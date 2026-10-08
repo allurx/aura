@@ -1,0 +1,12 @@
+{
+    "extends": "@allurx/web-foundation/tsconfig/base",
+    "compilerOptions": {
+        // 驱动由 Node 执行；应用类型图与服务测试的源码由 Vite 按 bundler 规则解析。
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "types": ["node"],
+        "paths": { "@/*": ["./src/*"] },
+        "lib": ["ES2025", "DOM", "DOM.Iterable"]
+    },
+    "include": ["tests/**/*.ts"]
+}
