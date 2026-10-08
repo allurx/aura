@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type PageAppearance from "../models/page-appearance";
 import { StyleProperty } from "../models/style-property";
 import Setting from "./setting";
 import { syncBrowserTheme } from "../application/browser-theme";
@@ -18,22 +17,6 @@ export default abstract class StyleSetting extends Setting {
         title: string
     ) {
         super(property, title);
-    }
-
-    public override read(appearance: PageAppearance): string | undefined {
-        return appearance.getValue(this.property);
-    }
-
-    public override update(appearance: PageAppearance, value: string): PageAppearance {
-        if (!this.accepts(value)) throw new Error(`Invalid ${this.key} setting value`);
-        return appearance.withValue(this.property, value);
-    }
-
-    /**
-     * 从快照中移除显式值；调用 apply 后才恢复目标元素的主题或 CSS 默认样式。
-     */
-    public override reset(appearance: PageAppearance): PageAppearance {
-        return appearance.withoutValue(this.property);
     }
 
     public override apply(value: string | undefined): void {

@@ -4,7 +4,6 @@
  */
 
 import { isReadingMode, type ReadingMode } from "@/pages/reader/reading-mode";
-import type PageAppearance from "../models/page-appearance";
 import ReadingModeSettingControl from "../controls/reading-mode-setting-control";
 import type SettingControlListener from "../controls/setting-control-listener";
 import Setting from "./setting";
@@ -31,19 +30,6 @@ export default class ReadingModeSetting extends Setting {
 
     public override accepts(value: unknown): value is ReadingMode {
         return isReadingMode(value);
-    }
-
-    public override read(appearance: PageAppearance): string | undefined {
-        return appearance.getValue(this.key);
-    }
-
-    public override update(appearance: PageAppearance, value: string): PageAppearance {
-        if (!isReadingMode(value)) throw new Error(`Invalid reading mode: ${value}`);
-        return appearance.withValue(this.key, value);
-    }
-
-    public override reset(appearance: PageAppearance): PageAppearance {
-        return appearance.withoutValue(this.key);
     }
 
     public override apply(value: string | undefined): void {

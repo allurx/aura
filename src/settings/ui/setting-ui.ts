@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type SettingControlListener from "../controls/setting-control-listener";
 import type Setting from "../definitions/setting";
 import type SettingConfiguration from "../models/setting-configuration";
 import Ui from "@/components/ui";
@@ -12,15 +11,14 @@ import { assertExists } from "@/utils/assert-util";
 import { createElementFromHtml } from "@/utils/dom-util";
 import { bind, run } from "@/utils/event-util";
 import SettingControlList from "./setting-control-list";
-import SettingPreviewSession from "./setting-preview-session";
 import type SettingUiListener from "./setting-ui-listener";
 
 /**
  * 当前页面的主题与常规设置面板。
  *
- * 协调控件、可取消的预览和模态交互，已提交状态由监听器管理。
+ * 保持控件、滚动、焦点与模态交互，设置会话状态由监听器管理。
  */
-export default class SettingUi extends Ui implements SettingControlListener {
+export default class SettingUi extends Ui {
     declare public readonly root: HTMLDialogElement;
     private readonly bodyElement: HTMLElement;
     private readonly themeElement: HTMLElement;
@@ -29,7 +27,6 @@ export default class SettingUi extends Ui implements SettingControlListener {
     private readonly closeElement: HTMLButtonElement;
     private readonly resetElement: HTMLButtonElement;
     private readonly resetGeneralElement: HTMLButtonElement;
-    private readonly previewSession = new SettingPreviewSession();
 
     private listener: SettingUiListener | undefined;
     private controlList: SettingControlList | undefined;
@@ -60,12 +57,18 @@ export default class SettingUi extends Ui implements SettingControlListener {
         this.listener = listener;
         this.generalSettings = configuration.general;
         this.generalElement.hidden = this.generalSettings.length === 0;
-        this.controlList = new SettingControlList(this.itemsElement, this.themeElement, configuration, this, signal);
+        this.controlList = new SettingControlList(
+            this.itemsElement,
+            this.themeElement,
+            configuration,
+            listener,
+            signal
+        );
         this.refresh();
 
         enableLightDismiss(this.root, signal);
 
-        // 页面与常规重置使用独立范围，预览先撤销，完成后回读已提交值。
+        // 面板只发出重置操作，预览撤销、提交与刷新由会话所有者协调。
         bind(
             this.closeElement,
             "click",
@@ -78,10 +81,7 @@ export default class SettingUi extends Ui implements SettingControlListener {
             this.resetElement,
             "click",
             () => {
-                this.performAndRefresh(() => {
-                    this.cancelPreviews();
-                    listener.reset();
-                });
+                listener.reset();
             },
             { signal }
         );
@@ -90,10 +90,7 @@ export default class SettingUi extends Ui implements SettingControlListener {
             "click",
             () => {
                 if (this.resetGeneralElement.getAttribute("aria-disabled") === "true") return;
-                this.performAndRefresh(() => {
-                    this.cancelPreviews();
-                    listener.resetGeneral();
-                });
+                listener.resetGeneral();
             },
             { signal }
         );
@@ -211,73 +208,15 @@ export default class SettingUi extends Ui implements SettingControlListener {
     }
 
     /**
-     * @returns 指定设置是否有尚未提交的预览。
+     * 按会话给出的显示值刷新控件；连续输入只刷新对应项，保留其他原生控件的状态。
      */
-    public isPreviewing(setting: Setting): boolean {
-        return this.previewSession.isPreviewing(setting);
-    }
-
-    /**
-     * 刷新全部控件，正在输入的预览值不被已提交快照覆盖。
-     */
-    public refresh(): void {
-        if (!this.controlList || !this.listener) return;
-        this.controlList.render(
-            (setting) => this.previewSession.getValue(setting) ?? this.requireListener().getValue(setting)
-        );
-        const customized = this.generalSettings.some(
-            (setting) => this.requireListener().getValue(setting) !== undefined || this.isPreviewing(setting)
-        );
+    public refresh(setting?: Setting): void {
+        const listener = this.listener;
+        if (!this.controlList || !listener) return;
+        if (setting) this.controlList.renderSetting(setting, listener.getValue(setting));
+        else this.controlList.render((item) => listener.getValue(item));
+        const customized = this.generalSettings.some((item) => listener.getValue(item) !== undefined);
         this.resetGeneralElement.setAttribute("aria-disabled", String(!customized));
-    }
-
-    /**
-     * 将连续输入临时应用到页面，不提交持久化。
-     */
-    public preview(setting: Setting, value: string): void {
-        this.previewSession.begin(setting, value);
-        this.requireListener().preview(setting, value);
-        this.requireControlList().renderSetting(setting, value);
-        this.resetGeneralElement.setAttribute("aria-disabled", "false");
-    }
-
-    /**
-     * 先撤销全部未提交预览，再重置指定项；其他已提交设置保持不变。
-     */
-    public resetSetting(setting: Setting): void {
-        this.performAndRefresh(() => {
-            this.cancelPreviews();
-            this.requireListener().resetSetting(setting);
-        });
-    }
-
-    /**
-     * 忽略取消之后迟到的 change，提交成功或失败都刷新面板控件。
-     */
-    public commit(setting: Setting, value: string): void {
-        if (this.previewSession.isCancelled(setting)) return;
-        this.previewSession.finish(setting);
-        this.performAndRefresh(() => {
-            this.requireListener().commit(setting, value);
-        });
-    }
-
-    /**
-     * 操作结束后刷新面板；两者都失败时保留两个错误，避免刷新掩盖原始失败。
-     */
-    private performAndRefresh(action: () => void): void {
-        try {
-            action();
-        } catch (error) {
-            try {
-                this.refresh();
-            } catch (refreshError) {
-                // eslint-disable-next-line preserve-caught-error -- AggregateError.errors 同时保留操作异常与刷新异常。
-                throw new AggregateError([error, refreshError], "Setting update and refresh failed");
-            }
-            throw error;
-        }
-        this.refresh();
     }
 
     /**
@@ -312,19 +251,12 @@ export default class SettingUi extends Ui implements SettingControlListener {
     /**
      * 恢复预览后关闭；即使恢复失败也释放模态状态，避免页面永久不可交互。
      *
-     * @param discard - 页面销毁时只丢弃预览，不向旧页面派发关闭事件。
+     * @param discard - 页面销毁时仅关闭模态，不请求恢复预览或向旧页面派发关闭事件。
      */
     private close(discard = false): void {
-        if (!this.root.open) {
-            if (discard) this.previewSession.discard();
-            return;
-        }
+        if (!this.root.open) return;
         try {
-            if (!discard)
-                this.performAndRefresh(() => {
-                    this.cancelPreviews();
-                });
-            else this.previewSession.discard();
+            if (!discard) this.listener?.cancelPreviews();
         } finally {
             this.root.close();
             this.root.inert = true;
@@ -335,30 +267,6 @@ export default class SettingUi extends Ui implements SettingControlListener {
             this.returnFocusTarget = undefined;
             if (!discard) this.root.dispatchEvent(new Event("appearance-close", { bubbles: true }));
         }
-    }
-
-    /**
-     * 将全部尚未提交的设置恢复到当前页面的已提交值。
-     */
-    private cancelPreviews(): void {
-        if (!this.listener) return;
-        this.previewSession.cancel((setting) => {
-            this.requireListener().restore(setting);
-        });
-    }
-
-    /**
-     * @returns 初始化后可用的控件列表。
-     */
-    private requireControlList(): SettingControlList {
-        return assertExists(this.controlList, "Setting controls are not initialized");
-    }
-
-    /**
-     * @returns 初始化后可用的状态监听器。
-     */
-    private requireListener(): SettingUiListener {
-        return assertExists(this.listener, "Setting UI listener is not initialized");
     }
 
     private static readonly template = `

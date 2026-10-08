@@ -5,7 +5,6 @@
 
 import PaperTextureSettingControl from "../controls/paper-texture-setting-control";
 import type SettingControlListener from "../controls/setting-control-listener";
-import type PageAppearance from "../models/page-appearance";
 import Setting from "./setting";
 
 /**
@@ -22,19 +21,6 @@ export default class PaperTextureSetting extends Setting {
 
     public override accepts(value: unknown): value is "none" | "fine" {
         return value === "none" || value === "fine";
-    }
-
-    public override read(appearance: PageAppearance): string | undefined {
-        return appearance.getValue(this.key);
-    }
-
-    public override update(appearance: PageAppearance, value: string): PageAppearance {
-        if (!this.accepts(value)) throw new Error(`Invalid paper texture: ${value}`);
-        return appearance.withValue(this.key, value);
-    }
-
-    public override reset(appearance: PageAppearance): PageAppearance {
-        return appearance.withoutValue(this.key);
     }
 
     public override apply(value: string | undefined): void {

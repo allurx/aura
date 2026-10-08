@@ -14,8 +14,7 @@ import SettingUi from "./ui/setting-ui";
 import type { PageName } from "@/constants/page-name";
 
 /**
- * 页面已提交外观的唯一状态所有者，协调存储、预览与外部宽度变化。
- *
+ * 统一管理页面已提交外观、预览与取消状态，协调持久化和外部宽度变化。
  */
 export default class SettingController implements SettingUiListener {
     private readonly settingUi: SettingUi;
@@ -23,6 +22,8 @@ export default class SettingController implements SettingUiListener {
     private readonly repository: AppearanceRepository;
     private readonly width: WidthSetting | undefined;
     private readonly widthSynchronizer: WidthSynchronizer | undefined;
+    private readonly previews = new Map<Setting, string>();
+    private readonly cancelledSettings = new Set<Setting>();
     private appearance: PageAppearance;
 
     public constructor({
@@ -50,18 +51,30 @@ export default class SettingController implements SettingUiListener {
 
         this.appearance = this.repository.load();
         document.documentElement.dataset["page"] = this.configuration.pageName;
-        for (const setting of this.configuration.settings) this.restore(setting);
+        for (const setting of this.configuration.settings) setting.apply(setting.read(this.appearance));
+
+        // 页面销毁只丢弃会话，不再向即将移除的 DOM 恢复预览。
+        signal.addEventListener(
+            "abort",
+            () => {
+                this.previews.clear();
+                this.cancelledSettings.clear();
+            },
+            { once: true }
+        );
         this.settingUi.init(this.configuration, this, signal);
 
         const width = this.width;
         if (width) {
             this.widthSynchronizer?.start(
                 {
-                    getValue: () => this.getValue(width),
-                    isPreviewing: () => this.settingUi.isPreviewing(width),
+                    getValue: () => width.read(this.appearance),
+                    isPreviewing: () => this.previews.has(width),
                     commit: (value) => {
-                        this.commit(width, value);
-                        this.settingUi.refresh();
+                        // 原生拖动是独立操作，不受已取消控件的迟到 change 标记影响。
+                        this.performAndRefresh(() => {
+                            this.save(width.update(this.appearance, value), [width]);
+                        });
                     },
                 },
                 signal
@@ -77,48 +90,107 @@ export default class SettingController implements SettingUiListener {
     }
 
     public getValue(setting: Setting): string | undefined {
-        return setting.read(this.appearance);
+        return this.previews.get(setting) ?? setting.read(this.appearance);
     }
 
     public preview(setting: Setting, value: string): void {
         this.requireSetting(setting);
         if (!setting.accepts(value)) throw new Error(`Invalid ${setting.key} setting value`);
-        setting.apply(value);
-    }
 
-    public restore(setting: Setting): void {
-        setting.apply(setting.read(this.appearance));
+        // 新 input 开始下一轮预览，解除上一轮取消留下的提交屏蔽。
+        this.cancelledSettings.delete(setting);
+        this.previews.set(setting, value);
+        setting.apply(value);
+        this.settingUi.refresh(setting);
     }
 
     /**
-     * 保存成功后才更新快照，失败时恢复提交前的界面。
+     * 忽略已取消预览的迟到 change；保存成功后才更新快照，失败时恢复提交前的界面。
      */
     public commit(setting: Setting, value: string): void {
         this.requireSetting(setting);
-        this.save(setting.update(this.appearance, value), [setting]);
+        if (this.cancelledSettings.has(setting)) return;
+        this.previews.delete(setting);
+        this.performAndRefresh(() => {
+            this.save(setting.update(this.appearance, value), [setting]);
+        });
     }
 
     /**
-     * 重置单项并取消它尚未提交的外部变化。
+     * 关闭面板前恢复已提交值，并同步控件；取消标记保留至该项的下一次 input。
+     */
+    public cancelPreviews(): void {
+        this.performAndRefresh(() => {
+            this.restorePreviews();
+        });
+    }
+
+    /**
+     * 撤销未提交预览，再重置单项；其他已提交设置保持不变。
      */
     public resetSetting(setting: Setting): void {
         this.requireSetting(setting);
-        this.resetSettings([setting]);
+        this.performAndRefresh(() => {
+            this.restorePreviews();
+            this.resetSettings([setting]);
+        });
     }
 
     /**
      * 清除常规设置的显式值，保留当前页面主题。
      */
     public resetGeneral(): void {
-        this.resetSettings(this.configuration.general);
+        this.performAndRefresh(() => {
+            this.restorePreviews();
+            this.resetSettings(this.configuration.general);
+        });
     }
 
     /**
      * 清除当前页面全部设置，不影响另一页面。
      */
     public reset(): void {
-        this.widthSynchronizer?.cancelPending();
-        this.save(PageAppearance.defaults(this.configuration.defaultTheme), this.configuration.settings, true);
+        this.performAndRefresh(() => {
+            this.restorePreviews();
+            this.widthSynchronizer?.cancelPending();
+            this.save(PageAppearance.defaults(this.configuration.defaultTheme), this.configuration.settings, true);
+        });
+    }
+
+    /**
+     * 逐项恢复全部预览；单项失败不能阻止其他设置及会话的清理。
+     */
+    private restorePreviews(): void {
+        const errors: unknown[] = [];
+        for (const setting of this.previews.keys()) {
+            this.cancelledSettings.add(setting);
+            try {
+                setting.apply(setting.read(this.appearance));
+            } catch (error) {
+                errors.push(error);
+            }
+        }
+        this.previews.clear();
+        if (errors.length === 1) throw errors[0];
+        if (errors.length > 1) throw new AggregateError(errors, "Failed to restore settings previews");
+    }
+
+    /**
+     * 操作结束后刷新控件；同时失败时保留操作和刷新异常。
+     */
+    private performAndRefresh(action: () => void): void {
+        try {
+            action();
+        } catch (error) {
+            try {
+                this.settingUi.refresh();
+            } catch (refreshError) {
+                // eslint-disable-next-line preserve-caught-error -- AggregateError.errors 同时保留操作异常与刷新异常。
+                throw new AggregateError([error, refreshError], "Setting update and refresh failed");
+            }
+            throw error;
+        }
+        this.settingUi.refresh();
     }
 
     /**

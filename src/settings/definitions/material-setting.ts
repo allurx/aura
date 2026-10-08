@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type PageAppearance from "../models/page-appearance";
 import MaterialSettingControl from "../controls/material-setting-control";
 import type SettingControlListener from "../controls/setting-control-listener";
 import Setting from "./setting";
@@ -49,19 +48,6 @@ export default class MaterialSetting extends Setting {
             value === "leather" ||
             value === "stone"
         );
-    }
-
-    public override read(appearance: PageAppearance): string | undefined {
-        return appearance.getValue(this.key);
-    }
-
-    public override update(appearance: PageAppearance, value: string): PageAppearance {
-        if (!this.accepts(value)) throw new Error(`Invalid material: ${value}`);
-        return appearance.withValue(this.key, value);
-    }
-
-    public override reset(appearance: PageAppearance): PageAppearance {
-        return appearance.withoutValue(this.key);
     }
 
     public override apply(value: string | undefined): void {
