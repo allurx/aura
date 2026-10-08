@@ -124,10 +124,15 @@ export default class BookshelfUi extends Ui {
             if (
                 !this.signal?.aborted &&
                 previousFocus instanceof HTMLElement &&
-                previousFocus.isConnected &&
                 document.activeElement === document.body
-            )
-                previousFocus.focus({ preventScroll: true });
+            ) {
+                // 空态导入入口随结果移除后，在解除 inert 的此处把操作接续到新书。
+                const target = previousFocus.isConnected
+                    ? previousFocus
+                    : (this.root.querySelector<HTMLElement>(".book-open") ??
+                      this.root.querySelector<HTMLElement>("#import-books"));
+                target?.focus({ preventScroll: true });
+            }
         }
     }
 

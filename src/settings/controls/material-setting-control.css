@@ -1,0 +1,255 @@
+/*
+ * Copyright 2026 allurx
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#setting {
+    .items > .item.material-setting {
+        position: relative;
+        display: block;
+        padding: 4px 0 12px;
+
+        > .reset-setting {
+            position: absolute;
+            top: 4px;
+            right: 0;
+        }
+
+        fieldset {
+            min-width: 0;
+            margin: 0;
+            padding: 0;
+            border: 0;
+        }
+
+        legend {
+            max-width: calc(100% - 44px);
+            min-height: 44px;
+            padding: 0;
+            align-content: center;
+            font-size: 14px;
+            font-weight: 500;
+        }
+    }
+
+    .material-options {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        padding: 3px;
+        margin-inline: -3px;
+    }
+
+    .material-option {
+        position: relative;
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 3px;
+        padding: 5px 4px 7px;
+        border: 1px solid transparent;
+        border-radius: 11px;
+        background: transparent;
+        color: var(--appearance-color);
+        line-height: 1.5;
+        text-align: center;
+        cursor: pointer;
+        transition:
+            background-color var(--motion-duration-fast) var(--motion-ease),
+            border-color var(--motion-duration-fast) var(--motion-ease);
+
+        > input {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            opacity: 0;
+            cursor: inherit;
+        }
+
+        > span {
+            pointer-events: none;
+        }
+
+        &:has(input:checked) {
+            border-color: color-mix(in srgb, var(--setting-accent-color) 60%, transparent);
+            background: var(--appearance-selection);
+
+            .material-caption::before {
+                background: var(--setting-accent-color);
+            }
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            &:hover:not(:has(input:checked)) {
+                background: var(--appearance-highlight);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            transition: none;
+        }
+    }
+
+    .material-preview {
+        position: relative;
+        display: block;
+        height: 40px;
+        margin-bottom: 3px;
+        overflow: hidden;
+        border-radius: 8px;
+        background: var(--appearance-muted-surface);
+
+        &:has([data-material="glass"]) {
+            background:
+                radial-gradient(ellipse at 12% 88%, var(--appearance-accent-secondary) 0 24%, transparent 65%),
+                radial-gradient(ellipse at 90% 6%, var(--appearance-accent) 0 25%, transparent 65%),
+                var(--appearance-canvas);
+        }
+
+        &:has([data-material="ceramic"]) {
+            background: linear-gradient(140deg, var(--appearance-glow), var(--appearance-canvas));
+        }
+
+        &:has([data-material="linen"]) {
+            background: color-mix(in srgb, var(--appearance-muted-surface) 75%, var(--appearance-shadow-color));
+        }
+
+        &:has([data-material="wood"]) {
+            background: color-mix(in srgb, var(--appearance-glow) 65%, var(--appearance-canvas));
+        }
+
+        &:has([data-material="metal"]) {
+            background: linear-gradient(130deg, var(--appearance-muted-surface), var(--appearance-highlight));
+        }
+
+        &:has([data-material="leather"]) {
+            background: color-mix(in srgb, var(--appearance-muted-surface) 82%, var(--appearance-shadow-color));
+        }
+
+        &:has([data-material="stone"]) {
+            background: color-mix(in srgb, var(--appearance-canvas) 75%, var(--appearance-panel));
+        }
+    }
+
+    .material-swatch {
+        position: absolute;
+        inset: 5px;
+        border: 1px solid var(--material-border);
+        border-radius: 6px;
+        background-color: var(--material-panel);
+        background-image: var(--material-image);
+        background-size: var(--material-size);
+        backdrop-filter: var(--material-filter);
+        box-shadow: var(--material-shadow);
+
+        &[data-material="glass"] {
+            background-color: var(--material-page-panel);
+        }
+
+        &[data-material="paper"] {
+            inset: 5px 8px 7px 5px;
+            border-radius: 2px;
+            transform: rotate(-4deg);
+        }
+
+        &[data-material="ceramic"] {
+            border-radius: 10px;
+        }
+
+        &[data-material="linen"] {
+            inset: 6px;
+            border-radius: 3px;
+        }
+
+        &[data-material="wood"] {
+            border-radius: 4px;
+        }
+
+        &[data-material="metal"] {
+            inset: 6px 5px;
+            border-radius: 5px;
+        }
+
+        &[data-material="leather"] {
+            inset: 5px 6px;
+            border-radius: 8px;
+            outline: 1px dashed var(--material-border);
+            outline-offset: -4px;
+        }
+
+        &[data-material="stone"] {
+            border-radius: 5px 9px 4px 8px;
+        }
+
+        &::before,
+        &::after {
+            content: "";
+            position: absolute;
+            left: 7px;
+            height: 2px;
+            border-radius: 2px;
+            background: color-mix(in srgb, var(--appearance-color) 36%, transparent);
+        }
+
+        &::before {
+            top: 11px;
+            width: 58%;
+        }
+
+        &::after {
+            top: 19px;
+            width: 38%;
+        }
+    }
+
+    .material-caption {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        font-size: 12px;
+        font-weight: 500;
+
+        &::before {
+            content: "";
+            flex: none;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: transparent;
+        }
+    }
+
+    .material-description {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    .material-current-description {
+        min-height: 1.5em;
+        margin-top: 6px;
+        color: var(--appearance-muted-color);
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    @media (forced-colors: active) {
+        .material-option:has(input:checked) {
+            border: 3px double Highlight;
+            padding: 3px 2px 5px;
+        }
+    }
+}
+
+/* 将原生单选输入的键盘焦点呈现在整张可见样片卡上。 */
+:where(html[data-keyboard-navigation]) #setting .material-option:has(> input:focus-visible) {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}

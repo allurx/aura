@@ -6,13 +6,14 @@
 import type Setting from "../definitions/setting";
 import type ThemeSetting from "../definitions/theme-setting";
 import type { PageName } from "@/constants/page-name";
-import { Theme } from "./theme";
+import type { Theme } from "./theme";
 
 /**
  * 页面固定提供主题，常规设置按页面配置；数组顺序就是控件顺序。
  */
 export interface PageSettings {
     readonly theme: ThemeSetting;
+    readonly defaultTheme: Theme;
     readonly general: readonly Setting[];
 }
 
@@ -24,11 +25,11 @@ export default class SettingConfiguration {
     public readonly theme: ThemeSetting;
     public readonly general: readonly Setting[];
     public readonly settings: readonly Setting[];
-    public readonly defaultTheme = Theme.SUNNY;
+    public readonly defaultTheme: Theme;
 
     public constructor(
         public readonly pageName: PageName,
-        { theme, general }: PageSettings
+        { theme, defaultTheme, general }: PageSettings
     ) {
         const keys = new Set<string>([theme.key]);
         for (const setting of general) {
@@ -36,6 +37,7 @@ export default class SettingConfiguration {
             keys.add(setting.key);
         }
         this.theme = theme;
+        this.defaultTheme = defaultTheme;
         this.general = Object.freeze([...general]);
         this.settings = Object.freeze([theme, ...this.general]);
     }

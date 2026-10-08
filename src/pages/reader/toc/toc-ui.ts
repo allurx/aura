@@ -4,6 +4,7 @@
  */
 
 import Ui from "@/components/ui";
+import enableLightDismiss from "@/components/dialog/light-dismiss";
 import { assertExists } from "@/utils/assert-util";
 import { delegate, bind } from "@/utils/event-util";
 import type TocEntry from "@/domain/toc/toc-entry";
@@ -140,6 +141,7 @@ export default class TocUi extends Ui {
      */
     public bindTocClose(handler: (chapterSelected: boolean) => void, signal: AbortSignal): this {
         let composing = false;
+        enableLightDismiss(this.dialog, signal);
 
         // 尺寸改变时恢复章节锚点，普通滚动才更新当前浏览快照。
         const observer = new ResizeObserver(() => {
@@ -157,7 +159,7 @@ export default class TocUi extends Ui {
             { signal, passive: true }
         );
 
-        // 关闭按钮和 Escape 统一保存位置，close 事件只负责通知页面恢复焦点。
+        // 关闭按钮、外点和 Escape 统一保存位置，close 事件只负责通知页面恢复焦点。
         bind(
             this.closeButton,
             "click",

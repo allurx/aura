@@ -10,6 +10,11 @@ import { CATEGORIES } from "@/domain/category/category";
 import type { BookSummary } from "../bookshelf-service";
 
 /**
+ * 控制器按完整书架和当前筛选区分空态，列表不自行推断领域状态。
+ */
+export type BookListEmptyState = "library" | "category" | "search";
+
+/**
  * 渲染书籍摘要，并管理阅读、分类移动与删除操作后的焦点。
  */
 export default class BookListUi extends Ui {
@@ -29,13 +34,14 @@ export default class BookListUi extends Ui {
 
     /**
      * 更新筛选结果，并保留还在书架中的操作焦点及滚动位置。
-     * @param searching - 是否存在有效查询，用于区分空书架与无搜索结果
+     * @param emptyState - 没有结果时展示的书架、分类或搜索提示。
      */
-    public renderBooks(books: BookSummary[], searching: boolean): void {
+    public renderBooks(books: BookSummary[], emptyState: BookListEmptyState): void {
         // 替换 DOM 前记录操作来源，禁用的分类选择器也参与焦点恢复。
         const scrollTop = this.root.scrollTop;
         const active = document.activeElement === document.body ? this.pendingSelection : document.activeElement;
         const focused = active instanceof HTMLOptionElement ? active.closest("select") : active;
+        const focusedInside = focused instanceof HTMLElement && this.root.contains(focused);
         const owner = focused instanceof HTMLElement ? focused.closest<HTMLElement>(".book") : null;
         const focusId = owner?.dataset["id"];
         const focusClass = focused instanceof HTMLSelectElement ? ".book-category" : ".book-open";
@@ -43,21 +49,7 @@ export default class BookListUi extends Ui {
 
         // 空态区分无藏书与无搜索结果，给出对应的下一步提示。
         if (books.length === 0) {
-            const empty = document.createElement("div");
-            empty.className = "shelf-empty";
-
-            // 图标只作装饰，标题与提示承担可读信息。
-            const symbol = document.createElement("span");
-            symbol.className = "icon icon-book";
-            symbol.setAttribute("aria-hidden", "true");
-
-            const title = document.createElement("h2");
-            title.textContent = searching ? "没有找到这本书" : "给书架添一本书吧";
-            const hint = document.createElement("p");
-            hint.textContent = searching ? "试试其他书名，或清除搜索。" : "导入 TXT 或 EPUB，开始阅读。";
-
-            empty.append(symbol, title, hint);
-            this.root.replaceChildren(empty);
+            this.root.replaceChildren(this.createEmptyState(emptyState));
         } else {
             // 先在片段中生成全部书目，再一次替换当前结果。
             const fragment = document.createDocumentFragment();
@@ -73,6 +65,12 @@ export default class BookListUi extends Ui {
                 replacement?.querySelector<HTMLElement>(focusClass) ??
                 cards[Math.min(previousIndex, cards.length - 1)]?.querySelector<HTMLElement>(".book-open");
             (next ?? this.root).focus({ preventScroll: true });
+        } else if (focusedInside && !this.root.contains(focused)) {
+            // 列表刷新也可能替换空态入口，失败后的重读同样保留可继续操作的焦点。
+            const next =
+                this.root.querySelector<HTMLElement>(".book-open") ??
+                this.root.querySelector<HTMLElement>(".shelf-empty-import");
+            (next ?? this.root).focus({ preventScroll: true });
         }
 
         this.root.scrollTop = scrollTop;
@@ -87,8 +85,12 @@ export default class BookListUi extends Ui {
         onDelete: (id: string) => Promise<void>,
         onMove: (id: string, categoryId: string) => Promise<boolean>,
         onExport: (id: string) => Promise<void>,
+        onImportRequest: () => void,
         signal: AbortSignal
     ): void {
+        // 空态和顶部入口请求同一个导入流程，不查找或触发其他区域的按钮。
+        delegate(this.root, ".shelf-empty-import", "click", onImportRequest, { signal });
+
         // 原生 popover 负责外部点击、Escape 与焦点顺序，只补充靠近书目的定位。
         bind(
             this.root,
@@ -189,6 +191,52 @@ export default class BookListUi extends Ui {
             },
             { signal }
         );
+    }
+
+    /**
+     * 空书架和分类提供直接导入入口；搜索无结果只提示调整查询。
+     */
+    private createEmptyState(state: BookListEmptyState): HTMLElement {
+        const searching = state === "search";
+        const empty = document.createElement("div");
+        empty.className = "shelf-empty";
+        empty.classList.toggle("shelf-empty-search", searching);
+
+        // 插画由主题协调的书封、书脊和页边构成，不作为可交互控件。
+        const illustration = document.createElement("div");
+        illustration.className = searching ? "icon icon-search" : "shelf-empty-illustration";
+        illustration.setAttribute("aria-hidden", "true");
+        if (!searching) {
+            for (const color of ["mint", "peach", "blue"]) {
+                const book = document.createElement("span");
+                book.className = `empty-book empty-book-${color}`;
+                illustration.append(book);
+            }
+        }
+
+        const title = document.createElement("h2");
+        title.textContent = searching ? "没有找到这本书" : state === "category" ? "这个分类还没有书" : "从一本书开始";
+        const hint = document.createElement("p");
+        hint.className = "shelf-empty-hint";
+        hint.textContent = searching ? "试试其他书名，或清除搜索。" : "导入 TXT 或 EPUB，把喜欢的书留在手边。";
+        empty.append(illustration, title, hint);
+        if (searching) return empty;
+
+        const importButton = document.createElement("button");
+        importButton.type = "button";
+        importButton.className = "shelf-empty-import";
+        const importIcon = document.createElement("span");
+        importIcon.className = "icon icon-add";
+        importIcon.setAttribute("aria-hidden", "true");
+        const importLabel = document.createElement("span");
+        importLabel.textContent = "导入书籍";
+        importButton.append(importIcon, importLabel);
+
+        const note = document.createElement("p");
+        note.className = "shelf-empty-note";
+        note.textContent = "本地保存 · 无需账户";
+        empty.append(importButton, note);
+        return empty;
     }
 
     /**

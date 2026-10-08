@@ -5,7 +5,7 @@
 
 import HeaderUi from "./header/header-ui";
 import NavUi from "./nav/nav-ui";
-import BookListUi from "./book-list/book-list-ui";
+import BookListUi, { type BookListEmptyState } from "./book-list/book-list-ui";
 import BookshelfUi from "./bookshelf-ui";
 import {
     BookImportError,
@@ -145,7 +145,12 @@ export default class BookshelfController {
         );
 
         // 列表、数量与导航选中态使用同一份筛选结果。
-        this.bookListUi.renderBooks(books, query.length > 0);
+        const emptyState: BookListEmptyState = query
+            ? "search"
+            : bookshelfSession.categoryId && this.books.length > 0
+              ? "category"
+              : "library";
+        this.bookListUi.renderBooks(books, emptyState);
         this.headerUi.render(
             getCategory(bookshelfSession.categoryId)?.name ?? "全部书籍",
             books.length,
@@ -391,6 +396,9 @@ export default class BookshelfController {
             (bookId) => this.deleteBook(bookId),
             (bookId, categoryId) => this.moveBook(bookId, categoryId),
             (bookId) => this.exportBook(bookId),
+            () => {
+                if (this.isActive() && !this.busy) this.headerUi.openFilePicker();
+            },
             signal
         );
 

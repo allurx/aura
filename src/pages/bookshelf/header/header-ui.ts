@@ -27,6 +27,13 @@ export default class HeaderUi extends Ui {
     }
 
     /**
+     * 在用户操作中同步打开共用文件选择器，选择结果仍由 change 事件处理。
+     */
+    public openFilePicker(): void {
+        this.input.click();
+    }
+
+    /**
      * 绑定搜索与文件选择器，选择结束后允许再次选择同一文件。
      */
     public bindEvents(
@@ -78,7 +85,7 @@ export default class HeaderUi extends Ui {
             this.importButton,
             "click",
             () => {
-                this.input.click();
+                this.openFilePicker();
             },
             { signal }
         );

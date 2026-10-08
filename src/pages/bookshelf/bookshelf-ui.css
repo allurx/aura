@@ -47,7 +47,8 @@
         min-height: 0;
         background: transparent;
         color: inherit;
-        overflow: hidden;
+        /* 导航自身裁切内容；外层让圆角表面的阴影自然延伸。 */
+        overflow: visible;
     }
     #shelf-feedback {
         position: absolute;
@@ -100,6 +101,7 @@
         grid-template-columns: minmax(0, 1fr);
         #bookshelf-sidebar {
             position: fixed;
+            overflow: hidden;
             inset: var(--viewport-top) auto var(--viewport-bottom) 0;
             width: min(21rem, 86vw);
             height: var(--viewport-height);

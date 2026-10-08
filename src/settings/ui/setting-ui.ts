@@ -7,6 +7,7 @@ import type SettingControlListener from "../controls/setting-control-listener";
 import type Setting from "../definitions/setting";
 import type SettingConfiguration from "../models/setting-configuration";
 import Ui from "@/components/ui";
+import enableLightDismiss from "@/components/dialog/light-dismiss";
 import { assertExists } from "@/utils/assert-util";
 import { createElementFromHtml } from "@/utils/dom-util";
 import { bind, run } from "@/utils/event-util";
@@ -62,45 +63,7 @@ export default class SettingUi extends Ui implements SettingControlListener {
         this.controlList = new SettingControlList(this.itemsElement, this.themeElement, configuration, this, signal);
         this.refresh();
 
-        // 原生 backdrop 的事件目标是 dialog；仅完整发生在外部的点击关闭面板。
-        let startedOnBackdrop = false;
-        bind(
-            this.root,
-            "pointerdown",
-            (event: PointerEvent) => {
-                event.stopPropagation();
-                startedOnBackdrop = this.isBackdrop(event);
-            },
-            { signal }
-        );
-        bind(
-            this.root,
-            "pointerup",
-            (event) => {
-                event.stopPropagation();
-            },
-            { signal }
-        );
-        bind(
-            this.root,
-            "pointercancel",
-            (event) => {
-                event.stopPropagation();
-                startedOnBackdrop = false;
-            },
-            { signal }
-        );
-        bind(
-            this.root,
-            "click",
-            (event: MouseEvent) => {
-                event.stopPropagation();
-                const dismiss = startedOnBackdrop && this.isBackdrop(event);
-                startedOnBackdrop = false;
-                if (dismiss) this.close();
-            },
-            { signal }
-        );
+        enableLightDismiss(this.root, signal);
 
         // 页面与常规重置使用独立范围，预览先撤销，完成后回读已提交值。
         bind(
@@ -372,20 +335,6 @@ export default class SettingUi extends Ui implements SettingControlListener {
             this.returnFocusTarget = undefined;
             if (!discard) this.root.dispatchEvent(new Event("appearance-close", { bubbles: true }));
         }
-    }
-
-    /**
-     * 区分面板空白区域与原生 backdrop，避免从控件拖出时关闭。
-     */
-    private isBackdrop(event: MouseEvent): boolean {
-        if (event.target !== this.root) return false;
-        const bounds = this.root.getBoundingClientRect();
-        return (
-            event.clientX < bounds.left ||
-            event.clientX > bounds.right ||
-            event.clientY < bounds.top ||
-            event.clientY > bounds.bottom
-        );
     }
 
     /**
