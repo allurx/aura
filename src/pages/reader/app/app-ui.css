@@ -83,3 +83,31 @@ html[data-page="reader"] #app {
         line-height: 1.5;
     }
 }
+
+/* 正文外侧画布和桌面操作栏独立选择表面，按钮继续保持透明。 */
+html:where([data-material]:not([data-material="standard"])) {
+    &[data-page="reader"] #app {
+        background-color: color-mix(in srgb, var(--material-panel) 35%, var(--appearance-canvas));
+        background-image: var(--material-canvas-image);
+        background-size: var(--material-canvas-size);
+    }
+
+    #reader-actions {
+        background-color: var(--material-page-panel);
+        background-image: var(--material-image);
+        background-size: var(--material-size);
+        border-color: var(--material-border);
+        box-shadow: var(--material-shadow);
+    }
+}
+
+html[data-material="glass"] #reader-actions {
+    --appearance-muted-color: var(--material-muted-color);
+    --appearance-accent: var(--material-accent-color);
+    --setting-accent-color: var(--material-accent-color);
+}
+
+html[data-material="leather"] #reader-actions {
+    outline: var(--material-edge-outline);
+    outline-offset: -6px;
+}

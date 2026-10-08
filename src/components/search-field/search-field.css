@@ -50,3 +50,11 @@
         transition: none;
     }
 }
+
+/* 表面增强不接管搜索框自身的焦点和悬停边界。 */
+html:where([data-material]:not([data-material="standard"])) .search-field {
+    background-color: var(--material-control-surface);
+    background-image: var(--material-control-image);
+    background-size: var(--material-control-size);
+    border-color: var(--material-border);
+}

@@ -493,3 +493,45 @@
         --setting-padding-right: max(16px, env(safe-area-inset-right));
     }
 }
+
+html:where([data-material]:not([data-material="standard"])) {
+    #setting {
+        background-color: var(--material-panel);
+        background-image: var(--material-image);
+        background-size: var(--material-size);
+        backdrop-filter: var(--material-filter);
+        border-color: var(--material-border);
+        box-shadow: var(--material-floating-shadow);
+    }
+
+    /* 普通输入共享淡表面，不在面板内重复添加模糊。 */
+    #setting .items > .item > .control-container > select,
+    #setting .items > .item > .control-container > input[type="color"] {
+        background-color: var(--material-control-surface);
+        background-image: var(--material-control-image);
+        background-size: var(--material-control-size);
+        border-color: var(--material-border);
+    }
+
+    #setting .items > .item > .control-container > select:open {
+        background-color: var(--appearance-selection);
+        background-image: none;
+
+        @media (forced-colors: active) {
+            background-color: Highlight;
+            color: HighlightText;
+            border-color: Highlight;
+        }
+    }
+}
+
+html[data-material="glass"] #setting {
+    --appearance-muted-color: var(--material-muted-color);
+    --appearance-accent: var(--material-accent-color);
+    --setting-accent-color: var(--material-accent-color);
+}
+
+html[data-material="leather"] #setting {
+    outline: var(--material-edge-outline);
+    outline-offset: -6px;
+}

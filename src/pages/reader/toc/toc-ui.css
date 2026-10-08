@@ -298,3 +298,23 @@
         padding-bottom: max(16px, env(safe-area-inset-bottom));
     }
 }
+
+html:where([data-material]:not([data-material="standard"])) #reader > #toc {
+    background-color: var(--material-panel);
+    background-image: var(--material-image);
+    background-size: var(--material-size);
+    backdrop-filter: var(--material-filter);
+    border-color: var(--material-border);
+    box-shadow: var(--material-floating-shadow);
+}
+
+html[data-material="glass"] #reader > #toc {
+    --appearance-muted-color: var(--material-muted-color);
+    --appearance-accent: var(--material-accent-color);
+    --setting-accent-color: var(--material-accent-color);
+}
+
+html[data-material="leather"] #reader > #toc {
+    outline: var(--material-edge-outline);
+    outline-offset: -6px;
+}

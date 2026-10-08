@@ -122,3 +122,23 @@
     outline: 2px solid var(--focus-ring-color);
     outline-offset: 2px;
 }
+
+html:where([data-material]:not([data-material="standard"])) {
+    #setting .reading-mode-option {
+        background-color: var(--material-control-surface);
+        background-image: var(--material-control-image);
+        background-size: var(--material-control-size);
+        border-color: var(--material-border);
+    }
+
+    #setting .reading-mode-option:has(input:checked) {
+        background-color: var(--appearance-selection);
+        background-image: none;
+
+        @media (forced-colors: active) {
+            background-color: Highlight;
+            color: HighlightText;
+            border-color: Highlight;
+        }
+    }
+}

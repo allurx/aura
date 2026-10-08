@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* 页面与样片共用原生表面；纹理、光泽和厚度独立于主题配色。 */
+/* 页面与样片共用材质变量；具体表面和响应式归属由各组件样式决定。 */
 :where(html, .material-swatch) {
     --material-panel: var(--appearance-panel);
     --material-page-panel: var(--material-panel);
@@ -49,20 +49,6 @@
         --material-page-panel: color-mix(in srgb, var(--appearance-panel) 38%, transparent);
         --material-filter: blur(20px) saturate(1.35);
         --material-static-filter: blur(16px) saturate(1.3);
-    }
-}
-
-/* 加强玻璃上的次要文字，不用接近实色的填充遮住背景。配色在根节点先求值。 */
-html[data-material="glass"] {
-    #setting,
-    #reader > #toc,
-    .dialog,
-    #bookshelf,
-    #reader-actions,
-    #reader > :is(#header, #footer) {
-        --appearance-muted-color: var(--material-muted-color);
-        --appearance-accent: var(--material-accent-color);
-        --setting-accent-color: var(--material-accent-color);
     }
 }
 
@@ -168,6 +154,7 @@ html[data-material="glass"] {
 }
 
 :where(html, .material-swatch)[data-material="leather"] {
+    --material-edge-outline: 1px dashed color-mix(in srgb, var(--appearance-color) 18%, transparent);
     --material-panel: color-mix(in srgb, var(--appearance-panel) 80%, var(--appearance-tint));
     --material-image:
         radial-gradient(ellipse at 30% 35%, transparent 1px, var(--material-ink) 1.5px, transparent 2px),
@@ -197,7 +184,7 @@ html[data-material="glass"] {
         inset 0 -2px 0 color-mix(in srgb, var(--appearance-shadow-color) 12%, transparent);
 }
 
-/* 大表面保留完整纹理尺度；文字与控件继续使用主题原有的成对颜色。 */
+/* 普通控件使用淡化后的同源表面，不增加父子模糊。 */
 html:where([data-material]:not([data-material="standard"])) {
     --material-control-surface: color-mix(in srgb, var(--material-panel) 78%, var(--appearance-canvas));
     --material-control-image:
@@ -207,137 +194,6 @@ html:where([data-material]:not([data-material="standard"])) {
         ),
         var(--material-image);
     --material-control-size: auto, var(--material-size);
-
-    #bookshelf,
-    &[data-page="reader"] #app {
-        background-image: var(--material-canvas-image);
-        background-size: var(--material-canvas-size);
-    }
-
-    &[data-page="reader"] #app {
-        background-color: color-mix(in srgb, var(--material-panel) 35%, var(--appearance-canvas));
-    }
-
-    #bookshelf #nav,
-    #reader-actions {
-        background-color: var(--material-page-panel);
-        background-image: var(--material-image);
-        background-size: var(--material-size);
-        border-color: var(--material-border);
-        box-shadow: var(--material-shadow);
-    }
-
-    #bookshelf #nav {
-        backdrop-filter: var(--material-static-filter);
-    }
-
-    #setting,
-    #reader > #toc,
-    .dialog,
-    #bookshelf #bookshelf-more-actions,
-    #bookshelf .book-file-actions,
-    #bookshelf #shelf-feedback,
-    #reader > :is(#header, #footer) {
-        background-color: var(--material-panel);
-        background-image: var(--material-image);
-        background-size: var(--material-size);
-        backdrop-filter: var(--material-filter);
-        border-color: var(--material-border);
-        box-shadow: var(--material-floating-shadow);
-    }
-
-    #reader > :is(#header, #footer) {
-        color: var(--appearance-color);
-    }
-
-    /* 控件使用较淡的同源表面；不在已模糊的面板内重复添加 backdrop-filter。 */
-    .search-field,
-    #bookshelf #header .appearance-button,
-    #bookshelf #header #open-navigation,
-    #setting .items > .item > .control-container > select,
-    #setting .items > .item > .control-container > input[type="color"],
-    #setting .reading-mode-option,
-    .dialog .footer .cancel-btn {
-        background-color: var(--material-control-surface);
-        background-image: var(--material-control-image);
-        background-size: var(--material-control-size);
-        border-color: var(--material-border);
-    }
-
-    /* 选择与展开状态优先使用主题的成对前景、背景，避免淡化真实状态。 */
-    #setting .reading-mode-option:has(input:checked),
-    #setting .items > .item > .control-container > select:open,
-    #bookshelf #header :is(.appearance-button, #open-navigation)[aria-expanded="true"] {
-        background-color: var(--appearance-selection);
-        background-image: none;
-    }
-
-    @supports (appearance: base-select) and selector(::picker(select)) {
-        select::picker(select) {
-            background-color: var(--material-panel);
-            background-image: var(--material-image);
-            background-size: var(--material-size);
-            backdrop-filter: var(--material-filter);
-            border-color: var(--material-border);
-            box-shadow: var(--material-floating-shadow);
-        }
-    }
-
-    /* 书封保留自身配色和书脊，表面与所在书架使用同一种材质。 */
-    #bookshelf #book-list .book-cover {
-        background-color: var(--book-face);
-        background-image: var(--material-image);
-        background-size: var(--material-size);
-        background-blend-mode: soft-light;
-    }
-
-    @media (min-width: 769px) {
-        #bookshelf > main {
-            background-color: var(--material-page-panel);
-            background-image: var(--material-image);
-            background-size: var(--material-size);
-            backdrop-filter: var(--material-static-filter);
-            border-color: var(--material-border);
-            box-shadow: var(--material-shadow);
-        }
-    }
-
-    @media (max-width: 768px) {
-        #bookshelf #book-list {
-            background-color: var(--material-page-panel);
-            background-image: var(--material-image);
-            background-size: var(--material-size);
-            backdrop-filter: var(--material-static-filter);
-            border-color: var(--material-border);
-            box-shadow: var(--material-inset-shadow);
-        }
-
-        #bookshelf #bookshelf-sidebar {
-            background-color: var(--material-panel);
-            background-image: var(--material-image);
-            background-size: var(--material-size);
-            backdrop-filter: var(--material-filter);
-            box-shadow: var(--material-floating-shadow);
-        }
-
-        #bookshelf #nav {
-            background: transparent;
-            backdrop-filter: none;
-            box-shadow: none;
-        }
-    }
-}
-
-/* 缝线收在大表面边缘，不围绕每个控件重复装饰。 */
-html[data-material="leather"] {
-    #bookshelf #nav,
-    #setting,
-    #reader > #toc,
-    .dialog,
-    #reader-actions {
-        outline: 1px dashed color-mix(in srgb, var(--appearance-color) 18%, transparent);
-        outline-offset: -6px;
-    }
 }
 
 /* 仅改变呈现，不回写用户所选的材质。 */
@@ -354,14 +210,6 @@ html[data-material="leather"] {
     html:where([data-material]:not([data-material="standard"])) {
         --material-control-surface: ButtonFace;
         --material-control-image: none;
-
-        #setting .reading-mode-option:has(input:checked),
-        #setting .items > .item > .control-container > select:open,
-        #bookshelf #header :is(.appearance-button, #open-navigation)[aria-expanded="true"] {
-            background-color: Highlight;
-            color: HighlightText;
-            border-color: Highlight;
-        }
     }
 
     :where(html, .material-swatch)[data-material] {
@@ -375,15 +223,6 @@ html[data-material="leather"] {
         --material-inset-shadow: inset 0 0 0 transparent;
         --material-shadow: none;
         --material-floating-shadow: none;
-    }
-
-    html[data-material="leather"] {
-        #bookshelf #nav,
-        #setting,
-        #reader > #toc,
-        .dialog,
-        #reader-actions {
-            outline: none;
-        }
+        --material-edge-outline: none;
     }
 }

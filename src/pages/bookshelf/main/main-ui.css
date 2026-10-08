@@ -23,3 +23,15 @@
         box-shadow: none;
     }
 }
+
+/* 窄屏由书籍列表承载表面，避免与外层重复叠加。 */
+@media (min-width: 769px) {
+    html:where([data-material]:not([data-material="standard"])) #bookshelf > main {
+        background-color: var(--material-page-panel);
+        background-image: var(--material-image);
+        background-size: var(--material-size);
+        border-color: var(--material-border);
+        box-shadow: var(--material-shadow);
+        backdrop-filter: var(--material-static-filter);
+    }
+}

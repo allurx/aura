@@ -161,3 +161,15 @@ select > button {
         }
     }
 }
+
+/* 原生 picker 是独立浮层，和 select 输入表面的材质分别处理。 */
+@supports (appearance: base-select) and selector(::picker(select)) {
+    html:where([data-material]:not([data-material="standard"])) select::picker(select) {
+        background-color: var(--material-panel);
+        background-image: var(--material-image);
+        background-size: var(--material-size);
+        backdrop-filter: var(--material-filter);
+        border-color: var(--material-border);
+        box-shadow: var(--material-floating-shadow);
+    }
+}

@@ -36,3 +36,19 @@
         padding-bottom: 4px;
     }
 }
+
+html:where([data-material]:not([data-material="standard"])) #reader > #header {
+    background-color: var(--material-panel);
+    background-image: var(--material-image);
+    background-size: var(--material-size);
+    backdrop-filter: var(--material-filter);
+    border-color: var(--material-border);
+    box-shadow: var(--material-floating-shadow);
+    color: var(--appearance-color);
+}
+
+html[data-material="glass"] #reader > #header {
+    --appearance-muted-color: var(--material-muted-color);
+    --appearance-accent: var(--material-accent-color);
+    --setting-accent-color: var(--material-accent-color);
+}

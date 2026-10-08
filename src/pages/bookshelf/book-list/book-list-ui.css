@@ -599,3 +599,33 @@
         }
     }
 }
+
+html:where([data-material]:not([data-material="standard"])) {
+    /* 书封保留自身配色和书脊，仅共用材质纹理。 */
+    #bookshelf #book-list .book-cover {
+        background-color: var(--book-face);
+        background-image: var(--material-image);
+        background-size: var(--material-size);
+        background-blend-mode: soft-light;
+    }
+
+    #bookshelf .book-file-actions {
+        background-color: var(--material-panel);
+        background-image: var(--material-image);
+        background-size: var(--material-size);
+        backdrop-filter: var(--material-filter);
+        border-color: var(--material-border);
+        box-shadow: var(--material-floating-shadow);
+    }
+
+    @media (max-width: 768px) {
+        #bookshelf #book-list {
+            background-color: var(--material-page-panel);
+            background-image: var(--material-image);
+            background-size: var(--material-size);
+            backdrop-filter: var(--material-static-filter);
+            border-color: var(--material-border);
+            box-shadow: var(--material-inset-shadow);
+        }
+    }
+}

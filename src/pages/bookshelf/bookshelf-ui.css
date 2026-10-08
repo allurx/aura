@@ -173,3 +173,36 @@
         transform: translate(-50%, 0);
     }
 }
+
+/* 书架负责画布、抽屉及操作反馈的材质归属。 */
+html[data-material="glass"] #bookshelf {
+    --appearance-muted-color: var(--material-muted-color);
+    --appearance-accent: var(--material-accent-color);
+    --setting-accent-color: var(--material-accent-color);
+}
+
+html:where([data-material]:not([data-material="standard"])) {
+    #bookshelf {
+        background-image: var(--material-canvas-image);
+        background-size: var(--material-canvas-size);
+    }
+
+    #bookshelf #shelf-feedback {
+        background-color: var(--material-panel);
+        background-image: var(--material-image);
+        background-size: var(--material-size);
+        backdrop-filter: var(--material-filter);
+        border-color: var(--material-border);
+        box-shadow: var(--material-floating-shadow);
+    }
+
+    @media (max-width: 768px) {
+        #bookshelf #bookshelf-sidebar {
+            background-color: var(--material-panel);
+            background-image: var(--material-image);
+            background-size: var(--material-size);
+            backdrop-filter: var(--material-filter);
+            box-shadow: var(--material-floating-shadow);
+        }
+    }
+}
