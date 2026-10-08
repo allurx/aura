@@ -13,6 +13,7 @@ import { parseChapters } from "@/domain/chapter/chapter-parser";
 import { detectTextEncoding } from "@/domain/file/text-encoding-detector";
 import { getBookFormat, getBookTitle, type BookFormat } from "@/domain/file/book-format";
 import { parseEpub, EpubImportError } from "@/domain/file/epub";
+import { getEpubSizeRejection } from "@/domain/file/epub-limits";
 import { computeHash } from "@/utils/file-util";
 import { assertExists } from "@/utils/assert-util";
 import { runTransaction } from "@/database/transaction";
@@ -86,7 +87,24 @@ export async function importBooks(
 
     try {
         const category = assertExists(getCategory(categoryId), "Category not found");
-        for (const { hash, format, files: groupedFiles } of await groupFilesByHash(files, reportProgress)) {
+        // 文件级拒绝在内容读取前完成，不阻止同一批次中可接受的输入。
+        const importableFiles: File[] = [];
+        for (const file of files) {
+            const format = getBookFormat(file.name);
+            const rejection = !format
+                ? "格式不支持（支持 TXT、EPUB）"
+                : format === "epub"
+                  ? getEpubSizeRejection(file.size)
+                  : undefined;
+            if (rejection) {
+                result.rejectedFiles.push({ file, reason: rejection });
+                unfinishedFiles.delete(file);
+            } else {
+                importableFiles.push(file);
+            }
+        }
+
+        for (const { hash, format, files: groupedFiles } of await groupFilesByHash(importableFiles, reportProgress)) {
             const file = assertExists(groupedFiles[0]);
             reportProgress?.(`正在保存：${file.name}`);
             const existingBooks = await saveBooks(groupedFiles, category.id, format, hash);
@@ -240,6 +258,7 @@ async function prepareFile(
             title: section.title,
             path: section.path,
             anchors: section.anchors,
+            ...(section.startAnchors ? { startAnchors: section.startAnchors } : {}),
             blocks: section.blocks,
             startPosition: position,
             endPosition: position + section.blocks.length - 1,

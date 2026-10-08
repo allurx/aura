@@ -161,7 +161,7 @@ export default class ContentUi extends Ui {
         if (chapter.kind === "epub" && this.file.format === "epub") {
             epub = new EpubContent(this.file.resources);
             try {
-                await epub.render(element, chapter.blocks, this.signal);
+                await epub.render(element, chapter.blocks, this.signal, chapter.startAnchors);
             } catch (error) {
                 epub.destroy();
                 throw error;

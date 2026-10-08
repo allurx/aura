@@ -14,7 +14,17 @@ type Chapter = {
     title: string;
     startPosition: number;
     endPosition: number;
-} & ({ kind: "text"; lines: string[] } | { kind: "epub"; path: string; anchors: string[]; blocks: EpubNode[] });
+} & (
+    | { kind: "text"; lines: string[] }
+    | {
+          kind: "epub";
+          path: string;
+          anchors: string[];
+          // 不占正文位置的章首别名，与实际内容节点中的锚点分别保存。
+          startAnchors?: string[];
+          blocks: EpubNode[];
+      }
+);
 
 export type { Chapter as default };
 

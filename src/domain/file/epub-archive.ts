@@ -4,10 +4,10 @@
  */
 
 import { Inflate } from "fflate";
+import { getEpubSizeRejection } from "./epub-limits";
 
 // 按浏览器中的单本书预算限制归档规模，避免恶意目录或高度压缩内容耗尽内存。
 const MAX_ENTRIES = 10_000;
-const MAX_ARCHIVE_BYTES = 256 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 512 * 1024 * 1024;
 const MAX_ENTRY_BYTES = 64 * 1024 * 1024;
 const INPUT_CHUNK_BYTES = 16 * 1024;
@@ -86,7 +86,8 @@ export class EpubArchive {
      * 先检查完整目录和声明的展开量，再允许读取任何正文或图片。
      */
     public static async open(file: File): Promise<EpubArchive> {
-        if (file.size > MAX_ARCHIVE_BYTES) throw new EpubImportError("EPUB 文件超过 256 MiB 的导入限制。");
+        const sizeRejection = getEpubSizeRejection(file.size);
+        if (sizeRejection) throw new EpubImportError(sizeRejection);
         const tailOffset = Math.max(0, file.size - 65_557);
         const tail = new DataView(await file.slice(tailOffset).arrayBuffer());
         let end = tail.byteLength - 22;

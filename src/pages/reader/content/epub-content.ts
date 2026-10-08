@@ -21,9 +21,16 @@ export default class EpubContent {
 
     /**
      * 每个顶层结构块拥有稳定进度序号，排版与图片加载不改变序号。
+     * 解析阶段明确归到章首的空锚点映射至章节根，不额外制造正文块或可见留白。
      */
-    public async render(root: HTMLElement, blocks: EpubNode[], signal: AbortSignal): Promise<void> {
+    public async render(
+        root: HTMLElement,
+        blocks: EpubNode[],
+        signal: AbortSignal,
+        startAnchors: readonly string[] = []
+    ): Promise<void> {
         this.anchors.clear();
+        for (const anchor of startAnchors) this.anchors.set(anchor, root);
         this.images.length = 0;
         const fragment = document.createDocumentFragment();
         blocks.forEach((node, index) => {
@@ -91,6 +98,7 @@ export default class EpubContent {
             if (node.colSpan !== undefined) element.setAttribute("colspan", String(node.colSpan));
             if (node.rowSpan !== undefined) element.setAttribute("rowspan", String(node.rowSpan));
             if (node.start !== undefined) element.setAttribute("start", String(node.start));
+            if (node.value !== undefined) element.setAttribute("value", String(node.value));
             if (node.reversed) element.setAttribute("reversed", "");
             if (node.dir) element.dir = node.dir;
             for (const child of node.children) element.append(this.createNode(child));
