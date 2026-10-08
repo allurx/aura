@@ -112,9 +112,9 @@ export default class TocUi extends Ui {
     }
 
     /**
-     * 等待选章处理成功才收起目录；失败保留面板供重试，销毁后不再更新界面。
+     * 等待选章实际完成才收起目录；忙碌中未接受或失败时保留面板，销毁后不再更新界面。
      */
-    public delegateTocItemClick(handler: (chapterNumber: number) => Promise<void>, signal: AbortSignal): this {
+    public delegateTocItemClick(handler: (chapterNumber: number) => Promise<boolean>, signal: AbortSignal): this {
         delegate(
             this.tocContentElement,
             "button[data-chapter-number]",
@@ -124,8 +124,8 @@ export default class TocUi extends Ui {
                 this.selectingChapter = true;
                 this.tocContentElement.setAttribute("aria-busy", "true");
                 try {
-                    await handler(Number(target.dataset["chapterNumber"]));
-                    if (!signal.aborted && this.dialog.open) this.close("chapter-selected");
+                    const selected = await handler(Number(target.dataset["chapterNumber"]));
+                    if (selected && !signal.aborted && this.dialog.open) this.close("chapter-selected");
                 } finally {
                     this.selectingChapter = false;
                     if (!signal.aborted) this.tocContentElement.removeAttribute("aria-busy");

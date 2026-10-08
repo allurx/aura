@@ -100,6 +100,9 @@
             overflow-wrap: normal;
             border-collapse: collapse;
         }
+        :is(table, pre):focus-visible {
+            outline-offset: -2px;
+        }
         td,
         th {
             min-inline-size: 5.5em;
@@ -210,6 +213,13 @@
         scrollbar-gutter: stable;
         padding-left: max(0px, calc(var(--reading-inset-left) - env(safe-area-inset-left)));
         padding-right: max(0px, calc(var(--reading-inset-right) - env(safe-area-inset-right)));
+
+        /* 书尾留白属于滚动内容，不用视窗 padding 撑大 flex 子项的最小高度。 */
+        &::after {
+            content: "";
+            display: block;
+            height: var(--reading-end-space, 0px);
+        }
     }
 
     .reading-chapter + .reading-chapter {

@@ -24,7 +24,8 @@ interface ContentUnit {
  * 标题可见时使用章首位置，临时视觉偏移由调用方独立保存。
  */
 export function readContentLocation(section: HTMLElement, viewport: DOMRectReadOnly): ContentLocation | undefined {
-    for (const block of section.children) {
+    for (let index = firstVisibleBlock(section, viewport); index < section.children.length; index++) {
+        const block = section.children[index];
         if (!(block instanceof HTMLElement)) continue;
         if (
             block.matches(".chapter-heading") &&
@@ -67,6 +68,33 @@ export function readContentLocation(section: HTMLElement, viewport: DOMRectReadO
         }
     }
     return undefined;
+}
+
+/**
+ * 受控正文块按源顺序排版，末片段也依次沿分页方向或纵轴推进。
+ * 二分跳过视窗前的整块，跨列块仍从其首个可能可见片段开始精确读取。
+ */
+function firstVisibleBlock(section: HTMLElement, viewport: DOMRectReadOnly): number {
+    const style = getComputedStyle(section);
+    const paginated = style.columnWidth !== "auto";
+    const rtl = style.direction === "rtl";
+    let low = 0;
+    let high = section.children.length;
+    while (low < high) {
+        const middle = Math.floor((low + high) / 2);
+        const fragments = section.children[middle]?.getClientRects();
+        const last = fragments?.[fragments.length - 1];
+        // 未参与排版的块不提供顺序证据，保留原来的精确遍历。
+        if (!last) return low;
+        const before = paginated
+            ? rtl
+                ? last.left >= viewport.right - 0.01
+                : last.right <= viewport.left + 0.01
+            : last.bottom <= viewport.top + 0.01;
+        if (before) low = middle + 1;
+        else high = middle;
+    }
+    return low;
 }
 
 /**

@@ -63,7 +63,7 @@ npm run dev
 | 功能      | 入口与职责                                                                                                                                                                                                                 |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 书架      | [Controller](../src/pages/bookshelf/bookshelf-controller.ts)协调导入、导出、分类、搜索和删除；[Service](../src/pages/bookshelf/bookshelf-service.ts)处理文件去重与写入事务                                                 |
-| 阅读      | [Controller](../src/pages/reader/reader-controller.ts)编排按需章节加载、导航和进度；[UI](../src/pages/reader/reader-ui.ts)处理工具与阅读输入                                                                               |
+| 阅读      | [Controller](../src/pages/reader/reader-controller.ts)协调进度、目录、设置和页面；[正文](../src/pages/reader/content/content-ui.ts)管理窗口与导航；[UI](../src/pages/reader/reader-ui.ts)处理工具布局                      |
 | TXT 解析  | [parseChapters](../src/domain/chapter/chapter-parser.ts)在写事务前完成解码与分章，按源文件物理行定位内容                                                                                                                   |
 | EPUB 解析 | [归档读取](../src/domain/file/epub-archive.ts)按需解压与校验资源；[内容解析](../src/domain/file/epub.ts)按阅读顺序和目录建立安全内容模型；[正文渲染](../src/pages/reader/content/epub-content.ts)处理书内图片与链接        |
 | 持久化    | [数据库 schema](../src/database/database-schema.ts)集中定义元信息与记录类型映射；[连接与初始化](../src/database/database.ts)、[存储操作](../src/database/store.ts)和[事务入口](../src/database/transaction.ts)管理领域数据 |
@@ -77,7 +77,9 @@ npm run dev
 
 ### 阅读排版与定位
 
-[翻页方式](../src/pages/reader/reading-mode.ts)由阅读器常规设置保存：覆盖、平移和无动画共用动态分页，上下使用原生连续滚动。[正文 UI](../src/pages/reader/content/content-ui.ts)只对当前章分页；连续滚动挂载当前章及前后相邻章，阅读过程中替换窗口外的内容，避免把整本书一次性挂入 DOM。[手势处理](../src/pages/reader/reading-gestures.ts)将触摸和滚轮输入转换为阅读意图，章节加载与缓存范围由阅读 Controller 管理。
+[翻页方式](../src/pages/reader/reading-mode.ts)由阅读器常规设置保存：覆盖、平移和无动画共用动态分页，上下使用原生连续滚动。[正文 UI](../src/pages/reader/content/content-ui.ts)统一管理章节窗口、排版和导航完成后的实际位置，通过加载回调取得章节，再向 Controller 提交稳定的阅读快照。分页只挂载当前章；连续滚动按实际视窗及相邻方向的缓冲补充章节，并释放远处内容，不假定固定章节数量足以填满视窗。真实书尾的呈现留白使最后短章可以置顶，不计入正文位置。
+
+[阅读输入](../src/pages/reader/reading-input.ts)统一处理正文键盘、触摸、触笔和滚轮，共用交互目标与内嵌滚动判断，各输入仍保留自身的修饰键、阈值和惯性规则。按钮和工具布局由阅读 UI 管理；Controller 协调进度持久化、目录、设置和页面导航。
 
 [阅读进度](../src/domain/progress/progress.ts)保存章节、内容块和块内源偏移。TXT 内容块对应原始行，EPUB 对应受控结构块；`contentOffset` 累计文本的 UTF-16 长度，图片、`br` 和 `hr` 各占一个位置。该契约在[正文定位](../src/pages/reader/content/content-location.ts)中用于 DOM 与源内容之间的映射，不依赖像素偏移、段落高度比例或页码。字体、宽度与视口变化后，用同一内容锚点恢复；临时视觉位置另保留锚点相对视窗的偏移。
 

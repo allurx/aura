@@ -25,15 +25,16 @@ interface ReadingPointer {
 }
 
 /**
- * 将触摸、触笔和滚轮转换为阅读意图；连续阅读保留原生滚动，鼠标短点中央只切换工具。
+ * 将正文键盘、触摸、触笔和滚轮转换为阅读意图，内嵌控件优先保留自身操作。
  * 开始和结束时均检查当前交互是否可用，页面退出时清理指针状态与全部监听。
  * @returns 取消当前候选手势；布局切换时调用，已按下的指针仍跟踪到释放或取消。
  */
-export default function bindReadingGestures(
+export default function bindReadingInput(
     content: HTMLElement,
     handlers: {
         isEnabled: () => boolean;
         onTurn: (direction: ReadingDirection) => Promise<void>;
+        onChapter: (direction: ReadingDirection) => Promise<void>;
         onCenterTap: () => void;
         getMode: () => ReadingMode;
     },
@@ -53,6 +54,45 @@ export default function bindReadingGestures(
         pointer = undefined;
         wheelConsumed = true;
     };
+
+    // 键盘与指针共用正文资格判断；各按键仍保留自己的方向、修饰键及重复语义。
+    bind(
+        document,
+        "keydown",
+        async (event: KeyboardEvent) => {
+            if (
+                event.defaultPrevented ||
+                event.altKey ||
+                event.metaKey ||
+                event.isComposing ||
+                event.repeat ||
+                hasSelection() ||
+                !handlers.isEnabled()
+            )
+                return;
+            const target = event.target;
+            if (target !== document.body && !isReadingTarget(target, content)) return;
+            if (event.ctrlKey) {
+                if (event.shiftKey || (event.key !== "PageUp" && event.key !== "PageDown")) return;
+                event.preventDefault();
+                await handlers.onChapter(event.key === "PageUp" ? ReadingDirection.PREV : ReadingDirection.NEXT);
+                return;
+            }
+            if (event.shiftKey && event.key !== " ") return;
+            const direction =
+                event.key === "ArrowLeft" || event.key === "PageUp" || (event.key === " " && event.shiftKey)
+                    ? ReadingDirection.PREV
+                    : event.key === "ArrowRight" || event.key === "PageDown" || event.key === " "
+                      ? ReadingDirection.NEXT
+                      : ReadingDirection.INVALID;
+            if (direction === ReadingDirection.INVALID) return;
+            const axis = event.key === "ArrowLeft" || event.key === "ArrowRight" ? "x" : "y";
+            if (hasNestedScroll(target, content, axis)) return;
+            event.preventDefault();
+            await handlers.onTurn(direction);
+        },
+        { signal }
+    );
 
     /**
      * 轻点要求 450ms 内且两轴全程位移小于 8px；触摸或触笔轻扫至少横移 48px，偏角不超过 30°。
@@ -87,7 +127,13 @@ export default function bindReadingGestures(
         const horizontalPosition = (event.clientX - bounds.left) / bounds.width;
         const paginated = current.mode !== "scroll" && (current.type === "touch" || current.type === "pen");
 
-        if (!inContent) return ReadingDirection.INVALID;
+        // 独立滚动内容的轻点也归其自身处理，不能因没有实际滚动而翻页或切换阅读工具。
+        if (
+            !inContent ||
+            hasNestedScroll(current.target, content, "x") ||
+            hasNestedScroll(current.target, content, "y")
+        )
+            return ReadingDirection.INVALID;
         if (tap && event.timeStamp - current.startedAt <= 450) {
             if (horizontalPosition < 1 / 3) {
                 return paginated ? ReadingDirection.PREV : ReadingDirection.INVALID;
@@ -96,12 +142,7 @@ export default function bindReadingGestures(
                 return paginated ? ReadingDirection.NEXT : ReadingDirection.INVALID;
             }
             handlers.onCenterTap();
-        } else if (
-            paginated &&
-            !hasNestedScroll(current.target, content, "x") &&
-            Math.abs(deltaX) >= 48 &&
-            maxY / Math.abs(deltaX) <= Math.tan(Math.PI / 6)
-        ) {
+        } else if (paginated && Math.abs(deltaX) >= 48 && maxY / Math.abs(deltaX) <= Math.tan(Math.PI / 6)) {
             return deltaX > 0 ? ReadingDirection.PREV : ReadingDirection.NEXT;
         }
         return ReadingDirection.INVALID;
@@ -285,7 +326,7 @@ function isReadingTarget(target: EventTarget | null, content: HTMLElement): bool
     return (
         target instanceof HTMLElement &&
         (target === content || content.contains(target)) &&
-        !target.closest("button, a, input, textarea, select, summary, [contenteditable]")
+        !target.closest("button, a, input, textarea, select, summary, [contenteditable], [role=dialog]")
     );
 }
 

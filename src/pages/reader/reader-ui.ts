@@ -8,7 +8,7 @@ import { getBookTitle } from "@/domain/file/book-format";
 import { assertExists } from "@/utils/assert-util";
 import { bind } from "@/utils/event-util";
 import { ReadingDirection } from "./reading-direction";
-import bindReadingGestures from "./reading-gestures";
+import bindReadingInput from "./reading-input";
 import type { ReadingMode } from "./reading-mode";
 
 /**
@@ -199,53 +199,13 @@ export default class ReaderUi extends Ui {
         bind(this.previousButton, "click", () => navigate(ReadingDirection.PREV), { signal });
         bind(this.nextButton, "click", () => navigate(ReadingDirection.NEXT), { signal });
 
-        // 正文翻页与显式跳章分别处理，编辑、选区、输入法和长按重复保留原行为。
-        bind(
-            document,
-            "keydown",
-            async (event: KeyboardEvent) => {
-                if (
-                    event.defaultPrevented ||
-                    event.altKey ||
-                    event.metaKey ||
-                    event.isComposing ||
-                    event.repeat ||
-                    window.getSelection()?.isCollapsed === false ||
-                    this.hasOpenPanel()
-                )
-                    return;
-                const target = event.target;
-                if (!(target instanceof HTMLElement)) return;
-                if (target !== document.body && target !== this.content && !this.content.contains(target)) return;
-                if (target.closest("button, a, input, textarea, select, summary, [contenteditable], [role=dialog]"))
-                    return;
-                if (event.ctrlKey) {
-                    if (event.shiftKey || (event.key !== "PageUp" && event.key !== "PageDown")) return;
-                    event.preventDefault();
-                    await handlers.onChapter(event.key === "PageUp" ? ReadingDirection.PREV : ReadingDirection.NEXT);
-                    return;
-                }
-                if (event.shiftKey && event.key !== " ") return;
-
-                const direction =
-                    event.key === "ArrowLeft" || event.key === "PageUp" || (event.key === " " && event.shiftKey)
-                        ? ReadingDirection.PREV
-                        : event.key === "ArrowRight" || event.key === "PageDown" || event.key === " "
-                          ? ReadingDirection.NEXT
-                          : ReadingDirection.INVALID;
-                if (direction === ReadingDirection.INVALID) return;
-                event.preventDefault();
-                await navigate(direction);
-            },
-            { signal }
-        );
-
         // 输入能力独立于工具布局：触摸大屏也可翻页，鼠标正文始终保留选择行为。
-        this.cancelReadingGesture = bindReadingGestures(
+        this.cancelReadingGesture = bindReadingInput(
             this.content,
             {
                 isEnabled: () => !this.hasOpenPanel(),
                 onTurn: navigate,
+                onChapter: handlers.onChapter,
                 onCenterTap: handlers.onCenterTap,
                 getMode: handlers.getMode,
             },
@@ -260,10 +220,15 @@ export default class ReaderUi extends Ui {
     public toggleReadingTools(): void {
         if (!this.mobileControls || this.hasOpenPanel()) return;
         if (this.toolsVisible) this.hideReadingTools();
-        else {
-            this.toolsVisible = true;
-            this.renderToolsVisibility();
-        }
+        else this.showReadingTools();
+    }
+
+    /**
+     * 显式展开移动工具，初始化失败时也让已绑定的书架入口可达。
+     */
+    public showReadingTools(): void {
+        this.toolsVisible = true;
+        this.renderToolsVisibility();
     }
 
     /**

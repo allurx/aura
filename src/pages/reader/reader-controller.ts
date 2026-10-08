@@ -7,15 +7,13 @@ import { run, bind } from "@/utils/event-util";
 import AppUi from "./app/app-ui";
 import ReaderUi from "./reader-ui";
 import type Progress from "@/domain/progress/progress";
-import type Chapter from "@/domain/chapter/chapter";
 import { toBookPosition } from "@/domain/chapter/chapter";
 import { numberOfPositions } from "@/domain/toc/toc";
 import { initReader, updateProgress, getChapter } from "./reader-service";
 import ContentUi from "./content/content-ui";
-import type { ReadingLocation, ReadingPosition } from "./content/content-ui";
+import type { ReadingLocation, ReadingPosition, ReadingSnapshot } from "./content/content-ui";
 import TocUi from "./toc/toc-ui";
 import type ReaderState from "./reader-state";
-import type { ReadingMode } from "./reading-mode";
 import { createReaderSettings } from "@/settings/definitions/setting-catalog";
 import SettingController from "@/settings/setting-controller";
 import { ReadingDirection } from "./reading-direction";
@@ -32,15 +30,10 @@ export default class ReaderController {
     private readonly contentUi: ContentUi;
     private readonly tocUi: TocUi;
     private readonly settingController: SettingController;
-    private readonly chapters = new Map<number, Chapter>();
     private state!: ReaderState;
     private signal!: AbortSignal;
     private initialized = false;
-    private navigating = false;
-    private updatingWindow = false;
     private returningToBookshelf = false;
-    private windowCenter = 1;
-    private mode: ReadingMode = "cover";
     private appearancePosition: ReadingPosition | undefined;
     private progressWrite: Promise<void> = Promise.resolve();
 
@@ -50,7 +43,7 @@ export default class ReaderController {
     public constructor(
         appRoot: HTMLElement,
         readerRoot: HTMLElement,
-        private readonly onReturnToBookshelf: () => void
+        private readonly onReturnToBookshelf: (missingBook?: boolean) => void
     ) {
         this.appUi = new AppUi(appRoot);
         this.readerUi = new ReaderUi(readerRoot);
@@ -60,9 +53,7 @@ export default class ReaderController {
             pageName: PageName.READER,
             container: readerRoot,
             settings: createReaderSettings(readerRoot, this.contentUi.root, (mode) => {
-                this.mode = mode;
                 this.contentUi.setMode(mode);
-                if (this.initialized) this.renderLocation();
             }),
         });
     }
@@ -82,56 +73,48 @@ export default class ReaderController {
         );
         this.settingController.init(signal);
         this.readerUi.bindResponsiveControls(signal);
+        // 初始化失败时也保留页面内的恢复入口，不让书架按钮依赖书籍成功加载。
+        this.readerUi.bindReturnToBookshelf(() => this.returnToBookshelf(), signal);
 
-        const state = await initReader(bookId);
-        if (signal.aborted) return;
-        // 旧进度使用排版比例，不能解释为当前源偏移；按项目约定提示重置，不做隐式迁移。
-        if (!Number.isSafeInteger(state.progress.contentOffset) || state.progress.contentOffset < 0) {
-            this.onReturnToBookshelf();
-            throw new OperationError(
-                "阅读数据需要重置。",
-                "此版本更新了阅读位置结构。请先从书架导出需要保留的原文件，再重置数据并重新导入。旧位置不会自动转换。",
-                new Error("Unsupported stored reading position")
+        try {
+            const state = await initReader(bookId);
+            if (signal.aborted) return;
+            if (!state) {
+                this.onReturnToBookshelf(true);
+                return;
+            }
+            // 旧进度使用排版比例，不能解释为当前源偏移；按项目约定提示重置，不做隐式迁移。
+            if (!Number.isSafeInteger(state.progress.contentOffset) || state.progress.contentOffset < 0) {
+                this.onReturnToBookshelf();
+                throw new OperationError(
+                    "阅读数据需要重置。",
+                    "此版本更新了阅读位置结构。请先从书架导出需要保留的原文件，再重置数据并重新导入。旧位置不会自动转换。",
+                    new Error("Unsupported stored reading position")
+                );
+            }
+            this.state = state;
+            this.readerUi.renderBookTitle(state.book.fileName);
+            this.tocUi.renderEntries(state.toc.entries);
+            this.contentUi.init(
+                state.file,
+                state.toc.entries.length,
+                (number) => getChapter(state.book.fileId, number),
+                signal
             );
-        }
-        this.state = state;
-        this.chapters.set(state.chapter.chapterNumber, state.chapter);
-        this.readerUi.renderBookTitle(state.book.fileName);
-        this.tocUi.renderEntries(state.toc.entries);
-        this.contentUi.init(state.file, signal);
-        const chapters = await this.loadWindow(state.progress.chapterNumber);
-        if (!this.isActive()) return;
-        await this.contentUi.showChapter(chapters, state.progress.chapterNumber, state.progress);
-        if (!this.isActive()) return;
-        this.windowCenter = state.progress.chapterNumber;
-        this.initialized = true;
-        this.renderLocation();
-        this.bindEvent(signal);
-    }
-
-    /**
-     * 只加载当前位置及前后一章，复用已有数据；窗口外数据由 trimChapters 释放。
-     */
-    private async loadWindow(chapterNumber: number): Promise<Chapter[]> {
-        const numbers = [chapterNumber - 1, chapterNumber, chapterNumber + 1].filter(
-            (number) => number >= 1 && number <= this.state.toc.entries.length
-        );
-        const chapters = await Promise.all(
-            numbers.map(async (number) => {
-                const chapter = this.chapters.get(number) ?? (await getChapter(this.state.book.fileId, number));
-                return chapter;
-            })
-        );
-        if (this.isActive()) for (const chapter of chapters) this.chapters.set(chapter.chapterNumber, chapter);
-        return chapters;
-    }
-
-    /**
-     * 内容和数据保留相同范围，不能因读完很多章节而累计整本书。
-     */
-    private trimChapters(chapterNumber: number): void {
-        for (const number of this.chapters.keys()) {
-            if (Math.abs(number - chapterNumber) > 1) this.chapters.delete(number);
+            const shown = await this.contentUi.showChapter(state.progress.chapterNumber, state.progress);
+            if (!this.isActive()) return;
+            if (!shown) throw new Error("Stored reading chapter is outside the book");
+            this.initialized = true;
+            this.renderLocation();
+            this.contentUi.bindLocationChange(async (snapshot) => {
+                if (!this.isActive()) return;
+                this.renderLocation(snapshot);
+                if (!this.appearancePosition) await this.updateProgress(snapshot.location);
+            });
+            this.bindEvent(signal);
+        } catch (error) {
+            if (!signal.aborted) this.readerUi.showReadingTools();
+            throw error;
         }
     }
 
@@ -159,7 +142,7 @@ export default class ReaderController {
         else if (this.isActive()) {
             this.returningToBookshelf = true;
             this.contentUi.cancelPendingScroll();
-            this.onReturnToBookshelf();
+            this.onReturnToBookshelf(true);
         }
     }
 
@@ -179,116 +162,31 @@ export default class ReaderController {
      */
     private async turn(direction: ReadingDirection): Promise<void> {
         if (!this.canNavigate()) return;
-        this.navigating = true;
-        this.contentUi.cancelPendingScroll();
-        try {
-            if (!(await this.contentUi.turn(direction))) {
-                const current = this.contentUi.readProgress()?.chapterNumber ?? this.state.progress.chapterNumber;
-                const chapterNumber = current + (direction === ReadingDirection.NEXT ? 1 : -1);
-                if (chapterNumber < 1 || chapterNumber > this.state.toc.entries.length) return;
-                await this.showChapter(chapterNumber, direction === ReadingDirection.PREV ? "end" : "start", direction);
-            }
-            if (!this.isActive()) return;
-            const location = this.contentUi.readProgress();
-            this.readerUi.hideReadingTools();
-            this.renderLocation();
-            if (location) await this.updateProgress(location);
-        } finally {
-            this.navigating = false;
-        }
-        if (this.mode === "scroll") this.contentUi.dispatchContentScroll();
+        if (await this.contentUi.turn(direction)) this.readerUi.hideReadingTools();
     }
 
     /**
      * 目录及显式切章进入章首，与日常翻页回退到章末的语义分开。
      */
-    private async selectChapter(chapterNumber: number): Promise<void> {
-        if (!this.canNavigate() || chapterNumber < 1 || chapterNumber > this.state.toc.entries.length) return;
-        this.navigating = true;
-        this.contentUi.cancelPendingScroll();
-        try {
-            const oldPosition = this.contentUi.readProgress();
-            if (oldPosition) await this.updateProgress(oldPosition);
-            if (!this.isActive()) return;
-            await this.showChapter(chapterNumber, "start");
-            if (!this.isActive()) return;
-            const position = this.contentUi.readProgress();
-            this.renderLocation();
-            if (position) await this.updateProgress(position);
-            if (this.isActive()) {
-                this.readerUi.hideReadingTools();
-            }
-        } finally {
-            this.navigating = false;
-        }
-    }
-
-    /**
-     * 准备相邻章后提交正文，数据加载失败时保留原来可读的页面。
-     */
-    private async showChapter(
-        chapterNumber: number,
-        target: "start" | "end",
-        direction = ReadingDirection.INVALID
-    ): Promise<void> {
-        const chapters = await this.loadWindow(chapterNumber);
-        if (!this.isActive()) return;
-        await this.contentUi.showChapter(chapters, chapterNumber, target, direction);
-        if (!this.isActive()) return;
-        this.windowCenter = chapterNumber;
-        this.trimChapters(chapterNumber);
-    }
-
-    /**
-     * 滚动自然跨章后更新位置和有限窗口，更新期间的输入由浏览器继续处理。
-     */
-    private async onContentScroll(location: ReadingLocation): Promise<void> {
-        if (this.navigating || this.updatingWindow || this.returningToBookshelf || this.appearancePosition) return;
-        this.updatingWindow = true;
-        try {
-            this.renderLocation();
-            await this.updateProgress(location);
-            if (!this.isActive()) return;
-            if (this.mode === "scroll" && location.chapterNumber !== this.windowCenter) {
-                const chapters = await this.loadWindow(location.chapterNumber);
-                if (!this.isActive()) return;
-                await this.contentUi.updateWindow(chapters, location.chapterNumber);
-                if (!this.isActive()) return;
-                if (this.contentUi.readProgress()?.chapterNumber === location.chapterNumber) {
-                    this.windowCenter = location.chapterNumber;
-                    this.trimChapters(location.chapterNumber);
-                }
-            }
-            this.renderLocation();
-        } finally {
-            this.updatingWindow = false;
-        }
-        const current = this.contentUi.readProgress();
-        if (
-            current &&
-            (current.chapterNumber !== location.chapterNumber ||
-                current.blockNumber !== location.blockNumber ||
-                current.contentOffset !== location.contentOffset)
-        )
-            this.contentUi.dispatchContentScroll();
+    private async selectChapter(chapterNumber: number): Promise<boolean> {
+        if (!this.canNavigate() || chapterNumber < 1 || chapterNumber > this.state.toc.entries.length) return false;
+        const selected = await this.contentUi.showChapter(chapterNumber, "start");
+        if (selected && this.isActive()) this.readerUi.hideReadingTools();
+        return selected && this.isActive();
     }
 
     /**
      * 按同一份可见内容同步章名、目录、页码和全书进度。
      */
-    private renderLocation(): void {
-        const location = this.contentUi.readProgress();
-        if (!location) return;
-        const chapter = this.chapters.get(location.chapterNumber);
-        if (!chapter) return;
-        this.state.chapter = chapter;
-        const navigation = this.contentUi.navigation(this.state.toc.entries.length);
-        this.readerUi.renderNavigation({ ...navigation, mode: this.mode });
-        this.readerUi.renderPageInfo(navigation.pageNumber, navigation.pageCount);
+    private renderLocation(snapshot: ReadingSnapshot | undefined = this.contentUi.readSnapshot()): void {
+        if (!snapshot) return;
+        const { location, chapter } = snapshot;
+        this.readerUi.renderNavigation(snapshot);
+        this.readerUi.renderPageInfo(snapshot.pageNumber, snapshot.pageCount);
         const count = numberOfPositions(this.state.toc);
         this.readerUi.renderChapterInfo(
             chapter.title,
-            navigation.canNext ? toBookPosition(chapter, location.blockNumber, location.contentOffset) : count,
+            snapshot.canNext ? toBookPosition(chapter, location.blockNumber, location.contentOffset) : count,
             count
         );
         this.tocUi.highlightCurrentChapter(location.chapterNumber);
@@ -305,13 +203,17 @@ export default class ReaderController {
      * 导航不能与已有导航或相邻章节替换并行。
      */
     private canNavigate(): boolean {
-        return this.isActive() && !this.navigating && !this.updatingWindow;
+        return this.isActive() && !this.contentUi.isBusy();
     }
 
     /**
      * 返回前保存当前位置；真实失败保留页面，允许重试。
      */
     private async returnToBookshelf(): Promise<void> {
+        if (!this.initialized) {
+            this.onReturnToBookshelf();
+            return;
+        }
         if (!this.canNavigate()) return;
         const position = this.contentUi.readProgress();
         this.returningToBookshelf = true;
@@ -342,38 +244,37 @@ export default class ReaderController {
         this.readerUi.bindReadingNavigation(
             {
                 onTurn: (direction) => this.turn(direction),
-                onChapter: (direction) =>
-                    this.selectChapter(
+                onChapter: async (direction) => {
+                    await this.selectChapter(
                         (this.contentUi.readProgress()?.chapterNumber ?? this.state.progress.chapterNumber) +
                             (direction === ReadingDirection.PREV ? -1 : 1)
-                    ),
+                    );
+                },
                 onCenterTap: () => {
                     if (this.canNavigate()) this.readerUi.toggleReadingTools();
                 },
-                getMode: () => this.mode,
+                getMode: () => this.contentUi.getMode(),
             },
             signal
         );
 
-        this.readerUi
-            .bindReturnToBookshelf(() => this.returnToBookshelf(), signal)
-            .bindToggleFullscreen(async () => {
-                if (!this.canNavigate()) return;
-                const position = this.contentUi.readPosition();
-                try {
-                    await this.appUi.toggleFullscreen();
-                } catch (error) {
-                    if (signal.aborted) return;
-                    throw new OperationError(
-                        "无法切换全屏。",
-                        "浏览器可能未提供或拒绝了全屏请求，可以继续普通阅读。",
-                        error
-                    );
-                }
+        this.readerUi.bindToggleFullscreen(async () => {
+            if (!this.canNavigate()) return;
+            const position = this.contentUi.readPosition();
+            try {
+                await this.appUi.toggleFullscreen();
+            } catch (error) {
                 if (signal.aborted) return;
-                if (position) this.contentUi.restorePosition(position);
-                this.contentUi.dispatchContentScroll();
-            }, signal);
+                throw new OperationError(
+                    "无法切换全屏。",
+                    "浏览器可能未提供或拒绝了全屏请求，可以继续普通阅读。",
+                    error
+                );
+            }
+            if (signal.aborted) return;
+            if (position) this.contentUi.restorePosition(position);
+            await this.contentUi.refreshLocation();
+        }, signal);
 
         this.readerUi
             .bindToggleSettingPanel((opener) => {
@@ -384,18 +285,13 @@ export default class ReaderController {
                 this.readerUi.setTocExpanded(this.tocUi.toggleToc());
             }, signal);
 
-        this.contentUi.bindContentScroll((location) => this.onContentScroll(location), signal);
         this.contentUi.bindBookLinks(async (path, fragment) => {
             if (!this.canNavigate()) return;
             const target = this.state.toc.entries.find(
                 (entry) => entry.path === path && (!fragment || entry.anchors?.includes(fragment))
             );
             if (!target) return;
-            await this.selectChapter(target.chapterNumber);
-            if (this.isActive() && this.state.progress.chapterNumber === target.chapterNumber) {
-                this.contentUi.scrollToFragment(fragment);
-                await this.saveReadingPosition();
-            }
+            if (await this.contentUi.showChapter(target.chapterNumber, { fragment })) this.readerUi.hideReadingTools();
         }, signal);
 
         this.tocUi
@@ -406,7 +302,7 @@ export default class ReaderController {
                     this.readerUi.hideReadingTools();
                     this.contentUi.root.focus({ preventScroll: true });
                 }
-                this.contentUi.dispatchContentScroll();
+                run(() => this.contentUi.refreshLocation());
             }, signal);
 
         // 设置预览冻结源位置；关闭后恢复同一内容，分页与滚动互换也使用同一锚点。
@@ -422,11 +318,11 @@ export default class ReaderController {
         bind(
             this.readerUi.root,
             "appearance-close",
-            () => {
+            async () => {
                 const position = this.appearancePosition;
                 this.appearancePosition = undefined;
                 if (position) this.contentUi.restorePosition(position);
-                this.contentUi.dispatchContentScroll();
+                await this.contentUi.refreshLocation();
             },
             { signal }
         );
