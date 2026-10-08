@@ -57,6 +57,14 @@ export default class Router {
     }
 
     /**
+     * 已确认书籍不存在时清除失效上下文，并替换无效阅读地址。
+     */
+    public discardReader(): void {
+        sessionStorage.removeItem(Router.READER_BOOK_ID_KEY);
+        this.navigateToBookshelf(true);
+    }
+
+    /**
      * 先将书籍标识保存在当前标签页，再进入共用的阅读器地址。
      */
     public navigateToReader(bookId: string): void {

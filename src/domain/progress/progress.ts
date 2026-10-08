@@ -13,6 +13,7 @@ export default interface Progress {
     // 从 1 开始的章内内容块；TXT 为原始行，EPUB 为结构块。
     blockNumber: number;
 
-    // 内容块在视口上缘以下的剩余比例（0～1），用于恢复块内阅读位置。
-    blockVisibleRatio: number;
+    // 块内源内容偏移：文本按 UTF-16 长度累计，图片、换行与分隔线各占一个位置。
+    // 不依赖排版后的像素、页码或段落高度，字体和视窗变化后仍定位同一内容。
+    contentOffset: number;
 }

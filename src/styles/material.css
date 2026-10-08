@@ -1,0 +1,228 @@
+/*
+ * Copyright 2026 allurx
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* 页面与样片共用材质变量；具体表面和响应式归属由各组件样式决定。 */
+:where(html, .material-swatch) {
+    --material-panel: var(--appearance-panel);
+    --material-page-panel: var(--material-panel);
+    --material-image: none;
+    --material-size: auto;
+    --material-canvas-image: var(--material-image);
+    --material-canvas-size: var(--material-size);
+    --material-filter: none;
+    --material-static-filter: none;
+    --material-border: var(--appearance-border);
+    --material-inset-shadow: inset 0 0 0 transparent;
+    --material-shadow: var(--material-inset-shadow), var(--appearance-shadow-soft);
+    --material-floating-shadow: var(--material-inset-shadow), var(--appearance-shadow-floating);
+    --material-ink: color-mix(in srgb, var(--appearance-color) 7%, transparent);
+    --material-light: color-mix(in srgb, var(--appearance-highlight) 50%, transparent);
+}
+
+:where(html, .material-swatch)[data-material="glass"] {
+    --material-muted-color: color-mix(in srgb, var(--appearance-muted-color) 30%, var(--appearance-color));
+    --material-accent-color: color-mix(in srgb, var(--appearance-accent) 65%, var(--appearance-color));
+    --material-canvas-image:
+        radial-gradient(
+            ellipse 45% 65% at 0% 10%,
+            color-mix(in srgb, var(--appearance-accent) 58%, transparent),
+            transparent 85%
+        ),
+        radial-gradient(
+            ellipse 50% 75% at 90% 100%,
+            color-mix(in srgb, var(--appearance-accent-secondary) 44%, transparent),
+            transparent 85%
+        ),
+        linear-gradient(130deg, var(--appearance-tint), transparent 55%);
+    --material-image: linear-gradient(125deg, var(--appearance-highlight), transparent 18% 78%, var(--material-light));
+    --material-border: color-mix(in srgb, var(--appearance-highlight) 75%, transparent);
+    --material-inset-shadow:
+        inset 1px 1px 0 var(--appearance-highlight),
+        inset -1px -1px 0 color-mix(in srgb, var(--appearance-highlight) 55%, transparent),
+        inset 0 0 12px color-mix(in srgb, var(--appearance-highlight) 28%, transparent);
+    --material-shadow: var(--material-inset-shadow), var(--appearance-shadow-raised);
+
+    @supports (backdrop-filter: blur(1px)) {
+        --material-panel: color-mix(in srgb, var(--appearance-panel) 84%, transparent);
+        --material-page-panel: color-mix(in srgb, var(--appearance-panel) 38%, transparent);
+        --material-filter: blur(20px) saturate(1.35);
+        --material-static-filter: blur(16px) saturate(1.3);
+    }
+}
+
+:where(html, .material-swatch)[data-material="paper"] {
+    --material-panel: color-mix(in srgb, var(--appearance-panel) 72%, var(--appearance-glow));
+    --material-image: var(--paper-image);
+    --material-size: var(--paper-size);
+    --material-border: color-mix(in srgb, var(--appearance-color) 18%, transparent);
+    --material-inset-shadow: inset 0 1px 0 var(--appearance-highlight);
+    --material-shadow:
+        0 1px 0 var(--material-panel), 0 2px 0 var(--material-border), 0 4px 0 var(--material-panel),
+        0 5px 0 var(--appearance-border), var(--appearance-shadow-soft);
+}
+
+:where(html, .material-swatch)[data-material="ceramic"] {
+    --material-panel: color-mix(in srgb, var(--appearance-panel) 70%, var(--appearance-tint));
+    --material-canvas-image: radial-gradient(ellipse at 50% 0%, var(--appearance-glow), transparent 75%);
+    --material-image: linear-gradient(
+        145deg,
+        var(--appearance-highlight),
+        transparent 36% 65%,
+        color-mix(in srgb, var(--appearance-shadow-color) 9%, transparent)
+    );
+    --material-border: color-mix(in srgb, var(--appearance-highlight) 65%, var(--appearance-border));
+    --material-inset-shadow:
+        inset 1px 2px 3px var(--appearance-highlight),
+        inset -1px -3px 6px color-mix(in srgb, var(--appearance-shadow-color) 12%, transparent);
+    --material-shadow: var(--material-inset-shadow), var(--appearance-shadow-raised);
+}
+
+:where(html, .material-swatch)[data-material="linen"] {
+    --material-panel: color-mix(in srgb, var(--appearance-panel) 78%, var(--appearance-canvas));
+    --material-image:
+        repeating-linear-gradient(
+            0deg,
+            var(--material-ink) 0 0.5px,
+            transparent 0.5px 2px,
+            var(--material-light) 2px 3px,
+            transparent 3px 5px
+        ),
+        repeating-linear-gradient(
+            90deg,
+            transparent 0 1px,
+            var(--material-ink) 1px 1.5px,
+            transparent 1.5px 4px,
+            var(--material-light) 4px 5px
+        );
+    --material-border: color-mix(in srgb, var(--appearance-color) 20%, transparent);
+    --material-inset-shadow: inset 0 0 0 3px color-mix(in srgb, var(--appearance-panel) 55%, transparent);
+    --material-size: 5px 5px;
+}
+
+:where(html, .material-swatch)[data-material="wood"] {
+    --material-panel: color-mix(in srgb, var(--appearance-panel) 55%, var(--appearance-glow));
+    --material-image:
+        repeating-radial-gradient(
+            ellipse 90px 900px at 10px -50px,
+            transparent 0 4px,
+            color-mix(in srgb, var(--appearance-color) 5%, transparent) 5px,
+            transparent 6px 11px
+        ),
+        repeating-linear-gradient(
+            89deg,
+            transparent 0 13px,
+            color-mix(in srgb, var(--appearance-color) 4%, transparent) 14px 15px,
+            transparent 18px 43px
+        ),
+        linear-gradient(90deg, var(--material-light), transparent 35% 70%, var(--material-light));
+    --material-border: color-mix(in srgb, var(--appearance-color) 20%, transparent);
+    --material-inset-shadow:
+        inset 0 1px 0 var(--appearance-highlight),
+        inset 0 -3px 3px color-mix(in srgb, var(--appearance-shadow-color) 12%, transparent);
+    --material-shadow: var(--material-inset-shadow), var(--appearance-shadow-raised);
+}
+
+:where(html, .material-swatch)[data-material="metal"] {
+    --material-panel: color-mix(in srgb, var(--appearance-panel) 62%, var(--appearance-muted-surface));
+    --material-image:
+        repeating-linear-gradient(
+            0deg,
+            var(--material-light) 0 0.5px,
+            var(--material-ink) 0.5px 1px,
+            transparent 1px 3px
+        ),
+        linear-gradient(
+            110deg,
+            color-mix(in srgb, var(--appearance-color) 8%, transparent),
+            var(--appearance-highlight) 24%,
+            transparent 43% 55%,
+            var(--material-light) 72%,
+            color-mix(in srgb, var(--appearance-color) 8%, transparent)
+        );
+    --material-canvas-image: linear-gradient(
+        120deg,
+        var(--appearance-muted-surface),
+        var(--appearance-canvas) 50%,
+        var(--appearance-muted-surface)
+    );
+    --material-canvas-size: auto;
+    --material-border: color-mix(in srgb, var(--appearance-color) 24%, transparent);
+    --material-size: 3px 3px, auto;
+    --material-inset-shadow: inset 0 1px 0 var(--appearance-highlight), inset 0 -1px 0 var(--material-border);
+}
+
+:where(html, .material-swatch)[data-material="leather"] {
+    --material-edge-outline: 1px dashed color-mix(in srgb, var(--appearance-color) 18%, transparent);
+    --material-panel: color-mix(in srgb, var(--appearance-panel) 80%, var(--appearance-tint));
+    --material-image:
+        radial-gradient(ellipse at 30% 35%, transparent 1px, var(--material-ink) 1.5px, transparent 2px),
+        radial-gradient(ellipse at 70% 65%, var(--material-light) 0.5px, transparent 1.5px);
+    --material-size: 6px 4px, 4px 7px;
+    --material-border: color-mix(in srgb, var(--appearance-color) 21%, transparent);
+    --material-inset-shadow:
+        inset 0 2px 3px var(--material-light),
+        inset 0 -3px 5px color-mix(in srgb, var(--appearance-shadow-color) 13%, transparent);
+    --material-shadow: var(--material-inset-shadow), var(--appearance-shadow-raised);
+}
+
+:where(html, .material-swatch)[data-material="stone"] {
+    --material-panel: color-mix(in srgb, var(--appearance-panel) 72%, var(--appearance-canvas));
+    --material-image:
+        radial-gradient(
+            circle at 16% 26%,
+            color-mix(in srgb, var(--appearance-color) 12%, transparent) 0.6px,
+            transparent 1px
+        ),
+        radial-gradient(circle at 72% 64%, var(--material-light) 0.7px, transparent 1.3px),
+        radial-gradient(circle at 42% 82%, var(--material-ink) 0.5px, transparent 1.1px);
+    --material-size: 11px 13px, 17px 11px, 7px 19px;
+    --material-border: color-mix(in srgb, var(--appearance-color) 20%, transparent);
+    --material-inset-shadow:
+        inset 0 1px 0 var(--appearance-highlight),
+        inset 0 -2px 0 color-mix(in srgb, var(--appearance-shadow-color) 12%, transparent);
+}
+
+/* 普通控件使用淡化后的同源表面，不增加父子模糊。 */
+html:where([data-material]:not([data-material="standard"])) {
+    --material-control-surface: color-mix(in srgb, var(--material-panel) 78%, var(--appearance-canvas));
+    --material-control-image:
+        linear-gradient(
+            color-mix(in srgb, var(--material-panel) 55%, transparent),
+            color-mix(in srgb, var(--material-panel) 55%, transparent)
+        ),
+        var(--material-image);
+    --material-control-size: auto, var(--material-size);
+}
+
+/* 仅改变呈现，不回写用户所选的材质。 */
+@media (prefers-reduced-transparency: reduce) {
+    :where(html, .material-swatch)[data-material="glass"] {
+        --material-panel: var(--appearance-panel);
+        --material-page-panel: var(--appearance-panel);
+        --material-filter: none;
+        --material-static-filter: none;
+    }
+}
+
+@media (forced-colors: active) {
+    html:where([data-material]:not([data-material="standard"])) {
+        --material-control-surface: ButtonFace;
+        --material-control-image: none;
+    }
+
+    :where(html, .material-swatch)[data-material] {
+        --material-panel: Canvas;
+        --material-page-panel: Canvas;
+        --material-image: none;
+        --material-canvas-image: none;
+        --material-filter: none;
+        --material-static-filter: none;
+        --material-border: CanvasText;
+        --material-inset-shadow: inset 0 0 0 transparent;
+        --material-shadow: none;
+        --material-floating-shadow: none;
+        --material-edge-outline: none;
+    }
+}

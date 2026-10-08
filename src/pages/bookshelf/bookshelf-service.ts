@@ -13,6 +13,7 @@ import { parseChapters } from "@/domain/chapter/chapter-parser";
 import { detectTextEncoding } from "@/domain/file/text-encoding-detector";
 import { getBookFormat, getBookTitle, type BookFormat } from "@/domain/file/book-format";
 import { parseEpub, EpubImportError } from "@/domain/file/epub";
+import { getEpubSizeRejection } from "@/domain/file/epub-limits";
 import { computeHash } from "@/utils/file-util";
 import { assertExists } from "@/utils/assert-util";
 import { runTransaction } from "@/database/transaction";
@@ -39,12 +40,12 @@ export interface BookImportResult {
 }
 
 /**
- * 书架所需摘要，不加载章节正文。
+ * 书架所需的只读摘要快照，不加载章节正文；领域变化后以新快照替换。
  */
 export interface BookSummary {
-    book: Book;
-    title: string;
-    progress: { chapterNumber: number; chapterCount: number } | null;
+    readonly book: Readonly<Book>;
+    readonly title: string;
+    readonly progress: Readonly<{ chapterNumber: number; chapterCount: number }> | null;
 }
 
 /**
@@ -86,7 +87,24 @@ export async function importBooks(
 
     try {
         const category = assertExists(getCategory(categoryId), "Category not found");
-        for (const { hash, format, files: groupedFiles } of await groupFilesByHash(files, reportProgress)) {
+        // 文件级拒绝在内容读取前完成，不阻止同一批次中可接受的输入。
+        const importableFiles: File[] = [];
+        for (const file of files) {
+            const format = getBookFormat(file.name);
+            const rejection = !format
+                ? "格式不支持（支持 TXT、EPUB）"
+                : format === "epub"
+                  ? getEpubSizeRejection(file.size)
+                  : undefined;
+            if (rejection) {
+                result.rejectedFiles.push({ file, reason: rejection });
+                unfinishedFiles.delete(file);
+            } else {
+                importableFiles.push(file);
+            }
+        }
+
+        for (const { hash, format, files: groupedFiles } of await groupFilesByHash(importableFiles, reportProgress)) {
             const file = assertExists(groupedFiles[0]);
             reportProgress?.(`正在保存：${file.name}`);
             const existingBooks = await saveBooks(groupedFiles, category.id, format, hash);
@@ -240,6 +258,7 @@ async function prepareFile(
             title: section.title,
             path: section.path,
             anchors: section.anchors,
+            ...(section.startAnchors ? { startAnchors: section.startAnchors } : {}),
             blocks: section.blocks,
             startPosition: position,
             endPosition: position + section.blocks.length - 1,
@@ -318,7 +337,7 @@ async function addBooks(
             bookId: book.id,
             chapterNumber: 1,
             blockNumber: 1,
-            blockVisibleRatio: 1,
+            contentOffset: 0,
         };
         await Promise.all([addRecord(transaction, "book", book), addRecord(transaction, "progress", progress)]);
         books.push(book);

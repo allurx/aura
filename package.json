@@ -11,9 +11,10 @@
         "format": "prettier . --write",
         "format:check": "prettier . --check",
         "lint": "eslint . --max-warnings 0",
-        "type-check": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+        "type-check": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.test.json --noEmit",
         "check": "npm run format:check && npm run lint && npm run type-check",
-        "verify": "npm run check && vite build && vite build --mode portable",
+        "test": "vite build && vite build --mode portable && node --test --test-concurrency=1 tests/*.test.ts",
+        "verify": "npm run check && npm test",
         "build": "npm run check && vite build",
         "build:portable": "npm run check && vite build --mode portable",
         "preview": "wrangler dev",
@@ -21,6 +22,7 @@
     },
     "devDependencies": {
         "@allurx/web-foundation": "git+https://github.com/allurx/web-foundation.git#v1.0.2",
+        "playwright-core": "1.64.0",
         "vite-plugin-singlefile": "2.3.3"
     },
     "prettier": "@allurx/web-foundation/prettier",

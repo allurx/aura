@@ -41,29 +41,35 @@ export async function* readLines(file: File, encoding: SupportedTextEncoding): A
         .pipeThrough(new TextDecoderStream(encoding, { fatal: true }))
         .getReader();
 
-    let remaining = "";
+    const fragments: string[] = [];
 
     try {
         for (;;) {
             const result = await reader.read();
             if (result.done) break;
 
-            // 将上一块的未结束行拼回当前块，再按换行符切分。
-            const text = remaining + result.value;
+            // 只扫描新到达的文本，避免长行在每次读取时重复拼接和扫描整个前缀。
+            const text = result.value;
             let start = 0;
             let end = text.indexOf("\n");
             while (end >= 0) {
-                const line = text.slice(start, end);
+                const part = text.slice(start, end);
+                let line = part;
+                if (fragments.length > 0) {
+                    fragments.push(part);
+                    line = fragments.join("");
+                    fragments.length = 0;
+                }
                 yield line.endsWith("\r") ? line.slice(0, -1) : line;
                 start = end + 1;
                 end = text.indexOf("\n", start);
             }
 
-            // 将最后一个不完整行留给下一文本块。
-            remaining = text.slice(start);
+            // 未结束行保留分片，只在读到换行或文件结束时合并一次。
+            if (start < text.length) fragments.push(text.slice(start));
         }
 
-        if (remaining.length > 0) yield remaining;
+        if (fragments.length > 0) yield fragments.join("");
     } finally {
         reader.releaseLock();
     }

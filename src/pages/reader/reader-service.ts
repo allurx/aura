@@ -10,32 +10,28 @@ import type ReaderState from "./reader-state";
 import { assertExists } from "@/utils/assert-util";
 
 /**
- * 在同一事务快照中加载完整阅读状态，必需记录缺失时保留错误上下文。
+ * 在同一事务快照中加载阅读上下文。书籍已删除时返回 undefined，其他记录缺失继续报错。
  */
-export async function initReader(bookId: string): Promise<ReaderState> {
-    return runTransaction(["book", "file", "toc", "chapter", "progress"], "readonly", async (transaction) => {
+export async function initReader(bookId: string): Promise<ReaderState | undefined> {
+    return runTransaction(["book", "file", "toc", "progress"], "readonly", async (transaction) => {
         const [book, progress] = await Promise.all([
             getRecord(transaction, "book", bookId),
             getRecord(transaction, "progress", bookId),
         ]);
-        const currentBook = assertExists(book, `Book[${bookId}] not found`);
+        if (!book) return undefined;
+        const currentBook = book;
         const currentProgress = assertExists(progress, `Progress[bookId=${bookId}] not found`);
 
-        // 目录与目标章节依赖正文标识和进度，其余读取彼此独立。
-        const [file, toc, chapter] = await Promise.all([
+        // 原文件与目录依赖正文标识，实际章节由正文窗口按需读取。
+        const [file, toc] = await Promise.all([
             getRecord(transaction, "file", currentBook.fileId),
             getRecord(transaction, "toc", currentBook.fileId),
-            getRecord(transaction, "chapter", [currentBook.fileId, currentProgress.chapterNumber]),
         ]);
         return {
             book: currentBook,
             file: assertExists(file, `File[${currentBook.fileId}] not found`),
             progress: currentProgress,
             toc: assertExists(toc, `Toc[fileId=${currentBook.fileId}] not found`),
-            chapter: assertExists(
-                chapter,
-                `Chapter[fileId=${currentBook.fileId}, chapterNumber=${String(currentProgress.chapterNumber)}] not found`
-            ),
         };
     });
 }

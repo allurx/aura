@@ -6,7 +6,6 @@
 import type SettingControl from "../controls/setting-control";
 import type SettingControlListener from "../controls/setting-control-listener";
 import type Setting from "../definitions/setting";
-import ThemeSettingControl from "../controls/theme-setting-control";
 import type SettingConfiguration from "../models/setting-configuration";
 import { assertExists } from "@/utils/assert-util";
 
@@ -16,7 +15,7 @@ import { assertExists } from "@/utils/assert-util";
  */
 export default class SettingControlList {
     private readonly controlBySetting = new Map<Setting, SettingControl>();
-    private readonly themeControl: ThemeSettingControl;
+    private readonly themeControl: SettingControl;
 
     public constructor(
         container: HTMLElement,
@@ -25,7 +24,7 @@ export default class SettingControlList {
         listener: SettingControlListener,
         signal: AbortSignal
     ) {
-        this.themeControl = new ThemeSettingControl(configuration.theme, listener, signal);
+        this.themeControl = configuration.theme.createControl(listener, signal);
         themeContainer.append(this.themeControl.element);
         for (const setting of configuration.general) {
             const control = setting.createControl(listener, signal);

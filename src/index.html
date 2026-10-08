@@ -11,7 +11,7 @@
             name="viewport"
             content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
         />
-        <title>Aura</title>
+        <title>Aura - 轻量、离线优先的 TXT 和 EPUB 阅读器</title>
         <meta
             name="description"
             content="Aura 是一个轻量、离线优先的电子书阅读器，可导入 TXT 和 EPUB，提供本地书架、章节导航、阅读进度恢复和原文件导出。书籍与阅读进度保存在当前浏览器本地。"
@@ -30,6 +30,7 @@
                             ? "reader"
                             : "bookshelf";
                     root.dataset.page = page;
+                    root.dataset.theme = page === "reader" ? "paper" : "sunny";
                     const appearance = JSON.parse(localStorage.getItem(`aura.${page}.appearance`) ?? "{}");
                     if (typeof appearance?.theme === "string") root.dataset.theme = appearance.theme;
                 } catch {
@@ -41,7 +42,14 @@
         <script src="./main.ts" type="module"></script>
     </head>
     <body>
-        <div id="app"></div>
+        <div id="app">
+            <noscript>
+                <p style="padding: 1.5rem; color: var(--appearance-color); line-height: 1.7">
+                    Aura 是一个轻量的本地 TXT 和 EPUB 阅读器。<br />
+                    请启用 JavaScript 后导入书籍并开始阅读。
+                </p>
+            </noscript>
+        </div>
         <dialog id="about-dialog" class="dialog license-dialog" aria-labelledby="about-title">
             <header class="header">
                 <h2 id="about-title" class="title">关于 Aura</h2>

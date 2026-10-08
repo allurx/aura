@@ -33,7 +33,7 @@ export default class FontFamilySetting extends StyleSetting {
     }
 
     public override update(appearance: PageAppearance, value: string): PageAppearance {
-        return value === "" ? appearance.withoutStyle(this.property) : super.update(appearance, value);
+        return value === "" ? appearance.withoutValue(this.property) : super.update(appearance, value);
     }
 
     public override apply(value: string | undefined): void {

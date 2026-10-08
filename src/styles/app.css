@@ -18,3 +18,5 @@
 @import "../components/license/license.css";
 @import "../components/overlay/overlay.css";
 @import "../settings/setting-ui.css";
+@import "./material.css";
+@import "./paper-texture.css";

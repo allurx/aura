@@ -4,6 +4,7 @@
  */
 
 import Ui from "@/components/ui";
+import enableLightDismiss from "@/components/dialog/light-dismiss";
 import { assertExists } from "@/utils/assert-util";
 import { delegate, bind } from "@/utils/event-util";
 import type TocEntry from "@/domain/toc/toc-entry";
@@ -111,9 +112,9 @@ export default class TocUi extends Ui {
     }
 
     /**
-     * 等待选章处理成功才收起目录；失败保留面板供重试，销毁后不再更新界面。
+     * 等待选章实际完成才收起目录；忙碌中未接受或失败时保留面板，销毁后不再更新界面。
      */
-    public delegateTocItemClick(handler: (chapterNumber: number) => Promise<void>, signal: AbortSignal): this {
+    public delegateTocItemClick(handler: (chapterNumber: number) => Promise<boolean>, signal: AbortSignal): this {
         delegate(
             this.tocContentElement,
             "button[data-chapter-number]",
@@ -123,8 +124,8 @@ export default class TocUi extends Ui {
                 this.selectingChapter = true;
                 this.tocContentElement.setAttribute("aria-busy", "true");
                 try {
-                    await handler(Number(target.dataset["chapterNumber"]));
-                    if (!signal.aborted && this.dialog.open) this.close("chapter-selected");
+                    const selected = await handler(Number(target.dataset["chapterNumber"]));
+                    if (selected && !signal.aborted && this.dialog.open) this.close("chapter-selected");
                 } finally {
                     this.selectingChapter = false;
                     if (!signal.aborted) this.tocContentElement.removeAttribute("aria-busy");
@@ -140,6 +141,7 @@ export default class TocUi extends Ui {
      */
     public bindTocClose(handler: (chapterSelected: boolean) => void, signal: AbortSignal): this {
         let composing = false;
+        enableLightDismiss(this.dialog, signal);
 
         // 尺寸改变时恢复章节锚点，普通滚动才更新当前浏览快照。
         const observer = new ResizeObserver(() => {
@@ -157,7 +159,7 @@ export default class TocUi extends Ui {
             { signal, passive: true }
         );
 
-        // 关闭按钮和 Escape 统一保存位置，close 事件只负责通知页面恢复焦点。
+        // 关闭按钮、外点和 Escape 统一保存位置，close 事件只负责通知页面恢复焦点。
         bind(
             this.closeButton,
             "click",

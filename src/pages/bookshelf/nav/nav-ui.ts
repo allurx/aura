@@ -7,6 +7,7 @@ import { CATEGORIES } from "@/domain/category/category";
 import { bind, delegate } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
 import Ui from "@/components/ui";
+import enableLightDismiss from "@/components/dialog/light-dismiss";
 
 /**
  * 桌面分类侧栏与移动端原生模态抽屉。
@@ -53,6 +54,7 @@ export default class NavUi extends Ui {
     public setActive(categoryId: string): void {
         for (const button of this.navigation.querySelectorAll("button")) {
             const active = button.dataset["id"] === categoryId;
+            if (button.classList.contains("active") === active) continue;
             button.classList.toggle("active", active);
             if (active) button.setAttribute("aria-current", "page");
             else button.removeAttribute("aria-current");
@@ -71,6 +73,7 @@ export default class NavUi extends Ui {
         signal: AbortSignal
     ): void {
         // 初始化及旋转、缩放时同步桌面侧栏和移动模态抽屉。
+        enableLightDismiss(this.drawer, signal);
         this.syncBreakpoint();
         this.mobile.addEventListener(
             "change",
@@ -127,14 +130,6 @@ export default class NavUi extends Ui {
             {
                 signal,
             }
-        );
-        bind(
-            this.drawer,
-            "click",
-            (event) => {
-                if (event.target === this.drawer) this.closeDrawer();
-            },
-            { signal }
         );
         bind(
             this.drawer,
@@ -204,6 +199,7 @@ export default class NavUi extends Ui {
         // 关于窗口集中展示项目链接与内嵌许可，离线查看声明不读取书籍或外部资源。
         const about = assertExists(document.querySelector<HTMLDialogElement>("#about-dialog"));
         const aboutButton = assertExists(this.root.querySelector<HTMLButtonElement>("#open-about"));
+        enableLightDismiss(about, signal);
         bind(
             aboutButton,
             "click",
@@ -268,6 +264,7 @@ export default class NavUi extends Ui {
         const focusedInside = this.drawer.contains(document.activeElement);
         this.closeMoreActions();
         this.opener.setAttribute("aria-expanded", "false");
+        this.drawer.setAttribute("closedby", this.mobile.matches ? "any" : "none");
         if (this.mobile.matches) {
             this.drawer.close();
             this.drawer.inert = true;

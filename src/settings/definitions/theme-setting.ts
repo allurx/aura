@@ -7,6 +7,8 @@ import type PageAppearance from "../models/page-appearance";
 import { isTheme, Theme } from "../models/theme";
 import Setting from "./setting";
 import { syncBrowserTheme } from "../application/browser-theme";
+import ThemeSettingControl from "../controls/theme-setting-control";
+import type SettingControlListener from "../controls/setting-control-listener";
 
 /**
  * 页面基础主题；切换主题时保留已提交的常规设置。
@@ -27,6 +29,10 @@ export default class ThemeSetting extends Setting {
 
     public constructor() {
         super("theme", "主题");
+    }
+
+    public override createControl(listener: SettingControlListener, signal: AbortSignal): ThemeSettingControl {
+        return new ThemeSettingControl(this, listener, signal);
     }
 
     public override accepts(value: unknown): value is Theme {

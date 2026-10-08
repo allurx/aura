@@ -1,0 +1,144 @@
+/*
+ * Copyright 2025 allurx
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#setting {
+    .items > .item.reading-mode-setting {
+        position: relative;
+        display: block;
+        padding: 4px 0 12px;
+
+        > .reset-setting {
+            position: absolute;
+            top: 4px;
+            right: 0;
+        }
+
+        fieldset {
+            min-width: 0;
+            margin: 0;
+            padding: 0;
+            border: 0;
+        }
+
+        legend {
+            max-width: calc(100% - 44px);
+            min-height: 44px;
+            padding: 0;
+            align-content: center;
+            font-size: 14px;
+            font-weight: 500;
+        }
+    }
+
+    .reading-mode-options {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        padding: 3px;
+        margin-inline: -3px;
+    }
+
+    .reading-mode-option {
+        position: relative;
+        display: flex;
+        min-width: 0;
+        min-height: 70px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        padding: 8px 3px;
+        border: 1px solid var(--appearance-border);
+        border-radius: 10px;
+        background: var(--appearance-canvas);
+        color: var(--appearance-muted-color);
+        font-size: 12px;
+        line-height: 1.5;
+        text-align: center;
+        cursor: pointer;
+        transition:
+            background-color var(--motion-duration-fast) var(--motion-ease),
+            border-color var(--motion-duration-fast) var(--motion-ease),
+            color var(--motion-duration-fast) var(--motion-ease);
+
+        > input {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            opacity: 0;
+            cursor: inherit;
+        }
+
+        > svg {
+            width: 32px;
+            height: 28px;
+            pointer-events: none;
+        }
+
+        > span {
+            pointer-events: none;
+        }
+
+        &:has(input:checked) {
+            border-color: color-mix(in srgb, var(--setting-accent-color) 60%, transparent);
+            background: var(--appearance-selection);
+            color: var(--setting-accent-color);
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            &:hover:not(:has(input:checked)) {
+                background: var(--appearance-highlight);
+                color: var(--appearance-color);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            transition: none;
+        }
+    }
+
+    .reading-mode-description {
+        min-height: 1.5em;
+        margin: 7px 0 0;
+        color: var(--appearance-muted-color);
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    @media (forced-colors: active) {
+        .reading-mode-option:has(input:checked) {
+            border: 3px double Highlight;
+            padding: 6px 1px;
+        }
+    }
+}
+
+/* 输入覆盖整张卡片，键盘焦点显示在可见卡片上。 */
+:where(html[data-keyboard-navigation]) #setting .reading-mode-option:has(> input:focus-visible) {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+html:where([data-material]:not([data-material="standard"])) {
+    #setting .reading-mode-option {
+        background-color: var(--material-control-surface);
+        background-image: var(--material-control-image);
+        background-size: var(--material-control-size);
+        border-color: var(--material-border);
+    }
+
+    #setting .reading-mode-option:has(input:checked) {
+        background-color: var(--appearance-selection);
+        background-image: none;
+
+        @media (forced-colors: active) {
+            background-color: Highlight;
+            color: HighlightText;
+            border-color: Highlight;
+        }
+    }
+}

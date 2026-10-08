@@ -126,8 +126,10 @@ export default class BookshelfUi extends Ui {
                 previousFocus instanceof HTMLElement &&
                 previousFocus.isConnected &&
                 document.activeElement === document.body
-            )
+            ) {
+                // 列表替换后的目标由具体操作决定，不抢占删除等流程的结果焦点。
                 previousFocus.focus({ preventScroll: true });
+            }
         }
     }
 

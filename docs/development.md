@@ -16,7 +16,7 @@ npm ci
 
 支持桌面和移动端主流常青浏览器的当前及前一个稳定大版本。Vite 继承 Web Foundation 的 `baseline-widely-available` 构建目标，具体浏览器范围随固定的 Vite 版本确定；该目标不会补齐 Web API，也不等于完整的浏览器兼容保证。平台可选能力仍按实际支持情况检测，交互修改按受影响浏览器和输入方式验证。
 
-[TypeScript 配置](../tsconfig.json)分别检查浏览器源码与 Node.js 构建配置，共享严格检查选项。浏览器侧只引入 DOM 与 Vite 客户端类型，构建侧使用与 Node.js 运行时对应的类型声明。浏览器配置继承共享 `browser`；工具配置继承共享 `base` 并添加 Node.js 类型。Vite/jiti 加载工具配置，因此这部分使用 bundler 模块解析。Vite 在共享构建配置上保留 Hash Router、资源路径、许可声明和 portable 插件；这些交付规则由 Aura 维护。
+[TypeScript 配置](../tsconfig.json)分别检查浏览器源码、Node.js 构建配置和测试，共享严格检查选项。浏览器侧只引入 DOM 与 Vite 客户端类型，构建侧使用 Node.js 类型；测试驱动同时描述 Node.js 操作和浏览器中的回调，使用独立配置，不向应用或构建配置泄漏全局 API。Vite/jiti 加载工具配置，因此这部分使用 bundler 模块解析。Vite 在共享构建配置上保留 Hash Router、资源路径、许可声明和 portable 插件；这些交付规则由 Aura 维护。
 
 ## 本地运行
 
@@ -63,7 +63,7 @@ npm run dev
 | 功能      | 入口与职责                                                                                                                                                                                                                 |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 书架      | [Controller](../src/pages/bookshelf/bookshelf-controller.ts)协调导入、导出、分类、搜索和删除；[Service](../src/pages/bookshelf/bookshelf-service.ts)处理文件去重与写入事务                                                 |
-| 阅读      | [Controller](../src/pages/reader/reader-controller.ts)协调切章和进度；[UI](../src/pages/reader/reader-ui.ts)处理按钮、键盘、手势与浮层                                                                                     |
+| 阅读      | [Controller](../src/pages/reader/reader-controller.ts)协调进度、目录、设置和页面；[正文](../src/pages/reader/content/content-ui.ts)管理窗口与导航；[UI](../src/pages/reader/reader-ui.ts)处理工具布局                      |
 | TXT 解析  | [parseChapters](../src/domain/chapter/chapter-parser.ts)在写事务前完成解码与分章，按源文件物理行定位内容                                                                                                                   |
 | EPUB 解析 | [归档读取](../src/domain/file/epub-archive.ts)按需解压与校验资源；[内容解析](../src/domain/file/epub.ts)按阅读顺序和目录建立安全内容模型；[正文渲染](../src/pages/reader/content/epub-content.ts)处理书内图片与链接        |
 | 持久化    | [数据库 schema](../src/database/database-schema.ts)集中定义元信息与记录类型映射；[连接与初始化](../src/database/database.ts)、[存储操作](../src/database/store.ts)和[事务入口](../src/database/transaction.ts)管理领域数据 |
@@ -73,7 +73,17 @@ npm run dev
 
 修改数据结构时使用隔离的浏览器配置，保留用户常用配置中的数据。项目当前只初始化当前结构，不迁移旧数据；测试库与新结构不兼容时，确认只含可丢弃的测试数据，并取得重置确认，再从书架执行“重置数据”。清除范围见[使用指南](usage.md#本地数据与-portable-注意事项)。
 
-文件记录保留原始 `Blob`，书籍记录保留导入文件名；导出直接读取它们，不从章节重建或重新编码。相同格式和内容 hash 共享文件与解析结果，分类和进度按书籍分别保存。TXT 使用原始文本行、EPUB 使用内容块定位阅读进度；视口内位置另按块内比例恢复。
+文件记录保留原始 `Blob`，书籍记录保留导入文件名；导出直接读取它们，不从章节重建或重新编码。相同格式和内容 hash 共享文件与解析结果，分类和进度按书籍分别保存。
+
+### 阅读排版与定位
+
+[翻页方式](../src/pages/reader/reading-mode.ts)由阅读器常规设置保存：覆盖、平移和无动画共用动态分页，上下使用原生连续滚动。[正文 UI](../src/pages/reader/content/content-ui.ts)统一管理章节窗口、排版和导航完成后的实际位置，通过加载回调取得章节，再向 Controller 提交稳定的阅读快照。分页只挂载当前章；连续滚动按实际视窗及相邻方向的缓冲补充章节，并释放远处内容，不假定固定章节数量足以填满视窗。真实书尾的呈现留白使最后短章可以置顶，不计入正文位置。
+
+[阅读输入](../src/pages/reader/reading-input.ts)统一处理正文键盘、触摸、触笔和滚轮，共用交互目标与内嵌滚动判断，各输入仍保留自身的修饰键、阈值和惯性规则。按钮和工具布局由阅读 UI 管理；Controller 协调进度持久化、目录、设置和页面导航。
+
+[阅读进度](../src/domain/progress/progress.ts)保存章节、内容块和块内源偏移。TXT 内容块对应原始行，EPUB 对应受控结构块；`contentOffset` 累计文本的 UTF-16 长度，图片、`br` 和 `hr` 各占一个位置。该契约在[正文定位](../src/pages/reader/content/content-location.ts)中用于 DOM 与源内容之间的映射，不依赖像素偏移、段落高度比例或页码。字体、宽度与视口变化后，用同一内容锚点恢复；临时视觉位置另保留锚点相对视窗的偏移。
+
+覆盖和平移动画按浏览器的 View Transitions 能力启用；缺少能力或启用减少动态效果时直接切换页面，不改写保存的阅读方式。具体操作与章节边界见[使用指南](usage.md#阅读与目录)。
 
 ## 构建与预览
 
@@ -97,17 +107,24 @@ npm run preview
 
 ## 检查与验证
 
-| 命令                   | 用途                                     |
-| ---------------------- | ---------------------------------------- |
-| `npm run format:check` | 只检查格式                               |
-| `npm run lint`         | 检查 ESLint 规则                         |
-| `npm run type-check`   | 检查 TypeScript 类型                     |
-| `npm run check`        | 依次执行上述三项只读检查                 |
-| `npm run verify`       | 执行一次静态检查，再构建 Web 和 portable |
+| 命令                   | 用途                                 |
+| ---------------------- | ------------------------------------ |
+| `npm run format:check` | 只检查格式                           |
+| `npm run lint`         | 检查 ESLint 规则                     |
+| `npm run type-check`   | 检查 TypeScript 类型                 |
+| `npm run check`        | 依次执行上述三项只读检查             |
+| `npm test`             | 构建两种产物，再执行服务与浏览器回归 |
+| `npm run verify`       | 执行一次静态检查，再执行 `npm test`  |
 
 `npm run format` 会改写 Prettier 支持且未被排除的文件，运行后应审查实际 diff。迭代时先运行与改动有关的检查，需要完整验证两种产物时执行 `npm run verify`。
 
+回归测试使用 Node.js 内置测试运行器和 Playwright 浏览器驱动。运行前安装 Google Chrome；测试会启动独立的无界面浏览器和隔离上下文，不连接日常浏览器资料，也不下载浏览器。GitHub Actions 的 Ubuntu runner 已提供 Chrome。[测试目录](../tests/)只保留核心契约：两种交付中的原文件字节与文件名、共享正文删除后的可用性、跨章和重排后的阅读定位，以及导入预算与批次错误结果。具体控件、布局和一次性边界使用临时脚本验证，完成后清理。
+
+浏览器回归用 Vite 的预览 API 在临时端口提供已构建 Web 文件，服务和浏览器随测试结束关闭。它检查应用行为，不代替下文默认 Wrangler 预览中的正式响应头、部署配置及实际设备检查。
+
 构建不能代替运行时检查。页面交互变更应实际验证导航、关闭与取消、焦点和位置恢复、错误反馈及持久化；涉及 portable 时还需实际打开 `file://` 产物。只改文档时检查内容、链接、示例和格式，不运行无关构建。
+
+阅读器变更应覆盖四种方式、前后跨章与目录跳转，以及字号、窗口、横竖屏、全屏和方式切换后的内容位置。分页检查长段落、图片与内部滚动内容；连续滚动检查相邻章替换前后的可见内容和进度。输入检查鼠标、键盘、触摸、滚轮惯性、选字与取消操作，并核对工具显隐和浮层关闭后的焦点、位置及模式保存。
 
 文件流程变更需覆盖各格式的有效文件、明确拒绝的内容和大文件，并核对失败时已完成的导入结果。EPUB 检查目录锚点、书内链接、图片、资源限制和不可信内容。导出使用包含不同 TXT 编码及二进制资源的样本，对比导入文件和实际下载文件的 SHA-256，同时检查文件名；不能用重新解析后的正文相同代替字节一致。
 

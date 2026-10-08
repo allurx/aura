@@ -231,3 +231,37 @@
         }
     }
 }
+
+html:where([data-material]:not([data-material="standard"])) {
+    #bookshelf #nav {
+        background-color: var(--material-page-panel);
+        background-image: var(--material-image);
+        background-size: var(--material-size);
+        border-color: var(--material-border);
+        box-shadow: var(--material-shadow);
+        backdrop-filter: var(--material-static-filter);
+    }
+
+    #bookshelf #bookshelf-more-actions {
+        background-color: var(--material-panel);
+        background-image: var(--material-image);
+        background-size: var(--material-size);
+        backdrop-filter: var(--material-filter);
+        border-color: var(--material-border);
+        box-shadow: var(--material-floating-shadow);
+    }
+
+    /* 移动导航由外层抽屉提供表面，内部不再模糊背景。 */
+    @media (max-width: 768px) {
+        #bookshelf #nav {
+            background: transparent;
+            backdrop-filter: none;
+            box-shadow: none;
+        }
+    }
+}
+
+html[data-material="leather"] #bookshelf #nav {
+    outline: var(--material-edge-outline);
+    outline-offset: -6px;
+}

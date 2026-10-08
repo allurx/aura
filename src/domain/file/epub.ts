@@ -97,6 +97,7 @@ export interface EpubElementNode {
     colSpan?: number;
     rowSpan?: number;
     start?: number;
+    value?: number;
     reversed?: boolean;
     dir?: "ltr" | "rtl" | "auto";
 }
@@ -120,6 +121,8 @@ export interface EpubSection {
     title: string;
     path: string;
     anchors: string[];
+    // 被前向合并的空片段锚点指向本节开头，不创建额外正文块。
+    startAnchors?: string[];
     blocks: EpubNode[];
 }
 
@@ -169,7 +172,19 @@ const XHTML_NAMESPACE = "http://www.w3.org/1999/xhtml";
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const elementTags = new Set<string>(allowedTags);
 const discardedTags = new Set(["script", "style", "link", "meta", "head", "template", "noscript", "source"]);
-const unsupportedTags = new Set(["audio", "video", "iframe", "canvas", "math", "embed"]);
+const unsupportedTags = new Set([
+    "audio",
+    "video",
+    "iframe",
+    "canvas",
+    "math",
+    "embed",
+    "form",
+    "button",
+    "input",
+    "select",
+    "textarea",
+]);
 const imageMediaTypes = new Set(["image/jpeg", "image/png", "image/gif", "image/webp", "image/avif", "image/svg+xml"]);
 const fontObfuscationAlgorithms = new Set(["http://www.idpf.org/2008/embedding", "http://ns.adobe.com/pdf/enc#RC"]);
 
@@ -443,7 +458,7 @@ async function readNavigation(
 }
 
 /**
- * 沿目录锚点切分同一正文，Range 保留被切开的列表、段落等祖先结构。
+ * 沿目录锚点切分同一正文，保留范围的祖先结构及切分前的列表序号。
  * anchors 只分配一次，供同路径中的跨章节链接定位；不依赖 CSS 选择器解释书内 id。
  */
 async function parseSections(
@@ -454,6 +469,7 @@ async function parseSections(
     context: ParseContext,
     sectionOffset: number
 ): Promise<EpubSection[]> {
+    normalizeListNumbering(body);
     const elements = [body, ...Array.from(body.getElementsByTagName("*"))];
     const positions = new Map(elements.map((element, index) => [element, index]));
     const anchors = new Map<string, Element>();
@@ -489,7 +505,7 @@ async function parseSections(
         else range.setStartBefore(start);
         if (end) range.setEndBefore(end);
         else range.setEnd(body, body.childNodes.length);
-        let blocks = await parseChildren(range.cloneContents(), path, context, 0);
+        let blocks = await parseChildren(cloneSection(range, body), path, context, 0);
         const endIndex = end ? (positions.get(end) ?? elements.length) : elements.length;
         const sectionAnchors: string[] = [];
         while (nextAnchor < anchorPositions.length) {
@@ -517,10 +533,59 @@ async function parseSections(
                 },
             ];
         }
-        sections.push({ title: sectionName, path, anchors: ownedAnchors, blocks });
+        sections.push({
+            title: sectionName,
+            path,
+            anchors: ownedAnchors,
+            ...(pendingAnchors.length > 0 ? { startAnchors: pendingAnchors } : {}),
+            blocks,
+        });
         pendingAnchors = [];
     }
     return sections;
+}
+
+/**
+ * Range 不复制共同祖先；补回至 body 内侧的结构，再统一经过安全内容投影。
+ */
+function cloneSection(range: Range, body: Element): DocumentFragment {
+    const fragment = range.cloneContents();
+    for (
+        let ancestor: Node | null = range.commonAncestorContainer;
+        ancestor instanceof Element && ancestor !== body;
+        ancestor = ancestor.parentNode
+    ) {
+        const wrapper = ancestor.cloneNode(false);
+        wrapper.appendChild(fragment);
+        fragment.appendChild(wrapper);
+    }
+    return fragment;
+}
+
+/**
+ * 在脱离页面的原始树中固定每个有序列表项的序号，避免切章后 start、reversed 或 value 重新计数。
+ * 只处理当前列表的直属 li，嵌套列表分别确定自己的序号；不修改原文件字节。
+ */
+function normalizeListNumbering(body: Element): void {
+    for (const list of descendants(body, "ol")) {
+        const items = Array.from(list.children).filter((element) => element.localName === "li");
+        const reversed = list.hasAttribute("reversed");
+        let value = listInteger(list.getAttribute("start")) ?? (reversed ? items.length : 1);
+        for (const item of items) {
+            value = listInteger(item.getAttribute("value")) ?? value;
+            item.setAttribute("value", String(value));
+            value += reversed ? -1 : 1;
+        }
+    }
+}
+
+/**
+ * 列表序号接受有符号整数，不把无效属性隐式转换为零。
+ */
+function listInteger(value: string | null): number | undefined {
+    if (value === null || !/^-?\d+$/u.test(value.trim())) return undefined;
+    const number = Number(value);
+    return Number.isSafeInteger(number) ? number : undefined;
 }
 
 /**
@@ -544,7 +609,8 @@ async function parseChildren(
     for (const node of Array.from(element.childNodes)) {
         if (++context.nodeCount > MAX_CONTENT_NODES)
             throw new EpubImportError("EPUB 正文结构过于复杂，最多支持 500,000 个节点。");
-        if (node.nodeType === Node.TEXT_NODE && node.textContent) nodes.push({ type: "text", text: node.textContent });
+        if ((node.nodeType === Node.TEXT_NODE || node.nodeType === Node.CDATA_SECTION_NODE) && node.textContent)
+            nodes.push({ type: "text", text: node.textContent });
         else if (node instanceof Element) nodes.push(...(await parseElement(node, path, context, depth + 1)));
     }
     return nodes;
@@ -618,15 +684,19 @@ async function parseElement(element: Element, path: string, context: ParseContex
         }
     }
     if (tag === "td" || tag === "th") {
-        const colSpan = positiveInteger(element.getAttribute("colspan"), 1_000);
-        const rowSpan = positiveInteger(element.getAttribute("rowspan"), 65_534);
-        if (colSpan) result.colSpan = colSpan;
-        if (rowSpan) result.rowSpan = rowSpan;
+        const colSpan = tableSpan(element.getAttribute("colspan"), 1, 1_000);
+        const rowSpan = tableSpan(element.getAttribute("rowspan"), 0, 65_534);
+        if (colSpan !== undefined) result.colSpan = colSpan;
+        if (rowSpan !== undefined) result.rowSpan = rowSpan;
     }
     if (tag === "ol") {
-        const start = element.getAttribute("start");
-        if (start && /^-?\d{1,9}$/u.test(start)) result.start = Number(start);
+        const start = listInteger(element.getAttribute("start"));
+        if (start !== undefined) result.start = start;
         if (element.hasAttribute("reversed")) result.reversed = true;
+    }
+    if (tag === "li") {
+        const value = listInteger(element.getAttribute("value"));
+        if (value !== undefined) result.value = value;
     }
     return [result];
 }
@@ -639,12 +709,12 @@ function isAllowedTag(tag: string): tag is EpubElementTag {
 }
 
 /**
- * HTML 表格跨度只接受有界的正整数。
+ * HTML 表格跨度保持原生范围；rowspan 的零表示延续到当前行组末尾。
  */
-function positiveInteger(value: string | null, maximum: number): number | undefined {
+function tableSpan(value: string | null, minimum: number, maximum: number): number | undefined {
     if (!value || !/^\d{1,5}$/u.test(value)) return undefined;
     const number = Number(value);
-    return number > 0 && number <= maximum ? number : undefined;
+    return number >= minimum && number <= maximum ? number : undefined;
 }
 
 /**

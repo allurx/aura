@@ -47,7 +47,8 @@
         min-height: 0;
         background: transparent;
         color: inherit;
-        overflow: hidden;
+        /* 导航自身裁切内容；外层让圆角表面的阴影自然延伸。 */
+        overflow: visible;
     }
     #shelf-feedback {
         position: absolute;
@@ -100,6 +101,7 @@
         grid-template-columns: minmax(0, 1fr);
         #bookshelf-sidebar {
             position: fixed;
+            overflow: hidden;
             inset: var(--viewport-top) auto var(--viewport-bottom) 0;
             width: min(21rem, 86vw);
             height: var(--viewport-height);
@@ -169,5 +171,38 @@
     to {
         opacity: 1;
         transform: translate(-50%, 0);
+    }
+}
+
+/* 书架负责画布、抽屉及操作反馈的材质归属。 */
+html[data-material="glass"] #bookshelf {
+    --appearance-muted-color: var(--material-muted-color);
+    --appearance-accent: var(--material-accent-color);
+    --setting-accent-color: var(--material-accent-color);
+}
+
+html:where([data-material]:not([data-material="standard"])) {
+    #bookshelf {
+        background-image: var(--material-canvas-image);
+        background-size: var(--material-canvas-size);
+    }
+
+    #bookshelf #shelf-feedback {
+        background-color: var(--material-panel);
+        background-image: var(--material-image);
+        background-size: var(--material-size);
+        backdrop-filter: var(--material-filter);
+        border-color: var(--material-border);
+        box-shadow: var(--material-floating-shadow);
+    }
+
+    @media (max-width: 768px) {
+        #bookshelf #bookshelf-sidebar {
+            background-color: var(--material-panel);
+            background-image: var(--material-image);
+            background-size: var(--material-size);
+            backdrop-filter: var(--material-filter);
+            box-shadow: var(--material-floating-shadow);
+        }
     }
 }

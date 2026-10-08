@@ -4,6 +4,8 @@
  */
 
 @import "./controls/theme-setting-control.css";
+@import "./controls/reading-mode-setting-control.css";
+@import "./controls/material-setting-control.css";
 
 /* 页面通过布局变量协调展开方向；标题和重置固定，设置项在中部滚动。 */
 #setting {
@@ -18,7 +20,7 @@
     flex-direction: column;
     width: var(
         --setting-width,
-        min(25rem, calc(100% - max(1rem, env(safe-area-inset-left)) - max(1rem, env(safe-area-inset-right))))
+        min(27rem, calc(100% - max(1rem, env(safe-area-inset-left)) - max(1rem, env(safe-area-inset-right))))
     );
     max-width: none;
     /* 覆盖原生 dialog 的 fit-content，内容参与面板自然高度计算。 */
@@ -100,7 +102,7 @@
         align-items: center;
         gap: 12px;
         flex: none;
-        padding-block: 12px;
+        padding-block: 8px;
         border-bottom: 1px solid var(--appearance-border);
 
         > .heading {
@@ -136,7 +138,7 @@
 
     > footer {
         flex: none;
-        padding-block: 8px max(12px, env(safe-area-inset-bottom));
+        padding-block: 4px max(8px, env(safe-area-inset-bottom));
         border-top: 1px solid var(--appearance-border);
     }
 
@@ -244,7 +246,7 @@
         }
 
         > .reset-setting {
-            grid-row: 1;
+            grid-row: 1 / span 2;
             grid-column: 3;
         }
 
@@ -264,7 +266,7 @@
 
     .items > .item > .control-container {
         grid-row: 2;
-        grid-column: 1 / -1;
+        grid-column: 1 / 3;
         min-width: 0;
 
         > .control {
@@ -305,7 +307,7 @@
             width: 20px;
             height: 20px;
             margin-top: -8px;
-            border: 3px solid var(--appearance-panel);
+            border: 3px solid var(--material-control-surface, var(--appearance-panel));
             border-radius: 50%;
             background: var(--setting-accent-color);
             box-shadow: 0 1px 4px var(--appearance-shadow-color);
@@ -321,7 +323,7 @@
             box-sizing: border-box;
             width: 20px;
             height: 20px;
-            border: 3px solid var(--appearance-panel);
+            border: 3px solid var(--material-control-surface, var(--appearance-panel));
             border-radius: 50%;
             background: var(--setting-accent-color);
             box-shadow: 0 1px 4px var(--appearance-shadow-color);
@@ -490,4 +492,46 @@
         --setting-padding-left: max(16px, env(safe-area-inset-left));
         --setting-padding-right: max(16px, env(safe-area-inset-right));
     }
+}
+
+html:where([data-material]:not([data-material="standard"])) {
+    #setting {
+        background-color: var(--material-panel);
+        background-image: var(--material-image);
+        background-size: var(--material-size);
+        backdrop-filter: var(--material-filter);
+        border-color: var(--material-border);
+        box-shadow: var(--material-floating-shadow);
+    }
+
+    /* 普通输入共享淡表面，不在面板内重复添加模糊。 */
+    #setting .items > .item > .control-container > select,
+    #setting .items > .item > .control-container > input[type="color"] {
+        background-color: var(--material-control-surface);
+        background-image: var(--material-control-image);
+        background-size: var(--material-control-size);
+        border-color: var(--material-border);
+    }
+
+    #setting .items > .item > .control-container > select:open {
+        background-color: var(--appearance-selection);
+        background-image: none;
+
+        @media (forced-colors: active) {
+            background-color: Highlight;
+            color: HighlightText;
+            border-color: Highlight;
+        }
+    }
+}
+
+html[data-material="glass"] #setting {
+    --appearance-muted-color: var(--material-muted-color);
+    --appearance-accent: var(--material-accent-color);
+    --setting-accent-color: var(--material-accent-color);
+}
+
+html[data-material="leather"] #setting {
+    outline: var(--material-edge-outline);
+    outline-offset: -6px;
 }

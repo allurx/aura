@@ -15,7 +15,6 @@ import type SettingControlListener from "./setting-control-listener";
  */
 export default class ThemeSettingControl extends SettingControl {
     private readonly inputByValue = new Map<string, HTMLInputElement>();
-    private readonly controlContainer = document.createElement("div");
 
     public constructor(
         private readonly themeSetting: ThemeSetting,
@@ -30,8 +29,9 @@ export default class ThemeSettingControl extends SettingControl {
         const legend = document.createElement("legend");
         legend.className = "section-title";
         legend.textContent = themeSetting.title;
-        this.controlContainer.className = "theme-options";
-        fieldset.append(legend, this.controlContainer);
+        const options = document.createElement("div");
+        options.className = "theme-options";
+        fieldset.append(legend, options);
         this.element.prepend(fieldset);
 
         for (const [value, title] of themeSetting.options) {
@@ -43,7 +43,7 @@ export default class ThemeSettingControl extends SettingControl {
             input.name = "appearance-theme";
             input.value = value;
 
-            // 缩略图呈现画布、表面与多种书封，直接继承真实主题的调色板。
+            // 紧凑色样保留表面与三册书封，直接继承真实主题的调色板。
             const swatch = document.createElement("span");
             swatch.className = "theme-swatch";
             swatch.dataset["theme"] = value;
@@ -64,7 +64,7 @@ export default class ThemeSettingControl extends SettingControl {
 
             // 保留输入节点的索引，后续刷新不打断原生单选组的焦点。
             label.append(input, swatch, caption);
-            this.controlContainer.append(label);
+            options.append(label);
             this.inputByValue.set(value, input);
 
             // 鼠标点击和方向键切换共用原生 change 提交路径。
@@ -84,18 +84,6 @@ export default class ThemeSettingControl extends SettingControl {
      */
     public override render(value: string | undefined): void {
         const resolvedValue = this.themeSetting.resolveValue(value);
-        for (const [theme, input] of this.inputByValue) {
-            const checked = theme === resolvedValue;
-            input.checked = checked;
-
-            // 恢复和重置也显示当前主题，只滚动本行，不拉动面板中的常规设置。
-            if (checked) {
-                const option = input.getBoundingClientRect();
-                const viewport = this.controlContainer.getBoundingClientRect();
-                if (option.left < viewport.left) this.controlContainer.scrollLeft += option.left - viewport.left;
-                else if (option.right > viewport.right)
-                    this.controlContainer.scrollLeft += option.right - viewport.right;
-            }
-        }
+        for (const [theme, input] of this.inputByValue) input.checked = theme === resolvedValue;
     }
 }

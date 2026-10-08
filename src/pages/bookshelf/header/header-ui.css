@@ -297,3 +297,25 @@
         }
     }
 }
+
+/* 普通入口使用淡表面，导入按钮继续使用强调色。 */
+html:where([data-material]:not([data-material="standard"])) {
+    #bookshelf #header .appearance-button,
+    #bookshelf #header #open-navigation {
+        background-color: var(--material-control-surface);
+        background-image: var(--material-control-image);
+        background-size: var(--material-control-size);
+        border-color: var(--material-border);
+    }
+
+    #bookshelf #header :is(.appearance-button, #open-navigation)[aria-expanded="true"] {
+        background-color: var(--appearance-selection);
+        background-image: none;
+
+        @media (forced-colors: active) {
+            background-color: Highlight;
+            color: HighlightText;
+            border-color: Highlight;
+        }
+    }
+}

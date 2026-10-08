@@ -13,10 +13,11 @@ import ReaderController from "./reader-controller";
 export default class Reader extends BasePage {
     /**
      * 保存路由提供的书籍标识与返回动作，实际数据在挂载后加载。
+     * @param onReturnToBookshelf - 参数为 true 时，书籍已确认不存在，路由应丢弃失效阅读上下文。
      */
     public constructor(
         public readonly bookId: string,
-        private readonly onReturnToBookshelf: () => void
+        private readonly onReturnToBookshelf: (missingBook?: boolean) => void
     ) {
         super(template);
     }
