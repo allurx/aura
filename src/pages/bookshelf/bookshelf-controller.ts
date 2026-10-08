@@ -28,6 +28,7 @@ import SettingController from "@/settings/setting-controller";
 import { PageName } from "@/constants/page-name";
 import OperationError from "@/errors/operation-error";
 import { BOOK_FILE_ACCEPT } from "@/domain/file/book-format";
+import { createErrorContent } from "@/components/dialog/error-content";
 
 /**
  * 编排书架筛选、数据操作与页面外观，并在异步渲染前核对页面生命周期。
@@ -123,7 +124,12 @@ export default class BookshelfController {
             // 已有摘要仍可保留；首次读取失败则提供原位重试，错误继续进入统一提示。
             if (this.isActive() && version === this.refreshVersion && this.books === null)
                 this.bookListUi.renderLoadState("error");
-            throw error;
+            throw new OperationError(
+                "书架暂时无法读取",
+                "Aura 没有读到书架中的书籍信息，当前列表可能不是最新结果。",
+                error,
+                "请关闭提示后点击“重新读取”，或重新打开书架。"
+            );
         }
     }
 
@@ -135,9 +141,10 @@ export default class BookshelfController {
             await this.refreshBooks();
         } catch (error) {
             throw new OperationError(
-                "数据操作已完成，但书架刷新失败。",
-                `${result}\n\n请重新打开书架查看，无需重复执行刚才的操作。`,
-                error
+                "操作已完成，书架尚未更新",
+                result,
+                error,
+                "请重新打开书架查看，无需重复执行刚才的操作。"
             );
         }
     }
@@ -193,10 +200,15 @@ export default class BookshelfController {
             // 部分跳过用结果对话框展示明细，全成功只提供短暂反馈。
             const skipped = result.rejectedFiles.length;
             if (skipped > 0) {
-                await this.bookshelfUi.dialog.alert(
-                    `已导入 ${String(result.books.length)} 本；${String(skipped)} 个文件未导入。\n\n${this.describeImport(result)}`,
-                    { title: "导入结果" }
+                const { title, content } = createErrorContent(
+                    new OperationError(
+                        result.books.length > 0 ? "部分文件未导入" : "所选文件未能导入",
+                        this.describeImport(result),
+                        undefined,
+                        "请按上面的原因检查文件，确认后只重新导入未成功的文件。"
+                    )
                 );
+                await this.bookshelfUi.dialog.alert(content, { title, confirmBtnText: "知道了", tone: "error" });
             } else {
                 this.bookshelfUi.showFeedback(`已导入 ${String(result.books.length)} 本书`);
             }
@@ -214,9 +226,10 @@ export default class BookshelfController {
                 if (!this.isActive()) return;
 
                 throw new OperationError(
-                    `导入中断：已导入 ${String(error.result.books.length)} 本；未完成 ${String(error.unfinishedFiles.length)} 个文件。`,
+                    "导入已中断",
                     details,
-                    cause
+                    cause,
+                    "已导入的书籍无需重复导入。请处理失败原因后，只重新选择未完成的文件。"
                 );
             }
 
@@ -244,7 +257,17 @@ export default class BookshelfController {
         if (this.busy || !this.isActive()) return;
         this.busy = true;
         try {
-            const file = await getBookExport(bookId);
+            let file: Awaited<ReturnType<typeof getBookExport>>;
+            try {
+                file = await getBookExport(bookId);
+            } catch (error) {
+                throw new OperationError(
+                    "原文件未能导出",
+                    "Aura 没有读到这本书的原文件，下载尚未开始。",
+                    error,
+                    "请重新打开书架后再次导出。"
+                );
+            }
             if (!this.isActive()) return;
             this.bookshelfUi.download(file.source, file.name);
             this.bookshelfUi.showFeedback("原文件已交给浏览器下载");
@@ -275,7 +298,16 @@ export default class BookshelfController {
 
             // 删除提交后再刷新列表，成功提示仅投递给仍存活的页面。
             await this.bookshelfUi.runBusy("正在删除书籍…", async () => {
-                await deleteBook(bookId);
+                try {
+                    await deleteBook(bookId);
+                } catch (error) {
+                    throw new OperationError(
+                        "书籍未能删除",
+                        `未能删除《${summary.title}》。`,
+                        error,
+                        "请重新打开书架，确认书籍当前状态后再删除。"
+                    );
+                }
                 await this.refreshAfterChange(`已删除《${summary.title}》及其阅读进度。`);
             });
             if (this.isActive()) this.bookshelfUi.showFeedback(`已删除《${summary.title}》`);
@@ -297,7 +329,16 @@ export default class BookshelfController {
         // 先提交领域操作，页面退出只停止渲染，不把已保存结果报告为失败。
         this.busy = true;
         try {
-            await moveBook(bookId, categoryId);
+            try {
+                await moveBook(bookId, categoryId);
+            } catch (error) {
+                throw new OperationError(
+                    "分类未能更改",
+                    `未能将《${summary.title}》移至“${category.name}”。`,
+                    error,
+                    "请重新打开书架，确认当前分类后再选择。"
+                );
+            }
             if (!this.isActive()) return true;
 
             // 新快照让列表只更新归属发生变化的书卡，其余摘要可继续复用。
@@ -333,7 +374,16 @@ export default class BookshelfController {
 
             // 空列表渲染后将焦点交给列表，避免停留在已删除的书目上。
             await this.bookshelfUi.runBusy("正在清空书架…", async () => {
-                await clearBookshelf();
+                try {
+                    await clearBookshelf();
+                } catch (error) {
+                    throw new OperationError(
+                        "书架未能清空",
+                        "Aura 未能完成清空书籍和阅读进度的操作。",
+                        error,
+                        "请重新打开书架，确认当前内容后再尝试清空。"
+                    );
+                }
                 await this.refreshAfterChange("已清空所有分类中的书籍和阅读进度，外观设置保持不变。");
             });
             if (this.isActive()) this.bookListUi.root.focus({ preventScroll: true });

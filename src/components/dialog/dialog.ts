@@ -16,6 +16,7 @@ type DialogRequest =
           content: Node | string;
           title: string;
           confirmBtnText: string;
+          tone: "neutral" | "error";
       }
     | {
           type: "confirm";
@@ -62,8 +63,15 @@ export default class Dialog {
      * 显示提示，隐藏取消按钮；关闭按钮和 Escape 仍可取消。
      * @returns 点击确定为 true，其他关闭方式为 false。
      */
-    public async alert(content: Node | string, { title = "提示", confirmBtnText = "确定" } = {}) {
-        return this.show({ type: "alert", content, title, confirmBtnText });
+    public async alert(
+        content: Node | string,
+        {
+            title = "提示",
+            confirmBtnText = "确定",
+            tone = "neutral",
+        }: { title?: string; confirmBtnText?: string; tone?: "neutral" | "error" } = {}
+    ) {
+        return this.show({ type: "alert", content, title, confirmBtnText, tone });
     }
 
     /**
@@ -95,6 +103,7 @@ export default class Dialog {
 
         // 同步本次请求的危险语义和取消入口，不让普通提示继承上次确认的样式。
         this.dialogElement.toggleAttribute("data-destructive", request.type === "confirm" && request.destructive);
+        this.dialogElement.toggleAttribute("data-error", request.type === "alert" && request.tone === "error");
         if (request.type === "alert") {
             this.cancelBtnElement.hidden = true;
         } else {
@@ -174,6 +183,7 @@ export default class Dialog {
         return `
       <dialog class="dialog" inert>
           <header class="header">
+            <span class="dialog-error-icon icon icon-warning" aria-hidden="true"></span>
             <span class="title"></span>
             <button type="button" class="close-btn icon-button" aria-label="关闭" title="关闭" autofocus>
                 <span class="icon icon-close" aria-hidden="true"></span>

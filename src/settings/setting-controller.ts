@@ -12,6 +12,7 @@ import SettingConfiguration, { type PageSettings } from "./models/setting-config
 import AppearanceRepository from "./persistence/appearance-repository";
 import SettingUi from "./ui/setting-ui";
 import type { PageName } from "@/constants/page-name";
+import OperationError from "@/errors/operation-error";
 
 /**
  * 统一管理页面已提交外观、预览与取消状态，协调持久化和外部宽度变化。
@@ -225,11 +226,18 @@ export default class SettingController implements SettingUiListener {
                     restoreErrors.push(restoreError);
                 }
             }
-            if (restoreErrors.length > 0) {
-                // eslint-disable-next-line preserve-caught-error -- AggregateError.errors 已按顺序保留原始异常与全部恢复异常。
-                throw new AggregateError([error, ...restoreErrors], "Failed to save and restore appearance settings");
-            }
-            throw error;
+            throw new OperationError(
+                "外观设置未能保存",
+                restoreErrors.length > 0
+                    ? "本次调整未保存，界面也未能完全恢复之前的外观。"
+                    : "本次调整未保存，已恢复之前的外观。",
+                restoreErrors.length > 0
+                    ? new AggregateError([error, ...restoreErrors], "Failed to save and restore appearance settings", {
+                          cause: error,
+                      })
+                    : error,
+                restoreErrors.length > 0 ? "请重新打开当前页面后再调整。" : "请处理失败原因后重新调整。"
+            );
         }
     }
 

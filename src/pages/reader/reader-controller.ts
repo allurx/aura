@@ -87,9 +87,10 @@ export default class ReaderController {
             if (!Number.isSafeInteger(state.progress.contentOffset) || state.progress.contentOffset < 0) {
                 this.onReturnToBookshelf();
                 throw new OperationError(
-                    "阅读数据需要重置。",
-                    "此版本更新了阅读位置结构。请先从书架导出需要保留的原文件，再重置数据并重新导入。旧位置不会自动转换。",
-                    new Error("Unsupported stored reading position")
+                    "这本书的阅读数据与当前版本不兼容",
+                    "此版本更新了阅读位置结构，旧位置不会自动转换。",
+                    new Error("Unsupported stored reading position"),
+                    "请先从书架导出需要保留的原文件，再重置数据并重新导入。"
                 );
             }
             this.state = state;
@@ -114,7 +115,13 @@ export default class ReaderController {
             this.bindEvent(signal);
         } catch (error) {
             if (!signal.aborted) this.readerUi.showReadingTools();
-            throw error;
+            if (error instanceof OperationError) throw error;
+            throw new OperationError(
+                "这本书暂时无法打开",
+                "Aura 未能读取或显示这本书的正文。",
+                error,
+                "请返回书架后重新打开。若仍无法打开，请保留原文件，并展开详细信息查看原因。"
+            );
         }
     }
 
@@ -133,9 +140,10 @@ export default class ReaderController {
             saved = await write;
         } catch (error) {
             throw new OperationError(
-                "阅读位置未能保存。",
-                "当前正文仍可阅读，但这次位置尚未保存。请检查浏览器存储状态，再尝试返回书架。",
-                error
+                "阅读位置尚未保存",
+                "这次位置未能保存，重新打开时可能回到之前的位置。",
+                error,
+                "请先记下当前章节和位置，处理失败原因后再尝试返回书架。"
             );
         }
         if (saved) this.state.progress = snapshot;
@@ -266,9 +274,10 @@ export default class ReaderController {
             } catch (error) {
                 if (signal.aborted) return;
                 throw new OperationError(
-                    "无法切换全屏。",
-                    "浏览器可能未提供或拒绝了全屏请求，可以继续普通阅读。",
-                    error
+                    "未能切换全屏",
+                    "浏览器没有完成这次全屏请求。",
+                    error,
+                    "可以继续普通阅读，也可以关闭提示后再次尝试全屏。"
                 );
             }
             if (signal.aborted) return;

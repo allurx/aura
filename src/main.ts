@@ -10,7 +10,7 @@ import Reader from "./pages/reader/reader";
 import Router, { type AppRoute } from "./router/router";
 import { assertExists } from "./utils/assert-util";
 import Dialog from "./components/dialog/dialog";
-import OperationError from "./errors/operation-error";
+import { createErrorContent } from "./components/dialog/error-content";
 import { run } from "./utils/event-util";
 
 /**
@@ -68,18 +68,8 @@ class Main {
         if (this.errorVisible) return;
         this.errorVisible = true;
         try {
-            // 业务层只补充可读上下文，通用原因与展示仍由统一错误入口负责。
-            const cause = error instanceof OperationError ? error.cause : error;
-            const primaryCause = cause instanceof AggregateError ? cause.cause : cause;
-            const storageGuidance =
-                primaryCause instanceof DOMException && primaryCause.name === "QuotaExceededError"
-                    ? "浏览器存储空间不足，操作未完成。请保留原始书籍文件，释放存储空间后重试。"
-                    : undefined;
-            const content =
-                error instanceof OperationError
-                    ? [error.message, error.details, storageGuidance].filter(Boolean).join("\n\n")
-                    : (storageGuidance ?? "操作未完成。请重试；若仍然失败，请保留原始书籍文件。");
-            await this.errorDialog.alert(content, { title: "操作失败" });
+            const { title, content } = createErrorContent(error);
+            await this.errorDialog.alert(content, { title, confirmBtnText: "知道了", tone: "error" });
         } finally {
             this.errorVisible = false;
         }
