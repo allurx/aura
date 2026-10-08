@@ -12,7 +12,7 @@ import RangeStyleSetting from "./range-style-setting";
  */
 export default class LineHeightSetting extends RangeStyleSetting {
     public constructor(element: HTMLElement) {
-        super(element, StyleProperty.LINE_HEIGHT, "行距", [1.5, 2.2], 0.05, "");
+        super(element, StyleProperty.LINE_HEIGHT, "行距", [1.5, 2.2], 0.01, "");
     }
 
     /**

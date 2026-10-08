@@ -32,7 +32,7 @@ export function createBookshelfSettings(bookshelf: HTMLElement, bookList: HTMLEl
         general: [
             new FontFamilySetting(bookshelf),
             new RangeStyleSetting(bookList, StyleProperty.BOOK_COVER_WIDTH, "封面大小", [96, 200], 1, "px"),
-            new RangeStyleSetting(bookList, StyleProperty.BOOK_TITLE_FONT_SIZE, "书名字号", [14, 28], 1, "px"),
+            new RangeStyleSetting(bookList, StyleProperty.BOOK_TITLE_FONT_SIZE, "书名字号", [14, 28], 0.1, "px"),
             new MaterialSetting("wood"),
         ],
     };
@@ -52,9 +52,9 @@ export function createReaderSettings(
         general: [
             new ReadingModeSetting(onReadingModeChange),
             new FontFamilySetting(content),
-            new RangeStyleSetting(content, StyleProperty.FONT_SIZE, "字号", [16, 28], 1, "px"),
+            new RangeStyleSetting(content, StyleProperty.FONT_SIZE, "字号", [16, 28], 0.1, "px"),
             new LineHeightSetting(content),
-            new RangeStyleSetting(content, StyleProperty.PARAGRAPH_SPACING, "段间距", [0, 3], 0.05, "em"),
+            new RangeStyleSetting(content, StyleProperty.PARAGRAPH_SPACING, "段间距", [0, 3], 0.01, "em"),
             new WidthSetting(reader),
             new ColorStyleSetting(content, StyleProperty.COLOR, "文字颜色"),
             new ColorStyleSetting(reader, StyleProperty.BACKGROUND_COLOR, "阅读背景"),
