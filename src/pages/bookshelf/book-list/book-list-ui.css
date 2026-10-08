@@ -609,7 +609,7 @@ html:where([data-material]:not([data-material="standard"])) {
         background-blend-mode: soft-light;
     }
 
-    #bookshelf .book-file-actions {
+    #bookshelf #book-list .book-file-actions {
         background-color: var(--material-panel);
         background-image: var(--material-image);
         background-size: var(--material-size);
