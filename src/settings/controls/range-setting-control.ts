@@ -58,10 +58,7 @@ export default class RangeSettingControl extends StyleSettingControl {
         this.inputElement.max = String(maximum);
         this.inputElement.value = this.withoutUnit(resolvedValue);
 
-        const displayValue =
-            this.rangeSetting.unit === "em" || this.rangeSetting.unit === ""
-                ? `${this.withoutUnit(resolvedValue)} 倍`
-                : resolvedValue;
+        const displayValue = this.rangeSetting.formatValue(resolvedValue);
         this.displayElement.textContent = displayValue;
         this.inputElement.setAttribute("aria-valuetext", displayValue);
     }

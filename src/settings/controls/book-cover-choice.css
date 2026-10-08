@@ -1,0 +1,104 @@
+/*
+ * Copyright 2026 allurx
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* 封面预览使用书架的配色和材质；具体造型不进入通用单选控件。 */
+#setting .book-cover-style-preview,
+#setting .book-cover-color-preview > span {
+    --preview-cover: hsl(205 var(--appearance-cover-saturation) var(--appearance-cover-lightness));
+    --preview-cover-ink: var(--appearance-cover-ink);
+    position: relative;
+    flex: none;
+    border: 1px solid color-mix(in srgb, var(--preview-cover-ink) 12%, transparent);
+    border-radius: 2px 5px 5px 2px;
+    background-color: var(--preview-cover);
+    background-image: var(--material-image);
+    background-size: var(--material-size);
+    background-blend-mode: soft-light;
+    box-shadow: 2px 2px 0 color-mix(in srgb, var(--preview-cover) 75%, var(--appearance-panel));
+
+    &::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 2px;
+        width: 2px;
+        background: color-mix(in srgb, var(--preview-cover-ink) 12%, transparent);
+    }
+}
+
+#setting .book-cover-style-preview {
+    width: 30px;
+    height: 38px;
+
+    &::after {
+        content: "";
+        position: absolute;
+        left: 8px;
+        right: 5px;
+        top: 13px;
+        height: 2px;
+        background: color-mix(in srgb, var(--preview-cover-ink) 45%, transparent);
+        box-shadow: 0 5px 0 color-mix(in srgb, var(--preview-cover-ink) 30%, transparent);
+    }
+
+    &[data-cover-style="flat"] {
+        border-radius: 4px;
+        box-shadow: none;
+
+        &::before {
+            display: none;
+        }
+    }
+}
+
+#setting .book-cover-color-preview {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    width: 42px;
+    height: 36px;
+    flex: none;
+
+    > span {
+        --preview-cover-hue: 30;
+        --preview-cover: hsl(
+            var(--preview-cover-hue) var(--appearance-cover-saturation) var(--appearance-cover-lightness)
+        );
+        width: 12px;
+        height: 27px;
+        border-radius: 2px 3px 3px 2px;
+
+        &:nth-child(2) {
+            --preview-cover-hue: 150;
+            height: 33px;
+        }
+
+        &:nth-child(3) {
+            --preview-cover-hue: 255;
+            height: 29px;
+        }
+    }
+}
+
+html:has(#book-list[data-cover-color="theme"]) #setting .book-cover-style-preview,
+#setting .book-cover-color-preview[data-cover-color="theme"] > span {
+    --preview-cover: color-mix(in srgb, var(--appearance-accent) 14%, var(--appearance-surface));
+    --preview-cover-ink: var(--appearance-color);
+}
+
+html:has(#book-list[data-cover-style="flat"]) #setting .book-cover-color-preview > span {
+    border-radius: 3px;
+    box-shadow: none;
+
+    &::before {
+        display: none;
+    }
+}
+
+@media (forced-colors: active) {
+    #setting .book-cover-style-preview,
+    #setting .book-cover-color-preview > span {
+        border-color: CanvasText;
+    }
+}

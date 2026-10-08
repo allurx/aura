@@ -10,12 +10,14 @@ html[data-page="reader"] #app {
     background-color: var(--reader-backdrop);
 
     background-image:
+        var(--background-texture-image),
         radial-gradient(ellipse at 4% 8%, color-mix(in srgb, var(--appearance-tint) 58%, transparent), transparent 48%),
         radial-gradient(
             ellipse at 96% 88%,
             color-mix(in srgb, var(--appearance-glow) 58%, transparent),
             transparent 48%
         );
+    background-size: var(--background-texture-size), auto, auto;
 
     &:has(> #reader[data-mobile-controls]) {
         display: flow-root;
@@ -88,8 +90,8 @@ html[data-page="reader"] #app {
 html:where([data-material]:not([data-material="standard"])) {
     &[data-page="reader"] #app {
         background-color: color-mix(in srgb, var(--material-panel) 35%, var(--appearance-canvas));
-        background-image: var(--material-canvas-image);
-        background-size: var(--material-canvas-size);
+        background-image: var(--background-texture-image), var(--material-canvas-image);
+        background-size: var(--background-texture-size), var(--material-canvas-size);
     }
 
     #reader-actions {

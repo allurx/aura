@@ -1,0 +1,19 @@
+/*
+ * Copyright 2026 allurx
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+html {
+    --background-texture-image: none;
+    --background-texture-size: auto;
+}
+
+/* 仅页面画布使用这组变量，正文和菜单继续由各自表面样式负责。 */
+html[data-background-texture="material"] {
+    --background-texture-image: var(--material-image);
+    --background-texture-size: var(--material-size);
+
+    @media (forced-colors: active) {
+        --background-texture-image: none;
+    }
+}

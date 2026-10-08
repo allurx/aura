@@ -26,10 +26,31 @@ export default class SettingControlList {
     ) {
         this.themeControl = configuration.theme.createControl(listener, signal);
         themeContainer.append(this.themeControl.element);
-        for (const setting of configuration.general) {
-            const control = setting.createControl(listener, signal);
-            this.controlBySetting.set(setting, control);
-            container.append(control.element);
+        for (const group of configuration.generalGroups) {
+            const section = document.createElement(group.collapsible ? "details" : "section");
+            section.className = "setting-group";
+            section.dataset["settingGroup"] = group.id;
+            if (group.collapsible) {
+                const heading = document.createElement("summary");
+                heading.className = "setting-group-heading";
+                heading.id = `setting-group-${group.id}`;
+                const title = document.createElement("span");
+                title.className = "setting-group-title";
+                title.textContent = group.title;
+                heading.append(title);
+                section.append(heading);
+                section.setAttribute("aria-labelledby", heading.id);
+            } else section.setAttribute("aria-label", group.title);
+
+            const items = document.createElement("div");
+            items.className = "items";
+            for (const setting of group.settings) {
+                const control = setting.createControl(listener, signal);
+                this.controlBySetting.set(setting, control);
+                items.append(control.element);
+            }
+            section.append(items);
+            container.append(section);
         }
     }
 

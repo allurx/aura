@@ -242,7 +242,7 @@ html:where([data-material]:not([data-material="standard"])) {
         backdrop-filter: var(--material-static-filter);
     }
 
-    #bookshelf #bookshelf-more-actions {
+    #bookshelf #nav #bookshelf-more-actions {
         background-color: var(--material-panel);
         background-image: var(--material-image);
         background-size: var(--material-size);

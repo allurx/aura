@@ -5,8 +5,10 @@
 
 #reader > #content {
     --reader-paragraph-spacing: 1.15em;
-    --ui-padding-left: 72px;
-    --ui-padding-right: 72px;
+    --reader-letter-spacing: 0em;
+    --reader-page-margin: 1;
+    --ui-padding-left: calc(72px * var(--reader-page-margin));
+    --ui-padding-right: calc(72px * var(--reader-page-margin));
     --reading-inset-left: max(var(--ui-padding-left), env(safe-area-inset-left));
     --reading-inset-right: max(var(--ui-padding-right), env(safe-area-inset-right));
     flex: 1;
@@ -21,6 +23,7 @@
     overscroll-behavior-y: contain;
     font-family: sans-serif;
     font-size: 19px;
+    letter-spacing: var(--reader-letter-spacing);
     color: var(--reader-color);
     line-height: 1.9;
     background-color: inherit;
@@ -42,6 +45,7 @@
     .reading-chapter > p {
         margin-bottom: var(--reader-paragraph-spacing);
     }
+
     .epub-block {
         margin-bottom: var(--reader-paragraph-spacing);
         h1,
@@ -125,8 +129,8 @@
     }
 
     @media (max-width: 600px) {
-        --ui-padding-left: 24px;
-        --ui-padding-right: 24px;
+        --ui-padding-left: calc(24px * var(--reader-page-margin));
+        --ui-padding-right: calc(24px * var(--reader-page-margin));
         --reading-inset-left: max(env(safe-area-inset-left), min(var(--ui-padding-left), 12.5vw));
         --reading-inset-right: max(env(safe-area-inset-right), min(var(--ui-padding-right), 12.5vw));
         padding-top: 28px;

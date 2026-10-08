@@ -4,6 +4,7 @@
  */
 
 import type Setting from "../definitions/setting";
+import { PageName } from "@/constants/page-name";
 import type SettingConfiguration from "../models/setting-configuration";
 import Ui from "@/components/ui";
 import enableLightDismiss from "@/components/dialog/light-dismiss";
@@ -44,7 +45,7 @@ export default class SettingUi extends Ui {
         this.bodyElement = assertExists(this.root.querySelector<HTMLElement>(".setting-body"));
         this.themeElement = assertExists(this.root.querySelector<HTMLElement>(".theme-items"));
         this.generalElement = assertExists(this.root.querySelector<HTMLElement>(".general-settings"));
-        this.itemsElement = assertExists(this.root.querySelector<HTMLElement>(".items"));
+        this.itemsElement = assertExists(this.root.querySelector<HTMLElement>(".setting-groups"));
         this.closeElement = assertExists(this.root.querySelector<HTMLButtonElement>(".close"));
         this.resetElement = assertExists(this.root.querySelector<HTMLButtonElement>(".reset"));
         this.resetGeneralElement = assertExists(this.root.querySelector<HTMLButtonElement>(".reset-general"));
@@ -55,7 +56,11 @@ export default class SettingUi extends Ui {
      */
     public init(configuration: SettingConfiguration, listener: SettingUiListener, signal: AbortSignal): void {
         this.listener = listener;
+        assertExists(this.root.querySelector<HTMLElement>("#setting-title")).textContent =
+            configuration.pageName === PageName.BOOKSHELF ? "书架设置" : "阅读设置";
         this.generalSettings = configuration.general;
+        const resetLabel = configuration.pageName === PageName.BOOKSHELF ? "重置书架设置" : "重置阅读设置";
+        assertExists(this.resetElement.querySelector<HTMLElement>(".reset-label")).textContent = resetLabel;
         this.generalElement.hidden = this.generalSettings.length === 0;
         this.controlList = new SettingControlList(
             this.itemsElement,
@@ -272,7 +277,9 @@ export default class SettingUi extends Ui {
     private static readonly template = `
         <dialog id="setting" aria-labelledby="setting-title" inert>
             <header>
-                <h2 id="setting-title" class="heading">设置</h2>
+                <div class="heading">
+                    <h2 id="setting-title">设置</h2>
+                </div>
                 <button class="close icon-button" type="button" title="关闭" aria-label="关闭设置" autofocus>
                     <span class="icon icon-close" aria-hidden="true"></span>
                 </button>
@@ -282,17 +289,15 @@ export default class SettingUi extends Ui {
                 <section class="general-settings" aria-labelledby="setting-general-title">
                     <header class="section-header">
                         <h3 id="setting-general-title" class="section-title">常规设置</h3>
-                        <button class="reset-general icon-button" type="button" aria-label="重置常规设置" title="重置常规设置">
-                            <span class="icon icon-reset" aria-hidden="true"></span>
-                        </button>
+                        <button class="reset-general" type="button" aria-label="重置常规设置" title="恢复常规设置默认值，保留主题">恢复默认</button>
                     </header>
-                    <div class="items"></div>
+                    <div class="setting-groups"></div>
                 </section>
             </div>
             <footer>
                 <button class="reset" type="button">
                     <span class="icon icon-reset" aria-hidden="true"></span>
-                    重置当前页面
+                    <span class="reset-label">重置设置</span>
                 </button>
             </footer>
         </dialog>

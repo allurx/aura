@@ -602,8 +602,10 @@ export default class ContentUi extends Ui {
             this.viewport.firstElementChild?.getBoundingClientRect().width ?? 0,
             style.fontFamily,
             style.fontSize,
+            style.letterSpacing,
             style.lineHeight,
             style.getPropertyValue("--reader-paragraph-spacing"),
+            style.getPropertyValue("--reader-page-margin"),
         ].join("|");
     }
 

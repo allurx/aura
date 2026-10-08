@@ -7,7 +7,7 @@
     .items > .item.material-setting {
         position: relative;
         display: block;
-        padding: 4px 0 12px;
+        padding: 4px 0 16px;
 
         > .reset-setting {
             position: absolute;
@@ -23,8 +23,8 @@
         }
 
         legend {
-            max-width: calc(100% - 44px);
-            min-height: 44px;
+            max-width: calc(100% - 52px);
+            min-height: 36px;
             padding: 0;
             align-content: center;
             font-size: 14px;
@@ -35,7 +35,7 @@
     .material-options {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 6px;
+        gap: 4px 6px;
         padding: 3px;
         margin-inline: -3px;
     }
@@ -43,17 +43,17 @@
     .material-option {
         position: relative;
         display: flex;
-        min-width: 0;
         flex-direction: column;
-        align-items: stretch;
-        gap: 3px;
-        padding: 5px 4px 7px;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+        min-height: 72px;
+        padding: 6px;
         border: 1px solid transparent;
-        border-radius: 11px;
+        border-radius: 9px;
         background: transparent;
         color: var(--appearance-color);
         line-height: 1.5;
-        text-align: center;
         cursor: pointer;
         transition:
             background-color var(--motion-duration-fast) var(--motion-ease),
@@ -74,17 +74,17 @@
         }
 
         &:has(input:checked) {
-            border-color: color-mix(in srgb, var(--setting-accent-color) 60%, transparent);
+            border-color: color-mix(in srgb, var(--setting-accent-color) 50%, transparent);
             background: var(--appearance-selection);
 
-            .material-caption::before {
-                background: var(--setting-accent-color);
+            .material-caption {
+                font-weight: 600;
             }
         }
 
         @media (hover: hover) and (pointer: fine) {
-            &:hover:not(:has(input:checked)) {
-                background: var(--appearance-highlight);
+            &:hover:not(:has(input:checked, input:disabled)) {
+                background: var(--setting-hover-background);
             }
         }
 
@@ -96,11 +96,12 @@
     .material-preview {
         position: relative;
         display: block;
+        flex: none;
+        width: 100%;
         height: 40px;
-        margin-bottom: 3px;
-        overflow: hidden;
-        border-radius: 8px;
-        background: var(--appearance-muted-surface);
+        overflow: clip;
+        border-radius: 6px;
+        background: transparent;
 
         &:has([data-material="glass"]) {
             background:
@@ -108,119 +109,58 @@
                 radial-gradient(ellipse at 90% 6%, var(--appearance-accent) 0 25%, transparent 65%),
                 var(--appearance-canvas);
         }
-
-        &:has([data-material="ceramic"]) {
-            background: linear-gradient(140deg, var(--appearance-glow), var(--appearance-canvas));
-        }
-
-        &:has([data-material="linen"]) {
-            background: color-mix(in srgb, var(--appearance-muted-surface) 75%, var(--appearance-shadow-color));
-        }
-
-        &:has([data-material="wood"]) {
-            background: color-mix(in srgb, var(--appearance-glow) 65%, var(--appearance-canvas));
-        }
-
-        &:has([data-material="metal"]) {
-            background: linear-gradient(130deg, var(--appearance-muted-surface), var(--appearance-highlight));
-        }
-
-        &:has([data-material="leather"]) {
-            background: color-mix(in srgb, var(--appearance-muted-surface) 82%, var(--appearance-shadow-color));
-        }
-
-        &:has([data-material="stone"]) {
-            background: color-mix(in srgb, var(--appearance-canvas) 75%, var(--appearance-panel));
-        }
     }
 
     .material-swatch {
         position: absolute;
-        inset: 5px;
+        inset: 2px 3px;
         border: 1px solid var(--material-border);
-        border-radius: 6px;
+        border-radius: 5px;
         background-color: var(--material-panel);
         background-image: var(--material-image);
         background-size: var(--material-size);
         backdrop-filter: var(--material-filter);
-        box-shadow: var(--material-shadow);
+        box-shadow: var(--material-inset-shadow);
+
+        &[data-material="paper"] {
+            inset: 2px 6px 5px 4px;
+            border-radius: 2px;
+            box-shadow:
+                1px 2px 0 var(--material-border),
+                2px 4px 0 var(--material-panel);
+            transform: rotate(-2deg);
+        }
+
+        &[data-material="ceramic"] {
+            border-radius: 9px;
+        }
 
         &[data-material="glass"] {
             background-color: var(--material-page-panel);
         }
 
-        &[data-material="paper"] {
-            inset: 5px 8px 7px 5px;
-            border-radius: 2px;
-            transform: rotate(-4deg);
-        }
-
-        &[data-material="ceramic"] {
-            border-radius: 10px;
-        }
-
-        &[data-material="linen"] {
-            inset: 6px;
-            border-radius: 3px;
-        }
-
-        &[data-material="wood"] {
-            border-radius: 4px;
-        }
-
-        &[data-material="metal"] {
-            inset: 6px 5px;
-            border-radius: 5px;
-        }
-
         &[data-material="leather"] {
-            inset: 5px 6px;
-            border-radius: 8px;
             outline: 1px dashed var(--material-border);
             outline-offset: -4px;
         }
 
-        &[data-material="stone"] {
-            border-radius: 5px 9px 4px 8px;
-        }
-
-        &::before,
-        &::after {
+        &::before {
             content: "";
             position: absolute;
-            left: 7px;
+            inset: 10px auto auto 9px;
+            width: 42%;
             height: 2px;
             border-radius: 2px;
-            background: color-mix(in srgb, var(--appearance-color) 36%, transparent);
-        }
-
-        &::before {
-            top: 11px;
-            width: 58%;
-        }
-
-        &::after {
-            top: 19px;
-            width: 38%;
+            background: color-mix(in srgb, var(--appearance-color) 32%, transparent);
+            box-shadow: 0 7px 0 color-mix(in srgb, var(--appearance-color) 20%, transparent);
         }
     }
 
     .material-caption {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
+        min-width: 0;
         font-size: 12px;
-        font-weight: 500;
-
-        &::before {
-            content: "";
-            flex: none;
-            width: 4px;
-            height: 4px;
-            border-radius: 50%;
-            background: transparent;
-        }
+        line-height: 1.45;
+        text-align: center;
     }
 
     .material-description {
@@ -234,21 +174,28 @@
 
     .material-current-description {
         min-height: 1.5em;
-        margin-top: 6px;
+        margin-top: 8px;
         color: var(--appearance-muted-color);
         font-size: 12px;
         line-height: 1.5;
     }
 
+    @media (max-width: 360px) {
+        .material-option {
+            gap: 5px;
+            padding-inline: 4px;
+        }
+    }
+
     @media (forced-colors: active) {
         .material-option:has(input:checked) {
-            border: 3px double Highlight;
-            padding: 3px 2px 5px;
+            outline: 2px solid Highlight;
+            outline-offset: -3px;
         }
     }
 }
 
-/* 将原生单选输入的键盘焦点呈现在整张可见样片卡上。 */
+/* 原生单选组的焦点落在整项上，选择状态与键盘焦点独立表达。 */
 :where(html[data-keyboard-navigation]) #setting .material-option:has(> input:focus-visible) {
     outline: 2px solid var(--focus-ring-color);
     outline-offset: 2px;

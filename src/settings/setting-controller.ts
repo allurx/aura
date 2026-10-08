@@ -12,6 +12,9 @@ import SettingConfiguration, { type PageSettings } from "./models/setting-config
 import AppearanceRepository from "./persistence/appearance-repository";
 import SettingUi from "./ui/setting-ui";
 import type { PageName } from "@/constants/page-name";
+import OperationError from "@/errors/operation-error";
+import RangeStyleSetting from "./definitions/range-style-setting";
+import { run } from "@/utils/event-util";
 
 /**
  * 统一管理页面已提交外观、预览与取消状态，协调持久化和外部宽度变化。
@@ -23,6 +26,7 @@ export default class SettingController implements SettingUiListener {
     private readonly width: WidthSetting | undefined;
     private readonly widthSynchronizer: WidthSynchronizer | undefined;
     private readonly previews = new Map<Setting, string>();
+    private readonly pendingPreviewTimers = new Map<Setting, number>();
     private readonly cancelledSettings = new Set<Setting>();
     private appearance: PageAppearance;
 
@@ -38,7 +42,9 @@ export default class SettingController implements SettingUiListener {
         this.settingUi = new SettingUi(container);
         this.configuration = new SettingConfiguration(pageName, settings);
         this.repository = new AppearanceRepository(this.configuration);
-        this.width = settings.general.find((setting): setting is WidthSetting => setting instanceof WidthSetting);
+        this.width = this.configuration.general.find(
+            (setting): setting is WidthSetting => setting instanceof WidthSetting
+        );
         this.widthSynchronizer = this.width ? new WidthSynchronizer(this.width) : undefined;
         this.appearance = PageAppearance.defaults(this.configuration.defaultTheme);
     }
@@ -57,6 +63,7 @@ export default class SettingController implements SettingUiListener {
         signal.addEventListener(
             "abort",
             () => {
+                this.cancelPendingPreviews();
                 this.previews.clear();
                 this.cancelledSettings.clear();
             },
@@ -100,7 +107,20 @@ export default class SettingController implements SettingUiListener {
         // 新 input 开始下一轮预览，解除上一轮取消留下的提交屏蔽。
         this.cancelledSettings.delete(setting);
         this.previews.set(setting, value);
-        setting.apply(value);
+
+        // 滑块与数值即时响应；暂停拖动后再重排页面，避免每次指针移动都阻塞下一次输入。
+        if (setting instanceof RangeStyleSetting) {
+            this.cancelPendingPreview(setting);
+            this.pendingPreviewTimers.set(
+                setting,
+                window.setTimeout(() => {
+                    this.pendingPreviewTimers.delete(setting);
+                    run(() => {
+                        setting.apply(value);
+                    });
+                }, 100)
+            );
+        } else setting.apply(value);
         this.settingUi.refresh(setting);
     }
 
@@ -109,6 +129,7 @@ export default class SettingController implements SettingUiListener {
      */
     public commit(setting: Setting, value: string): void {
         this.requireSetting(setting);
+        this.cancelPendingPreview(setting);
         if (this.cancelledSettings.has(setting)) return;
         this.previews.delete(setting);
         this.performAndRefresh(() => {
@@ -161,6 +182,7 @@ export default class SettingController implements SettingUiListener {
      * 逐项恢复全部预览；单项失败不能阻止其他设置及会话的清理。
      */
     private restorePreviews(): void {
+        this.cancelPendingPreviews();
         const errors: unknown[] = [];
         for (const setting of this.previews.keys()) {
             this.cancelledSettings.add(setting);
@@ -173,6 +195,24 @@ export default class SettingController implements SettingUiListener {
         this.previews.clear();
         if (errors.length === 1) throw errors[0];
         if (errors.length > 1) throw new AggregateError(errors, "Failed to restore settings previews");
+    }
+
+    /**
+     * 同一滑块的新输入或提交替换尚未应用的预览。
+     */
+    private cancelPendingPreview(setting: Setting): void {
+        const timer = this.pendingPreviewTimers.get(setting);
+        if (timer === undefined) return;
+        window.clearTimeout(timer);
+        this.pendingPreviewTimers.delete(setting);
+    }
+
+    /**
+     * 关闭、重置与页面销毁都取消延迟应用，避免旧预览在之后覆盖页面。
+     */
+    private cancelPendingPreviews(): void {
+        for (const timer of this.pendingPreviewTimers.values()) window.clearTimeout(timer);
+        this.pendingPreviewTimers.clear();
     }
 
     /**
@@ -225,11 +265,18 @@ export default class SettingController implements SettingUiListener {
                     restoreErrors.push(restoreError);
                 }
             }
-            if (restoreErrors.length > 0) {
-                // eslint-disable-next-line preserve-caught-error -- AggregateError.errors 已按顺序保留原始异常与全部恢复异常。
-                throw new AggregateError([error, ...restoreErrors], "Failed to save and restore appearance settings");
-            }
-            throw error;
+            throw new OperationError(
+                "外观设置未能保存",
+                restoreErrors.length > 0
+                    ? "本次调整未保存，界面也未能完全恢复之前的外观。"
+                    : "本次调整未保存，已恢复之前的外观。",
+                restoreErrors.length > 0
+                    ? new AggregateError([error, ...restoreErrors], "Failed to save and restore appearance settings", {
+                          cause: error,
+                      })
+                    : error,
+                restoreErrors.length > 0 ? "请重新打开当前页面后再调整。" : "请处理失败原因后重新调整。"
+            );
         }
     }
 

@@ -80,6 +80,7 @@
 
         .title {
             min-width: 0;
+            flex: 1;
             letter-spacing: -0.02em;
             overflow-wrap: anywhere;
         }
@@ -89,6 +90,52 @@
             margin-right: -8px;
             border-radius: 10px;
             color: var(--appearance-muted-color);
+        }
+    }
+
+    .dialog-error-icon {
+        display: none;
+        color: var(--appearance-danger);
+        flex: 0 0 auto;
+        --icon-size: 22px;
+    }
+
+    &[data-error] .dialog-error-icon {
+        display: inline-block;
+    }
+
+    .error-content {
+        display: grid;
+        gap: 14px;
+
+        p {
+            margin: 0;
+        }
+
+        .error-recovery {
+            color: var(--appearance-muted-color);
+        }
+
+        .error-diagnostics {
+            border-top: 1px solid var(--appearance-border);
+            padding-top: 12px;
+            font-size: 13px;
+
+            summary {
+                cursor: pointer;
+                color: var(--appearance-muted-color);
+            }
+
+            pre {
+                margin: 10px 0 0;
+                padding: 12px;
+                border-radius: 10px;
+                background: var(--appearance-selection);
+                font-family: ui-monospace, monospace;
+                font-size: 12px;
+                white-space: pre-wrap;
+                overflow-wrap: anywhere;
+            }
         }
     }
 
