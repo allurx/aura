@@ -54,6 +54,7 @@ export default class NavUi extends Ui {
     public setActive(categoryId: string): void {
         for (const button of this.navigation.querySelectorAll("button")) {
             const active = button.dataset["id"] === categoryId;
+            if (button.classList.contains("active") === active) continue;
             button.classList.toggle("active", active);
             if (active) button.setAttribute("aria-current", "page");
             else button.removeAttribute("aria-current");

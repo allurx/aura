@@ -276,7 +276,8 @@
     .icon-more {
         --icon-image: url("../../../assets/images/more.svg");
     }
-    .shelf-empty {
+    .shelf-empty,
+    .shelf-status {
         grid-column: 1 / -1;
         display: flex;
         flex-direction: column;
@@ -315,14 +316,15 @@
         }
     }
 
-    &:has(> .shelf-empty) {
+    &:has(> .shelf-empty, > .shelf-status) {
         grid-template-columns: minmax(0, 1fr);
         grid-template-rows: minmax(min-content, 1fr);
         align-content: stretch;
         row-gap: 0;
     }
 
-    .shelf-empty-search h2 {
+    .shelf-empty-search h2,
+    .shelf-status h2 {
         font-size: 20px;
     }
 
@@ -442,7 +444,8 @@
         transform: rotate(-3deg);
     }
 
-    .shelf-empty-import {
+    .shelf-empty-import,
+    .shelf-retry {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -508,7 +511,8 @@
             margin-top: 6px;
         }
 
-        .shelf-empty-import {
+        .shelf-empty-import,
+        .shelf-retry {
             margin-top: 16px;
         }
 
@@ -522,7 +526,8 @@
             display: none;
         }
 
-        .shelf-empty-import {
+        .shelf-empty-import,
+        .shelf-retry {
             border-color: ButtonText;
         }
     }

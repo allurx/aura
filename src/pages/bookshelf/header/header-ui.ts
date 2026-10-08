@@ -19,11 +19,14 @@ export default class HeaderUi extends Ui {
     /**
      * 显示当前分类与筛选后的数量。
      */
-    public render(category: string, count: number, query: string): void {
-        assertExists(this.root.querySelector("#category-title")).textContent = category;
-        assertExists(this.root.querySelector("#book-count")).textContent = `${String(count)} 本`;
+    public render(category: string, count: number | null, query: string): void {
+        const title = assertExists(this.root.querySelector("#category-title"));
+        const amount = assertExists(this.root.querySelector("#book-count"));
+        const label = count === null ? "" : `${String(count)} 本`;
+        if (title.textContent !== category) title.textContent = category;
+        if (amount.textContent !== label) amount.textContent = label;
         this.renderedQuery = query;
-        this.search.value = query;
+        if (this.search.value !== query) this.search.value = query;
     }
 
     /**

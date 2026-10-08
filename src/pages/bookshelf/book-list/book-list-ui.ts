@@ -18,8 +18,36 @@ export type BookListEmptyState = "library" | "category" | "search";
  * 渲染书籍摘要，并管理阅读、分类移动与删除操作后的焦点。
  */
 export default class BookListUi extends Ui {
+    // 摘要是一次读取或修改后的快照；筛选复用书卡，旧快照释放后不再保留对应 DOM。
+    private readonly bookElements = new WeakMap<BookSummary, HTMLElement>();
     // 原生选择器禁用后可能失焦，保留来源供列表重渲染时恢复焦点。
     private pendingSelection: HTMLSelectElement | null = null;
+
+    /**
+     * 尚无摘要时明确展示读取或失败状态；重试只读取本地数据。
+     */
+    public renderLoadState(state: "loading" | "error"): void {
+        const focusedInside = this.root.contains(document.activeElement);
+        const status = document.createElement("div");
+        status.className = "shelf-status";
+        status.setAttribute("role", "status");
+        const title = document.createElement("h2");
+        title.textContent = state === "loading" ? "正在读取书架…" : "书架未能加载";
+        status.append(title);
+
+        if (state === "error") {
+            const hint = document.createElement("p");
+            hint.className = "shelf-empty-hint";
+            hint.textContent = "请重试读取，或通过管理与帮助处理本地数据。";
+            const retry = document.createElement("button");
+            retry.type = "button";
+            retry.className = "shelf-retry";
+            retry.textContent = "重新读取";
+            status.append(hint, retry);
+        }
+        this.root.replaceChildren(status);
+        if (focusedInside) this.root.focus({ preventScroll: true });
+    }
 
     /**
      * 返回时恢复仍在当前列表中的书籍；加载期间用户已移走焦点则保持原处。
@@ -30,6 +58,15 @@ export default class BookListUi extends Ui {
             (element) => element.dataset["id"] === bookId
         );
         book?.querySelector<HTMLButtonElement>(".book-open")?.focus({ preventScroll: true });
+    }
+
+    /**
+     * 导入替换空态入口后接续到书目；全部拒绝时仍可重新导入，不夺走用户已移动的焦点。
+     */
+    public restoreImportFocus(): void {
+        if (document.activeElement !== document.body) return;
+        const target = this.root.querySelector<HTMLElement>(".book-open, .shelf-empty-import") ?? this.root;
+        target.focus({ preventScroll: true });
     }
 
     /**
@@ -44,21 +81,38 @@ export default class BookListUi extends Ui {
         const focusedInside = focused instanceof HTMLElement && this.root.contains(focused);
         const owner = focused instanceof HTMLElement ? focused.closest<HTMLElement>(".book") : null;
         const focusId = owner?.dataset["id"];
-        const focusClass = focused instanceof HTMLSelectElement ? ".book-category" : ".book-open";
+        const focusClass =
+            focused instanceof HTMLSelectElement
+                ? ".book-category"
+                : focused instanceof HTMLElement && focused.classList.contains("book-more")
+                  ? ".book-more"
+                  : ".book-open";
         const previousIndex = owner ? Array.from(this.root.children).indexOf(owner) : -1;
 
         // 空态区分无藏书与无搜索结果，给出对应的下一步提示。
         if (books.length === 0) {
             this.root.replaceChildren(this.createEmptyState(emptyState));
         } else {
-            // 先在片段中生成全部书目，再一次替换当前结果。
-            const fragment = document.createDocumentFragment();
-            for (const book of books) fragment.append(this.createBookElement(book));
-            this.root.replaceChildren(fragment);
+            // 搜索逐字变化只移动增减的书卡，避免反复创建每本书的原生分类选项。
+            let cursor = this.root.firstElementChild;
+            for (const summary of books) {
+                let element = this.bookElements.get(summary);
+                if (!element) {
+                    element = this.createBookElement(summary);
+                    this.bookElements.set(summary, element);
+                }
+                if (element === cursor) cursor = cursor.nextElementSibling;
+                else this.root.insertBefore(element, cursor);
+            }
+            while (cursor) {
+                const next = cursor.nextElementSibling;
+                cursor.remove();
+                cursor = next;
+            }
         }
 
         // 优先恢复同书目的原操作，已移出结果时再回退到相邻书目或列表。
-        if (focusId && !this.root.contains(owner)) {
+        if (focusId && document.activeElement !== focused) {
             const cards = Array.from(this.root.querySelectorAll<HTMLElement>(".book"));
             const replacement = cards.find((card) => card.dataset["id"] === focusId);
             const next =
@@ -78,18 +132,22 @@ export default class BookListUi extends Ui {
 
     /**
      * 阅读与分类直接可达，文件操作就地展开；分类选择完成即保存，失败时恢复原值。
-     * @param onMove - 返回是否接受目标分类；返回 false 或抛错时恢复选择器原值
+     * @param handlers - move 返回 false 或抛错时恢复分类选择器原值
      */
     public bindEvents(
-        onRead: (id: string) => void,
-        onDelete: (id: string) => Promise<void>,
-        onMove: (id: string, categoryId: string) => Promise<boolean>,
-        onExport: (id: string) => Promise<void>,
-        onImportRequest: () => void,
+        handlers: {
+            read: (id: string) => void;
+            delete: (id: string) => Promise<void>;
+            move: (id: string, categoryId: string) => Promise<boolean>;
+            export: (id: string) => Promise<void>;
+            import: () => void;
+            retry: () => Promise<void>;
+        },
         signal: AbortSignal
     ): void {
         // 空态和顶部入口请求同一个导入流程，不查找或触发其他区域的按钮。
-        delegate(this.root, ".shelf-empty-import", "click", onImportRequest, { signal });
+        delegate(this.root, ".shelf-empty-import", "click", handlers.import, { signal });
+        delegate(this.root, ".shelf-retry", "click", handlers.retry, { signal });
 
         // 原生 popover 负责外部点击、Escape 与焦点顺序，只补充靠近书目的定位。
         bind(
@@ -105,6 +163,19 @@ export default class BookListUi extends Ui {
             },
             { signal, capture: true }
         );
+        bind(
+            this.root,
+            "toggle",
+            (event: ToggleEvent) => {
+                if (
+                    event.newState === "open" &&
+                    event.target instanceof HTMLElement &&
+                    event.target.classList.contains("book-file-actions")
+                )
+                    event.target.scrollTop = 0;
+            },
+            { signal, capture: true }
+        );
         const closeFileActions = () => {
             for (const actions of this.root.querySelectorAll<HTMLElement>(".book-file-actions:popover-open"))
                 actions.hidePopover();
@@ -112,6 +183,7 @@ export default class BookListUi extends Ui {
         this.root.addEventListener("scroll", closeFileActions, { signal });
         window.addEventListener("resize", closeFileActions, { signal });
         window.visualViewport?.addEventListener("resize", closeFileActions, { signal });
+        window.visualViewport?.addEventListener("scroll", closeFileActions, { signal });
         signal.addEventListener("abort", closeFileActions, { once: true });
 
         delegate(
@@ -120,7 +192,7 @@ export default class BookListUi extends Ui {
             "click",
             (_, button) => {
                 const owner = this.closeFileActions(button);
-                return onExport(assertExists(owner.dataset["id"]));
+                return handlers.export(assertExists(owner.dataset["id"]));
             },
             { signal }
         );
@@ -131,7 +203,7 @@ export default class BookListUi extends Ui {
             ".book-open",
             "click",
             (_, button) => {
-                onRead(assertExists(button.closest<HTMLElement>(".book")?.dataset["id"]));
+                handlers.read(assertExists(button.closest<HTMLElement>(".book")?.dataset["id"]));
             },
             { signal }
         );
@@ -144,12 +216,15 @@ export default class BookListUi extends Ui {
             async (_, button) => {
                 const owner = this.closeFileActions(button);
                 const index = Array.from(this.root.children).indexOf(owner);
-                await onDelete(assertExists(owner.dataset["id"]));
-
-                if (!signal.aborted && !owner.isConnected && document.activeElement === document.body) {
-                    const cards = this.root.querySelectorAll<HTMLElement>(".book");
-                    const next = cards[Math.min(index, cards.length - 1)]?.querySelector<HTMLElement>(".book-open");
-                    (next ?? this.root).focus({ preventScroll: true });
+                try {
+                    await handlers.delete(assertExists(owner.dataset["id"]));
+                } finally {
+                    // 刷新后的反馈失败也不能把焦点留给已经移除的控件。
+                    if (!signal.aborted && !owner.isConnected && document.activeElement === document.body) {
+                        const cards = this.root.querySelectorAll<HTMLElement>(".book");
+                        const next = cards[Math.min(index, cards.length - 1)]?.querySelector<HTMLElement>(".book-open");
+                        (next ?? this.root).focus({ preventScroll: true });
+                    }
                 }
             },
             { signal }
@@ -173,7 +248,7 @@ export default class BookListUi extends Ui {
                 element.setAttribute("aria-busy", "true");
 
                 try {
-                    if (await onMove(id, next)) element.dataset["categoryId"] = next;
+                    if (await handlers.move(id, next)) element.dataset["categoryId"] = next;
                     else element.value = previous;
                 } catch (error) {
                     element.value = previous;

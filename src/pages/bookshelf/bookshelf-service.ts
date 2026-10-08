@@ -40,12 +40,12 @@ export interface BookImportResult {
 }
 
 /**
- * 书架所需摘要，不加载章节正文。
+ * 书架所需的只读摘要快照，不加载章节正文；领域变化后以新快照替换。
  */
 export interface BookSummary {
-    book: Book;
-    title: string;
-    progress: { chapterNumber: number; chapterCount: number } | null;
+    readonly book: Readonly<Book>;
+    readonly title: string;
+    readonly progress: Readonly<{ chapterNumber: number; chapterCount: number }> | null;
 }
 
 /**
