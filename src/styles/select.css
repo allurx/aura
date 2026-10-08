@@ -143,8 +143,8 @@ select > button {
             }
 
             @media (hover: hover) and (pointer: fine) {
-                &:hover:not(:checked) {
-                    background: var(--appearance-muted-surface);
+                &:hover:not(:checked, :disabled) {
+                    background: var(--setting-hover-background, var(--appearance-muted-surface));
                 }
             }
 

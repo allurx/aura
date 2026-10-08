@@ -1,0 +1,80 @@
+/*
+ * Copyright 2026 allurx
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#setting {
+    .setting-group {
+        min-width: 0;
+
+        + .setting-group {
+            margin-top: 8px;
+            border-top: 1px solid var(--appearance-border);
+        }
+
+        > .items {
+            padding-top: 6px;
+        }
+    }
+
+    .setting-group-heading {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 44px;
+        margin: 0;
+        padding: 8px 0;
+        color: var(--appearance-color);
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.5;
+    }
+
+    .setting-group-title {
+        flex: 1;
+        min-width: 0;
+    }
+
+    details.setting-group > summary {
+        list-style: none;
+        cursor: pointer;
+        border-radius: 8px;
+        padding-inline: 8px;
+        margin-inline: -8px;
+
+        &::-webkit-details-marker {
+            display: none;
+        }
+
+        &::after {
+            content: "";
+            flex: none;
+            width: 7px;
+            height: 7px;
+            margin: 0 3px;
+            border: solid currentColor;
+            border-width: 0 1.5px 1.5px 0;
+            transform: rotate(-45deg);
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            &:hover {
+                background: var(--setting-hover-background);
+            }
+        }
+    }
+
+    details.setting-group[open] > summary::after {
+        transform: rotate(45deg);
+    }
+
+    .setting-group > .items > .item + .item {
+        margin-top: 4px;
+        padding-top: 12px;
+        border-top: 1px solid var(--appearance-border);
+
+        > .reset-setting {
+            top: 12px;
+        }
+    }
+}

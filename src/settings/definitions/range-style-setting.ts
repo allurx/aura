@@ -77,6 +77,14 @@ export default class RangeStyleSetting extends StyleSetting {
     }
 
     /**
+     * 控件与辅助技术共用可读数值；专有设置可按自身语义调整表达。
+     */
+    public formatValue(value: string): string {
+        const numericValue = this.unit ? value.slice(0, -this.unit.length) : value;
+        return this.unit === "em" || this.unit === "" ? `${numericValue} 倍` : value;
+    }
+
+    /**
      * 将计算样式或原生 resize 结果限制范围并对齐步长。
      */
     protected normalizeValue(value: number): string {

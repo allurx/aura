@@ -6,10 +6,15 @@
 @import "./controls/theme-setting-control.css";
 @import "./controls/reading-mode-setting-control.css";
 @import "./controls/material-setting-control.css";
+@import "./controls/choice-setting-control.css";
+@import "./controls/book-cover-choice.css";
+@import "./controls/switch-setting-control.css";
+@import "./ui/setting-groups.css";
 
 /* 页面通过布局变量协调展开方向；标题和重置固定，设置项在中部滚动。 */
 #setting {
     --setting-padding: 20px;
+    --setting-hover-background: color-mix(in srgb, var(--appearance-color) 7%, transparent);
     --setting-hidden-translation: translateX(calc(100% + max(1rem, env(safe-area-inset-right))));
     position: fixed;
     inset: var(
@@ -20,7 +25,7 @@
     flex-direction: column;
     width: var(
         --setting-width,
-        min(27rem, calc(100% - max(1rem, env(safe-area-inset-left)) - max(1rem, env(safe-area-inset-right))))
+        min(28rem, calc(100% - max(1rem, env(safe-area-inset-left)) - max(1rem, env(safe-area-inset-right))))
     );
     max-width: none;
     /* 覆盖原生 dialog 的 fit-content，内容参与面板自然高度计算。 */
@@ -102,17 +107,21 @@
         align-items: center;
         gap: 12px;
         flex: none;
-        padding-block: 8px;
+        padding-block: 14px;
         border-bottom: 1px solid var(--appearance-border);
 
         > .heading {
             flex: 1;
             min-width: 0;
             margin: 0;
-            font-size: 18px;
-            font-weight: 600;
-            letter-spacing: -0.02em;
             overflow-wrap: anywhere;
+
+            h2 {
+                margin: 0;
+                font-size: 19px;
+                font-weight: 600;
+                letter-spacing: -0.02em;
+            }
         }
 
         > .close {
@@ -123,6 +132,12 @@
             margin-right: -8px;
             border-radius: 10px;
             color: var(--appearance-muted-color);
+
+            @media (hover: hover) and (pointer: fine) {
+                &:hover:enabled:not(:active, [aria-disabled="true"]) {
+                    --icon-feedback-color: var(--setting-hover-background);
+                }
+            }
         }
     }
 
@@ -133,7 +148,7 @@
         overflow-y: auto;
         overscroll-behavior-y: contain;
         scroll-padding-block: 0.5rem;
-        padding-block: 8px 16px;
+        padding-block: 12px 20px;
     }
 
     > footer {
@@ -164,13 +179,13 @@
 
         @media (hover: hover) and (pointer: fine) {
             &:hover:enabled {
-                background: var(--appearance-selection);
+                background: var(--setting-hover-background);
                 color: var(--appearance-color);
             }
         }
 
         &:active:enabled {
-            background: var(--appearance-selection);
+            background: var(--setting-hover-background);
             transform: translateY(1px);
         }
 
@@ -202,9 +217,9 @@
         overflow-wrap: anywhere;
     }
 
-    .general-settings {
-        margin-top: 16px;
-        padding-top: 12px;
+    .setting-body > section + section {
+        margin-top: 20px;
+        padding-top: 16px;
         border-top: 1px solid var(--appearance-border);
     }
 
@@ -219,40 +234,62 @@
     }
 
     :is(.reset-setting, .reset-general) {
-        --icon-size: 18px;
-        color: var(--appearance-muted-color);
+        flex: none;
+        min-width: 44px;
+        min-height: 32px;
+        padding: 4px 6px;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        color: var(--setting-accent-color);
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+
+        @media (hover: hover) and (pointer: fine) {
+            &:hover:not([aria-disabled="true"]) {
+                background: var(--setting-hover-background);
+            }
+        }
 
         &[aria-disabled="true"] {
-            opacity: 0.3;
+            color: var(--appearance-muted-color);
+            opacity: 0.5;
             cursor: default;
-            --icon-hover-opacity: 0%;
-            transform: none;
         }
+    }
+
+    /* 默认项不显示还原动作，但保留占位，避免控件与数值随状态跳动。 */
+    .reset-setting[aria-disabled="true"] {
+        visibility: hidden;
+        pointer-events: none;
     }
 
     .items > .item {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, auto) 44px;
+        grid-template-columns: minmax(0, 1fr) minmax(0, auto) auto;
         align-items: center;
-        gap: 0 8px;
-        padding: 4px 0 8px;
+        gap: 2px 8px;
+        padding: 0 0 12px;
 
         > .title {
             grid-row: 1;
             grid-column: 1;
             font-size: 14px;
             font-weight: 500;
+            min-height: 32px;
+            align-content: center;
             overflow-wrap: anywhere;
         }
 
         > .reset-setting {
-            grid-row: 1 / span 2;
-            grid-column: 3;
+            grid-row: 1;
+            grid-column: 2;
         }
 
         > .display {
             grid-row: 1;
-            grid-column: 2;
+            grid-column: 3;
             min-width: 0;
             color: var(--appearance-muted-color);
             font-size: 12px;
@@ -266,7 +303,7 @@
 
     .items > .item > .control-container {
         grid-row: 2;
-        grid-column: 1 / 3;
+        grid-column: 1 / -1;
         min-width: 0;
 
         > .control {
@@ -287,6 +324,13 @@
             background: var(--appearance-canvas);
             color: inherit;
             text-overflow: ellipsis;
+
+            @media (hover: hover) and (pointer: fine) {
+                &:hover:enabled:not(:open) {
+                    background-color: var(--setting-hover-background);
+                    border-color: var(--setting-accent-color);
+                }
+            }
         }
     }
 
@@ -367,9 +411,9 @@
             background-color var(--motion-duration-fast) var(--motion-ease);
 
         @media (hover: hover) and (pointer: fine) {
-            &:hover {
+            &:hover:enabled {
                 border-color: var(--setting-accent-color);
-                background-color: color-mix(in srgb, currentColor 4%, transparent);
+                background-color: var(--setting-hover-background);
             }
         }
 
@@ -379,7 +423,7 @@
     }
 
     .items > .item:has(input[type="color"]) {
-        grid-template-columns: minmax(0, 1fr) minmax(0, auto) 44px 44px;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, auto) 44px;
         padding: 0.5rem 0;
 
         > .display {
@@ -388,7 +432,7 @@
 
         > .control-container {
             grid-row: 1;
-            grid-column: 3;
+            grid-column: 4;
 
             > input[type="color"] {
                 height: 44px;
@@ -400,12 +444,12 @@
 
         > .reset-setting {
             grid-row: 1;
-            grid-column: 4;
+            grid-column: 2;
         }
     }
 
     .items > .item.font-setting {
-        row-gap: 4px;
+        row-gap: 2px;
         padding-bottom: 12px;
 
         > .control-container {

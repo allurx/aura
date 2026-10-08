@@ -600,6 +600,43 @@
     }
 }
 
+/* 主题配色同时协调文字和页芯，深浅主题都使用各自的可读前景色。 */
+#bookshelf #book-list[data-cover-color="theme"] .book {
+    --book-cover: color-mix(in srgb, var(--appearance-accent) 14%, var(--appearance-surface));
+    --book-cover-ink: var(--appearance-color);
+    --book-paper: color-mix(in srgb, var(--appearance-surface) 90%, var(--appearance-color));
+}
+
+/* 平面书封保留完整点击区域和材质，只移除书脊、页芯与立体投影。 */
+#bookshelf #book-list[data-cover-style="flat"] {
+    .book {
+        --book-depth: 0px;
+        --book-spine-width: 0px;
+    }
+
+    .book-open {
+        border-radius: 10px;
+    }
+
+    .book-open::before,
+    .book-open::after,
+    .book-cover::before {
+        display: none;
+    }
+
+    .book-cover {
+        padding-inline: clamp(10px, calc(var(--book-cover-width) * 0.1), 20px);
+        border: 1px solid color-mix(in srgb, var(--book-cover-ink) 12%, transparent);
+        background-image: var(--material-image);
+        background-size: var(--material-size);
+        box-shadow: none;
+
+        @media (forced-colors: active) {
+            border-color: CanvasText;
+        }
+    }
+}
+
 html:where([data-material]:not([data-material="standard"])) {
     /* 书封保留自身配色和书脊，仅共用材质纹理。 */
     #bookshelf #book-list .book-cover {

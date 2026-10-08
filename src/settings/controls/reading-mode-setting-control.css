@@ -23,8 +23,8 @@
         }
 
         legend {
-            max-width: calc(100% - 44px);
-            min-height: 44px;
+            max-width: calc(100% - 52px);
+            min-height: 36px;
             padding: 0;
             align-content: center;
             font-size: 14px;
@@ -44,7 +44,7 @@
         position: relative;
         display: flex;
         min-width: 0;
-        min-height: 70px;
+        min-height: 76px;
         flex-direction: column;
         align-items: center;
         justify-content: center;
@@ -52,14 +52,13 @@
         padding: 8px 3px;
         border: 1px solid var(--appearance-border);
         border-radius: 10px;
-        background: var(--appearance-canvas);
-        color: var(--appearance-muted-color);
-        font-size: 12px;
+        background: transparent;
+        color: var(--appearance-color);
+        font-size: 13px;
         line-height: 1.5;
         text-align: center;
         cursor: pointer;
         transition:
-            background-color var(--motion-duration-fast) var(--motion-ease),
             border-color var(--motion-duration-fast) var(--motion-ease),
             color var(--motion-duration-fast) var(--motion-ease);
 
@@ -76,6 +75,7 @@
         > svg {
             width: 32px;
             height: 28px;
+            stroke-width: 1.8;
             pointer-events: none;
         }
 
@@ -84,15 +84,14 @@
         }
 
         &:has(input:checked) {
-            border-color: color-mix(in srgb, var(--setting-accent-color) 60%, transparent);
-            background: var(--appearance-selection);
+            border-color: var(--setting-accent-color);
             color: var(--setting-accent-color);
+            font-weight: 600;
         }
 
         @media (hover: hover) and (pointer: fine) {
             &:hover:not(:has(input:checked)) {
-                background: var(--appearance-highlight);
-                color: var(--appearance-color);
+                border-color: var(--setting-accent-color);
             }
         }
 
@@ -111,8 +110,8 @@
 
     @media (forced-colors: active) {
         .reading-mode-option:has(input:checked) {
-            border: 3px double Highlight;
-            padding: 6px 1px;
+            outline: 2px solid Highlight;
+            outline-offset: -3px;
         }
     }
 }
@@ -121,24 +120,4 @@
 :where(html[data-keyboard-navigation]) #setting .reading-mode-option:has(> input:focus-visible) {
     outline: 2px solid var(--focus-ring-color);
     outline-offset: 2px;
-}
-
-html:where([data-material]:not([data-material="standard"])) {
-    #setting .reading-mode-option {
-        background-color: var(--material-control-surface);
-        background-image: var(--material-control-image);
-        background-size: var(--material-control-size);
-        border-color: var(--material-border);
-    }
-
-    #setting .reading-mode-option:has(input:checked) {
-        background-color: var(--appearance-selection);
-        background-image: none;
-
-        @media (forced-colors: active) {
-            background-color: Highlight;
-            color: HighlightText;
-            border-color: Highlight;
-        }
-    }
 }

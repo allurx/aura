@@ -42,7 +42,9 @@ export default class SettingController implements SettingUiListener {
         this.settingUi = new SettingUi(container);
         this.configuration = new SettingConfiguration(pageName, settings);
         this.repository = new AppearanceRepository(this.configuration);
-        this.width = settings.general.find((setting): setting is WidthSetting => setting instanceof WidthSetting);
+        this.width = this.configuration.general.find(
+            (setting): setting is WidthSetting => setting instanceof WidthSetting
+        );
         this.widthSynchronizer = this.width ? new WidthSynchronizer(this.width) : undefined;
         this.appearance = PageAppearance.defaults(this.configuration.defaultTheme);
     }

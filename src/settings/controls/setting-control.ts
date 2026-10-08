@@ -22,15 +22,12 @@ export default abstract class SettingControl {
     ) {
         this.element.className = "item";
 
-        // 重置入口始终占位；默认态保留焦点，避免操作完成后焦点掉出面板。
+        // 还原与选项选择分开呈现，默认项不重复提供还原动作。
         this.resetElement.type = "button";
-        this.resetElement.className = "reset-setting icon-button";
+        this.resetElement.className = "reset-setting";
         this.resetElement.title = `重置${setting.title}`;
         this.resetElement.setAttribute("aria-label", this.resetElement.title);
-        const icon = document.createElement("span");
-        icon.className = "icon icon-reset";
-        icon.setAttribute("aria-hidden", "true");
-        this.resetElement.append(icon);
+        this.resetElement.textContent = "还原";
         this.element.append(this.resetElement);
         bind(
             this.resetElement,
@@ -53,7 +50,15 @@ export default abstract class SettingControl {
      * 显式覆盖与默认值分开标记，不根据计算样式猜测是否已经修改。
      */
     public setCustomized(customized: boolean): void {
+        const returnFocus = !customized && document.activeElement === this.resetElement;
         this.element.toggleAttribute("data-customized", customized);
         this.resetElement.setAttribute("aria-disabled", String(!customized));
+        this.resetElement.tabIndex = customized ? 0 : -1;
+        // 还原后把焦点交回设置本身，让按钮立即隐藏且不丢失键盘操作位置。
+        if (returnFocus) {
+            this.element
+                .querySelector<HTMLInputElement | HTMLSelectElement>('input:checked, input:not([type="radio"]), select')
+                ?.focus({ preventScroll: true });
+        }
     }
 }
