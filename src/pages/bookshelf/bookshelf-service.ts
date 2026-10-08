@@ -318,7 +318,7 @@ async function addBooks(
             bookId: book.id,
             chapterNumber: 1,
             blockNumber: 1,
-            blockVisibleRatio: 1,
+            contentOffset: 0,
         };
         await Promise.all([addRecord(transaction, "book", book), addRecord(transaction, "progress", progress)]);
         books.push(book);

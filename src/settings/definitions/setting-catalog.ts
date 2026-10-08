@@ -11,6 +11,8 @@ import RangeStyleSetting from "./range-style-setting";
 import type { PageSettings } from "../models/setting-configuration";
 import ThemeSetting from "./theme-setting";
 import WidthSetting from "./width-setting";
+import ReadingModeSetting from "./reading-mode-setting";
+import type { ReadingMode } from "@/pages/reader/reading-mode";
 
 /**
  * 两个页面共用主题定义，各自保存已提交的主题值。
@@ -34,10 +36,15 @@ export function createBookshelfSettings(bookshelf: HTMLElement, bookList: HTMLEl
 /**
  * 将阅读常规设置绑定到阅读器或正文，避免修改工具栏与浮层的排版。
  */
-export function createReaderSettings(reader: HTMLElement, content: HTMLElement): PageSettings {
+export function createReaderSettings(
+    reader: HTMLElement,
+    content: HTMLElement,
+    onReadingModeChange: (mode: ReadingMode) => void
+): PageSettings {
     return {
         theme: themeSetting,
         general: [
+            new ReadingModeSetting(onReadingModeChange),
             new FontFamilySetting(content),
             new RangeStyleSetting(content, StyleProperty.FONT_SIZE, "字号", [16, 28], 1, "px"),
             new LineHeightSetting(content),

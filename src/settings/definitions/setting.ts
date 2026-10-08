@@ -5,6 +5,8 @@
 
 import type PageAppearance from "../models/page-appearance";
 import type { Theme } from "../models/theme";
+import type SettingControl from "../controls/setting-control";
+import type SettingControlListener from "../controls/setting-control-listener";
 
 /**
  * 页面外观项的值域、快照更新与 DOM 应用契约，快照操作不直接修改页面或存储。
@@ -14,6 +16,11 @@ export default abstract class Setting {
         public readonly key: string,
         public readonly title: string
     ) {}
+
+    /**
+     * 创建当前设置的原生交互控件。
+     */
+    public abstract createControl(listener: SettingControlListener, signal: AbortSignal): SettingControl;
 
     /**
      * @returns value 是否属于当前设置的合法值域。

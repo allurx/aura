@@ -4,6 +4,7 @@
  */
 
 @import "./controls/theme-setting-control.css";
+@import "./controls/reading-mode-setting-control.css";
 
 /* 页面通过布局变量协调展开方向；标题和重置固定，设置项在中部滚动。 */
 #setting {

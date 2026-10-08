@@ -11,6 +11,7 @@ import Router, { type AppRoute } from "./router/router";
 import { assertExists } from "./utils/assert-util";
 import Dialog from "./components/dialog/dialog";
 import OperationError from "./errors/operation-error";
+import { run } from "./utils/event-util";
 
 /**
  * 管理页面替换和统一错误提示，页面实例随路由切换创建与销毁。
@@ -34,7 +35,7 @@ class Main {
     /**
      * 在启动路由前接入统一错误提示，覆盖首个页面的异步初始化失败。
      */
-    public start(): void {
+    public async start(): Promise<void> {
         // 同步错误和未处理的 Promise 拒绝共用一个用户提示入口。
         window.addEventListener("error", (event) => {
             void this.showError(event.error);
@@ -43,7 +44,20 @@ class Main {
             void this.showError(event.reason);
         });
 
-        // 首屏样式由 HTML 加载，原生 module 执行前已就绪，无需等待整页 load。
+        // module 与 DOMContentLoaded 不保证外链样式已经可用；仅在样式尚未就绪时等待加载结束。
+        // portable 已内联样式，直接初始化。失败样式仍由实际计算值检查和统一错误路径报告。
+        const styles = [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')];
+        if (styles.some((link) => !link.sheet) && document.readyState !== "complete") {
+            await new Promise<void>((resolve) => {
+                window.addEventListener(
+                    "load",
+                    () => {
+                        resolve();
+                    },
+                    { once: true }
+                );
+            });
+        }
         this.router.start();
     }
 
@@ -114,4 +128,4 @@ class Main {
     }
 }
 
-new Main().start();
+run(() => new Main().start());

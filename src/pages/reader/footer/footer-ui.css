@@ -22,12 +22,30 @@
     user-select: none;
     overflow-y: auto;
 
+    .mobile-page-navigation {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) 44px;
+        align-items: center;
+        gap: 8px;
+
+        > .reader-action {
+            min-height: 44px;
+            width: 44px;
+            border-radius: 50%;
+            background: color-mix(in srgb, currentColor 5%, transparent);
+
+            > span:last-child {
+                display: none;
+            }
+        }
+    }
+
     .reading-location {
         display: flex;
-        flex-wrap: wrap;
-        align-items: baseline;
+        flex-direction: column;
+        align-items: center;
         justify-content: center;
-        gap: 12px;
+        gap: 2px;
         min-width: 0;
         padding-inline: 8px;
         line-height: 1.4;
@@ -35,15 +53,17 @@
     }
 
     #chapter-title {
-        flex: 1 1 0;
         min-width: 0;
-        max-width: max-content;
+        max-width: 100%;
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
     }
 
-    #progress-rate {
+    .reading-status {
+        display: flex;
+        align-items: center;
+        gap: 12px;
         flex: 0 0 auto;
     }
 
@@ -74,6 +94,27 @@
             gap: 1px;
         }
     }
+}
+
+/* 页码描述当前排版，全书进度在分页和滚动之间保持相同含义。 */
+:is(#reader, #reader-actions) #page-position {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--appearance-muted-color);
+    font-variant-numeric: tabular-nums;
+    font-size: 11px;
+    white-space: nowrap;
+
+    &[hidden] {
+        display: none;
+    }
+}
+
+#reader-actions #page-position {
+    flex-direction: column;
+    gap: 0;
+    font-size: 11px;
 }
 
 /* 桌面侧栏与移动页脚复用同一进度元素和排版规则。 */

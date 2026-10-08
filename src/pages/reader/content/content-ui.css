@@ -7,20 +7,28 @@
     --reader-paragraph-spacing: 1.15em;
     --ui-padding-left: 72px;
     --ui-padding-right: 72px;
+    --reading-inset-left: max(var(--ui-padding-left), env(safe-area-inset-left));
+    --reading-inset-right: max(var(--ui-padding-right), env(safe-area-inset-right));
     flex: 1;
+    display: flex;
+    position: relative;
     min-height: 0;
     min-width: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
     overflow-wrap: anywhere;
-    padding: 44px max(var(--ui-padding-right), env(safe-area-inset-right)) 32px
-        max(var(--ui-padding-left), env(safe-area-inset-left));
+    padding: 44px var(--reading-inset-right) 32px var(--reading-inset-left);
+    outline-offset: -2px;
     overscroll-behavior-y: contain;
     font-family: sans-serif;
     font-size: 19px;
     color: var(--reader-color);
     line-height: 1.9;
-    background-color: transparent;
+    background-color: inherit;
+
+    /* 滚动条靠近阅读区域边缘；外层只保留系统安全区，正文留白由滚动层承担。 */
+    &[data-reading-mode="scroll"] {
+        padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
+    }
 
     .chapter-heading {
         margin-bottom: 1.4em;
@@ -31,7 +39,7 @@
         letter-spacing: 0.02em;
         overflow-wrap: anywhere;
     }
-    > p {
+    .reading-chapter > p {
         margin-bottom: var(--reader-paragraph-spacing);
     }
     .epub-block {
@@ -74,6 +82,7 @@
             max-width: 100%;
             height: auto;
             margin-inline: auto;
+            object-fit: contain;
         }
         a {
             color: var(--appearance-accent);
@@ -88,10 +97,12 @@
             display: block;
             max-width: 100%;
             overflow-x: auto;
+            overflow-wrap: normal;
             border-collapse: collapse;
         }
         td,
         th {
+            min-inline-size: 5.5em;
             padding: 0.35em 0.6em;
             border: 1px solid var(--appearance-muted-color);
         }
@@ -106,11 +117,15 @@
         }
     }
 
+    .reading-chapter > :last-child {
+        margin-bottom: 0;
+    }
+
     @media (max-width: 600px) {
         --ui-padding-left: 24px;
         --ui-padding-right: 24px;
-        padding-inline: max(env(safe-area-inset-left), min(var(--ui-padding-left), 12.5vw))
-            max(env(safe-area-inset-right), min(var(--ui-padding-right), 12.5vw));
+        --reading-inset-left: max(env(safe-area-inset-left), min(var(--ui-padding-left), 12.5vw));
+        --reading-inset-right: max(env(safe-area-inset-right), min(var(--ui-padding-right), 12.5vw));
         padding-top: 28px;
 
         .chapter-heading {
@@ -124,7 +139,6 @@
 }
 
 #reader[data-mobile-controls] > #content {
-    touch-action: pan-y pinch-zoom;
     /* 安全区位于滚动视窗外，正文滚动途中也不会进入刘海和手势区域。 */
     margin-top: env(safe-area-inset-top);
     margin-bottom: env(safe-area-inset-bottom);
@@ -133,5 +147,164 @@
 
     @media (max-height: 500px) {
         padding-top: max(0px, calc(20px - env(safe-area-inset-top)));
+    }
+}
+
+/* 分页与滚动共用同一正文与源锚点，只改变视窗和章节的排版。 */
+#content > .reading-viewport {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    overscroll-behavior: contain;
+    overflow-anchor: none;
+    scrollbar-gutter: auto;
+    background-color: inherit;
+    color: inherit;
+}
+
+.reading-chapter {
+    display: flow-root;
+    width: 100%;
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        break-after: avoid;
+    }
+
+    p,
+    li {
+        orphans: 2;
+        widows: 2;
+    }
+}
+
+#content:not([data-reading-mode="scroll"]) {
+    .reading-chapter {
+        height: var(--reading-page-height);
+        column-width: var(--reading-page-width);
+        column-gap: 32px;
+        column-fill: auto;
+    }
+
+    .epub-block img {
+        max-height: var(--reading-page-height);
+        break-inside: avoid;
+    }
+
+    .epub-block :is(table, pre) {
+        max-height: var(--reading-page-height);
+        overflow: auto;
+        break-inside: avoid;
+        overscroll-behavior: contain;
+    }
+}
+
+#content[data-reading-mode="scroll"] {
+    > .reading-viewport {
+        overflow-y: auto;
+        scrollbar-gutter: stable;
+        padding-left: max(0px, calc(var(--reading-inset-left) - env(safe-area-inset-left)));
+        padding-right: max(0px, calc(var(--reading-inset-right) - env(safe-area-inset-right)));
+    }
+
+    .reading-chapter + .reading-chapter {
+        margin-top: 3em;
+        padding-top: 2em;
+        border-top: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+    }
+}
+
+/* 只为非滚动正文保留横扫，表格仍交给原生双轴滚动和缩放。 */
+#content:not([data-reading-mode="scroll"]) .reading-chapter > :not(:has(table, pre)) {
+    touch-action: pan-y pinch-zoom;
+}
+
+/* 翻页快照固定在正文视窗内，背景、工具和页码保持静止。 */
+html[data-page-turn] {
+    &::view-transition-old(root),
+    &::view-transition-new(root) {
+        animation: none;
+        mix-blend-mode: normal;
+    }
+
+    &::view-transition-group(reading-page) {
+        overflow: clip;
+        animation-duration: 220ms;
+    }
+
+    &::view-transition-old(reading-page),
+    &::view-transition-new(reading-page) {
+        mix-blend-mode: normal;
+        animation-duration: 220ms;
+        animation-timing-function: cubic-bezier(0.2, 0.65, 0.3, 1);
+        animation-fill-mode: both;
+    }
+
+    &[data-page-direction="next"]::view-transition-new(reading-page) {
+        animation-name: reading-enter-next;
+    }
+
+    &[data-page-direction="previous"]::view-transition-old(reading-page) {
+        animation-name: reading-leave-previous;
+        z-index: 1;
+    }
+
+    &[data-page-turn="cover"][data-page-direction="next"]::view-transition-old(reading-page),
+    &[data-page-turn="cover"][data-page-direction="previous"]::view-transition-new(reading-page) {
+        animation-name: none;
+    }
+
+    &[data-page-turn="cover"][data-page-direction="next"]::view-transition-new(reading-page),
+    &[data-page-turn="cover"][data-page-direction="previous"]::view-transition-old(reading-page) {
+        box-shadow: -6px 0 18px color-mix(in srgb, var(--appearance-shadow-color) 18%, transparent);
+    }
+
+    &[data-page-turn="slide"][data-page-direction="next"]::view-transition-old(reading-page) {
+        animation-name: reading-leave-next;
+    }
+
+    &[data-page-turn="slide"][data-page-direction="previous"]::view-transition-new(reading-page) {
+        animation-name: reading-enter-previous;
+    }
+}
+
+@keyframes reading-enter-next {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes reading-leave-next {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-100%);
+    }
+}
+
+@keyframes reading-enter-previous {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes reading-leave-previous {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(100%);
     }
 }

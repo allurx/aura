@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { bind } from "@/utils/event-util";
-import { SwitchChapterDirection } from "./switch-chapter-direction";
+import { bind, run } from "@/utils/event-util";
+import { ReadingDirection } from "./reading-direction";
+import type { ReadingMode } from "./reading-mode";
 
 /**
  * 一次主指针操作；多指、取消或正文滚动会使本次手势失效。
@@ -19,12 +20,12 @@ interface ReadingPointer {
     maxX: number;
     maxY: number;
     startedAt: number;
-    scrollTop: number;
+    mode: ReadingMode;
     cancelled: boolean;
 }
 
 /**
- * 将正文两侧轻点、横向轻扫和中心轻点转换为阅读意图，保留原生滚动与文字选择。
+ * 将触摸、触笔和滚轮转换为阅读意图；连续阅读保留原生滚动，鼠标短点中央只切换工具。
  * 开始和结束时均检查当前交互是否可用，页面退出时清理指针状态与全部监听。
  * @returns 取消当前候选手势；布局切换时调用，已按下的指针仍跟踪到释放或取消。
  */
@@ -32,26 +33,32 @@ export default function bindReadingGestures(
     content: HTMLElement,
     handlers: {
         isEnabled: () => boolean;
-        onChapter: (direction: SwitchChapterDirection) => Promise<void>;
+        onTurn: (direction: ReadingDirection) => Promise<void>;
         onCenterTap: () => void;
+        getMode: () => ReadingMode;
     },
     signal: AbortSignal
 ): () => void {
     let pointer: ReadingPointer | undefined;
     const activePointers = new Set<number>();
+    let wheelLastAt = Number.NEGATIVE_INFINITY;
+    let wheelDistance = 0;
+    let wheelAxis: "x" | "y" | undefined;
+    let wheelConsumed = false;
 
     /**
      * 放弃当前候选，不把仍按下的其他指针误认为已经释放。
      */
     const cancel = (): void => {
         pointer = undefined;
+        wheelConsumed = true;
     };
 
     /**
      * 轻点要求 450ms 内且两轴全程位移小于 8px；触摸或触笔轻扫至少横移 48px，偏角不超过 30°。
      * 选区、多指、取消及正文滚动均忽略，鼠标拖选不作为轻扫。
      */
-    const readGesture = (current: ReadingPointer, event: PointerEvent): SwitchChapterDirection => {
+    const readGesture = (current: ReadingPointer, event: PointerEvent): ReadingDirection => {
         // 先排除选区、多指、取消与滚动后的操作，再判断轻点或轻扫。
         if (
             current.cancelled ||
@@ -59,9 +66,9 @@ export default function bindReadingGestures(
             event.button !== 0 ||
             activePointers.size > 0 ||
             hasSelection() ||
-            Math.abs(content.scrollTop - current.scrollTop) > 1
+            handlers.getMode() !== current.mode
         )
-            return SwitchChapterDirection.INVALID;
+            return ReadingDirection.INVALID;
 
         // 用全程位移判定轻点，再按正文的实际边界划分左右与中央区域。
         const deltaX = event.clientX - current.startX;
@@ -78,24 +85,29 @@ export default function bindReadingGestures(
             event.clientY >= bounds.top &&
             event.clientY <= bounds.bottom;
         const horizontalPosition = (event.clientX - bounds.left) / bounds.width;
+        const paginated = current.mode !== "scroll" && (current.type === "touch" || current.type === "pen");
 
-        if (!inContent) return SwitchChapterDirection.INVALID;
+        if (!inContent) return ReadingDirection.INVALID;
         if (tap && event.timeStamp - current.startedAt <= 450) {
-            if (horizontalPosition < 1 / 3) return SwitchChapterDirection.PREV;
-            if (horizontalPosition > 2 / 3) return SwitchChapterDirection.NEXT;
+            if (horizontalPosition < 1 / 3) {
+                return paginated ? ReadingDirection.PREV : ReadingDirection.INVALID;
+            }
+            if (horizontalPosition > 2 / 3) {
+                return paginated ? ReadingDirection.NEXT : ReadingDirection.INVALID;
+            }
             handlers.onCenterTap();
         } else if (
-            !hasHorizontalScroll(current.target, content) &&
-            (current.type === "touch" || current.type === "pen") &&
+            paginated &&
+            !hasNestedScroll(current.target, content, "x") &&
             Math.abs(deltaX) >= 48 &&
             maxY / Math.abs(deltaX) <= Math.tan(Math.PI / 6)
         ) {
-            return deltaX > 0 ? SwitchChapterDirection.PREV : SwitchChapterDirection.NEXT;
+            return deltaX > 0 ? ReadingDirection.PREV : ReadingDirection.NEXT;
         }
-        return SwitchChapterDirection.INVALID;
+        return ReadingDirection.INVALID;
     };
 
-    // 正文之外的指针也参与多指判断，只在可用布局中为单个主指针建立候选。
+    // 正文之外的指针也参与多指判断；输入识别不依赖窗口宽度或主指针媒体查询。
     bind(
         document,
         "pointerdown",
@@ -115,7 +127,7 @@ export default function bindReadingGestures(
                 maxX: 0,
                 maxY: 0,
                 startedAt: event.timeStamp,
-                scrollTop: content.scrollTop,
+                mode: handlers.getMode(),
                 cancelled: hasSelection(),
             };
         },
@@ -141,7 +153,7 @@ export default function bindReadingGestures(
         () => {
             if (pointer) pointer.cancelled = true;
         },
-        { passive: true, signal }
+        { passive: true, capture: true, signal }
     );
     bind(
         document,
@@ -153,7 +165,7 @@ export default function bindReadingGestures(
         { signal }
     );
 
-    // 正常抬起时先释放候选，再按当前交互状态分发一次工具或切章操作。
+    // 正常抬起时先释放候选，再按当前交互状态分发一次工具或翻页操作。
     bind(
         document,
         "pointerup",
@@ -161,10 +173,75 @@ export default function bindReadingGestures(
             activePointers.delete(event.pointerId);
             const current = pointer;
             if (current?.id !== event.pointerId) return;
-            cancel();
+            pointer = undefined;
             if (!handlers.isEnabled()) return;
             const direction = readGesture(current, event);
-            if (direction !== SwitchChapterDirection.INVALID) await handlers.onChapter(direction);
+            if (direction !== ReadingDirection.INVALID) await handlers.onTurn(direction);
+        },
+        { signal }
+    );
+
+    // 连续滚动保持原生行为；分页把一次滚轮或触控板输入及其惯性作为一次翻页。
+    bind(
+        content,
+        "wheel",
+        async (event: WheelEvent) => {
+            if (
+                event.defaultPrevented ||
+                event.ctrlKey ||
+                event.metaKey ||
+                event.altKey ||
+                handlers.getMode() === "scroll" ||
+                !handlers.isEnabled() ||
+                hasSelection() ||
+                !isReadingTarget(event.target, content)
+            ) {
+                wheelLastAt = event.timeStamp;
+                wheelConsumed = true;
+                return;
+            }
+
+            const axis = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? "x" : "y";
+            if (hasNestedScroll(event.target, content, axis)) {
+                wheelLastAt = event.timeStamp;
+                wheelConsumed = true;
+                return;
+            }
+
+            // 内嵌表格等控件先获得滚动；正文分页接管后，惯性不再滚动其他容器。
+            event.preventDefault();
+            if (event.timeStamp - wheelLastAt > 180) {
+                wheelDistance = 0;
+                wheelAxis = undefined;
+                wheelConsumed = false;
+            }
+            wheelLastAt = event.timeStamp;
+            if (wheelConsumed) return;
+            wheelAxis ??= axis;
+
+            // DOM_DELTA_LINE/PAGE 不能直接当像素；一段输入锁定主轴，避免对角惯性重复翻页。
+            const unit =
+                event.deltaMode === WheelEvent.DOM_DELTA_LINE
+                    ? 16
+                    : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+                      ? content.clientHeight
+                      : 1;
+            wheelDistance += (wheelAxis === "x" ? event.deltaX : event.deltaY) * unit;
+            if (Math.abs(wheelDistance) < 48) return;
+            wheelConsumed = true;
+            await handlers.onTurn(wheelDistance > 0 ? ReadingDirection.NEXT : ReadingDirection.PREV);
+        },
+        { passive: false, signal }
+    );
+
+    // 窗口失焦或切到后台后不沿用未完成输入，也不保留缺失 pointerup 的多指状态。
+    window.addEventListener(
+        "blur",
+        () => {
+            run(() => {
+                cancel();
+                activePointers.clear();
+            });
         },
         { signal }
     );
@@ -181,20 +258,22 @@ export default function bindReadingGestures(
 }
 
 /**
- * 横向滚动区域优先保留自身操作，包括正文内的表格；触笔未触发原生滚动时也不切章。
+ * 内嵌滚动区域优先保留自身操作，包括表格与代码；阅读视窗本身由当前模式接管。
  */
-function hasHorizontalScroll(target: EventTarget | null, content: HTMLElement): boolean {
+function hasNestedScroll(target: EventTarget | null, content: HTMLElement, axis: "x" | "y"): boolean {
     if (!(target instanceof HTMLElement)) return false;
     for (
         let element: HTMLElement | null = target;
-        element && content.contains(element);
+        element && element !== content && content.contains(element);
         element = element.parentElement
     ) {
-        if (
-            element.scrollWidth > element.clientWidth + 1 &&
-            ["auto", "scroll"].includes(getComputedStyle(element).overflowX)
-        )
-            return true;
+        if (element.classList.contains("reading-viewport")) continue;
+        const style = getComputedStyle(element);
+        const scrollable =
+            axis === "x"
+                ? element.scrollWidth > element.clientWidth + 1 && ["auto", "scroll"].includes(style.overflowX)
+                : element.scrollHeight > element.clientHeight + 1 && ["auto", "scroll"].includes(style.overflowY);
+        if (scrollable) return true;
     }
     return false;
 }

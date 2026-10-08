@@ -63,7 +63,7 @@ npm run dev
 | 功能      | 入口与职责                                                                                                                                                                                                                 |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 书架      | [Controller](../src/pages/bookshelf/bookshelf-controller.ts)协调导入、导出、分类、搜索和删除；[Service](../src/pages/bookshelf/bookshelf-service.ts)处理文件去重与写入事务                                                 |
-| 阅读      | [Controller](../src/pages/reader/reader-controller.ts)协调切章和进度；[UI](../src/pages/reader/reader-ui.ts)处理按钮、键盘、手势与浮层                                                                                     |
+| 阅读      | [Controller](../src/pages/reader/reader-controller.ts)编排按需章节加载、导航和进度；[UI](../src/pages/reader/reader-ui.ts)处理工具与阅读输入                                                                               |
 | TXT 解析  | [parseChapters](../src/domain/chapter/chapter-parser.ts)在写事务前完成解码与分章，按源文件物理行定位内容                                                                                                                   |
 | EPUB 解析 | [归档读取](../src/domain/file/epub-archive.ts)按需解压与校验资源；[内容解析](../src/domain/file/epub.ts)按阅读顺序和目录建立安全内容模型；[正文渲染](../src/pages/reader/content/epub-content.ts)处理书内图片与链接        |
 | 持久化    | [数据库 schema](../src/database/database-schema.ts)集中定义元信息与记录类型映射；[连接与初始化](../src/database/database.ts)、[存储操作](../src/database/store.ts)和[事务入口](../src/database/transaction.ts)管理领域数据 |
@@ -73,7 +73,15 @@ npm run dev
 
 修改数据结构时使用隔离的浏览器配置，保留用户常用配置中的数据。项目当前只初始化当前结构，不迁移旧数据；测试库与新结构不兼容时，确认只含可丢弃的测试数据，并取得重置确认，再从书架执行“重置数据”。清除范围见[使用指南](usage.md#本地数据与-portable-注意事项)。
 
-文件记录保留原始 `Blob`，书籍记录保留导入文件名；导出直接读取它们，不从章节重建或重新编码。相同格式和内容 hash 共享文件与解析结果，分类和进度按书籍分别保存。TXT 使用原始文本行、EPUB 使用内容块定位阅读进度；视口内位置另按块内比例恢复。
+文件记录保留原始 `Blob`，书籍记录保留导入文件名；导出直接读取它们，不从章节重建或重新编码。相同格式和内容 hash 共享文件与解析结果，分类和进度按书籍分别保存。
+
+### 阅读排版与定位
+
+[翻页方式](../src/pages/reader/reading-mode.ts)由阅读器常规设置保存：覆盖、平移和无动画共用动态分页，上下使用原生连续滚动。[正文 UI](../src/pages/reader/content/content-ui.ts)只对当前章分页；连续滚动挂载当前章及前后相邻章，阅读过程中替换窗口外的内容，避免把整本书一次性挂入 DOM。[手势处理](../src/pages/reader/reading-gestures.ts)将触摸和滚轮输入转换为阅读意图，章节加载与缓存范围由阅读 Controller 管理。
+
+[阅读进度](../src/domain/progress/progress.ts)保存章节、内容块和块内源偏移。TXT 内容块对应原始行，EPUB 对应受控结构块；`contentOffset` 累计文本的 UTF-16 长度，图片、`br` 和 `hr` 各占一个位置。该契约在[正文定位](../src/pages/reader/content/content-location.ts)中用于 DOM 与源内容之间的映射，不依赖像素偏移、段落高度比例或页码。字体、宽度与视口变化后，用同一内容锚点恢复；临时视觉位置另保留锚点相对视窗的偏移。
+
+覆盖和平移动画按浏览器的 View Transitions 能力启用；缺少能力或启用减少动态效果时直接切换页面，不改写保存的阅读方式。具体操作与章节边界见[使用指南](usage.md#阅读与目录)。
 
 ## 构建与预览
 
@@ -108,6 +116,8 @@ npm run preview
 `npm run format` 会改写 Prettier 支持且未被排除的文件，运行后应审查实际 diff。迭代时先运行与改动有关的检查，需要完整验证两种产物时执行 `npm run verify`。
 
 构建不能代替运行时检查。页面交互变更应实际验证导航、关闭与取消、焦点和位置恢复、错误反馈及持久化；涉及 portable 时还需实际打开 `file://` 产物。只改文档时检查内容、链接、示例和格式，不运行无关构建。
+
+阅读器变更应覆盖四种方式、前后跨章与目录跳转，以及字号、窗口、横竖屏、全屏和方式切换后的内容位置。分页检查长段落、图片与内部滚动内容；连续滚动检查相邻章替换前后的可见内容和进度。输入检查鼠标、键盘、触摸、滚轮惯性、选字与取消操作，并核对工具显隐和浮层关闭后的焦点、位置及模式保存。
 
 文件流程变更需覆盖各格式的有效文件、明确拒绝的内容和大文件，并核对失败时已完成的导入结果。EPUB 检查目录锚点、书内链接、图片、资源限制和不可信内容。导出使用包含不同 TXT 编码及二进制资源的样本，对比导入文件和实际下载文件的 SHA-256，同时检查文件名；不能用重新解析后的正文相同代替字节一致。
 

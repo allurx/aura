@@ -4,7 +4,6 @@
  */
 
 import type Setting from "../definitions/setting";
-import type StyleSetting from "../definitions/style-setting";
 import type ThemeSetting from "../definitions/theme-setting";
 import type { PageName } from "@/constants/page-name";
 import { Theme } from "./theme";
@@ -14,7 +13,7 @@ import { Theme } from "./theme";
  */
 export interface PageSettings {
     readonly theme: ThemeSetting;
-    readonly general: readonly StyleSetting[];
+    readonly general: readonly Setting[];
 }
 
 /**
@@ -23,7 +22,7 @@ export interface PageSettings {
  */
 export default class SettingConfiguration {
     public readonly theme: ThemeSetting;
-    public readonly general: readonly StyleSetting[];
+    public readonly general: readonly Setting[];
     public readonly settings: readonly Setting[];
     public readonly defaultTheme = Theme.SUNNY;
 

@@ -20,26 +20,38 @@
         <h1 id="book-title"></h1>
     </header>
 
-    <main id="content" class="panel-scroll" tabindex="0" aria-label="阅读正文"></main>
+    <main id="content" tabindex="0" aria-label="阅读正文"></main>
 
     <nav id="reader-actions" class="panel-scroll" aria-label="阅读操作" hidden>
-        <div class="reader-action-group navigation-actions" role="group" aria-label="章节导航">
-            <button id="previous-chapter" class="reader-action" type="button" aria-keyshortcuts="ArrowLeft">
-                <span class="icon icon-arrow-left" aria-hidden="true"></span><span>上一章</span>
+        <div class="reader-action-group navigation-actions" role="group" aria-label="阅读导航">
+            <button
+                id="previous-page"
+                class="reader-action"
+                type="button"
+                aria-keyshortcuts="ArrowLeft PageUp Shift+Space"
+            >
+                <span class="icon icon-arrow-left" aria-hidden="true"></span><span>上一页</span>
             </button>
-            <button id="next-chapter" class="reader-action" type="button" aria-keyshortcuts="ArrowRight">
-                <span class="icon icon-arrow-right" aria-hidden="true"></span><span>下一章</span>
+            <button id="next-page" class="reader-action" type="button" aria-keyshortcuts="ArrowRight PageDown Space">
+                <span class="icon icon-arrow-right" aria-hidden="true"></span><span>下一页</span>
             </button>
         </div>
-        <div class="reader-action-group preference-actions" role="group" aria-label="阅读外观与全屏"></div>
+        <div class="reader-action-group preference-actions" role="group" aria-label="阅读设置与全屏"></div>
         <div class="reader-action-group bookshelf-actions" role="group" aria-label="返回书架"></div>
     </nav>
 
     <footer id="footer" aria-hidden="true" inert>
-        <div class="reading-location">
-            <div id="chapter-title"></div>
-            <div id="progress-rate" title="全书阅读进度"></div>
-        </div>
+        <nav class="mobile-page-navigation" aria-label="阅读翻页">
+            <div class="reading-location">
+                <div id="chapter-title"></div>
+                <div class="reading-status">
+                    <span id="page-position" title="当前章节页码" role="status" aria-atomic="true" hidden>
+                        <span>本章</span><span class="page-count"></span>
+                    </span>
+                    <span id="progress-rate" title="全书阅读进度"></span>
+                </div>
+            </div>
+        </nav>
         <nav class="mobile-actions" aria-label="阅读操作">
             <button
                 id="toggle-toc-panel"
@@ -56,12 +68,13 @@
                 id="toggle-setting-panel"
                 class="reader-action"
                 type="button"
-                aria-label="阅读外观"
+                aria-label="阅读设置"
+                title="阅读设置"
                 aria-controls="setting"
                 aria-expanded="false"
                 aria-haspopup="dialog"
             >
-                <span class="appearance-mark" aria-hidden="true">Aa</span><span>外观</span>
+                <span class="appearance-mark" aria-hidden="true">Aa</span><span>设置</span>
             </button>
             <button
                 id="toggle-fullscreen"

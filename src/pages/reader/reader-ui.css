@@ -175,23 +175,23 @@
 
     @media (hover: hover) and (pointer: fine) {
         &:hover:not(:disabled) {
-            background: var(--appearance-selection);
+            background: color-mix(in srgb, var(--appearance-color) 5%, transparent);
             color: var(--appearance-accent);
         }
     }
 
     &:active:not(:disabled) {
-        background: color-mix(in srgb, var(--appearance-accent) 14%, var(--appearance-panel));
+        background: color-mix(in srgb, var(--appearance-color) 8%, transparent);
         color: var(--appearance-accent);
     }
 
-    &:is([aria-expanded="true"], [aria-pressed="true"]) {
+    &[aria-expanded="true"] {
         background: var(--appearance-tint);
         color: var(--appearance-accent);
     }
 
     @media (forced-colors: active) {
-        &:is([aria-expanded="true"], [aria-pressed="true"]) {
+        &[aria-expanded="true"] {
             border-color: Highlight;
             background: Highlight;
             color: HighlightText;
