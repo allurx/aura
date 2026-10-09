@@ -102,6 +102,8 @@ npm run dev
 
 每个构建命令先执行静态检查，只清理自身输出子目录。Web 目录包含入口、资源、安装元信息、响应头配置和许可声明，需整体使用；portable 将应用资源与许可声明嵌入单个 HTML。
 
+[Vite 配置](../vite.config.ts)组合交付方式、资源路径与插件；[Web 元信息插件](../build/web-app.ts)维护安装和公开站点信息，[portable 插件](../build/portable.ts)在内联完成后确定单文件入口名称，[许可插件](../build/licenses.ts)生成页面说明和分发文件，并核对最终入口中的声明完整性。`build/` 与根配置共用 Node.js 类型检查环境。
+
 开发服务器与 Web 构建共用安装元信息。可在本地 HTTPS 开发页或 `localhost` 预览中验证浏览器原生安装；安装和离线使用的区别见[使用指南](usage.md)。
 
 先构建 Web 版，再启动本地预览：
