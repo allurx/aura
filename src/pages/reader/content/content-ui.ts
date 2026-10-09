@@ -9,7 +9,7 @@ import type Chapter from "@/domain/chapter/chapter";
 import type BookFile from "@/domain/file/book-file";
 import type { ReadingMode } from "../reading-mode";
 import { ReadingDirection } from "../reading-direction";
-import EpubContent from "./epub-content";
+import ChapterView from "./chapter-view";
 import { endContentLocation, locateContentRange, locateContentRect, readContentLocation } from "./content-location";
 import type { ContentLocation } from "./content-location";
 
@@ -43,15 +43,6 @@ export interface ReadingSnapshot {
 }
 
 /**
- * 每章独立持有受控 DOM 和图片 URL，移出相邻章节窗口后释放。
- */
-interface ChapterView {
-    readonly chapter: Chapter;
-    readonly element: HTMLElement;
-    readonly epub: EpubContent | undefined;
-}
-
-/**
  * 显式导航目的地，不把章首、章末或书内锚点混同为某个固定页码。
  */
 type ChapterTarget = ContentLocation | "start" | "end" | { readonly fragment: string };
@@ -62,7 +53,7 @@ type ChapterTarget = ContentLocation | "start" | "end" | { readonly fragment: st
 export default class ContentUi extends Ui {
     private readonly viewport = document.createElement("div");
     private readonly views = new Map<number, ChapterView>();
-    private file!: BookFile;
+    private epubResources: ReadonlyMap<string, Blob> | undefined;
     private signal!: AbortSignal;
     private loadChapter!: (chapterNumber: number) => Promise<Chapter>;
     private chapterCount = 0;
@@ -100,7 +91,8 @@ export default class ContentUi extends Ui {
         loadChapter: (chapterNumber: number) => Promise<Chapter>,
         signal: AbortSignal
     ): void {
-        this.file = file;
+        this.epubResources =
+            file.format === "epub" ? new Map(file.resources.map(({ path, blob }) => [path, blob])) : undefined;
         this.chapterCount = chapterCount;
         this.loadChapter = loadChapter;
         this.signal = signal;
@@ -155,8 +147,9 @@ export default class ContentUi extends Ui {
                 this.cancelPendingScroll();
                 if (this.layoutFrame !== undefined) cancelAnimationFrame(this.layoutFrame);
                 this.transition?.skipTransition();
-                for (const view of this.views.values()) view.epub?.destroy();
+                for (const view of this.views.values()) view.dispose();
                 this.views.clear();
+                this.epubResources = undefined;
                 this.onLocationChange = undefined;
             },
             { once: true }
@@ -203,38 +196,6 @@ export default class ContentUi extends Ui {
     }
 
     /**
-     * 在未挂载的章节中完成安全渲染及图片解码，避免中间布局影响定位。
-     */
-    private async createView(chapter: Chapter): Promise<ChapterView> {
-        const element = document.createElement("section");
-        element.className = "reading-chapter";
-        element.dataset["chapterNumber"] = String(chapter.chapterNumber);
-        element.setAttribute("aria-label", chapter.title);
-        let epub: EpubContent | undefined;
-        if (chapter.kind === "epub" && this.file.format === "epub") {
-            epub = new EpubContent(this.file.resources);
-            try {
-                await epub.render(element, chapter.blocks, this.signal, chapter.startAnchors);
-            } catch (error) {
-                epub.destroy();
-                throw error;
-            }
-        } else if (chapter.kind === "text") {
-            const heading = document.createElement("h2");
-            heading.className = "chapter-heading";
-            heading.textContent = chapter.title;
-            element.append(heading);
-            for (const [index, line] of chapter.lines.entries()) {
-                const paragraph = document.createElement("p");
-                paragraph.dataset["blockNumber"] = String(index + 1);
-                paragraph.textContent = line;
-                element.append(paragraph);
-            }
-        } else throw new Error("Content format does not match the opened book");
-        return { chapter, element, epub };
-    }
-
-    /**
      * 按目标位置两侧的实际高度准备窗口，短章继续补充真实内容。
      * 新章节在不可交互的测量视窗中排版，加载失败不替换仍可阅读的正文。
      */
@@ -264,7 +225,9 @@ export default class ContentUi extends Ui {
          * 当前窗口复用视图，新视图先登记以便失败时释放。
          */
         const getView = async (number: number): Promise<ChapterView> => {
-            const view = this.views.get(number) ?? (await this.createView(await this.loadChapter(number)));
+            const view =
+                this.views.get(number) ??
+                (await ChapterView.create(await this.loadChapter(number), this.epubResources, this.signal));
             prepared.push(view);
             return view;
         };
@@ -286,7 +249,7 @@ export default class ContentUi extends Ui {
                 else if (destination && typeof destination !== "string") {
                     const rect =
                         "fragment" in destination
-                            ? view.epub?.findAnchor(destination.fragment)?.getClientRects()[0]
+                            ? view.findAnchor(destination.fragment)?.getClientRects()[0]
                             : destination.blockNumber === 1 && destination.contentOffset === 0
                               ? undefined
                               : locateContentRect(view.element, destination);
@@ -333,7 +296,7 @@ export default class ContentUi extends Ui {
      */
     private releasePrepared(views: readonly ChapterView[]): void {
         for (const view of views) {
-            if (this.views.get(view.chapter.chapterNumber) !== view) view.epub?.destroy();
+            if (this.views.get(view.chapter.chapterNumber) !== view) view.dispose();
         }
     }
 
@@ -342,7 +305,7 @@ export default class ContentUi extends Ui {
      */
     private install(views: readonly ChapterView[]): void {
         for (const previous of this.views.values()) {
-            if (!views.includes(previous)) previous.epub?.destroy();
+            if (!views.includes(previous)) previous.dispose();
         }
         this.views.clear();
         for (const view of views) this.views.set(view.chapter.chapterNumber, view);
@@ -837,7 +800,7 @@ export default class ContentUi extends Ui {
      * 定位书内锚点所在页，滚动方式将目标移到视窗上缘。
      */
     private scrollToFragment(fragment: string): void {
-        const target = this.views.get(this.chapterNumber)?.epub?.findAnchor(fragment);
+        const target = this.views.get(this.chapterNumber)?.findAnchor(fragment);
         if (!fragment) this.restoreChapterStart();
         else if (target) {
             const rect = target.getClientRects()[0];

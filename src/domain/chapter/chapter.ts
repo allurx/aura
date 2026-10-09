@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { EpubNode } from "@/domain/file/epub";
+import type { EpubNode } from "@/domain/file/epub-content";
 
 /**
  * 一次加载的章节；全书位置依次按 TXT 原始行或 EPUB 内容块累计。
