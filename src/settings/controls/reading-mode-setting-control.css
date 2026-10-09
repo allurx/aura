@@ -72,11 +72,9 @@
             cursor: inherit;
         }
 
-        > svg {
+        > .icon {
             width: 32px;
             height: 28px;
-            stroke-width: 1.8;
-            pointer-events: none;
         }
 
         > span {
@@ -98,6 +96,22 @@
         @media (prefers-reduced-motion: reduce) {
             transition: none;
         }
+    }
+
+    .icon-reading-mode-cover {
+        --icon-image: url("../../assets/images/reading-mode-cover.svg");
+    }
+
+    .icon-reading-mode-slide {
+        --icon-image: url("../../assets/images/reading-mode-slide.svg");
+    }
+
+    .icon-reading-mode-scroll {
+        --icon-image: url("../../assets/images/reading-mode-scroll.svg");
+    }
+
+    .icon-reading-mode-none {
+        --icon-image: url("../../assets/images/reading-mode-none.svg");
     }
 
     .reading-mode-description {

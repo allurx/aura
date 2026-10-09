@@ -4,8 +4,7 @@
  */
 
 import type ThemeSetting from "../definitions/theme-setting";
-import { bind } from "@/utils/event-util";
-import SettingControl from "./setting-control";
+import RadioSettingControl from "./radio-setting-control";
 import type SettingControlListener from "./setting-control-listener";
 
 /**
@@ -13,35 +12,19 @@ import type SettingControlListener from "./setting-control-listener";
  * 色样与页面共用主题标识和调色板，不另外维护预览颜色。
  *
  */
-export default class ThemeSettingControl extends SettingControl {
-    private readonly inputByValue = new Map<string, HTMLInputElement>();
-
-    public constructor(
-        private readonly themeSetting: ThemeSetting,
-        listener: SettingControlListener,
-        signal: AbortSignal
-    ) {
-        super(themeSetting, listener, signal);
+export default class ThemeSettingControl extends RadioSettingControl {
+    public constructor(themeSetting: ThemeSetting, listener: SettingControlListener, signal: AbortSignal) {
+        super(themeSetting, listener, signal, "appearance-theme");
 
         // 主题直接使用原生单选组，不经过常规设置的单输入外壳。
         this.element.classList.add("theme-setting");
-        const fieldset = document.createElement("fieldset");
-        const legend = document.createElement("legend");
-        legend.className = "section-title";
-        legend.textContent = themeSetting.title;
-        const options = document.createElement("div");
-        options.className = "theme-options";
-        fieldset.append(legend, options);
-        this.element.prepend(fieldset);
+        this.legend.className = "section-title";
+        this.optionsElement.className = "theme-options";
 
         for (const [value, title] of themeSetting.options) {
             // 单选输入管理选中状态，外层 label 让整个色样都可点击。
-            const label = document.createElement("label");
+            const { label } = this.createOption(value);
             label.className = "theme-option";
-            const input = document.createElement("input");
-            input.type = "radio";
-            input.name = "appearance-theme";
-            input.value = value;
 
             // 紧凑色样保留表面与三册书封，直接继承真实主题的调色板。
             const swatch = document.createElement("span");
@@ -62,28 +45,7 @@ export default class ThemeSettingControl extends SettingControl {
             caption.className = "theme-caption";
             caption.textContent = title;
 
-            // 保留输入节点的索引，后续刷新不打断原生单选组的焦点。
-            label.append(input, swatch, caption);
-            options.append(label);
-            this.inputByValue.set(value, input);
-
-            // 鼠标点击和方向键切换共用原生 change 提交路径。
-            bind(
-                input,
-                "change",
-                () => {
-                    if (input.checked) listener.commit(themeSetting, value);
-                },
-                { signal }
-            );
+            label.append(swatch, caption);
         }
-    }
-
-    /**
-     * 根据已提交主题同步选择标记，不重建正在操作的原生控件。
-     */
-    public override render(value: string | undefined): void {
-        const resolvedValue = this.themeSetting.resolveValue(value);
-        for (const [theme, input] of this.inputByValue) input.checked = theme === resolvedValue;
     }
 }

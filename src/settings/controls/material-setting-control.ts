@@ -3,17 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { bind } from "@/utils/event-util";
 import type MaterialSetting from "../definitions/material-setting";
-import type { Material } from "../definitions/material-setting";
-import SettingControl from "./setting-control";
+import RadioSettingControl from "./radio-setting-control";
 import type SettingControlListener from "./setting-control-listener";
 
 /**
  * 材质样片使用真实表面变量；原生单选组同时提供整卡点击和方向键切换。
  */
-export default class MaterialSettingControl extends SettingControl {
-    private readonly inputByValue = new Map<Material, HTMLInputElement>();
+export default class MaterialSettingControl extends RadioSettingControl {
     private readonly description = document.createElement("p");
 
     public constructor(
@@ -21,27 +18,17 @@ export default class MaterialSettingControl extends SettingControl {
         listener: SettingControlListener,
         signal: AbortSignal
     ) {
-        super(materialSetting, listener, signal);
+        super(materialSetting, listener, signal, "appearance-material");
 
         // 材质沿用常规设置的标题和单项重置，不增加独立设置层级。
         this.element.classList.add("material-setting");
-        const fieldset = document.createElement("fieldset");
-        const legend = document.createElement("legend");
-        legend.textContent = materialSetting.title;
-        const options = document.createElement("div");
-        options.className = "material-options";
-        fieldset.append(legend, options);
+        this.optionsElement.className = "material-options";
         this.description.className = "material-current-description";
-        fieldset.append(this.description);
-        this.element.prepend(fieldset);
+        this.fieldset.append(this.description);
 
         for (const [material, { title, description }] of materialSetting.options) {
-            const label = document.createElement("label");
+            const { label, input } = this.createOption(material);
             label.className = "material-option";
-            const input = document.createElement("input");
-            input.type = "radio";
-            input.name = "appearance-material";
-            input.value = material;
 
             // 彩色底层供透明材质透出；样片只展示效果，不参与控件名称。
             const preview = document.createElement("span");
@@ -62,24 +49,13 @@ export default class MaterialSettingControl extends SettingControl {
             explanation.textContent = description;
             input.setAttribute("aria-labelledby", caption.id);
             input.setAttribute("aria-describedby", explanation.id);
-            label.append(input, preview, caption, explanation);
-            options.append(label);
-            this.inputByValue.set(material, input);
-
-            bind(
-                input,
-                "change",
-                () => {
-                    if (input.checked) listener.commit(materialSetting, material);
-                },
-                { signal }
-            );
+            label.append(preview, caption, explanation);
         }
     }
 
     public override render(value: string | undefined): void {
+        super.render(value);
         const material = this.materialSetting.resolveValue(value);
-        for (const [option, input] of this.inputByValue) input.checked = option === material;
         this.description.textContent = this.materialSetting.options.get(material)?.description ?? "";
     }
 }
