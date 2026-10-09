@@ -31,7 +31,12 @@ export default class BookListUi extends Ui {
         const status = document.createElement("div");
         status.className = "shelf-status";
         status.setAttribute("role", "status");
-        const title = document.createElement("h2");
+        if (state === "loading") {
+            status.classList.add("shelf-loading");
+            status.append(this.createShelfIllustration());
+        }
+
+        const title = document.createElement(state === "loading" ? "p" : "h2");
         title.textContent = state === "loading" ? "正在读取书架…" : "书架未能加载";
         status.append(title);
 
@@ -277,16 +282,10 @@ export default class BookListUi extends Ui {
         empty.className = "shelf-empty";
         empty.classList.toggle("shelf-empty-search", searching);
 
-        // 插画由主题协调的书封、书脊和页边构成，不作为可交互控件。
-        const illustration = document.createElement("div");
-        illustration.className = searching ? "icon icon-search" : "shelf-empty-illustration";
-        illustration.setAttribute("aria-hidden", "true");
-        if (!searching) {
-            for (const color of ["mint", "peach", "blue"]) {
-                const book = document.createElement("span");
-                book.className = `empty-book empty-book-${color}`;
-                illustration.append(book);
-            }
+        const illustration = searching ? document.createElement("div") : this.createShelfIllustration();
+        if (searching) {
+            illustration.className = "icon icon-search";
+            illustration.setAttribute("aria-hidden", "true");
         }
 
         const title = document.createElement("h2");
@@ -312,6 +311,21 @@ export default class BookListUi extends Ui {
         note.textContent = "本地保存 · 无需账户";
         empty.append(importButton, note);
         return empty;
+    }
+
+    /**
+     * 加载与空态共用主题协调的书籍插画，装饰不参与辅助技术朗读。
+     */
+    private createShelfIllustration(): HTMLElement {
+        const illustration = document.createElement("div");
+        illustration.className = "shelf-illustration";
+        illustration.setAttribute("aria-hidden", "true");
+        for (const color of ["mint", "peach", "blue"]) {
+            const book = document.createElement("span");
+            book.className = `illustration-book illustration-book-${color}`;
+            illustration.append(book);
+        }
+        return illustration;
     }
 
     /**

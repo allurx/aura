@@ -328,8 +328,26 @@
         font-size: 20px;
     }
 
+    .shelf-loading {
+        /* 快速读取时不闪出提示，只延后呈现，不延后书籍显示。 */
+        animation: shelf-loading-reveal 180ms step-end both;
+
+        > .shelf-illustration {
+            height: 92px;
+            margin-bottom: 12px;
+            transform: scale(0.68);
+            transform-origin: center bottom;
+        }
+
+        > p {
+            font-size: 14px;
+            font-weight: 400;
+            letter-spacing: 0.04em;
+        }
+    }
+
     /* 三本主题协调的实体书，以书脊、页边和投影代替孤立的小图标。 */
-    .shelf-empty-illustration {
+    .shelf-illustration {
         position: relative;
         isolation: isolate;
         flex: none;
@@ -364,7 +382,7 @@
         }
     }
 
-    .empty-book {
+    .illustration-book {
         position: absolute;
         bottom: 12px;
         width: 56px;
@@ -380,7 +398,7 @@
                 transparent 10px
             ),
             linear-gradient(150deg, color-mix(in srgb, var(--appearance-highlight) 40%, transparent), transparent 65%),
-            var(--empty-book-color);
+            var(--illustration-book-color);
         box-shadow:
             inset 0 1px 0 color-mix(in srgb, var(--appearance-highlight) 80%, transparent),
             3px 5px 6px color-mix(in srgb, var(--appearance-shadow-color) 15%, transparent),
@@ -420,24 +438,24 @@
         }
     }
 
-    .empty-book-mint {
-        --empty-book-color: hsl(162 var(--appearance-cover-saturation) var(--appearance-cover-lightness));
+    .illustration-book-mint {
+        --illustration-book-color: hsl(162 var(--appearance-cover-saturation) var(--appearance-cover-lightness));
         z-index: 1;
         left: 26px;
         height: 96px;
         transform: rotate(-13deg);
     }
 
-    .empty-book-peach {
-        --empty-book-color: hsl(28 var(--appearance-cover-saturation) var(--appearance-cover-lightness));
+    .illustration-book-peach {
+        --illustration-book-color: hsl(28 var(--appearance-cover-saturation) var(--appearance-cover-lightness));
         z-index: 2;
         left: 105px;
         height: 93px;
         transform: rotate(12deg);
     }
 
-    .empty-book-blue {
-        --empty-book-color: hsl(220 var(--appearance-cover-saturation) var(--appearance-cover-lightness));
+    .illustration-book-blue {
+        --illustration-book-color: hsl(220 var(--appearance-cover-saturation) var(--appearance-cover-lightness));
         z-index: 3;
         left: 67px;
         bottom: 10px;
@@ -484,7 +502,7 @@
             font-size: 22px;
         }
 
-        .shelf-empty-illustration {
+        .shelf-empty .shelf-illustration {
             margin-bottom: 18px;
         }
     }
@@ -495,7 +513,7 @@
             padding-block: 12px;
         }
 
-        .shelf-empty-illustration {
+        .shelf-empty .shelf-illustration {
             height: 90px;
             margin-top: -14px;
             margin-bottom: 6px;
@@ -522,7 +540,7 @@
     }
 
     @media (forced-colors: active) {
-        .shelf-empty-illustration {
+        .shelf-illustration {
             display: none;
         }
 
@@ -597,6 +615,15 @@
         .book-open::before {
             border: 1px solid CanvasText;
         }
+    }
+}
+
+@keyframes shelf-loading-reveal {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
     }
 }
 
