@@ -32,6 +32,8 @@ export default class TocUi extends Ui {
     private entries: TocEntry[] = [];
     private currentChapterNumber = 1;
     private chapterButtons: HTMLButtonElement[] = [];
+    private readonly buttonsByChapter = new Map<number, HTMLButtonElement>();
+    private highlightedButton: HTMLButtonElement | undefined;
     private unfilteredPosition: TocScrollPosition | undefined;
     private browsingPosition: TocScrollPosition | undefined;
     private lastLayout = "";
@@ -88,17 +90,19 @@ export default class TocUi extends Ui {
      * 标记当前章节；不强制改变用户正在浏览的目录位置。
      */
     public highlightCurrentChapter(chapterNumber: number): this {
+        const button = this.buttonsByChapter.get(chapterNumber);
+        if (button && button === this.highlightedButton) return this;
         this.currentChapterNumber = chapterNumber;
 
         // 搜索可能隐藏当前章，定位入口仍依据完整目录判断是否可用。
         this.locateCurrentButton.disabled = !this.entries.some((entry) => entry.chapterNumber === chapterNumber);
 
-        for (const button of this.tocContentElement.querySelectorAll("button")) {
-            const current = Number(button.dataset["chapterNumber"]) === chapterNumber;
-            button.classList.toggle("active", current);
-            if (current) button.setAttribute("aria-current", "location");
-            else button.removeAttribute("aria-current");
-        }
+        if (button === this.highlightedButton) return this;
+        this.highlightedButton?.classList.remove("active");
+        this.highlightedButton?.removeAttribute("aria-current");
+        button?.classList.add("active");
+        button?.setAttribute("aria-current", "location");
+        this.highlightedButton = button;
         return this;
     }
 
@@ -394,6 +398,8 @@ export default class TocUi extends Ui {
         const entries = this.entries.filter((entry) => entry.title.toLocaleLowerCase().includes(this.query));
         const fragment = document.createDocumentFragment();
         this.chapterButtons = [];
+        this.buttonsByChapter.clear();
+        this.highlightedButton = undefined;
         for (const entry of entries) {
             // 可见标题与悬停标题保留原文，章号用于委托选择和浏览锚点恢复。
             const button = document.createElement("button");
@@ -404,6 +410,7 @@ export default class TocUi extends Ui {
 
             // DOM 顺序与缓存顺序一致，几何二分查找据此定位首个可见章节。
             this.chapterButtons.push(button);
+            this.buttonsByChapter.set(entry.chapterNumber, button);
             fragment.appendChild(button);
         }
 
