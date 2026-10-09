@@ -97,9 +97,19 @@ export async function withPage(delivery: Delivery, operation: (page: Page) => Pr
  * 经实际文件输入导入，等待结果列表和忙碌状态结束。
  */
 export async function importBooks(page: Page, files: BookUpload[]): Promise<void> {
-    const expected = (await page.locator(".book").count()) + files.length;
+    const expected = Number.parseInt(await page.locator("#book-count").innerText(), 10) + files.length;
     await page.locator("#book-input").setInputFiles(files);
-    await page.waitForFunction((count) => document.querySelectorAll(".book").length === count, expected);
+    await waitForBookCount(page, expected);
+}
+
+/**
+ * 等待当前筛选的总数和操作结束；窗口中挂载的书卡不代表全部结果。
+ */
+export async function waitForBookCount(page: Page, count: number): Promise<void> {
+    await page.waitForFunction(
+        (expected) => document.querySelector("#book-count")?.textContent === `${String(expected)} 本`,
+        count
+    );
     await page.locator(".overlay").waitFor({ state: "hidden" });
 }
 

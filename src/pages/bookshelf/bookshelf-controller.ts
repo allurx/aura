@@ -5,7 +5,7 @@
 
 import HeaderUi from "./header/header-ui";
 import NavUi from "./nav/nav-ui";
-import BookListUi, { type BookListEmptyState } from "./book-list/book-list-ui";
+import BookListUi, { type BookListEmptyState, type BookListPosition } from "./book-list/book-list-ui";
 import BookshelfUi from "./bookshelf-ui";
 import {
     BookImportError,
@@ -98,7 +98,7 @@ export default class BookshelfController {
      */
     private readBook(bookId: string): void {
         if (!this.isActive() || this.busy) return;
-        bookshelfSession.scrollTop = this.bookListUi.root.scrollTop;
+        bookshelfSession.position = this.bookListUi.capturePosition();
         bookshelfSession.focusBookId = bookId;
         this.onReadBook(bookId);
     }
@@ -113,13 +113,25 @@ export default class BookshelfController {
         try {
             const books = await getBookSummaries();
             if (!this.isActive() || version !== this.refreshVersion) return;
-            this.books = books;
-            this.renderBooks();
-            // 查询或分类改变已将会话位置清零，不能再恢复进入页面时的旧位置。
-            if (firstLoad) {
-                this.bookListUi.root.scrollTop = bookshelfSession.scrollTop;
-                this.bookListUi.restoreBookFocus(bookshelfSession.focusBookId);
-            }
+
+            // 刷新仍以数据库快照为准；未变化的摘要保留身份，复用已有书卡。
+            const previousBooks = new Map(this.books?.map((summary) => [summary.book.id, summary]));
+            this.books = books.map((summary) => {
+                const previous = previousBooks.get(summary.book.id);
+                return previous?.book.fileId === summary.book.fileId &&
+                    previous.book.fileName === summary.book.fileName &&
+                    previous.book.categoryId === summary.book.categoryId &&
+                    previous.book.createdTime === summary.book.createdTime &&
+                    previous.title === summary.title &&
+                    previous.progress?.chapterNumber === summary.progress?.chapterNumber &&
+                    previous.progress?.chapterCount === summary.progress?.chapterCount
+                    ? previous
+                    : summary;
+            });
+
+            // 读取期间切换查询或分类已清除会话锚点，恢复时使用最新选择。
+            this.renderBooks(firstLoad ? bookshelfSession.position : undefined);
+            if (firstLoad) this.bookListUi.restoreBookFocus(bookshelfSession.focusBookId);
         } catch (error) {
             // 已有摘要仍可保留；首次读取失败则提供原位重试，错误继续进入统一提示。
             if (this.isActive() && version === this.refreshVersion && this.books === null)
@@ -150,9 +162,9 @@ export default class BookshelfController {
     }
 
     /**
-     * 分类和书名搜索共用同一摘要列表，不发起并发分类查询。
+     * 分类和书名搜索共用全部摘要；位置由列表按内容锚点恢复，null 表示回到顶部。
      */
-    private renderBooks(): void {
+    private renderBooks(position?: BookListPosition | null): void {
         const category = getCategory(bookshelfSession.categoryId)?.name ?? "全部书籍";
         this.navUi.setActive(bookshelfSession.categoryId);
         if (this.books === null) {
@@ -174,7 +186,7 @@ export default class BookshelfController {
             : bookshelfSession.categoryId && this.books.length > 0
               ? "category"
               : "library";
-        this.bookListUi.renderBooks(books, emptyState);
+        this.bookListUi.renderBooks(books, emptyState, position);
         this.headerUi.render(category, books.length, bookshelfSession.search);
     }
 
@@ -425,9 +437,8 @@ export default class BookshelfController {
                 category: (categoryId) => {
                     if (this.busy) return;
                     bookshelfSession.categoryId = categoryId;
-                    bookshelfSession.scrollTop = 0;
-                    this.renderBooks();
-                    this.bookListUi.root.scrollTop = 0;
+                    bookshelfSession.position = null;
+                    this.renderBooks(null);
                 },
                 clear: () => this.clearBookshelf(),
                 reset: () => this.resetData(),
@@ -439,9 +450,8 @@ export default class BookshelfController {
         this.headerUi.bindEvents(
             (query) => {
                 bookshelfSession.search = query;
-                bookshelfSession.scrollTop = 0;
-                this.renderBooks();
-                this.bookListUi.root.scrollTop = 0;
+                bookshelfSession.position = null;
+                this.renderBooks(null);
             },
             (files) => this.importBooks(files),
             (opener) => {
@@ -469,13 +479,13 @@ export default class BookshelfController {
             signal
         );
 
-        // 将滚动位置写入内存会话，返回书架时由初始化流程恢复。
+        // 将内容锚点写入内存会话，返回时不依赖旧布局的像素位置。
         bind(
             this.bookListUi.root,
             "scroll",
             () => {
                 // 加载和错误提示不是书籍列表，不能覆盖仍待恢复的浏览位置。
-                if (this.books !== null) bookshelfSession.scrollTop = this.bookListUi.root.scrollTop;
+                if (this.books !== null) bookshelfSession.position = this.bookListUi.capturePosition();
             },
             { signal, passive: true }
         );

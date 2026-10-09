@@ -26,6 +26,24 @@
     color: var(--appearance-color);
     font-size: 1rem;
 
+    &[data-windowed] {
+        display: block;
+        overflow-anchor: none;
+    }
+    .book-window {
+        position: relative;
+        grid-template-columns: inherit;
+        column-gap: inherit;
+        justify-content: inherit;
+    }
+    .book-row {
+        position: absolute;
+        inset-inline: 0;
+        display: grid;
+        grid-template-columns: inherit;
+        column-gap: inherit;
+        justify-content: inherit;
+    }
     .book {
         --book-cover: hsl(var(--book-cover-hue) var(--appearance-cover-saturation) var(--appearance-cover-lightness));
         --book-cover-ink: var(--appearance-cover-ink);
@@ -38,6 +56,7 @@
         --book-paper: hsl(var(--book-cover-hue) 12% calc(var(--appearance-cover-lightness) + 10%));
         --book-face: var(--book-cover);
         min-width: 0;
+        align-self: start;
         width: 100%;
         /* 换列只重新分配留白，书卡保持目标宽度，不随剩余空间拉伸。 */
         max-width: var(--book-cover-width);

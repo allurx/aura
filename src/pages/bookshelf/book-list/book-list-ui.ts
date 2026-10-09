@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { bind, delegate } from "@/utils/event-util";
+import { bind, delegate, run } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
 import Ui from "@/components/ui";
 import { CATEGORIES } from "@/domain/category/category";
@@ -15,19 +15,47 @@ import type { BookSummary } from "../bookshelf-service";
 export type BookListEmptyState = "library" | "category" | "search";
 
 /**
- * 渲染书籍摘要，并管理阅读、分类移动与删除操作后的焦点。
+ * 当前页会话中的内容锚点；offset 是视窗上缘在锚点所在行内的偏移。
+ */
+export interface BookListPosition {
+    bookId: string;
+    offset: number;
+}
+
+/**
+ * 仅挂载可见行、缓冲行和正在操作的书卡，完整摘要仍用于筛选和导航。
  */
 export default class BookListUi extends Ui {
-    // 摘要是一次读取或修改后的快照；筛选复用书卡，旧快照释放后不再保留对应 DOM。
-    private readonly bookElements = new WeakMap<BookSummary, HTMLElement>();
+    private books: readonly BookSummary[] = [];
+    private readonly bookIndexes = new Map<string, number>();
+    // 离开窗口且没有操作的节点及时释放，滚遍全书架也不积累 DOM 缓存。
+    private readonly bookElements = new Map<string, { summary: BookSummary; element: HTMLElement }>();
+    private readonly rows = new Map<number, HTMLElement>();
+    private readonly windowElement = document.createElement("div");
+    private readonly operatingBooks = new Set<string>();
+    private layout = { columns: 1, rowHeight: 0, rowGap: 0, paddingTop: 0 };
+    private position: BookListPosition | null = null;
+    private resizeObserver: ResizeObserver | undefined;
+    private observedBook: HTMLElement | undefined;
+    private frame: number | undefined;
     // 原生选择器禁用后可能失焦，保留来源供列表重渲染时恢复焦点。
     private pendingSelection: HTMLSelectElement | null = null;
+
+    /**
+     * 共同滚动内容只承担总高度，行内排版继续由页面 CSS 决定。
+     */
+    public constructor(root: HTMLElement) {
+        super(root);
+        this.windowElement.className = "book-window";
+        this.windowElement.setAttribute("role", "presentation");
+    }
 
     /**
      * 尚无摘要时明确展示读取或失败状态；重试只读取本地数据。
      */
     public renderLoadState(state: "loading" | "error"): void {
         const focusedInside = this.root.contains(document.activeElement);
+        this.clearWindow();
         const status = document.createElement("div");
         status.className = "shelf-status";
         status.setAttribute("role", "status");
@@ -59,10 +87,8 @@ export default class BookListUi extends Ui {
      */
     public restoreBookFocus(bookId: string): void {
         if (!bookId || document.activeElement !== document.body) return;
-        const book = Array.from(this.root.querySelectorAll<HTMLElement>(".book")).find(
-            (element) => element.dataset["id"] === bookId
-        );
-        book?.querySelector<HTMLButtonElement>(".book-open")?.focus({ preventScroll: true });
+        const index = this.bookIndexes.get(bookId);
+        if (index !== undefined) this.focusBook(index, ".book-open", false);
     }
 
     /**
@@ -75,64 +101,282 @@ export default class BookListUi extends Ui {
     }
 
     /**
-     * 更新筛选结果，并保留还在书架中的操作焦点及滚动位置。
-     * @param emptyState - 没有结果时展示的书架、分类或搜索提示。
+     * 保留可见行中的同一书籍锚点，避免连续换列时逐次改选行首而向前漂移。
      */
-    public renderBooks(books: BookSummary[], emptyState: BookListEmptyState): void {
-        // 替换 DOM 前记录操作来源，禁用的分类选择器也参与焦点恢复。
-        const scrollTop = this.root.scrollTop;
+    public capturePosition(): BookListPosition | null {
+        if (!this.books.length || !this.layout.rowHeight) return null;
+        const top = this.root.scrollTop - this.layout.paddingTop;
+        const row = Math.max(0, Math.floor(top / (this.layout.rowHeight + this.layout.rowGap)));
+        const previous = this.position ? this.bookIndexes.get(this.position.bookId) : undefined;
+        const index =
+            previous !== undefined && Math.floor(previous / this.layout.columns) === row
+                ? previous
+                : Math.min(row * this.layout.columns, this.books.length - 1);
+        const book = this.books[index];
+        return book ? { bookId: book.book.id, offset: top - row * (this.layout.rowHeight + this.layout.rowGap) } : null;
+    }
+
+    /**
+     * 更新完整筛选结果，仅构造当前位置附近的书卡。
+     * @param position - undefined 保留内容锚点，null 回顶部，其他值恢复指定锚点。
+     */
+    public renderBooks(books: BookSummary[], emptyState: BookListEmptyState, position?: BookListPosition | null): void {
+        const anchor = position === undefined ? this.capturePosition() : position;
+        const anchorIndex = anchor ? this.bookIndexes.get(anchor.bookId) : undefined;
         const active = document.activeElement === document.body ? this.pendingSelection : document.activeElement;
         const focused = active instanceof HTMLOptionElement ? active.closest("select") : active;
         const focusedInside = focused instanceof HTMLElement && this.root.contains(focused);
-        const owner = focused instanceof HTMLElement ? focused.closest<HTMLElement>(".book") : null;
-        const focusId = owner?.dataset["id"];
+        const focusId = focusedInside ? focused.closest<HTMLElement>(".book")?.dataset["id"] : undefined;
+        const previousIndex = focusId ? this.bookIndexes.get(focusId) : undefined;
         const focusClass =
             focused instanceof HTMLSelectElement
                 ? ".book-category"
                 : focused instanceof HTMLElement && focused.classList.contains("book-more")
                   ? ".book-more"
                   : ".book-open";
-        const previousIndex = owner ? Array.from(this.root.children).indexOf(owner) : -1;
 
-        // 空态区分无藏书与无搜索结果，给出对应的下一步提示。
-        if (books.length === 0) {
+        this.books = books;
+        this.bookIndexes.clear();
+        books.forEach((summary, index) => this.bookIndexes.set(summary.book.id, index));
+        if (!books.length) {
+            this.clearWindow();
             this.root.replaceChildren(this.createEmptyState(emptyState));
         } else {
-            // 搜索逐字变化只移动增减的书卡，避免反复创建每本书的原生分类选项。
-            let cursor = this.root.firstElementChild;
-            for (const summary of books) {
-                let element = this.bookElements.get(summary);
-                if (!element) {
-                    element = this.createBookElement(summary);
-                    this.bookElements.set(summary, element);
-                }
-                if (element === cursor) cursor = cursor.nextElementSibling;
-                else this.root.insertBefore(element, cursor);
-            }
-            while (cursor) {
-                const next = cursor.nextElementSibling;
-                cursor.remove();
-                cursor = next;
-            }
+            // 锚点书籍被删除时，接续它原位置的相邻书目。
+            const nextAnchor =
+                anchor && !this.bookIndexes.has(anchor.bookId)
+                    ? {
+                          bookId: assertExists(books[Math.min(anchorIndex ?? 0, books.length - 1)]).book.id,
+                          offset: anchor.offset,
+                      }
+                    : anchor;
+            this.updateLayout(nextAnchor);
         }
 
-        // 优先恢复同书目的原操作，已移出结果时再回退到相邻书目或列表。
         if (focusId && document.activeElement !== focused) {
-            const cards = Array.from(this.root.querySelectorAll<HTMLElement>(".book"));
-            const replacement = cards.find((card) => card.dataset["id"] === focusId);
-            const next =
-                replacement?.querySelector<HTMLElement>(focusClass) ??
-                cards[Math.min(previousIndex, cards.length - 1)]?.querySelector<HTMLElement>(".book-open");
-            (next ?? this.root).focus({ preventScroll: true });
+            const index = this.bookIndexes.get(focusId);
+            this.focusBook(
+                index ?? Math.min(previousIndex ?? 0, books.length - 1),
+                index === undefined ? ".book-open" : focusClass,
+                false
+            );
         } else if (focusedInside && !this.root.contains(focused)) {
-            // 列表刷新也可能替换空态入口，失败后的重读同样保留可继续操作的焦点。
-            const next =
-                this.root.querySelector<HTMLElement>(".book-open") ??
-                this.root.querySelector<HTMLElement>(".shelf-empty-import");
-            (next ?? this.root).focus({ preventScroll: true });
+            (this.root.querySelector<HTMLElement>(".book-open, .shelf-empty-import") ?? this.root).focus({
+                preventScroll: true,
+            });
+        }
+    }
+
+    /**
+     * 一张实际书卡提供共同尺寸，CSS Grid 决定列数；滚动条出现后再核对一次。
+     */
+    private updateLayout(position: BookListPosition | null): void {
+        if (!this.books.length || !this.root.clientWidth) return;
+        this.position = position;
+        if (this.windowElement.parentElement !== this.root) {
+            this.root.dataset["windowed"] = "true";
+            this.root.setAttribute("role", "list");
+            this.root.replaceChildren(this.windowElement);
         }
 
-        this.root.scrollTop = scrollTop;
+        let sample = this.bookElements.values().next().value?.element;
+        if (!sample) {
+            const summary = assertExists(this.books[0]);
+            sample = this.createBookElement(summary);
+            this.bookElements.set(summary.book.id, { summary, element: sample });
+            this.getRow(0).append(sample);
+        }
+        const row = assertExists(sample.parentElement);
+        const listStyle = getComputedStyle(this.root);
+        for (let pass = 0; pass < 2; pass++) {
+            this.layout = {
+                columns: getComputedStyle(row).gridTemplateColumns.split(/\s+/u).length,
+                rowHeight: sample.getBoundingClientRect().height,
+                rowGap: Number.parseFloat(listStyle.rowGap),
+                paddingTop: Number.parseFloat(listStyle.paddingTop),
+            };
+            const count = Math.ceil(this.books.length / this.layout.columns);
+            this.windowElement.style.height = `${String(count * this.layout.rowHeight + (count - 1) * this.layout.rowGap)}px`;
+        }
+
+        const index = position ? (this.bookIndexes.get(position.bookId) ?? 0) : 0;
+        const offset = position
+            ? Math.min(position.offset, this.layout.rowHeight + this.layout.rowGap - 1)
+            : -this.layout.paddingTop;
+        this.root.scrollTop =
+            this.layout.paddingTop +
+            Math.floor(index / this.layout.columns) * (this.layout.rowHeight + this.layout.rowGap) +
+            offset;
+        this.renderWindow();
+        this.position = this.capturePosition();
+    }
+
+    /**
+     * 行容器沿用书架的原生网格，位置由当前共同的行步长决定。
+     */
+    private getRow(index: number): HTMLElement {
+        let row = this.rows.get(index);
+        if (!row) {
+            row = document.createElement("div");
+            row.className = "book-row";
+            row.setAttribute("role", "presentation");
+            this.rows.set(index, row);
+            this.windowElement.append(row);
+        }
+        row.style.top = `${String(index * (this.layout.rowHeight + this.layout.rowGap))}px`;
+        return row;
+    }
+
+    /**
+     * 保留可见行和上下两行；焦点、菜单及异步操作最多另保留各自所在行。
+     */
+    private renderWindow(extraIndex?: number): void {
+        if (!this.books.length || !this.layout.rowHeight) return;
+        const { columns, rowHeight, rowGap, paddingTop } = this.layout;
+        const step = rowHeight + rowGap;
+        const first = Math.max(0, Math.floor((this.root.scrollTop - paddingTop) / step) - 2);
+        const last = Math.min(
+            Math.ceil(this.books.length / columns),
+            Math.ceil((this.root.scrollTop + this.root.clientHeight - paddingTop) / step) + 2
+        );
+        const wantedRows = new Set<number>();
+        for (let row = first; row < last; row++) wantedRows.add(row);
+        if (extraIndex !== undefined) wantedRows.add(Math.floor(extraIndex / columns));
+
+        const active = document.activeElement;
+        const focused = active instanceof HTMLOptionElement ? active.closest("select") : active;
+        const focusedInside = focused instanceof HTMLElement && this.root.contains(focused);
+        const pinnedIds = new Set(this.operatingBooks);
+        for (const element of [
+            focused,
+            this.pendingSelection,
+            ...this.root.querySelectorAll(".book-file-actions:popover-open"),
+        ]) {
+            if (element instanceof Element && this.root.contains(element)) {
+                const id = element.closest<HTMLElement>(".book")?.dataset["id"];
+                if (id) pinnedIds.add(id);
+            }
+        }
+        for (const id of pinnedIds) {
+            const index = this.bookIndexes.get(id);
+            if (index !== undefined) wantedRows.add(Math.floor(index / columns));
+        }
+
+        // 仅对窗口内变更协调 DOM；保留项不因前面有删除节点而反复重插。
+        const wantedBooks = new Set<string>();
+        const orderedRows = [...wantedRows].sort((a, b) => a - b);
+        for (const index of orderedRows) {
+            const row = this.getRow(index);
+            const elements: HTMLElement[] = [];
+            for (let item = index * columns; item < Math.min((index + 1) * columns, this.books.length); item++) {
+                const summary = assertExists(this.books[item]);
+                const id = summary.book.id;
+                wantedBooks.add(id);
+                let entry = this.bookElements.get(id);
+                if (entry?.summary !== summary) {
+                    entry?.element.remove();
+                    entry = { summary, element: this.createBookElement(summary) };
+                    this.bookElements.set(id, entry);
+                }
+                entry.element.setAttribute("aria-posinset", String(item + 1));
+                entry.element.setAttribute("aria-setsize", String(this.books.length));
+                elements.push(entry.element);
+            }
+            const desired = new Set<Element>(elements);
+            for (const child of Array.from(row.children)) {
+                if (!desired.has(child)) child.remove();
+            }
+            let cursor = row.firstElementChild;
+            for (const element of elements) {
+                if (element === cursor) cursor = cursor.nextElementSibling;
+                else row.insertBefore(element, cursor);
+            }
+        }
+        for (const [index, row] of this.rows) {
+            if (!wantedRows.has(index)) {
+                row.remove();
+                this.rows.delete(index);
+            }
+        }
+        for (const [id, entry] of this.bookElements) {
+            if (!wantedBooks.has(id)) {
+                entry.element.remove();
+                this.bookElements.delete(id);
+            }
+        }
+        let cursor = this.windowElement.firstElementChild;
+        for (const index of orderedRows) {
+            const row = assertExists(this.rows.get(index));
+            if (row === cursor) cursor = cursor.nextElementSibling;
+            else this.windowElement.insertBefore(row, cursor);
+        }
+
+        // 网格换列可能移动同一控件，恢复其原生焦点，不改变浏览位置。
+        if (focusedInside && focused.isConnected && document.activeElement === document.body)
+            focused.focus({ preventScroll: true });
+        const sample = this.bookElements.values().next().value?.element;
+        if (sample !== this.observedBook) {
+            if (this.observedBook) this.resizeObserver?.unobserve(this.observedBook);
+            this.observedBook = sample;
+            if (sample) this.resizeObserver?.observe(sample);
+        }
+    }
+
+    /**
+     * 滚动与焦点变化合并到下一帧，离窗书卡没有独立监听或 Observer。
+     */
+    private scheduleWindow(): void {
+        if (this.frame !== undefined || !this.books.length) return;
+        this.frame = requestAnimationFrame(() => {
+            this.frame = undefined;
+            run(() => {
+                this.renderWindow();
+                this.position = this.capturePosition();
+            });
+        });
+    }
+
+    /**
+     * 按完整结果的索引挂载焦点目标，键盘跨窗口时让目标进入视窗。
+     */
+    private focusBook(index: number, selector: string, reveal: boolean): void {
+        const summary = this.books[index];
+        if (!summary) {
+            this.root.focus({ preventScroll: true });
+            return;
+        }
+        if (reveal) {
+            const top =
+                this.layout.paddingTop +
+                Math.floor(index / this.layout.columns) * (this.layout.rowHeight + this.layout.rowGap);
+            if (top < this.root.scrollTop) this.root.scrollTop = top;
+            else if (top + this.layout.rowHeight > this.root.scrollTop + this.root.clientHeight)
+                this.root.scrollTop = top + this.layout.rowHeight - this.root.clientHeight;
+        }
+        this.renderWindow(index);
+        this.bookElements
+            .get(summary.book.id)
+            ?.element.querySelector<HTMLElement>(selector)
+            ?.focus({ preventScroll: true });
+        this.position = this.capturePosition();
+    }
+
+    /**
+     * 空态和页面销毁释放所有离窗引用；布局监听仍由页面生命周期统一结束。
+     */
+    private clearWindow(): void {
+        if (this.frame !== undefined) cancelAnimationFrame(this.frame);
+        this.frame = undefined;
+        if (this.observedBook) this.resizeObserver?.unobserve(this.observedBook);
+        this.observedBook = undefined;
+        this.bookElements.clear();
+        this.rows.clear();
+        this.books = [];
+        this.bookIndexes.clear();
+        this.windowElement.replaceChildren();
+        this.position = null;
+        delete this.root.dataset["windowed"];
+        this.root.removeAttribute("role");
     }
 
     /**
@@ -150,6 +394,86 @@ export default class BookListUi extends Ui {
         },
         signal: AbortSignal
     ): void {
+        this.resizeObserver = new ResizeObserver(() => {
+            run(() => {
+                this.updateLayout(this.position);
+            });
+        });
+        this.resizeObserver.observe(this.root);
+        bind(
+            this.root,
+            "scroll",
+            () => {
+                this.position = this.capturePosition();
+                this.scheduleWindow();
+            },
+            { signal, passive: true }
+        );
+        bind(
+            this.root,
+            "focusin",
+            () => {
+                this.scheduleWindow();
+            },
+            { signal }
+        );
+        bind(
+            this.root,
+            "focusout",
+            () => {
+                this.scheduleWindow();
+            },
+            { signal }
+        );
+        signal.addEventListener(
+            "abort",
+            () => {
+                this.resizeObserver?.disconnect();
+                if (this.frame !== undefined) cancelAnimationFrame(this.frame);
+                this.frame = undefined;
+                this.bookElements.clear();
+                this.rows.clear();
+                this.operatingBooks.clear();
+            },
+            { once: true }
+        );
+
+        // 原生 Tab 在书卡内部流动，跨书籍时按完整结果衔接，避免受 DOM 窗口边缘限制。
+        bind(
+            this.root,
+            "keydown",
+            (event: KeyboardEvent) => {
+                if (
+                    event.key !== "Tab" ||
+                    event.altKey ||
+                    event.ctrlKey ||
+                    event.metaKey ||
+                    !(event.target instanceof HTMLElement)
+                )
+                    return;
+                const id = event.target.closest<HTMLElement>(".book")?.dataset["id"];
+                const index = id ? this.bookIndexes.get(id) : undefined;
+                if (index === undefined) return;
+                if (
+                    !event.shiftKey &&
+                    event.target instanceof HTMLButtonElement &&
+                    event.target.matches(".book-more") &&
+                    event.target.popoverTargetElement?.matches(":popover-open")
+                )
+                    return;
+                const direction =
+                    event.shiftKey && event.target.matches(".book-open")
+                        ? -1
+                        : !event.shiftKey && event.target.matches(".book-more")
+                          ? 1
+                          : 0;
+                if (!direction || !this.books[index + direction]) return;
+                event.preventDefault();
+                this.focusBook(index + direction, direction > 0 ? ".book-open" : ".book-more", true);
+            },
+            { signal }
+        );
+
         // 空态和顶部入口请求同一个导入流程，不查找或触发其他区域的按钮。
         delegate(this.root, ".shelf-empty-import", "click", handlers.import, { signal });
         delegate(this.root, ".shelf-retry", "click", handlers.retry, { signal });
@@ -195,9 +519,16 @@ export default class BookListUi extends Ui {
             this.root,
             ".book-export",
             "click",
-            (_, button) => {
+            async (_, button) => {
                 const owner = this.closeFileActions(button);
-                return handlers.export(assertExists(owner.dataset["id"]));
+                const id = assertExists(owner.dataset["id"]);
+                this.operatingBooks.add(id);
+                try {
+                    await handlers.export(id);
+                } finally {
+                    this.operatingBooks.delete(id);
+                    if (!signal.aborted) this.scheduleWindow();
+                }
             },
             { signal }
         );
@@ -220,16 +551,18 @@ export default class BookListUi extends Ui {
             "click",
             async (_, button) => {
                 const owner = this.closeFileActions(button);
-                const index = Array.from(this.root.children).indexOf(owner);
+                const id = assertExists(owner.dataset["id"]);
+                const index = this.bookIndexes.get(id) ?? 0;
+                this.operatingBooks.add(id);
                 try {
-                    await handlers.delete(assertExists(owner.dataset["id"]));
+                    await handlers.delete(id);
                 } finally {
+                    this.operatingBooks.delete(id);
                     // 刷新后的反馈失败也不能把焦点留给已经移除的控件。
                     if (!signal.aborted && !owner.isConnected && document.activeElement === document.body) {
-                        const cards = this.root.querySelectorAll<HTMLElement>(".book");
-                        const next = cards[Math.min(index, cards.length - 1)]?.querySelector<HTMLElement>(".book-open");
-                        (next ?? this.root).focus({ preventScroll: true });
+                        this.focusBook(Math.min(index, this.books.length - 1), ".book-open", false);
                     }
+                    if (!signal.aborted) this.scheduleWindow();
                 }
             },
             { signal }
@@ -248,6 +581,7 @@ export default class BookListUi extends Ui {
 
                 // 定制原生 picker 的焦点可能落在 option，禁用前一并保存来源。
                 const id = assertExists(element.closest<HTMLElement>(".book")?.dataset["id"]);
+                this.operatingBooks.add(id);
                 if (element.contains(document.activeElement)) this.pendingSelection = element;
                 element.disabled = true;
                 element.setAttribute("aria-busy", "true");
@@ -260,6 +594,7 @@ export default class BookListUi extends Ui {
                     throw error;
                 } finally {
                     // 仅在控件仍存在且用户未移走焦点时恢复焦点。
+                    this.operatingBooks.delete(id);
                     element.disabled = false;
                     element.removeAttribute("aria-busy");
                     if (this.pendingSelection === element) {
@@ -267,6 +602,7 @@ export default class BookListUi extends Ui {
                         if (!signal.aborted && element.isConnected && document.activeElement === document.body)
                             element.focus({ preventScroll: true });
                     }
+                    if (!signal.aborted) this.scheduleWindow();
                 }
             },
             { signal }
@@ -376,6 +712,7 @@ export default class BookListUi extends Ui {
         // 书目容器携带稳定 ID，供事件委托和重渲染后的焦点定位。
         const book = document.createElement("article");
         book.className = "book";
+        book.setAttribute("role", "listitem");
         book.dataset["id"] = summary.book.id;
         book.style.setProperty("--book-cover-hue", String(this.coverHue(summary.book.id)));
 

@@ -16,6 +16,7 @@ import {
     startBrowserTests,
     stopBrowserTests,
     textBook,
+    waitForBookCount,
     withPage,
 } from "./browser-test-support.ts";
 import { createEpubFixture } from "./fixtures/epub-fixtures.ts";
@@ -24,6 +25,52 @@ before(startBrowserTests);
 after(stopBrowserTests);
 
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: windowed bookshelf keeps offscreen books searchable and readable after deletion`, async () => {
+        await withPage(delivery, async (page) => {
+            await page.setViewportSize({ width: 900, height: 650 });
+            const books = Array.from({ length: 60 }, (_, index) =>
+                textBook(`shelf-${String(index).padStart(2, "0")}.txt`)
+            );
+            await importBooks(page, books);
+
+            // 总数覆盖整批书籍，实际挂载只保留窗口；窗口外书籍仍经正常搜索可达。
+            const mounted = await page
+                .locator(".book-open")
+                .evaluateAll((buttons) => buttons.map((button) => button.getAttribute("title")));
+            assert(
+                mounted.length > 0 && mounted.length < books.length,
+                `Expected a bounded bookshelf, received ${String(mounted.length)} cards`
+            );
+            const target = books.findLast((book) => !mounted.includes(book.name));
+            assert(target);
+            await page.locator("#book-search").fill(target.name.replace(/\.txt$/, ""));
+            await waitForBookCount(page, 1);
+            await openBook(page, target.name);
+            await selectChapter(page, 2);
+            await page.locator("#return-bookshelf").click();
+            await waitForBookCount(page, 1);
+            const targetCard = page.locator(".book").filter({ has: page.getByTitle(target.name, { exact: true }) });
+            assert.equal(await targetCard.locator(".book-progress").textContent(), "2/3");
+
+            // 删除搜索找到的书籍后，其他共享同一原文件的书籍仍可继续阅读。
+            await targetCard.locator(".book-more").click();
+            await targetCard.locator(".book-delete").click();
+            await page
+                .getByRole("dialog", { name: "删除书籍", exact: true })
+                .getByRole("button", { name: "删除", exact: true })
+                .click();
+            await waitForBookCount(page, 0);
+            await page.locator("#book-search").fill("");
+            await waitForBookCount(page, 59);
+            const remaining = books.find((book) => book !== target);
+            assert(remaining);
+            await page.locator("#book-search").fill(remaining.name.replace(/\.txt$/, ""));
+            await waitForBookCount(page, 1);
+            await openBook(page, remaining.name);
+            assert.match((await page.locator("#content").textContent()) ?? "", /这是章节1的第1段/);
+        });
+    });
+
     void test(`${delivery}: shared TXT and EPUB sources survive deletion and export byte for byte`, async () => {
         await withPage(delivery, async (page) => {
             const sources = [
