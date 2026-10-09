@@ -35,7 +35,6 @@ export default class ReaderController {
     private initialized = false;
     private returningToBookshelf = false;
     private appearancePosition: ReadingPosition | undefined;
-    private progressWrite: Promise<void> = Promise.resolve();
 
     /**
      * UI 负责排版与输入归一，控制器只编排书籍、位置和阅读意图。
@@ -126,18 +125,14 @@ export default class ReaderController {
     }
 
     /**
-     * 独立快照按提交顺序写入，删除中的书籍不重新创建孤儿进度。
+     * 独立快照直接进入数据库事务队列，后续阅读会话等待此前提交完成再读取位置。
+     * 不另建页面级 Promise 队列，避免尚未创建的保存事务被新会话读取越过。
      */
     private async updateProgress(location: ReadingLocation): Promise<void> {
         const snapshot: Progress = { bookId: this.state.book.id, ...location };
-        const write = this.progressWrite.then(() => updateProgress(snapshot));
-        this.progressWrite = write.then(
-            () => undefined,
-            () => undefined
-        );
         let saved: boolean;
         try {
-            saved = await write;
+            saved = await updateProgress(snapshot);
         } catch (error) {
             throw new OperationError(
                 "阅读位置尚未保存",
