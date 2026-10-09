@@ -4,7 +4,7 @@
  */
 
 #bookshelf #book-list {
-    --book-cover-width: 128px;
+    --book-cover-width: 120px;
     --book-title-font-size: 18px;
     --book-column-gap: 20px;
     --book-row-gap: 28px;

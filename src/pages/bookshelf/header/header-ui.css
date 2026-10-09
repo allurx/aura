@@ -178,7 +178,6 @@
         .shelf-heading {
             grid-column: 1;
             grid-row: 1;
-            gap: 6px;
         }
         .shelf-heading-text {
             gap: 8px;
