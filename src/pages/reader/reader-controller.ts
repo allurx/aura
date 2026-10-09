@@ -294,7 +294,13 @@ export default class ReaderController {
             const target = this.state.toc.entries.find(
                 (entry) => entry.path === path && (!fragment || entry.anchors?.includes(fragment))
             );
-            if (!target) return;
+            if (!target)
+                throw new OperationError(
+                    "书内链接的目标不存在",
+                    "这条链接指向的内容在书中不存在，阅读位置没有改变。",
+                    new Error(`Missing EPUB link target: ${path}#${fragment}`),
+                    "关闭提示后可继续阅读，或从目录查找相关内容。"
+                );
             if (await this.contentUi.showChapter(target.chapterNumber, { fragment })) this.readerUi.hideReadingTools();
         }, signal);
 
