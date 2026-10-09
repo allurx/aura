@@ -6,8 +6,8 @@
 import { bind, delegate, run } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
 import Ui from "@/components/ui";
-import { CATEGORIES } from "@/domain/category/category";
 import type { BookSummary } from "../bookshelf-service";
+import BookCardUi from "./book-card-ui";
 
 /**
  * 控制器按完整书架和当前筛选区分空态，列表不自行推断领域状态。
@@ -29,7 +29,7 @@ export default class BookListUi extends Ui {
     private books: readonly BookSummary[] = [];
     private readonly bookIndexes = new Map<string, number>();
     // 离开窗口且没有操作的节点及时释放，滚遍全书架也不积累 DOM 缓存。
-    private readonly bookElements = new Map<string, { summary: BookSummary; element: HTMLElement }>();
+    private readonly bookCards = new Map<string, BookCardUi>();
     private readonly rows = new Map<number, HTMLElement>();
     private readonly windowElement = document.createElement("div");
     private readonly operatingBooks = new Set<string>();
@@ -179,11 +179,12 @@ export default class BookListUi extends Ui {
             this.root.replaceChildren(this.windowElement);
         }
 
-        let sample = this.bookElements.values().next().value?.element;
+        let sample = this.bookCards.values().next().value?.root;
         if (!sample) {
             const summary = assertExists(this.books[0]);
-            sample = this.createBookElement(summary);
-            this.bookElements.set(summary.book.id, { summary, element: sample });
+            const card = new BookCardUi(summary);
+            this.bookCards.set(summary.book.id, card);
+            sample = card.root;
             this.getRow(0).append(sample);
         }
         const row = assertExists(sample.parentElement);
@@ -272,15 +273,15 @@ export default class BookListUi extends Ui {
                 const summary = assertExists(this.books[item]);
                 const id = summary.book.id;
                 wantedBooks.add(id);
-                let entry = this.bookElements.get(id);
-                if (entry?.summary !== summary) {
-                    entry?.element.remove();
-                    entry = { summary, element: this.createBookElement(summary) };
-                    this.bookElements.set(id, entry);
+                let card = this.bookCards.get(id);
+                if (card) card.update(summary);
+                else {
+                    card = new BookCardUi(summary);
+                    this.bookCards.set(id, card);
                 }
-                entry.element.setAttribute("aria-posinset", String(item + 1));
-                entry.element.setAttribute("aria-setsize", String(this.books.length));
-                elements.push(entry.element);
+                card.root.setAttribute("aria-posinset", String(item + 1));
+                card.root.setAttribute("aria-setsize", String(this.books.length));
+                elements.push(card.root);
             }
             const desired = new Set<Element>(elements);
             for (const child of Array.from(row.children)) {
@@ -298,10 +299,10 @@ export default class BookListUi extends Ui {
                 this.rows.delete(index);
             }
         }
-        for (const [id, entry] of this.bookElements) {
+        for (const [id, card] of this.bookCards) {
             if (!wantedBooks.has(id)) {
-                entry.element.remove();
-                this.bookElements.delete(id);
+                card.root.remove();
+                this.bookCards.delete(id);
             }
         }
         let cursor = this.windowElement.firstElementChild;
@@ -314,7 +315,7 @@ export default class BookListUi extends Ui {
         // 网格换列可能移动同一控件，恢复其原生焦点，不改变浏览位置。
         if (focusedInside && focused.isConnected && document.activeElement === document.body)
             focused.focus({ preventScroll: true });
-        const sample = this.bookElements.values().next().value?.element;
+        const sample = this.bookCards.values().next().value?.root;
         if (sample !== this.observedBook) {
             if (this.observedBook) this.resizeObserver?.unobserve(this.observedBook);
             this.observedBook = sample;
@@ -354,10 +355,7 @@ export default class BookListUi extends Ui {
                 this.root.scrollTop = top + this.layout.rowHeight - this.root.clientHeight;
         }
         this.renderWindow(index);
-        this.bookElements
-            .get(summary.book.id)
-            ?.element.querySelector<HTMLElement>(selector)
-            ?.focus({ preventScroll: true });
+        this.bookCards.get(summary.book.id)?.root.querySelector<HTMLElement>(selector)?.focus({ preventScroll: true });
         this.position = this.capturePosition();
     }
 
@@ -369,7 +367,7 @@ export default class BookListUi extends Ui {
         this.frame = undefined;
         if (this.observedBook) this.resizeObserver?.unobserve(this.observedBook);
         this.observedBook = undefined;
-        this.bookElements.clear();
+        this.bookCards.clear();
         this.rows.clear();
         this.books = [];
         this.bookIndexes.clear();
@@ -431,7 +429,7 @@ export default class BookListUi extends Ui {
                 this.resizeObserver?.disconnect();
                 if (this.frame !== undefined) cancelAnimationFrame(this.frame);
                 this.frame = undefined;
-                this.bookElements.clear();
+                this.bookCards.clear();
                 this.rows.clear();
                 this.operatingBooks.clear();
             },
@@ -694,130 +692,5 @@ export default class BookListUi extends Ui {
         assertExists(owner.querySelector<HTMLElement>(".book-file-actions")).hidePopover();
         assertExists(owner.querySelector<HTMLElement>(".book-more")).focus({ preventScroll: true });
         return owner;
-    }
-
-    /**
-     * 将稳定书籍标识映射到完整色相环，分类与筛选不会改变书封。
-     */
-    private coverHue(bookId: string): number {
-        let hash = 0;
-        for (const character of bookId) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
-        return hash % 360;
-    }
-
-    /**
-     * 全书名使用文本和无障碍名称，视觉书封保持有限行数。
-     */
-    private createBookElement(summary: BookSummary): HTMLElement {
-        // 书目容器携带稳定 ID，供事件委托和重渲染后的焦点定位。
-        const book = document.createElement("article");
-        book.className = "book";
-        book.setAttribute("role", "listitem");
-        book.dataset["id"] = summary.book.id;
-        book.style.setProperty("--book-cover-hue", String(this.coverHue(summary.book.id)));
-
-        // 书封作为阅读入口，完整书名与进度同时提供给辅助技术。
-        const open = document.createElement("button");
-        open.type = "button";
-        open.className = "book-open";
-        open.title = summary.book.fileName;
-        const progressLabel = summary.progress
-            ? `第 ${String(summary.progress.chapterNumber)} / ${String(summary.progress.chapterCount)} 章`
-            : "暂无阅读位置";
-        open.setAttribute("aria-label", `阅读《${summary.title}》，${progressLabel}`);
-        const title = document.createElement("span");
-        title.className = "book-title";
-        title.textContent = summary.title;
-        const cover = document.createElement("span");
-        cover.className = "book-cover";
-        cover.append(title);
-        open.append(cover);
-
-        // 书封外显示已保存位置，便于快速接续阅读。
-        const details = document.createElement("div");
-        details.className = "book-details";
-        const progress = document.createElement("p");
-        progress.className = "book-progress";
-        progress.textContent = summary.progress
-            ? `${String(summary.progress.chapterNumber)}/${String(summary.progress.chapterCount)}`
-            : "暂无进度";
-        progress.title = progressLabel;
-
-        // 分类与更多操作共用一行，选项值保留持久化分类 ID。
-        const categorySelect = document.createElement("select");
-        categorySelect.className = "book-category";
-        categorySelect.id = `book-category-${summary.book.id}`;
-        categorySelect.dataset["categoryId"] = summary.book.categoryId;
-        categorySelect.setAttribute("aria-label", `移动《${summary.title}》到分类`);
-        for (const category of CATEGORIES) {
-            const option = document.createElement("option");
-            option.value = category.id;
-            option.textContent = category.name;
-            categorySelect.append(option);
-        }
-        categorySelect.value = summary.book.categoryId;
-        categorySelect.title = `当前分类：${categorySelect.selectedOptions[0]?.textContent ?? ""}。选择分类即可移动`;
-
-        // 分类名称只展示归属；独立的原生选择器在箭头区域承载点击和键盘操作。
-        const categoryLabel = document.createElement("span");
-        categoryLabel.className = "book-category-label";
-        categoryLabel.textContent = categorySelect.selectedOptions[0]?.textContent ?? "";
-        categoryLabel.title = categoryLabel.textContent;
-        const categoryIcon = document.createElement("span");
-        categoryIcon.className = "book-category-icon";
-        categoryIcon.setAttribute("aria-hidden", "true");
-        const chevron = document.createElement("span");
-        chevron.className = "icon icon-chevron";
-        categoryIcon.append(chevron);
-
-        // 删除入口独立于阅读按钮，装饰图标不重复朗读书名。
-        const remove = document.createElement("button");
-        remove.type = "button";
-        remove.className = "book-delete book-action";
-        remove.setAttribute("aria-label", `删除《${summary.title}》`);
-        remove.title = "删除书籍";
-        const icon = document.createElement("span");
-        icon.className = "icon icon-delete";
-        icon.setAttribute("aria-hidden", "true");
-        const removeLabel = document.createElement("span");
-        removeLabel.textContent = "删除";
-        remove.append(icon, removeLabel);
-
-        const exportButton = document.createElement("button");
-        exportButton.type = "button";
-        exportButton.className = "book-export book-action";
-        exportButton.title = "导出原文件";
-        exportButton.setAttribute("aria-label", `导出《${summary.title}》原文件`);
-        const exportIcon = document.createElement("span");
-        exportIcon.className = "icon icon-download";
-        exportIcon.setAttribute("aria-hidden", "true");
-        const exportLabel = document.createElement("span");
-        exportLabel.textContent = "导出";
-        exportButton.append(exportIcon, exportLabel);
-
-        const actions = document.createElement("div");
-        actions.id = `book-actions-${summary.book.id}`;
-        actions.className = "book-file-actions panel-scroll";
-        actions.popover = "auto";
-        actions.setAttribute("role", "group");
-        actions.setAttribute("aria-label", `《${summary.title}》的文件操作`);
-        exportButton.autofocus = true;
-        actions.append(exportButton, remove);
-
-        const more = document.createElement("button");
-        more.type = "button";
-        more.className = "book-more icon-button";
-        more.popoverTargetElement = actions;
-        more.setAttribute("aria-label", `《${summary.title}》的更多操作`);
-        more.title = "更多操作";
-        const moreIcon = document.createElement("span");
-        moreIcon.className = "icon icon-more";
-        moreIcon.setAttribute("aria-hidden", "true");
-        more.append(moreIcon);
-
-        // 按阅读、进度和就近操作的顺序组装书目。
-        details.append(progress, categoryLabel, categorySelect, categoryIcon, more, actions);
-        book.append(open, details);
-        return book;
     }
 }

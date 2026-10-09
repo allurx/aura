@@ -114,20 +114,7 @@ export default class BookshelfController {
             const books = await getBookSummaries();
             if (!this.isActive() || version !== this.refreshVersion) return;
 
-            // 刷新仍以数据库快照为准；未变化的摘要保留身份，复用已有书卡。
-            const previousBooks = new Map(this.books?.map((summary) => [summary.book.id, summary]));
-            this.books = books.map((summary) => {
-                const previous = previousBooks.get(summary.book.id);
-                return previous?.book.fileId === summary.book.fileId &&
-                    previous.book.fileName === summary.book.fileName &&
-                    previous.book.categoryId === summary.book.categoryId &&
-                    previous.book.createdTime === summary.book.createdTime &&
-                    previous.title === summary.title &&
-                    previous.progress?.chapterNumber === summary.progress?.chapterNumber &&
-                    previous.progress?.chapterCount === summary.progress?.chapterCount
-                    ? previous
-                    : summary;
-            });
+            this.books = books;
 
             // 读取期间切换查询或分类已清除会话锚点，恢复时使用最新选择。
             this.renderBooks(firstLoad ? bookshelfSession.position : undefined);
@@ -353,9 +340,9 @@ export default class BookshelfController {
             }
             if (!this.isActive()) return true;
 
-            // 新快照让列表只更新归属发生变化的书卡，其余摘要可继续复用。
+            // 持久化结果更新摘要，列表按书籍 ID 更新已有控件。
             this.books = assertExists(this.books).map((item) =>
-                item === summary ? { ...item, book: { ...item.book, categoryId: category.id } } : item
+                item.book.id === bookId ? { ...item, book: { ...item.book, categoryId: category.id } } : item
             );
             this.renderBooks();
             this.bookshelfUi.showFeedback(`已移至${category.name}`);
