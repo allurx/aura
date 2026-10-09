@@ -21,8 +21,8 @@
     --appearance-danger: #b4324d;
     --appearance-shadow-color: #426599;
     --appearance-highlight: #ffffffc9;
-    --appearance-cover-saturation: 70%;
-    --appearance-cover-lightness: 82%;
+    --appearance-cover-saturation: 49%;
+    --appearance-cover-lightness: 75%;
     --appearance-cover-ink: #27354b;
 
     --appearance-focus: var(--appearance-accent);
@@ -54,8 +54,8 @@
     --appearance-tint: #c9edf2;
     --appearance-glow: #fde7db;
     --appearance-shadow-color: #387986;
-    --appearance-cover-saturation: 58%;
-    --appearance-cover-lightness: 80%;
+    --appearance-cover-saturation: 40%;
+    --appearance-cover-lightness: 78%;
     --appearance-cover-ink: #24434d;
 }
 
@@ -72,8 +72,8 @@
     --appearance-tint: #d8edce;
     --appearance-glow: #fff0bd;
     --appearance-shadow-color: #5e7e50;
-    --appearance-cover-saturation: 50%;
-    --appearance-cover-lightness: 78%;
+    --appearance-cover-saturation: 35%;
+    --appearance-cover-lightness: 76%;
     --appearance-cover-ink: #30402f;
 }
 
@@ -90,8 +90,8 @@
     --appearance-tint: #ffe1cb;
     --appearance-glow: #f9edb8;
     --appearance-shadow-color: #a27056;
-    --appearance-cover-saturation: 65%;
-    --appearance-cover-lightness: 81%;
+    --appearance-cover-saturation: 46%;
+    --appearance-cover-lightness: 77%;
     --appearance-cover-ink: #4b3432;
 }
 
@@ -108,8 +108,8 @@
     --appearance-tint: #ebdafa;
     --appearance-glow: #ffe2e4;
     --appearance-shadow-color: #896494;
-    --appearance-cover-saturation: 60%;
-    --appearance-cover-lightness: 83%;
+    --appearance-cover-saturation: 42%;
+    --appearance-cover-lightness: 76%;
     --appearance-cover-ink: #45324f;
 }
 
@@ -129,8 +129,8 @@
     --appearance-danger: #a83e45;
     --appearance-shadow-color: #8b795d;
     --appearance-highlight: #fffaf0c9;
-    --appearance-cover-saturation: 38%;
-    --appearance-cover-lightness: 79%;
+    --appearance-cover-saturation: 27%;
+    --appearance-cover-lightness: 75%;
     --appearance-cover-ink: #433b2e;
 }
 
@@ -151,8 +151,8 @@
     --appearance-danger: #ffb6bf;
     --appearance-shadow-color: #080f22;
     --appearance-highlight: #bfcfff17;
-    --appearance-cover-saturation: 42%;
-    --appearance-cover-lightness: 72%;
+    --appearance-cover-saturation: 29%;
+    --appearance-cover-lightness: 69%;
     --appearance-cover-ink: #202d43;
 }
 
@@ -173,8 +173,8 @@
     --appearance-danger: #ffb7c7;
     --appearance-shadow-color: #100d19;
     --appearance-highlight: #efd1ff17;
-    --appearance-cover-saturation: 44%;
-    --appearance-cover-lightness: 76%;
+    --appearance-cover-saturation: 31%;
+    --appearance-cover-lightness: 72%;
     --appearance-cover-ink: #382c42;
 }
 
@@ -195,7 +195,7 @@
     --appearance-danger: #ffbab4;
     --appearance-shadow-color: #071b22;
     --appearance-highlight: #b5efe617;
-    --appearance-cover-saturation: 48%;
+    --appearance-cover-saturation: 34%;
     --appearance-cover-lightness: 75%;
     --appearance-cover-ink: #213d42;
 }

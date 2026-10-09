@@ -8,7 +8,7 @@ import ChoiceSettingControl from "../controls/choice-setting-control";
 import type SettingControlListener from "../controls/setting-control-listener";
 
 /**
- * 仅改变书封的立体表现，保留同一书架布局、入口和页面材质。
+ * 在纸本精装与现代书刊的封面构图之间切换，保留同一书架布局、入口和页面材质。
  */
 export default class BookCoverStyleSetting extends ChoiceSetting {
     public constructor(bookList: HTMLElement) {
