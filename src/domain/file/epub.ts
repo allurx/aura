@@ -4,6 +4,7 @@
  */
 
 import { EpubArchive, EpubImportError } from "./epub-archive";
+import { yieldTask } from "@/utils/task-util";
 import {
     EPUB_ELEMENT_TAGS,
     type EpubElementNode,
@@ -63,6 +64,7 @@ interface ParseContext {
     links: EpubLinkTarget[];
     nodeCount: number;
     inlineImageCount: number;
+    taskStarted: number;
 }
 
 const MAX_XML_BYTES = 16 * 1024 * 1024;
@@ -154,6 +156,7 @@ export async function parseEpub(file: File): Promise<EpubPublication> {
         links: [],
         nodeCount: 0,
         inlineImageCount: 0,
+        taskStarted: performance.now(),
     };
     const sections: EpubSection[] = [];
     const scheduled = new Set(readingOrder.map((item) => item.path));
@@ -510,6 +513,13 @@ async function parseChildren(
     for (const node of Array.from(element.childNodes)) {
         if (++context.nodeCount > MAX_CONTENT_NODES)
             throw new EpubImportError("EPUB 正文结构过于复杂，最多支持 500,000 个节点。");
+
+        // XML 解析后的模型转换可能持续占用同一任务，按预算让出而不改变节点顺序与复杂度限制。
+        if (context.nodeCount % 256 === 0 && performance.now() - context.taskStarted >= 8) {
+            await yieldTask();
+            context.taskStarted = performance.now();
+        }
+
         if ((node.nodeType === Node.TEXT_NODE || node.nodeType === Node.CDATA_SECTION_NODE) && node.textContent)
             nodes.push({ type: "text", text: node.textContent });
         else if (node instanceof Element) nodes.push(...(await parseElement(node, path, context, depth + 1)));
