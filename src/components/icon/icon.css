@@ -126,9 +126,8 @@
         cursor: not-allowed;
     }
 
-    /* 面板入口及模态背景不保留交互高亮，避免指针未移动时出现残影。 */
-    &:is(.icon-button[aria-expanded="true"], [inert], [inert] *),
-    :root:has(dialog:modal) &:not(dialog:modal *) {
+    /* 展开入口及显式 inert 区域不保留高亮；模态背景的指针状态由原生 inert 处理。 */
+    &:is(.icon-button[aria-expanded="true"], [inert], [inert] *) {
         --icon-feedback-color: transparent;
         color: var(--icon-color, inherit);
         transition: none;

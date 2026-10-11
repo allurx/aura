@@ -33,7 +33,7 @@ export default class BookListUi extends Ui {
     private readonly rows = new Map<number, HTMLElement>();
     private readonly windowElement = document.createElement("div");
     private readonly operatingBooks = new Set<string>();
-    private layout = { columns: 1, rowHeight: 0, rowGap: 0, paddingTop: 0 };
+    private layout = { columns: 1, rowHeight: 0, rowGap: 0, paddingTop: 0, paddingBottom: 0, viewportHeight: 0 };
     private position: BookListPosition | null = null;
     private resizeObserver: ResizeObserver | undefined;
     private observedBook: HTMLElement | undefined;
@@ -103,9 +103,9 @@ export default class BookListUi extends Ui {
     /**
      * 保留可见行中的同一书籍锚点，避免连续换列时逐次改选行首而向前漂移。
      */
-    public capturePosition(): BookListPosition | null {
+    public capturePosition(scrollTop = this.root.scrollTop): BookListPosition | null {
         if (!this.books.length || !this.layout.rowHeight) return null;
-        const top = this.root.scrollTop - this.layout.paddingTop;
+        const top = scrollTop - this.layout.paddingTop;
         const row = Math.max(0, Math.floor(top / (this.layout.rowHeight + this.layout.rowGap)));
         const previous = this.position ? this.bookIndexes.get(this.position.bookId) : undefined;
         const index =
@@ -150,7 +150,7 @@ export default class BookListUi extends Ui {
                           offset: anchor.offset,
                       }
                     : anchor;
-            this.updateLayout(nextAnchor);
+            this.updateLayout(nextAnchor, true);
         }
 
         if (focusId && document.activeElement !== focused) {
@@ -168,10 +168,10 @@ export default class BookListUi extends Ui {
     }
 
     /**
-     * 一张实际书卡提供共同尺寸，CSS Grid 决定列数；滚动条出现后再核对一次。
+     * 一张实际书卡提供共同尺寸，CSS Grid 决定列数；稳定滚动条槽使总高度不影响列数。
      */
-    private updateLayout(position: BookListPosition | null): void {
-        if (!this.books.length || !this.root.clientWidth) return;
+    private updateLayout(position: BookListPosition | null, refreshBooks = false): void {
+        if (!this.books.length) return;
         this.position = position;
         if (this.windowElement.parentElement !== this.root) {
             this.root.dataset["windowed"] = "true";
@@ -189,27 +189,56 @@ export default class BookListUi extends Ui {
         }
         const row = assertExists(sample.parentElement);
         const listStyle = getComputedStyle(this.root);
-        for (let pass = 0; pass < 2; pass++) {
-            this.layout = {
-                columns: getComputedStyle(row).gridTemplateColumns.split(/\s+/u).length,
-                rowHeight: sample.getBoundingClientRect().height,
-                rowGap: Number.parseFloat(listStyle.rowGap),
-                paddingTop: Number.parseFloat(listStyle.paddingTop),
-            };
-            const count = Math.ceil(this.books.length / this.layout.columns);
-            this.windowElement.style.height = `${String(count * this.layout.rowHeight + (count - 1) * this.layout.rowGap)}px`;
-        }
+        if (!this.root.clientWidth) return;
+        const viewportHeight = this.root.clientHeight;
+        const previousScrollTop = this.root.scrollTop;
+        const previousMaximumTop = Math.max(0, this.root.scrollHeight - viewportHeight);
+        const paddingBottom = Number.parseFloat(listStyle.paddingBottom);
+        const layout = {
+            columns: getComputedStyle(row).gridTemplateColumns.split(/\s+/u).length,
+            rowHeight: sample.getBoundingClientRect().height,
+            rowGap: Number.parseFloat(listStyle.rowGap),
+            paddingTop: Number.parseFloat(listStyle.paddingTop),
+            paddingBottom,
+            viewportHeight,
+        };
+        // 滚动窗口更换样本也会收到初始通知；相同几何无需再次写高度、移动书卡或设置滚动位置。
+        if (
+            !refreshBooks &&
+            layout.columns === this.layout.columns &&
+            layout.rowHeight === this.layout.rowHeight &&
+            layout.rowGap === this.layout.rowGap &&
+            layout.paddingTop === this.layout.paddingTop &&
+            layout.paddingBottom === this.layout.paddingBottom &&
+            layout.viewportHeight === this.layout.viewportHeight
+        )
+            return;
+        this.layout = layout;
+        const count = Math.ceil(this.books.length / this.layout.columns);
+        const height = count * this.layout.rowHeight + (count - 1) * this.layout.rowGap;
 
         const index = position ? (this.bookIndexes.get(position.bookId) ?? 0) : 0;
         const offset = position
             ? Math.min(position.offset, this.layout.rowHeight + this.layout.rowGap - 1)
             : -this.layout.paddingTop;
-        this.root.scrollTop =
-            this.layout.paddingTop +
-            Math.floor(index / this.layout.columns) * (this.layout.rowHeight + this.layout.rowGap) +
-            offset;
-        this.renderWindow();
-        this.position = this.capturePosition();
+        // 第一行前的负偏移属于顶部留白，响应式 padding 变化不应把未滚动的书架推离顶部。
+        const requestedTop =
+            index < this.layout.columns && offset < 0
+                ? 0
+                : this.layout.paddingTop +
+                  Math.floor(index / this.layout.columns) * (this.layout.rowHeight + this.layout.rowGap) +
+                  offset;
+        const maximumTop = Math.max(0, Math.round(this.layout.paddingTop + height + paddingBottom) - viewportHeight);
+        const scrollTop = Math.max(0, Math.min(requestedTop, maximumTop));
+
+        // 旧边界已能容纳时，先在干净布局上恢复滚动；扩展边界的场景须等高度生效，避免原生钳制。
+        const moveScroll = scrollTop !== previousScrollTop;
+        const scrollBeforeRender = scrollTop <= previousMaximumTop;
+        if (moveScroll && scrollBeforeRender) this.root.scrollTop = scrollTop;
+        this.windowElement.style.height = `${String(height)}px`;
+        this.renderWindow(undefined, { scrollTop, height: viewportHeight });
+        this.position = this.capturePosition(scrollTop);
+        if (moveScroll && !scrollBeforeRender) this.root.scrollTop = scrollTop;
     }
 
     /**
@@ -231,14 +260,17 @@ export default class BookListUi extends Ui {
     /**
      * 保留可见行和上下两行；焦点、菜单及异步操作最多另保留各自所在行。
      */
-    private renderWindow(extraIndex?: number): void {
+    private renderWindow(
+        extraIndex?: number,
+        viewport = { scrollTop: this.root.scrollTop, height: this.root.clientHeight }
+    ): void {
         if (!this.books.length || !this.layout.rowHeight) return;
         const { columns, rowHeight, rowGap, paddingTop } = this.layout;
         const step = rowHeight + rowGap;
-        const first = Math.max(0, Math.floor((this.root.scrollTop - paddingTop) / step) - 2);
+        const first = Math.max(0, Math.floor((viewport.scrollTop - paddingTop) / step) - 2);
         const last = Math.min(
             Math.ceil(this.books.length / columns),
-            Math.ceil((this.root.scrollTop + this.root.clientHeight - paddingTop) / step) + 2
+            Math.ceil((viewport.scrollTop + viewport.height - paddingTop) / step) + 2
         );
         const wantedRows = new Set<number>();
         for (let row = first; row < last; row++) wantedRows.add(row);
@@ -331,8 +363,8 @@ export default class BookListUi extends Ui {
         this.frame = requestAnimationFrame(() => {
             this.frame = undefined;
             run(() => {
-                this.renderWindow();
                 this.position = this.capturePosition();
+                this.renderWindow();
             });
         });
     }
@@ -346,17 +378,19 @@ export default class BookListUi extends Ui {
             this.root.focus({ preventScroll: true });
             return;
         }
+        const viewport = { scrollTop: this.root.scrollTop, height: this.root.clientHeight };
         if (reveal) {
             const top =
                 this.layout.paddingTop +
                 Math.floor(index / this.layout.columns) * (this.layout.rowHeight + this.layout.rowGap);
-            if (top < this.root.scrollTop) this.root.scrollTop = top;
-            else if (top + this.layout.rowHeight > this.root.scrollTop + this.root.clientHeight)
-                this.root.scrollTop = top + this.layout.rowHeight - this.root.clientHeight;
+            if (top < viewport.scrollTop) viewport.scrollTop = top;
+            else if (top + this.layout.rowHeight > viewport.scrollTop + viewport.height)
+                viewport.scrollTop = top + this.layout.rowHeight - viewport.height;
         }
-        this.renderWindow(index);
+        this.renderWindow(index, viewport);
+        if (reveal) this.root.scrollTop = viewport.scrollTop;
         this.bookCards.get(summary.book.id)?.root.querySelector<HTMLElement>(selector)?.focus({ preventScroll: true });
-        this.position = this.capturePosition();
+        this.position = this.capturePosition(viewport.scrollTop);
     }
 
     /**
@@ -667,6 +701,7 @@ export default class BookListUi extends Ui {
      */
     private positionFileActions(actions: HTMLElement): void {
         const owner = assertExists(actions.closest<HTMLElement>(".book"));
+        const ownerLeft = owner.getBoundingClientRect().left;
         const button = assertExists(owner.querySelector<HTMLElement>(".book-more")).getBoundingClientRect();
         const viewport = window.visualViewport;
         const left = viewport?.offsetLeft ?? 0;
@@ -678,7 +713,7 @@ export default class BookListUi extends Ui {
         const opensAbove = below < 112 && above > below;
 
         actions.style.width = `${Math.min(184, width - 16)}px`;
-        actions.style.left = `${Math.max(left + 8, Math.min(owner.getBoundingClientRect().left, left + width - 192))}px`;
+        actions.style.left = `${Math.max(left + 8, Math.min(ownerLeft, left + width - 192))}px`;
         actions.style.top = opensAbove ? "auto" : `${button.bottom + 4}px`;
         actions.style.bottom = opensAbove ? `${window.innerHeight - button.top + 4}px` : "auto";
         actions.style.maxHeight = `${Math.max(0, opensAbove ? above : below)}px`;

@@ -12,6 +12,7 @@ import { assertExists } from "./utils/assert-util";
 import Dialog from "./components/dialog/dialog";
 import { createErrorContent } from "./components/dialog/error-content";
 import { run } from "./utils/event-util";
+import { getPlatformFontFamily } from "./settings/application/platform-font";
 
 /**
  * 管理页面替换和统一错误提示，页面实例随路由切换创建与销毁。
@@ -35,6 +36,9 @@ class Main {
      * 在启动路由前接入统一错误提示，覆盖首个页面的异步初始化失败。
      */
     public async start(): Promise<void> {
+        // 界面沿用正文已有的平台默认字体，避免首次打开浮层时逐一解析跨平台字族。
+        document.documentElement.style.setProperty("--ui-font-family", getPlatformFontFamily(navigator));
+
         // 同步错误和未处理的 Promise 拒绝共用一个用户提示入口。
         window.addEventListener("error", (event) => {
             void this.showError(event.error ?? new Error(event.message));

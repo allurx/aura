@@ -165,7 +165,7 @@ export default class NavUi extends Ui {
             { signal }
         );
 
-        // 数据操作先退出当前模态，避免遮罩与确认对话框冲突。
+        // 先交给确认框接管焦点，再收起背景抽屉，避免在两个模态之间反复恢复焦点和布局。
         for (const [selector, handler] of [
             ["#clear-btn", handlers.clear],
             ["#reset-data", handlers.reset],
@@ -174,11 +174,11 @@ export default class NavUi extends Ui {
                 assertExists(this.root.querySelector(selector)),
                 "click",
                 async () => {
-                    this.closeMoreActions();
-                    this.closeDrawer();
-                    this.focusMoreEntry();
                     try {
-                        await handler();
+                        const operation = handler();
+                        this.closeMoreActions();
+                        this.closeDrawer();
+                        await operation;
                     } finally {
                         // 旧入口隐藏时，关闭中的 dialog 可能仍短暂持有焦点；成功后的列表焦点保持不变。
                         const focused = document.activeElement;
@@ -204,10 +204,11 @@ export default class NavUi extends Ui {
             aboutButton,
             "click",
             () => {
+                // 与数据确认相同，先打开目标模态，避免先把焦点交回即将失活的背景。
+                about.inert = false;
+                about.showModal();
                 this.closeMoreActions();
                 this.closeDrawer();
-                this.focusMoreEntry();
-                about.showModal();
             },
             { signal }
         );
@@ -219,7 +220,7 @@ export default class NavUi extends Ui {
                 if (event.key !== "Escape" || event.defaultPrevented) return;
                 event.preventDefault();
                 event.stopPropagation();
-                about.close();
+                closeAbout();
             },
             { signal }
         );
@@ -227,8 +228,40 @@ export default class NavUi extends Ui {
             about,
             "close",
             () => {
-                this.syncBreakpoint();
-                this.focusMoreEntry();
+                if (about.open) return;
+                about.inert = true;
+                const focused = document.activeElement;
+                const restoreFocus =
+                    focused === document.body ||
+                    focused === this.opener ||
+                    focused === this.moreButton ||
+                    about.contains(focused);
+                // 断点由 change 事件维护；迟到的 close 不重置用户随后打开的抽屉或菜单。
+                if (restoreFocus) this.focusMoreEntry();
+            },
+            { signal }
+        );
+
+        // 静态许可浮层保留布局；任何原生关闭入口都立即退出交互，退场只负责绘制。
+        const closeAbout = (): void => {
+            about.close();
+            about.inert = true;
+        };
+        bind(
+            about,
+            "submit",
+            (event: SubmitEvent) => {
+                event.preventDefault();
+                closeAbout();
+            },
+            { signal }
+        );
+        bind(
+            about,
+            "cancel",
+            (event) => {
+                event.preventDefault();
+                closeAbout();
             },
             { signal }
         );
@@ -239,7 +272,7 @@ export default class NavUi extends Ui {
             () => {
                 this.closeMoreActions();
                 this.drawer.close();
-                about.close();
+                closeAbout();
             },
             { once: true }
         );
@@ -254,7 +287,6 @@ export default class NavUi extends Ui {
         this.drawer.close();
         this.drawer.inert = true;
         this.opener.setAttribute("aria-expanded", "false");
-        this.opener.focus({ preventScroll: true });
     }
 
     /**
@@ -307,6 +339,7 @@ export default class NavUi extends Ui {
      * 关闭关于或数据确认后，焦点返回当前布局中可见的入口。
      */
     private focusMoreEntry(): void {
-        (this.mobile.matches ? this.opener : this.moreButton).focus({ preventScroll: true });
+        const entry = this.mobile.matches ? this.opener : this.moreButton;
+        if (document.activeElement !== entry) entry.focus({ preventScroll: true });
     }
 }

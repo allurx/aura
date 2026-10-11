@@ -39,11 +39,17 @@ export default class TocUi extends Ui {
     private lastLayout = "";
     private query = "";
     private selectingChapter = false;
+    private resizeObserver: ResizeObserver | undefined;
+    private pendingLayout: "open" | "search" | "locate" | undefined;
 
     /**
      * 使用原生对话框提供焦点约束和 Escape 关闭。
      */
-    public constructor(root: HTMLDialogElement) {
+    public constructor(
+        root: HTMLDialogElement,
+        private readonly opener: HTMLButtonElement,
+        private readonly canOpen: () => boolean
+    ) {
         super(root);
         this.dialog = root;
         this.tocContentElement = assertExists(this.root.querySelector<HTMLElement>(".main"));
@@ -55,33 +61,28 @@ export default class TocUi extends Ui {
     }
 
     /**
-     * 切换目录显隐；首次打开定位当前章节，后续恢复目录自身的滚动位置。
-     * @returns 切换后目录是否打开。
+     * 原生模态打开前准备状态，布局完成后再恢复目录自身的浏览位置。
      */
-    public toggleToc(): boolean {
-        if (this.dialog.open) {
-            this.close();
-            return false;
-        }
-
-        // 先进入原生模态并建立焦点，再恢复章节列表的浏览位置。
+    private prepareOpen(): void {
+        this.dialog.returnValue = "cancel";
+        this.opener.setAttribute("aria-expanded", "true");
         this.dialog.inert = false;
-        this.dialog.showModal();
-        this.closeButton.focus({ preventScroll: true });
-        if (this.browsingPosition) this.restorePosition(this.browsingPosition);
-        else this.centerCurrentChapter();
-
-        this.capturePosition();
-        return true;
+        this.scheduleLayout("open");
     }
 
     /**
      * 记住列表位置；取消沿用原生入口焦点恢复，选章关闭由调用方将焦点交给正文。
      */
     public close(reason: "cancel" | "chapter-selected" = "cancel"): void {
-        this.restoreAfterResize();
-        this.capturePosition();
+        this.prepareClose();
         this.dialog.close(reason);
+    }
+
+    /**
+     * 浏览位置由滚动和布局回调维护；关闭不再测量即将退场的列表。
+     */
+    private prepareClose(): void {
+        this.opener.setAttribute("aria-expanded", "false");
         // 退场绘制期间保留视觉连续性，但不再让已关闭的章节参与焦点遍历。
         this.dialog.inert = true;
     }
@@ -111,6 +112,16 @@ export default class TocUi extends Ui {
      */
     public renderEntries(entries: TocEntry[]): this {
         this.entries = entries;
+        this.buttonsByChapter.clear();
+        this.highlightedButton = undefined;
+        for (const entry of entries) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = entry.title;
+            button.dataset["chapterNumber"] = String(entry.chapterNumber);
+            button.title = entry.title;
+            this.buttonsByChapter.set(entry.chapterNumber, button);
+        }
         this.renderFilteredEntries();
         return this;
     }
@@ -126,9 +137,11 @@ export default class TocUi extends Ui {
             async (_, target) => {
                 if (this.selectingChapter) return;
                 this.selectingChapter = true;
-                this.tocContentElement.setAttribute("aria-busy", "true");
                 try {
-                    const selected = await handler(Number(target.dataset["chapterNumber"]));
+                    // 正文先读取当前布局，再显示列表忙碌状态，避免游标样式变化触发整列同步重算。
+                    const selection = handler(Number(target.dataset["chapterNumber"]));
+                    this.tocContentElement.setAttribute("aria-busy", "true");
+                    const selected = await selection;
                     if (selected && !signal.aborted && this.dialog.open) this.close("chapter-selected");
                 } finally {
                     this.selectingChapter = false;
@@ -151,6 +164,7 @@ export default class TocUi extends Ui {
         const observer = new ResizeObserver(() => {
             this.restoreAfterResize();
         });
+        this.resizeObserver = observer;
         observer.observe(this.dialog);
         observer.observe(this.tocContentElement);
         bind(
@@ -158,26 +172,59 @@ export default class TocUi extends Ui {
             "scroll",
             () => {
                 // 布局变化可能钳制 scrollTop；此时保留变更前的章节锚点。
-                if (this.dialog.open && this.layoutSignature() === this.lastLayout) this.capturePosition();
+                if (!this.pendingLayout && this.dialog.open && this.layoutSignature() === this.lastLayout)
+                    this.capturePosition();
             },
             { signal, passive: true }
         );
 
-        // 关闭按钮、外点和 Escape 统一保存位置，close 事件只负责通知页面恢复焦点。
-        bind(
-            this.closeButton,
-            "click",
-            () => {
-                this.close();
-            },
-            { signal }
-        );
+        // 原生按钮命令承担模态激活，脚本只检查阅读状态并准备浏览位置。
+        if ("commandForElement" in HTMLButtonElement.prototype) {
+            this.opener.commandForElement = this.dialog;
+            this.opener.command = "show-modal";
+            this.closeButton.commandForElement = this.dialog;
+            this.closeButton.command = "request-close";
+            bind(
+                this.dialog,
+                "command",
+                (event) => {
+                    if (!(event instanceof CommandEvent) || event.command !== "show-modal") return;
+                    if (event.source !== this.opener || !this.canOpen()) {
+                        event.preventDefault();
+                        return;
+                    }
+                    this.prepareOpen();
+                },
+                { signal }
+            );
+        } else {
+            bind(
+                this.opener,
+                "click",
+                () => {
+                    if (!this.canOpen() || this.dialog.open) return;
+                    this.prepareOpen();
+                    this.dialog.showModal();
+                },
+                { signal }
+            );
+            bind(
+                this.closeButton,
+                "click",
+                () => {
+                    this.close();
+                },
+                { signal }
+            );
+        }
+
+        // 关闭按钮、外点和 Escape 共用取消流程；输入法候选优先处理 Escape。
         bind(
             this.dialog,
             "cancel",
             (event) => {
-                event.preventDefault();
-                if (!composing) this.close();
+                if (composing) event.preventDefault();
+                else this.prepareClose();
             },
             { signal }
         );
@@ -197,6 +244,8 @@ export default class TocUi extends Ui {
             this.dialog,
             "close",
             () => {
+                if (this.dialog.open) return;
+                this.prepareClose();
                 composing = false;
                 handler(this.dialog.returnValue === "chapter-selected");
             },
@@ -218,13 +267,14 @@ export default class TocUi extends Ui {
             const nextQuery = this.searchInput.value.trim().toLocaleLowerCase();
             if (nextQuery === this.query) return;
             if (!this.query && nextQuery) {
-                this.capturePosition();
                 this.unfilteredPosition = this.browsingPosition;
             }
             this.query = nextQuery;
+            this.browsingPosition = this.query
+                ? { chapterNumber: undefined, offset: 0, scrollTop: 0 }
+                : this.unfilteredPosition;
             this.renderFilteredEntries();
-            this.restorePosition(this.query ? undefined : this.unfilteredPosition);
-            this.capturePosition();
+            this.scheduleLayout("search");
         };
         bind(
             this.searchInput,
@@ -257,8 +307,10 @@ export default class TocUi extends Ui {
             "abort",
             () => {
                 observer.disconnect();
+                this.resizeObserver = undefined;
+                this.pendingLayout = undefined;
+                this.prepareClose();
                 this.dialog.close();
-                this.dialog.inert = true;
             },
             { once: true }
         );
@@ -271,14 +323,13 @@ export default class TocUi extends Ui {
     private locateCurrentChapter(): void {
         // 当前章可能被筛选隐藏，先恢复完整目录再定位。
         this.searchInput.value = "";
-        this.query = "";
-        this.renderFilteredEntries();
+        if (this.query) {
+            this.query = "";
+            this.renderFilteredEntries();
+        }
 
-        // 将当前章放入视口并更新恢复锚点，不改变正文的阅读进度。
-        const current = this.centerCurrentChapter();
-        current?.focus({ preventScroll: true });
-        this.capturePosition();
-        this.unfilteredPosition = this.browsingPosition;
+        this.browsingPosition = undefined;
+        this.scheduleLayout("locate");
     }
 
     /**
@@ -344,26 +395,44 @@ export default class TocUi extends Ui {
     private restorePosition(position: TocScrollPosition | undefined): void {
         // 以稳定章号跨筛选结果与响应式换行寻找原锚点。
         const container = this.tocContentElement;
-        const button = position
-            ? this.chapterButtons.find((item) => Number(item.dataset["chapterNumber"]) === position.chapterNumber)
-            : undefined;
+        const button =
+            position?.chapterNumber === undefined ? undefined : this.buttonsByChapter.get(position.chapterNumber);
 
         // 按新几何位置补偿滚动差；章号不在当前结果中时退回原生像素位置。
-        if (button && position) {
+        if (button && container.contains(button) && position) {
             const top = container.getBoundingClientRect().top + container.clientTop;
             container.scrollTop += button.getBoundingClientRect().top - top - position.offset;
         } else container.scrollTop = position?.scrollTop ?? 0;
     }
 
     /**
-     * 只在布局变化时恢复浏览锚点，不在普通滚动中追踪当前阅读章。
+     * 打开、筛选和定位先完成 DOM 写入，再由已有观察器在自然布局后处理位置。
+     */
+    private scheduleLayout(action: "open" | "search" | "locate"): void {
+        this.pendingLayout = action;
+        this.resizeObserver?.unobserve(this.tocContentElement);
+        this.resizeObserver?.observe(this.tocContentElement);
+    }
+
+    /**
+     * 布局后恢复目录浏览锚点；只有首次打开和显式定位才跟随当前阅读章。
      */
     private restoreAfterResize(): void {
         if (!this.dialog.open) return;
-        if (this.layoutSignature() === this.lastLayout) return;
-        this.restorePosition(this.browsingPosition);
-        this.keepFocusedElementVisible();
+        const action = this.pendingLayout;
+        if (!action && this.layoutSignature() === this.lastLayout) return;
+        this.pendingLayout = undefined;
+        const current =
+            action === "locate" || (action === "open" && !this.browsingPosition)
+                ? this.centerCurrentChapter()
+                : undefined;
+        if (!current) this.restorePosition(this.browsingPosition);
+        if (!action) this.keepFocusedElementVisible();
         this.capturePosition();
+        if (action === "locate") {
+            this.unfilteredPosition = this.browsingPosition;
+            current?.focus({ preventScroll: true });
+        }
     }
 
     /**
@@ -394,23 +463,15 @@ export default class TocUi extends Ui {
      * 根据标题筛选目录，保留总章数和当前章标记。
      */
     private renderFilteredEntries(): void {
-        // 在未挂载的片段中构造匹配章节，外部章名始终作为文本写入。
+        // 筛选只调整已有按钮的挂载范围，清空搜索不重复创建整份目录。
         const entries = this.entries.filter((entry) => entry.title.toLocaleLowerCase().includes(this.query));
         const fragment = document.createDocumentFragment();
         this.chapterButtons = [];
-        this.buttonsByChapter.clear();
-        this.highlightedButton = undefined;
         for (const entry of entries) {
-            // 可见标题与悬停标题保留原文，章号用于委托选择和浏览锚点恢复。
-            const button = document.createElement("button");
-            button.type = "button";
-            button.textContent = entry.title;
-            button.dataset["chapterNumber"] = String(entry.chapterNumber);
-            button.title = entry.title;
+            const button = assertExists(this.buttonsByChapter.get(entry.chapterNumber));
 
             // DOM 顺序与缓存顺序一致，几何二分查找据此定位首个可见章节。
             this.chapterButtons.push(button);
-            this.buttonsByChapter.set(entry.chapterNumber, button);
             fragment.appendChild(button);
         }
 

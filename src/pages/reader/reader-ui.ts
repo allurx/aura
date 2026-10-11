@@ -19,7 +19,7 @@ export default class ReaderUi extends Ui {
     private readonly previousButton = assertExists(this.actions.querySelector<HTMLButtonElement>("#previous-page"));
     private readonly nextButton = assertExists(this.actions.querySelector<HTMLButtonElement>("#next-page"));
     private readonly returnButton = assertExists(this.root.querySelector<HTMLButtonElement>("#return-bookshelf"));
-    private readonly tocButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-toc-panel"));
+    public readonly tocButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-toc-panel"));
     public readonly settingButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel"));
     private readonly fullscreenButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-fullscreen"));
     private readonly header = assertExists(this.root.querySelector<HTMLElement>("#header"));
@@ -337,22 +337,6 @@ export default class ReaderUi extends Ui {
             { signal }
         );
         this.renderFullscreenState();
-        return this;
-    }
-
-    /**
-     * 绑定目录入口；位置改变不会重建按钮。
-     */
-    public bindToggleTocPanel(handler: () => void, signal: AbortSignal): this {
-        bind(this.tocButton, "click", handler, { signal });
-        return this;
-    }
-
-    /**
-     * 同步目录入口的展开状态。
-     */
-    public setTocExpanded(expanded: boolean): this {
-        this.tocButton.setAttribute("aria-expanded", String(expanded));
         return this;
     }
 

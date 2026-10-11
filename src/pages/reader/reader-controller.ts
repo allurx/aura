@@ -46,7 +46,11 @@ export default class ReaderController {
         this.appUi = new AppUi(appRoot);
         this.readerUi = new ReaderUi(readerRoot);
         this.contentUi = new ContentUi(assertExists(readerRoot.querySelector<HTMLElement>("#content")));
-        this.tocUi = new TocUi(assertExists(readerRoot.querySelector<HTMLDialogElement>("#toc")));
+        this.tocUi = new TocUi(
+            assertExists(readerRoot.querySelector<HTMLDialogElement>("#toc")),
+            this.readerUi.tocButton,
+            () => this.isActive()
+        );
         this.settingController = new SettingController({
             pageName: PageName.READER,
             container: readerRoot,
@@ -284,11 +288,6 @@ export default class ReaderController {
             await this.contentUi.refreshLocation();
         }, signal);
 
-        this.readerUi.bindToggleTocPanel(() => {
-            if (!this.canNavigate()) return;
-            this.readerUi.setTocExpanded(this.tocUi.toggleToc());
-        }, signal);
-
         this.contentUi.bindBookLinks(async (path, fragment) => {
             if (!this.canNavigate()) return;
             const target = this.state.toc.entries.find(
@@ -307,7 +306,6 @@ export default class ReaderController {
         this.tocUi
             .delegateTocItemClick((chapterNumber) => this.selectChapter(chapterNumber), signal)
             .bindTocClose((selected) => {
-                this.readerUi.setTocExpanded(false);
                 if (selected) {
                     this.readerUi.hideReadingTools();
                     this.contentUi.root.focus({ preventScroll: true });

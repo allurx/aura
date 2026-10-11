@@ -102,6 +102,8 @@
             env(safe-area-inset-left);
         grid-template-columns: minmax(0, 1fr);
         #bookshelf-sidebar {
+            /* 固定分类保留布局；关闭时移出画布，并由页面同步 inert 排除交互。 */
+            display: block;
             position: fixed;
             overflow: hidden;
             inset: var(--viewport-top) auto var(--viewport-bottom) 0;
@@ -112,23 +114,24 @@
             background: var(--appearance-panel);
             box-shadow: var(--appearance-shadow-floating);
             transform: translateX(-100%);
+            opacity: 0;
             transition:
                 transform var(--motion-duration-slow) var(--motion-ease-out),
-                display var(--motion-duration-slow) allow-discrete,
+                opacity var(--motion-duration-normal) var(--motion-ease),
                 overlay var(--motion-duration-slow) allow-discrete;
             &:not(:modal) {
-                display: none;
                 pointer-events: none;
             }
             &:not(:modal)::backdrop {
                 pointer-events: none;
             }
             &:modal {
-                display: block;
                 transform: translateX(0);
+                opacity: 1;
 
                 @starting-style {
                     transform: translateX(-100%);
+                    opacity: 0;
                 }
             }
             &::backdrop {

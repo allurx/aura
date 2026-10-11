@@ -5,6 +5,8 @@
 
 .license-dialog {
     width: min(40rem, calc(100% - var(--dialog-left) - var(--dialog-right)));
+    /* 静态许可内容保留布局，减少首次打开的同步排版；关闭时由 inert 排除交互和辅助技术。 */
+    display: flex;
 
     .title {
         font: inherit;
