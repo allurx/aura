@@ -4,6 +4,7 @@
  */
 
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import { after, before, test } from "node:test";
 import type { Page } from "playwright-core";
 import type Progress from "../src/domain/progress/progress.ts";
@@ -76,6 +77,96 @@ async function readProgress(page: Page): Promise<Progress[]> {
 }
 
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: long chapters retain deep source positions while layout is pending`, async () => {
+        await withPage(delivery, async (page) => {
+            const book = textBook("windowed-progress.txt", 1, 6000);
+            // 空物理行仍属于源位置，排版批次碰到零高段落也不能丢失章节前缀。
+            book.buffer = Buffer.from(
+                book.buffer
+                    .toString("utf8")
+                    .split("\n")
+                    .map((line, index) => (index > 0 && index % 64 === 1 ? "" : line))
+                    .join("\n")
+            );
+            await importBooks(page, [book]);
+            await openBook(page, "windowed-progress.txt");
+            await setMode(page, "scroll");
+            await page.locator("#content > .reading-viewport:not(.reading-measure-viewport)").evaluate((viewport) => {
+                viewport.scrollTop = (viewport.scrollHeight - viewport.clientHeight) * 0.75;
+            });
+            await page.waitForFunction(
+                () => Number.parseFloat(document.querySelector("#progress-rate")?.textContent ?? "0") > 30
+            );
+            const progress = await readProgress(page);
+            const anchor = progress[0];
+            assert(anchor && anchor.blockNumber > 2000);
+
+            // 连续有效输入和模式切换保留同一源位置，不要求后台全章排版先完成。
+            await page.locator("#toggle-setting-panel").click();
+            for (const fontSize of [22, 25, 18, 23]) {
+                await page.locator("#setting-control-font-size").fill(String(fontSize));
+                assert.equal(
+                    await page.locator("#content").evaluate((content) => getComputedStyle(content).fontSize),
+                    `${String(fontSize)}px`
+                );
+            }
+            for (const mode of ["cover", "scroll", "none"]) {
+                await page.locator(`input[name="reading-mode"][value="${mode}"]`).check();
+                await page.waitForFunction(
+                    (expected) => document.querySelector("#content")?.getAttribute("data-reading-mode") === expected,
+                    mode
+                );
+            }
+            await page.locator("#setting .close").click();
+            await settleReader(page);
+            assert.deepEqual(await readProgress(page), progress);
+
+            // 在用户可见的排版进行状态中离页；重入必须读到离开时的源锚点。
+            await page.locator('#page-position[aria-busy="true"]').waitFor();
+            await page.locator("#return-bookshelf").click();
+            await page.locator("#bookshelf").waitFor();
+            assert.equal(await page.locator(".reading-measure-viewport").count(), 0);
+            await openBook(page, "windowed-progress.txt");
+            assert.deepEqual(await readProgress(page), progress);
+            assert.equal(
+                await page.locator("#content").evaluate((content) => getComputedStyle(content).fontSize),
+                "23px"
+            );
+            await page.waitForFunction((blockNumber) => {
+                const viewport = document.querySelector("#content > .reading-viewport:not(.reading-measure-viewport)");
+                const bounds = viewport?.getBoundingClientRect();
+                if (!viewport || !bounds) return false;
+                return [...viewport.querySelectorAll<HTMLElement>("[data-block-number]")].some(
+                    (block) =>
+                        Number(block.dataset["blockNumber"]) === blockNumber &&
+                        [...block.getClientRects()].some(
+                            (rect) =>
+                                rect.right > bounds.left + 1 &&
+                                rect.left < bounds.right - 1 &&
+                                rect.bottom > bounds.top + 1 &&
+                                rect.top < bounds.bottom - 1
+                        )
+                );
+            }, anchor.blockNumber);
+
+            // 未知全章页号不能被解释为章首页；显式向前后，索引提交也不能覆盖新位置。
+            await page.locator('#page-position[aria-busy="true"]').waitFor();
+            await page.locator("#next-page").click();
+            await settleReader(page);
+            const advanced = await readProgress(page);
+            assert(advanced[0] && advanced[0].blockNumber > anchor.blockNumber);
+            assert(advanced[0].blockNumber < anchor.blockNumber + 100);
+            await waitForChapterLayout(page);
+            assert.deepEqual(await readProgress(page), advanced);
+            assert.match(
+                (await page.locator("#page-position").getAttribute("aria-label")) ?? "",
+                /第 \d+ 页，共 \d+ 页/
+            );
+            const pages = (await page.locator("#page-position").getAttribute("aria-label"))?.match(/\d+/g);
+            assert(pages && Number(pages[0]) > 1 && Number(pages[0]) <= Number(pages[1]));
+        });
+    });
+
     void test(`${delivery}: viewport reflow preserves the source anchor until explicit navigation`, async () => {
         await withPage(delivery, async (page) => {
             await importBooks(page, [textBook("reflow-progress.txt", 3, 240)]);

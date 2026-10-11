@@ -6,17 +6,12 @@
 import type Setting from "../definitions/setting";
 
 /**
- * 设置控件产生的预览和提交事件。
+ * 设置控件实时保存有效输入与恢复默认值的操作。
  *
  */
 export default interface SettingControlListener {
     /**
-     * 连续输入只预览，直到确认或取消。
-     */
-    preview(setting: Setting, value: string): void;
-
-    /**
-     * 确认控件值并保存到当前页面。
+     * 立即应用有效控件值并保存到当前页面。
      */
     commit(setting: Setting, value: string): void;
 

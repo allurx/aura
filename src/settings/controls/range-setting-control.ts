@@ -11,7 +11,7 @@ import type SettingControlListener from "./setting-control-listener";
 /**
  * 有限数值范围的滑块控件。
  *
- * input 仅预览，change 才提交；刷新范围和数值时复用原生滑块节点。
+ * 连续输入立即应用并保存；刷新时复用原生滑块节点，不中断拖动或键盘操作。
  *
  */
 export default class RangeSettingControl extends StyleSettingControl {
@@ -30,12 +30,12 @@ export default class RangeSettingControl extends StyleSettingControl {
         this.inputElement.step = String(rangeSetting.step);
         this.attachControl(this.inputElement);
 
-        // 拖动与键盘调整先预览，再由原生 change 确认最终值。
+        // input 同步保存每个有效值，关闭面板或离开页面无需等待最后一次 change。
         bind(
             this.inputElement,
             "input",
             (_, input) => {
-                listener.preview(rangeSetting, this.withUnit(input.value));
+                listener.commit(rangeSetting, this.withUnit(input.value));
             },
             { signal }
         );
@@ -54,13 +54,17 @@ export default class RangeSettingControl extends StyleSettingControl {
         const [minimum, maximum] = this.rangeSetting.range();
         const resolvedValue = this.rangeSetting.resolveValue(value);
 
-        this.inputElement.min = String(minimum);
-        this.inputElement.max = String(maximum);
-        this.inputElement.value = this.withoutUnit(resolvedValue);
+        const minimumValue = String(minimum);
+        const maximumValue = String(maximum);
+        const inputValue = this.withoutUnit(resolvedValue);
+        if (this.inputElement.min !== minimumValue) this.inputElement.min = minimumValue;
+        if (this.inputElement.max !== maximumValue) this.inputElement.max = maximumValue;
+        if (this.inputElement.value !== inputValue) this.inputElement.value = inputValue;
 
         const displayValue = this.rangeSetting.formatValue(resolvedValue);
-        this.displayElement.textContent = displayValue;
-        this.inputElement.setAttribute("aria-valuetext", displayValue);
+        if (this.displayElement.textContent !== displayValue) this.displayElement.textContent = displayValue;
+        if (this.inputElement.getAttribute("aria-valuetext") !== displayValue)
+            this.inputElement.setAttribute("aria-valuetext", displayValue);
     }
 
     private withUnit(value: string): string {

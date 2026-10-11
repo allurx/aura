@@ -23,12 +23,12 @@ export default class ColorSettingControl extends StyleSettingControl {
         this.inputElement.type = "color";
         this.attachControl(this.inputElement);
 
-        // 连续选色只预览，确认值后再由 change 提交。
+        // 原生选色窗口每次提供有效颜色时都立即应用并保存。
         bind(
             this.inputElement,
             "input",
             (_, input) => {
-                listener.preview(setting, input.value);
+                listener.commit(setting, input.value);
             },
             { signal }
         );
@@ -45,8 +45,8 @@ export default class ColorSettingControl extends StyleSettingControl {
 
     public override render(value: string | undefined): void {
         const resolvedValue = this.toHex(this.setting.resolveValue(value));
-        this.inputElement.value = resolvedValue;
-        this.displayElement.textContent = resolvedValue;
+        if (this.inputElement.value !== resolvedValue) this.inputElement.value = resolvedValue;
+        if (this.displayElement.textContent !== resolvedValue) this.displayElement.textContent = resolvedValue;
     }
 
     /**

@@ -20,7 +20,7 @@ export default class ReaderUi extends Ui {
     private readonly nextButton = assertExists(this.actions.querySelector<HTMLButtonElement>("#next-page"));
     private readonly returnButton = assertExists(this.root.querySelector<HTMLButtonElement>("#return-bookshelf"));
     private readonly tocButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-toc-panel"));
-    private readonly settingButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel"));
+    public readonly settingButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel"));
     private readonly fullscreenButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-fullscreen"));
     private readonly header = assertExists(this.root.querySelector<HTMLElement>("#header"));
     private readonly footer = assertExists(this.root.querySelector<HTMLElement>("#footer"));
@@ -353,21 +353,6 @@ export default class ReaderUi extends Ui {
      */
     public setTocExpanded(expanded: boolean): this {
         this.tocButton.setAttribute("aria-expanded", String(expanded));
-        return this;
-    }
-
-    /**
-     * 将同一设置入口交给面板，以便关闭后恢复焦点。
-     */
-    public bindToggleSettingPanel(handler: (opener: HTMLButtonElement) => void, signal: AbortSignal): this {
-        bind(
-            this.settingButton,
-            "click",
-            (_, opener) => {
-                handler(opener);
-            },
-            { signal }
-        );
         return this;
     }
 

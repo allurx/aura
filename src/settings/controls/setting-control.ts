@@ -40,9 +40,9 @@ export default abstract class SettingControl {
     }
 
     /**
-     * 根据显式值刷新控件，预览期间也可显示尚未提交的值。
+     * 刷新控件的当前有效值。
      *
-     * @param value - 预览或已提交的显式值；缺失时由设置定义解析默认表现
+     * @param value - 控件应显示的值；缺失时由设置定义解析默认表现
      */
     public abstract render(value: string | undefined): void;
 
@@ -51,9 +51,13 @@ export default abstract class SettingControl {
      */
     public setCustomized(customized: boolean): void {
         const returnFocus = !customized && document.activeElement === this.resetElement;
-        this.element.toggleAttribute("data-customized", customized);
-        this.resetElement.setAttribute("aria-disabled", String(!customized));
-        this.resetElement.tabIndex = customized ? 0 : -1;
+        if (this.element.hasAttribute("data-customized") !== customized)
+            this.element.toggleAttribute("data-customized", customized);
+        const disabled = String(!customized);
+        if (this.resetElement.getAttribute("aria-disabled") !== disabled)
+            this.resetElement.setAttribute("aria-disabled", disabled);
+        const tabIndex = customized ? 0 : -1;
+        if (this.resetElement.tabIndex !== tabIndex) this.resetElement.tabIndex = tabIndex;
         // 还原后把焦点交回设置本身，让按钮立即隐藏且不丢失键盘操作位置。
         if (returnFocus) {
             this.element

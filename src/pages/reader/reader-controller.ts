@@ -11,7 +11,7 @@ import { toBookPosition } from "@/domain/chapter/chapter";
 import { numberOfPositions } from "@/domain/toc/toc";
 import { initReader, updateProgress, getChapter } from "./reader-service";
 import ContentUi from "./content/content-ui";
-import type { ReadingLocation, ReadingPosition, ReadingSnapshot } from "./content/content-ui";
+import type { ReadingLocation, ReadingSnapshot } from "./content/content-ui";
 import TocUi from "./toc/toc-ui";
 import type ReaderState from "./reader-state";
 import { createReaderSettings } from "@/settings/definitions/setting-catalog";
@@ -34,7 +34,6 @@ export default class ReaderController {
     private signal!: AbortSignal;
     private initialized = false;
     private returningToBookshelf = false;
-    private appearancePosition: ReadingPosition | undefined;
 
     /**
      * UI 负责排版与输入归一，控制器只编排书籍、位置和阅读意图。
@@ -51,6 +50,8 @@ export default class ReaderController {
         this.settingController = new SettingController({
             pageName: PageName.READER,
             container: readerRoot,
+            opener: this.readerUi.settingButton,
+            canOpen: () => this.isActive(),
             settings: createReaderSettings(readerRoot, this.contentUi.root, (mode) => {
                 this.contentUi.setMode(mode);
             }),
@@ -110,7 +111,7 @@ export default class ReaderController {
             this.contentUi.bindLocationChange(async (snapshot) => {
                 if (!this.isActive()) return;
                 this.renderLocation(snapshot);
-                if (!this.appearancePosition) await this.updateProgress(snapshot.location);
+                await this.updateProgress(snapshot.location);
             });
             this.bindEvent(signal);
             this.readerUi.enableReadingControls();
@@ -152,12 +153,12 @@ export default class ReaderController {
     }
 
     /**
-     * 退出或切后台立即保存；外观预览期间保存调整前的源位置。
+     * 退出或切后台立即保存正文维护的稳定源位置。
      */
     private async saveReadingPosition(): Promise<void> {
         if (!this.initialized || this.returningToBookshelf) return;
         this.contentUi.cancelPendingScroll();
-        const location = this.appearancePosition?.location ?? this.contentUi.readProgress();
+        const location = this.contentUi.readProgress();
         if (location) await this.updateProgress(location);
         if (this.isActive()) this.renderLocation();
     }
@@ -283,14 +284,10 @@ export default class ReaderController {
             await this.contentUi.refreshLocation();
         }, signal);
 
-        this.readerUi
-            .bindToggleSettingPanel((opener) => {
-                if (this.canNavigate()) this.settingController.toggle(opener);
-            }, signal)
-            .bindToggleTocPanel(() => {
-                if (!this.canNavigate()) return;
-                this.readerUi.setTocExpanded(this.tocUi.toggleToc());
-            }, signal);
+        this.readerUi.bindToggleTocPanel(() => {
+            if (!this.canNavigate()) return;
+            this.readerUi.setTocExpanded(this.tocUi.toggleToc());
+        }, signal);
 
         this.contentUi.bindBookLinks(async (path, fragment) => {
             if (!this.canNavigate()) return;
@@ -317,27 +314,5 @@ export default class ReaderController {
                 }
                 run(() => this.contentUi.refreshLocation());
             }, signal);
-
-        // 设置预览冻结源位置；关闭后恢复同一内容，分页与滚动互换也使用同一锚点。
-        bind(
-            this.readerUi.root,
-            "appearance-open",
-            () => {
-                this.contentUi.cancelPendingScroll();
-                this.appearancePosition = this.contentUi.readPosition();
-            },
-            { signal }
-        );
-        bind(
-            this.readerUi.root,
-            "appearance-close",
-            async () => {
-                const position = this.appearancePosition;
-                this.appearancePosition = undefined;
-                if (position) this.contentUi.restorePosition(position);
-                await this.contentUi.refreshLocation();
-            },
-            { signal }
-        );
     }
 }

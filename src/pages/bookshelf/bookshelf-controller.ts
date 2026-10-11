@@ -65,6 +65,7 @@ export default class BookshelfController {
         this.settingController = new SettingController({
             pageName: PageName.BOOKSHELF,
             container: this.bookshelfUi.root,
+            opener: this.headerUi.settingButton,
             settings: createBookshelfSettings(this.bookshelfUi.root, this.bookListUi.root),
         });
     }
@@ -441,9 +442,6 @@ export default class BookshelfController {
                 this.renderBooks(null);
             },
             (files) => this.importBooks(files),
-            (opener) => {
-                this.settingController.toggle(opener);
-            },
             signal
         );
 

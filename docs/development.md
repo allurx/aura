@@ -67,11 +67,11 @@ npm run dev
 | TXT 解析  | [parseChapters](../src/domain/chapter/chapter-parser.ts)在写事务前完成解码与分章，按源文件物理行定位内容                                                                                                                                          |
 | EPUB 解析 | [归档读取](../src/domain/file/epub-archive.ts)按需解压与校验资源；[内容解析](../src/domain/file/epub.ts)生成[受控内容模型](../src/domain/file/epub-content.ts)；[章节视图](../src/pages/reader/content/chapter-view.ts)负责安全渲染和图片资源释放 |
 | 持久化    | [数据库 schema](../src/database/database-schema.ts)集中定义元信息与记录类型映射；[连接与初始化](../src/database/database.ts)、[存储操作](../src/database/store.ts)和[事务入口](../src/database/transaction.ts)管理领域数据                        |
-| 外观      | [SettingController](../src/settings/setting-controller.ts)管理主题、常规设置、预览与提交；两页外观各自保存到 `localStorage`                                                                                                                       |
+| 外观      | [SettingController](../src/settings/setting-controller.ts)管理主题、常规设置的提交与重置；两页外观各自保存到 `localStorage`                                                                                                                       |
 
 书架的[窗口列表](../src/pages/bookshelf/book-list/book-list-ui.ts)管理挂载范围、滚动位置和操作焦点；[书卡](../src/pages/bookshelf/book-list/book-card-ui.ts)按书籍 ID 保留原生控件，更新标题、分类和进度。Controller 只提供最新摘要，不通过对象身份控制 DOM 复用。
 
-主题、材质、翻页方式和封面选项共用[原生单选控件骨架](../src/settings/controls/radio-setting-control.ts)，各控件保留自己的图示与说明。设置的值域和应用行为由[定义目录](../src/settings/definitions/)维护，提交、预览与撤销统一归外观 Controller。
+主题、材质、翻页方式和封面选项共用[原生单选控件骨架](../src/settings/controls/radio-setting-control.ts)，各控件保留自己的图示与说明。设置的值域和应用行为由[定义目录](../src/settings/definitions/)维护，连续控件在原生 input 时实时应用并保存有效值，选项在选择时生效；保存及失败恢复统一归外观 Controller，同值的 change 不重复应用或保存，不建立页面预览会话。
 
 数据库名、版本、store 主键、索引 `keyPath` 和 `unique` 由数据库 schema 统一维护，初始化直接读取这份描述。`StoreRecords` 将 store 名称关联到[领域记录类型](../src/domain/)，具体字段由领域类型定义；存储 API 在编译期约束所选 store 与索引名的组合。命名约束见 [AGENTS.md 的工程原则](../AGENTS.md#工程原则)。
 

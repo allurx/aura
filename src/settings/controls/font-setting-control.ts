@@ -33,7 +33,7 @@ export default class FontSettingControl extends StyleSettingControl {
     ) {
         super(fontSetting, listener, signal);
 
-        // 原生选框沿用设置面板的标签、预览、确认与单项重置。
+        // 原生选框沿用设置面板的标签、提交与单项重置。
         this.element.classList.add("font-setting");
         this.selectElement.className = "control";
         // 支持定制原生 select 时，让长名称在独立文本区域截断，保留箭头。
@@ -50,7 +50,7 @@ export default class FontSettingControl extends StyleSettingControl {
             this.selectElement,
             "input",
             (_, select) => {
-                if (select.selectedOptions[0] !== this.readOption) listener.preview(fontSetting, select.value);
+                if (select.selectedOptions[0] !== this.readOption) listener.commit(fontSetting, select.value);
             },
             { signal }
         );

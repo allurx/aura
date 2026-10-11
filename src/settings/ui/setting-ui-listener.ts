@@ -7,18 +7,13 @@ import type Setting from "../definitions/setting";
 import type SettingControlListener from "../controls/setting-control-listener";
 
 /**
- * 设置面板只读取当前显示值并发出操作，完整会话由监听器管理。
+ * 设置面板读取已提交值并发出保存与重置操作。
  */
 export default interface SettingUiListener extends SettingControlListener {
     /**
-     * @returns 当前应显示的显式值，包含尚未确认的预览。
+     * @returns 当前已提交的显式值。
      */
     getValue(setting: Setting): string | undefined;
-
-    /**
-     * 关闭面板前撤销未提交预览；页面销毁不调用此操作。
-     */
-    cancelPreviews(): void;
 
     /**
      * 重置页面常规设置，保留主题。
