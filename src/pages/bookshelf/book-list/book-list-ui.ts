@@ -38,8 +38,6 @@ export default class BookListUi extends Ui {
     private resizeObserver: ResizeObserver | undefined;
     private observedBook: HTMLElement | undefined;
     private frame: number | undefined;
-    // 原生选择器禁用后可能失焦，保留来源供列表重渲染时恢复焦点。
-    private pendingSelection: HTMLSelectElement | null = null;
 
     /**
      * 共同滚动内容只承担总高度，行内排版继续由页面 CSS 决定。
@@ -92,15 +90,6 @@ export default class BookListUi extends Ui {
     }
 
     /**
-     * 导入替换空态入口后接续到书目；全部拒绝时仍可重新导入，不夺走用户已移动的焦点。
-     */
-    public restoreImportFocus(): void {
-        if (document.activeElement !== document.body) return;
-        const target = this.root.querySelector<HTMLElement>(".book-open, .shelf-empty-import") ?? this.root;
-        target.focus({ preventScroll: true });
-    }
-
-    /**
      * 保留可见行中的同一书籍锚点，避免连续换列时逐次改选行首而向前漂移。
      */
     public capturePosition(scrollTop = this.root.scrollTop): BookListPosition | null {
@@ -123,7 +112,7 @@ export default class BookListUi extends Ui {
     public renderBooks(books: BookSummary[], emptyState: BookListEmptyState, position?: BookListPosition | null): void {
         const anchor = position === undefined ? this.capturePosition() : position;
         const anchorIndex = anchor ? this.bookIndexes.get(anchor.bookId) : undefined;
-        const active = document.activeElement === document.body ? this.pendingSelection : document.activeElement;
+        const active = document.activeElement;
         const focused = active instanceof HTMLOptionElement ? active.closest("select") : active;
         const focusedInside = focused instanceof HTMLElement && this.root.contains(focused);
         const focusId = focusedInside ? focused.closest<HTMLElement>(".book")?.dataset["id"] : undefined;
@@ -160,7 +149,7 @@ export default class BookListUi extends Ui {
                 index === undefined ? ".book-open" : focusClass,
                 false
             );
-        } else if (focusedInside && !this.root.contains(focused)) {
+        } else if (focusedInside && !this.root.contains(focused) && document.activeElement === document.body) {
             (this.root.querySelector<HTMLElement>(".book-open, .shelf-empty-import") ?? this.root).focus({
                 preventScroll: true,
             });
@@ -173,6 +162,10 @@ export default class BookListUi extends Ui {
     private updateLayout(position: BookListPosition | null, refreshBooks = false): void {
         if (!this.books.length) return;
         this.position = position;
+        const restoreEmptyFocus =
+            this.windowElement.parentElement !== this.root &&
+            this.root.contains(document.activeElement) &&
+            document.activeElement !== this.root;
         if (this.windowElement.parentElement !== this.root) {
             this.root.dataset["windowed"] = "true";
             this.root.setAttribute("role", "list");
@@ -214,6 +207,8 @@ export default class BookListUi extends Ui {
         )
             return;
         this.layout = layout;
+        // 空态入口刚被替换时，利用首卡已经完成的测量接续焦点，再挂载其余书卡。
+        if (restoreEmptyFocus) sample.querySelector<HTMLElement>(".book-open")?.focus({ preventScroll: true });
         const count = Math.ceil(this.books.length / this.layout.columns);
         const height = count * this.layout.rowHeight + (count - 1) * this.layout.rowGap;
 
@@ -280,11 +275,7 @@ export default class BookListUi extends Ui {
         const focused = active instanceof HTMLOptionElement ? active.closest("select") : active;
         const focusedInside = focused instanceof HTMLElement && this.root.contains(focused);
         const pinnedIds = new Set(this.operatingBooks);
-        for (const element of [
-            focused,
-            this.pendingSelection,
-            ...this.root.querySelectorAll(".book-file-actions:popover-open"),
-        ]) {
+        for (const element of [focused, ...this.root.querySelectorAll(".book-file-actions:popover-open")]) {
             if (element instanceof Element && this.root.contains(element)) {
                 const id = element.closest<HTMLElement>(".book")?.dataset["id"];
                 if (id) pinnedIds.add(id);
@@ -315,13 +306,11 @@ export default class BookListUi extends Ui {
                 card.root.setAttribute("aria-setsize", String(this.books.length));
                 elements.push(card.root);
             }
-            const desired = new Set<Element>(elements);
-            for (const child of Array.from(row.children)) {
-                if (!desired.has(child)) child.remove();
-            }
+            // 先迁移仍保留的书卡，再统一回收；逐行预先移除会打断换列中的焦点和原生控件状态。
             let cursor = row.firstElementChild;
             for (const element of elements) {
                 if (element === cursor) cursor = cursor.nextElementSibling;
+                else if (typeof row.moveBefore === "function" && element.isConnected) row.moveBefore(element, cursor);
                 else row.insertBefore(element, cursor);
             }
         }
@@ -341,10 +330,11 @@ export default class BookListUi extends Ui {
         for (const index of orderedRows) {
             const row = assertExists(this.rows.get(index));
             if (row === cursor) cursor = cursor.nextElementSibling;
+            else if (typeof this.windowElement.moveBefore === "function") this.windowElement.moveBefore(row, cursor);
             else this.windowElement.insertBefore(row, cursor);
         }
 
-        // 网格换列可能移动同一控件，恢复其原生焦点，不改变浏览位置。
+        // 不支持保留节点状态的移动时，仅在协调 DOM 的边界恢复被 insertBefore 打断的焦点。
         if (focusedInside && focused.isConnected && document.activeElement === document.body)
             focused.focus({ preventScroll: true });
         const sample = this.bookCards.values().next().value?.root;
@@ -611,10 +601,11 @@ export default class BookListUi extends Ui {
                 const next = element.value;
                 if (previous === next) return;
 
-                // 定制原生 picker 的焦点可能落在 option，禁用前一并保存来源。
+                // 选择器禁用后可能失焦，接续由本次分类操作负责，不交给列表渲染猜测来源。
                 const id = assertExists(element.closest<HTMLElement>(".book")?.dataset["id"]);
+                const index = this.bookIndexes.get(id) ?? 0;
+                const hadFocus = element.contains(document.activeElement);
                 this.operatingBooks.add(id);
-                if (element.contains(document.activeElement)) this.pendingSelection = element;
                 element.disabled = true;
                 element.setAttribute("aria-busy", "true");
 
@@ -629,10 +620,9 @@ export default class BookListUi extends Ui {
                     this.operatingBooks.delete(id);
                     element.disabled = false;
                     element.removeAttribute("aria-busy");
-                    if (this.pendingSelection === element) {
-                        this.pendingSelection = null;
-                        if (!signal.aborted && element.isConnected && document.activeElement === document.body)
-                            element.focus({ preventScroll: true });
+                    if (!signal.aborted && hadFocus && document.activeElement === document.body) {
+                        if (element.isConnected) element.focus({ preventScroll: true });
+                        else this.focusBook(Math.min(index, this.books.length - 1), ".book-open", false);
                     }
                     if (!signal.aborted) this.scheduleWindow();
                 }
@@ -724,8 +714,12 @@ export default class BookListUi extends Ui {
      */
     private closeFileActions(button: HTMLElement): HTMLElement {
         const owner = assertExists(button.closest<HTMLElement>(".book"));
-        assertExists(owner.querySelector<HTMLElement>(".book-file-actions")).hidePopover();
-        assertExists(owner.querySelector<HTMLElement>(".book-more")).focus({ preventScroll: true });
+        const actions = assertExists(owner.querySelector<HTMLElement>(".book-file-actions"));
+        const focusedInside = actions.contains(document.activeElement);
+        actions.hidePopover();
+        // 部分浏览器关闭 popover 后仍暂留菜单焦点，只为这个原生缺口接续可见入口。
+        const entry = assertExists(owner.querySelector<HTMLElement>(".book-more"));
+        if (focusedInside && document.activeElement !== entry) entry.focus({ preventScroll: true });
         return owner;
     }
 }

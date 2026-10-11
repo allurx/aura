@@ -108,37 +108,64 @@ export default class BookshelfController {
      * 在重新读取期间允许切换分类，响应只更新最新请求且按当前筛选渲染。
      */
     private async refreshBooks(): Promise<void> {
+        const books = await this.readBooks();
+        if (books) this.presentBooks(books);
+    }
+
+    /**
+     * 读取当前摘要；与呈现分开，使导入结束可先恢复原入口焦点，再挂载新书卡。
+     */
+    private async readBooks(): Promise<BookSummary[] | null> {
         const version = ++this.refreshVersion;
         const firstLoad = this.books === null;
         if (firstLoad) this.bookListUi.renderLoadState("loading");
         try {
             const books = await getBookSummaries();
-            if (!this.isActive() || version !== this.refreshVersion) return;
-
-            this.books = books;
-
-            // 读取期间切换查询或分类已清除会话锚点，恢复时使用最新选择。
-            this.renderBooks(firstLoad ? bookshelfSession.position : undefined);
-            if (firstLoad) this.bookListUi.restoreBookFocus(bookshelfSession.focusBookId);
+            return this.isActive() && version === this.refreshVersion ? books : null;
         } catch (error) {
             // 已有摘要仍可保留；首次读取失败则提供原位重试，错误继续进入统一提示。
             if (this.isActive() && version === this.refreshVersion && this.books === null)
                 this.bookListUi.renderLoadState("error");
-            throw new OperationError(
-                "书架暂时无法读取",
-                "Aura 没有读到书架中的书籍信息，当前列表可能不是最新结果。",
-                error,
-                "请关闭提示后点击“重新读取”，或重新打开书架。"
-            );
+            throw this.createRefreshError(error);
         }
+    }
+
+    /**
+     * 读取期间的筛选变化已经更新会话，呈现时按最新筛选和内容位置恢复。
+     */
+    private presentBooks(books: BookSummary[]): void {
+        if (!this.isActive()) return;
+        const firstLoad = this.books === null;
+        this.books = books;
+        try {
+            this.renderBooks(firstLoad ? bookshelfSession.position : undefined);
+            if (firstLoad) this.bookListUi.restoreBookFocus(bookshelfSession.focusBookId);
+        } catch (error) {
+            throw this.createRefreshError(error);
+        }
+    }
+
+    /**
+     * 摘要读取或呈现失败都保留原始原因，并明确当前列表可能尚未更新。
+     */
+    private createRefreshError(error: unknown): OperationError {
+        return new OperationError(
+            "书架暂时无法读取",
+            "Aura 没有读到书架中的书籍信息，当前列表可能不是最新结果。",
+            error,
+            "请关闭提示后点击“重新读取”，或重新打开书架。"
+        );
     }
 
     /**
      * 数据已提交后，刷新失败只报告列表未更新，保留结果以免用户重复执行。
      */
-    private async refreshAfterChange(result: string): Promise<void> {
+    private async refreshAfterChange(
+        result: string,
+        refresh: () => void | Promise<void> = () => this.refreshBooks()
+    ): Promise<void> {
         try {
-            await this.refreshBooks();
+            await refresh();
         } catch (error) {
             throw new OperationError(
                 "操作已完成，书架尚未更新",
@@ -187,15 +214,23 @@ export default class BookshelfController {
         // 批次开始时确定目标分类，文件接受范围与拒绝原因由导入服务统一判断。
         const categoryId = bookshelfSession.categoryId || DEFAULT_CATEGORY_ID;
         let result: BookImportResult = { books: [], rejectedFiles: [] };
+        let refreshedBooks: BookSummary[] | null = null;
 
         // 导入与列表刷新共用忙碌状态，避免结果尚未可见就接受下一次操作。
         this.busy = true;
         try {
             await this.bookshelfUi.runBusy(`正在导入 ${String(files.length)} 个文件…`, async (setStatus) => {
                 result = await importBooks(files, categoryId, setStatus);
-                await this.refreshAfterChange(this.describeImport(result));
+                await this.refreshAfterChange(this.describeImport(result), async () => {
+                    refreshedBooks = await this.readBooks();
+                });
             });
             if (!this.isActive()) return;
+
+            // 同一收尾链内先还原入口焦点，再更新列表，避免焦点强制排版刚挂载的整窗书卡。
+            await this.refreshAfterChange(this.describeImport(result), () => {
+                if (refreshedBooks) this.presentBooks(refreshedBooks);
+            });
 
             // 部分跳过用结果对话框展示明细，全成功只提供短暂反馈。
             const skipped = result.rejectedFiles.length;
@@ -236,7 +271,6 @@ export default class BookshelfController {
             throw error;
         } finally {
             this.busy = false;
-            if (this.isActive()) this.bookListUi.restoreImportFocus();
         }
     }
 
