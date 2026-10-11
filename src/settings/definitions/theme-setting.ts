@@ -25,6 +25,9 @@ export default class ThemeSetting extends Setting {
         [Theme.STARRY, "星夜"],
         [Theme.DUSK, "暮色"],
         [Theme.OCEAN, "深海"],
+        [Theme.EMBER, "烛光"],
+        [Theme.FOREST, "松影"],
+        [Theme.GRAPHITE, "墨夜"],
     ]);
 
     public constructor() {

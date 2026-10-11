@@ -142,6 +142,14 @@ export default class Dialog {
             this.cancel();
         });
 
+        bind(this.dialogElement, "keydown", (event: KeyboardEvent) => {
+            // 背景侧栏跨断点重新展开时，原生关闭请求可能被截走；Escape 仍只取消当前确认。
+            if (event.key !== "Escape" || event.defaultPrevented) return;
+            event.preventDefault();
+            event.stopPropagation();
+            this.cancel();
+        });
+
         // 显式操作入口只设置结果，继续交给统一关闭流程处理。
         bind(this.confirmBtnElement, "click", () => {
             this.close("confirm");

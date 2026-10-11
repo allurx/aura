@@ -11,6 +11,7 @@ import Ui from "@/components/ui";
  * 分类标题、搜索和导入工具栏。
  */
 export default class HeaderUi extends Ui {
+    public readonly settingButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel"));
     private readonly search = assertExists(this.root.querySelector<HTMLInputElement>("#book-search"));
     private readonly input = assertExists(this.root.querySelector<HTMLInputElement>("#book-input"));
     private readonly importButton = assertExists(this.root.querySelector<HTMLButtonElement>("#import-books"));
@@ -42,19 +43,8 @@ export default class HeaderUi extends Ui {
     public bindEvents(
         onSearch: (query: string) => void,
         onImport: (files: File[]) => Promise<void>,
-        onAppearance: (opener: HTMLElement) => void,
         signal: AbortSignal
     ): void {
-        // 保留外观入口节点，面板关闭后可将焦点归还给原按钮。
-        bind(
-            assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel")),
-            "click",
-            (_, button) => {
-                onAppearance(button);
-            },
-            { signal }
-        );
-
         // 输入法完成后才筛选，避免候选阶段反复重建列表和播报数量。
         const updateSearch = (): void => {
             if (this.search.value !== this.renderedQuery) onSearch(this.search.value);

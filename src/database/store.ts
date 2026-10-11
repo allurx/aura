@@ -49,30 +49,63 @@ export async function getAllRecords<S extends StoreName>(transaction: IDBTransac
 }
 
 /**
+ * 逐条读取并同步投影较大的记录，避免一次反序列化全部内容；只保留调用方需要的结果。
+ * project 不等待异步工作，游标推进及最终提交仍由当前事务管理。
+ */
+export function mapRecords<S extends StoreName, T>(
+    transaction: IDBTransaction,
+    store: S,
+    project: (record: StoreRecords[S]) => T
+): Promise<T[]> {
+    return new Promise<T[]>((resolve, reject) => {
+        const results: T[] = [];
+        const request = transaction.objectStore(store).openCursor();
+        request.onsuccess = () => {
+            const cursor = request.result;
+            if (!cursor) {
+                resolve(results);
+                return;
+            }
+
+            try {
+                const record: unknown = cursor.value;
+                results.push(project(record as StoreRecords[S]));
+                cursor.continue();
+            } catch (error) {
+                reject(error instanceof Error ? error : new Error("Failed to project stored record", { cause: error }));
+            }
+        };
+        request.onerror = () => {
+            reject(request.error ?? new Error("Failed to read records"));
+        };
+    });
+}
+
+/**
  * 新增记录，主键或唯一索引冲突时由事务回滚。
  */
-export function addRecord<S extends StoreName>(transaction: IDBTransaction, store: S, record: StoreRecords[S]) {
+export async function addRecord<S extends StoreName>(transaction: IDBTransaction, store: S, record: StoreRecords[S]) {
     return requestResult(transaction.objectStore(store).add(record));
 }
 
 /**
  * 按主键写入记录，保存的是调用方提供的完整快照。
  */
-export function putRecord<S extends StoreName>(transaction: IDBTransaction, store: S, record: StoreRecords[S]) {
+export async function putRecord<S extends StoreName>(transaction: IDBTransaction, store: S, record: StoreRecords[S]) {
     return requestResult(transaction.objectStore(store).put(record));
 }
 
 /**
  * 删除主键对应的记录。
  */
-export function deleteRecord(transaction: IDBTransaction, store: StoreName, key: IDBValidKey) {
+export async function deleteRecord(transaction: IDBTransaction, store: StoreName, key: IDBValidKey) {
     return requestResult(transaction.objectStore(store).delete(key));
 }
 
 /**
  * 统计索引命中的记录，用于判断共享正文是否仍被引用。
  */
-export function countRecordsByIndex<S extends StoreName>(
+export async function countRecordsByIndex<S extends StoreName>(
     transaction: IDBTransaction,
     store: S,
     index: IndexName<NoInfer<S>>,
@@ -84,7 +117,7 @@ export function countRecordsByIndex<S extends StoreName>(
 /**
  * 清空一个存储，跨存储原子性由调用方的事务保证。
  */
-export function clearRecords(transaction: IDBTransaction, store: StoreName) {
+export async function clearRecords(transaction: IDBTransaction, store: StoreName) {
     return requestResult(transaction.objectStore(store).clear());
 }
 

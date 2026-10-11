@@ -13,18 +13,23 @@ export function run(handler: () => Promise<void> | void): void {
 }
 
 /**
+ * Document 的事件映射包含页面使用的标准 DOM 事件；自定义事件保持基础 Event 契约。
+ */
+type BoundEvent<K extends string> = K extends keyof DocumentEventMap ? DocumentEventMap[K] : Event;
+
+/**
  * 为已有节点绑定事件，保留原生监听选项及页面生命周期信号。
  */
-export function bind<E extends Event, N extends Node>(
+export function bind<N extends Node, K extends string>(
     targetElement: N,
-    eventType: string,
-    handler: (event: E, targetElement: N) => Promise<void> | void,
+    eventType: K,
+    handler: (event: BoundEvent<NoInfer<K>>, targetElement: N) => Promise<void> | void,
     options: AddEventListenerOptions = {}
 ): void {
     targetElement.addEventListener(
         eventType,
         (event) => {
-            run(() => handler(event as E, targetElement));
+            run(() => handler(event as BoundEvent<K>, targetElement));
         },
         options
     );

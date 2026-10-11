@@ -5,20 +5,10 @@
 
 #setting {
     .theme-setting {
-        position: relative;
         padding: 0 0 0.4rem;
 
         > .reset-setting {
-            position: absolute;
             top: 0;
-            right: 0;
-        }
-
-        fieldset {
-            min-width: 0;
-            padding: 0;
-            margin: 0;
-            border: 0;
         }
 
         legend {
@@ -26,7 +16,7 @@
         }
     }
 
-    /* 九个主题同时可见；紧凑色样与名称横排，不与材质的大样片争夺空间。 */
+    /* 主题按三列排列；紧凑色样与名称横排，不与材质的大样片争夺空间。 */
     .theme-options {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -36,7 +26,6 @@
     }
 
     .theme-option {
-        position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -47,22 +36,11 @@
         border: 1px solid transparent;
         border-radius: 10px;
         background: transparent;
-        cursor: pointer;
         transition:
             background-color var(--motion-duration-fast) var(--motion-ease),
             box-shadow var(--motion-duration-fast) var(--motion-ease),
             border-color var(--motion-duration-fast) var(--motion-ease),
             transform var(--motion-duration-fast) var(--motion-ease);
-
-        input {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            opacity: 0;
-            cursor: inherit;
-        }
 
         &:has(input:checked) {
             border-color: color-mix(in srgb, var(--setting-accent-color) 52%, transparent);
@@ -98,7 +76,6 @@
     }
 
     .theme-caption {
-        pointer-events: none;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -120,7 +97,6 @@
     }
 
     .theme-swatch {
-        pointer-events: none;
         position: relative;
         display: block;
         flex: 0 1 auto;

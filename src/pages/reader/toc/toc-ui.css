@@ -16,6 +16,9 @@
     inset: calc(var(--viewport-top) + var(--toc-top)) var(--toc-right) calc(var(--viewport-bottom) + var(--toc-bottom))
         auto;
     margin: 0;
+    display: none;
+    /* 关闭后离散过渡仍会绘制面板，纵向布局必须保持到退出结束。 */
+    flex-direction: column;
     width: min(26rem, calc(100% - var(--toc-left) - var(--toc-right)));
     height: calc(var(--viewport-height) - var(--toc-top) - var(--toc-bottom));
     container: toc / size;
@@ -28,7 +31,7 @@
     background-color: var(--appearance-panel);
     font-size: 1rem;
     line-height: 1.5;
-    overflow: clip;
+    overflow: hidden;
     scrollbar-gutter: auto;
     box-shadow: var(--appearance-shadow-floating);
     opacity: 0;
@@ -42,7 +45,6 @@
 
     &[open] {
         display: flex;
-        flex-direction: column;
         opacity: 1;
         transform: none;
         pointer-events: auto;
@@ -52,6 +54,22 @@
             transform: var(--toc-enter-transform);
         }
     }
+
+    /* 自由放置后围绕当前面板淡入淡出，不再沿原停靠边滑行。 */
+    &[data-panel-positioned] {
+        --toc-enter-transform: translateY(6px);
+        inset: var(--panel-top) auto auto var(--panel-left);
+        width: var(--panel-width);
+        height: var(--panel-height);
+        max-width: var(--panel-maximum-width);
+        max-height: var(--panel-maximum-height);
+    }
+
+    &[data-panel-interacting] {
+        transform: none;
+        transition: none;
+    }
+
     &::backdrop {
         background: var(--appearance-backdrop);
         backdrop-filter: blur(3px);
@@ -183,14 +201,24 @@
     overflow-y: auto;
     padding-block: 0 16px;
     overscroll-behavior: contain;
+    overflow-anchor: none;
 
-    > button {
+    > .toc-window {
+        position: relative;
+    }
+
+    .toc-row {
+        position: absolute;
+        inset-inline: 0;
+        padding-bottom: 2px;
+    }
+
+    .toc-row > button {
         position: relative;
         display: block;
         width: 100%;
         min-height: 48px;
         padding: 12px;
-        margin-bottom: 2px;
         border: 1px solid transparent;
         border-radius: 10px;
         background: transparent;
@@ -206,7 +234,7 @@
             border-color var(--motion-duration-fast) var(--motion-ease),
             color var(--motion-duration-fast) var(--motion-ease);
 
-        &:not(:last-child)::after {
+        &::after {
             content: "";
             position: absolute;
             inset: auto 0 -2px;
@@ -241,7 +269,11 @@
         }
     }
 
-    &[aria-busy="true"] > button {
+    .toc-row[data-last] > button::after {
+        display: none;
+    }
+
+    &[aria-busy="true"] .toc-row > button {
         cursor: progress;
     }
 }
@@ -274,7 +306,7 @@
     #reader > #toc::backdrop,
     #reader > #toc .toc-search,
     #reader > #toc .locate-current,
-    #reader > #toc > .main > button {
+    #reader > #toc .toc-row > button {
         transition: none;
     }
 

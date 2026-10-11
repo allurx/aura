@@ -5,20 +5,27 @@
 
 import type Setting from "../definitions/setting";
 import type SettingControlListener from "../controls/setting-control-listener";
+import type { PanelFrameBinding } from "@/components/dialog/panel-frame";
+import type { PanelName } from "../models/page-appearance";
 
 /**
- * 设置面板只读取当前显示值并发出操作，完整会话由监听器管理。
+ * 设置面板读取已提交值并发出保存与重置操作。
  */
 export default interface SettingUiListener extends SettingControlListener {
     /**
-     * @returns 当前应显示的显式值，包含尚未确认的预览。
+     * 面板几何与当前页面外观共用持久化和重置边界。
      */
-    getValue(setting: Setting): string | undefined;
+    getPanelFrame(name: PanelName): PanelFrameBinding;
 
     /**
-     * 关闭面板前撤销未提交预览；页面销毁不调用此操作。
+     * 判断常规外观重置是否还需要清除浮层布局。
      */
-    cancelPreviews(): void;
+    hasCustomLayout(): boolean;
+
+    /**
+     * @returns 当前已提交的显式值。
+     */
+    getValue(setting: Setting): string | undefined;
 
     /**
      * 重置页面常规设置，保留主题。

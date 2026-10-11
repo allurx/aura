@@ -16,16 +16,14 @@ export default class WidthSynchronizer {
     public constructor(private readonly width: WidthSetting) {}
 
     /**
-     * 合并连续 inline 变化，排除已保存值、面板预览和已失效的观察结果。
+     * 合并连续 inline 变化，排除已保存值和已失效的观察结果。
      */
     public start(
         {
             getValue,
-            isPreviewing,
             commit,
         }: {
             getValue: () => string | undefined;
-            isPreviewing: () => boolean;
             commit: (value: string) => void;
         },
         signal: AbortSignal
@@ -43,7 +41,7 @@ export default class WidthSynchronizer {
             this.timer = window.setTimeout(() => {
                 this.timer = undefined;
                 if (signal.aborted || this.width.readExternalValue() !== value) return;
-                if (isPreviewing() || getValue() === value) return;
+                if (getValue() === value) return;
 
                 run(() => {
                     commit(value);

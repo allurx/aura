@@ -4,52 +4,28 @@
  */
 
 #reader > #footer {
-    bottom: 0;
-    --ui-padding-left: 12px;
-    --ui-padding-right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     max-height: 100%;
     align-items: center;
-    gap: 6px;
-    padding: 8px max(var(--ui-padding-right), env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom))
-        max(var(--ui-padding-left), env(safe-area-inset-left));
+    gap: 8px;
+    padding: 8px 10px;
+    font-family: var(--ui-font-family);
     font-size: 13px;
     color: var(--reader-color);
     background-color: var(--reader-surface);
-    border-top: 1px solid color-mix(in srgb, currentColor 7%, transparent);
-    box-shadow: 0 -6px 20px color-mix(in srgb, var(--appearance-shadow-color) 8%, transparent);
-    user-select: none;
     overflow-y: auto;
 
-    .mobile-page-navigation {
-        display: grid;
-        grid-template-columns: 44px minmax(0, 1fr) 44px;
-        align-items: center;
-        gap: 8px;
-
-        > .reader-action {
-            min-height: 44px;
-            width: 44px;
-            border-radius: 50%;
-            background: color-mix(in srgb, currentColor 5%, transparent);
-
-            > span:last-child {
-                display: none;
-            }
-        }
-    }
-
     .reading-location {
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
         align-items: center;
-        justify-content: center;
-        gap: 2px;
+        gap: 12px;
         min-width: 0;
-        padding-inline: 8px;
+        min-height: 32px;
+        padding-inline: 6px;
         line-height: 1.4;
-        text-align: center;
     }
 
     #chapter-title {
@@ -58,12 +34,13 @@
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
+        font-weight: 500;
     }
 
     .reading-status {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         flex: 0 0 auto;
     }
 
@@ -71,27 +48,49 @@
         display: grid;
         /* 按实际可用宽度换行，不能让列宽小于按钮的最小点击尺寸。 */
         grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
-        gap: 6px;
+        gap: 4px;
+        padding-top: 8px;
+        border-top: 1px solid color-mix(in srgb, currentColor 10%, transparent);
 
         > .reader-action {
+            --icon-size: 22px;
             flex-direction: column;
             width: 100%;
             min-width: 44px;
             min-height: 56px;
-            padding: 6px 2px;
-            gap: 3px;
+            padding: 6px 4px;
+            gap: 4px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .appearance-mark {
+            flex-basis: auto;
+            width: 24px;
+            height: 22px;
+            font-size: 22px;
         }
     }
 
     @media (max-height: 500px) {
+        bottom: max(8px, env(safe-area-inset-bottom));
         gap: 4px;
-        padding-top: 4px;
-        padding-bottom: max(4px, env(safe-area-inset-bottom));
+        padding-block: 6px;
+
+        .reading-location {
+            min-height: 28px;
+        }
+
+        .mobile-actions {
+            padding-top: 4px;
+        }
 
         .mobile-actions > .reader-action {
-            min-height: 48px;
-            padding-block: 4px;
-            gap: 1px;
+            flex-direction: row;
+            min-height: 44px;
+            padding-block: 6px;
+            gap: 7px;
         }
     }
 }
@@ -108,6 +107,31 @@
 
     &[hidden] {
         display: none;
+    }
+
+    .page-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        min-width: 6ch;
+        line-height: 1.4;
+        transition: opacity var(--motion-duration-fast) var(--motion-ease);
+    }
+
+    :is(.current-page, .total-pages) {
+        min-width: 2ch;
+        text-align: center;
+    }
+
+    &[aria-busy="true"] .page-count {
+        opacity: 0.65;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .page-count {
+            transition: none;
+        }
     }
 }
 

@@ -5,7 +5,7 @@
 
 import HeaderUi from "./header/header-ui";
 import NavUi from "./nav/nav-ui";
-import BookListUi, { type BookListEmptyState } from "./book-list/book-list-ui";
+import BookListUi, { type BookListEmptyState, type BookListPosition } from "./book-list/book-list-ui";
 import BookshelfUi from "./bookshelf-ui";
 import {
     BookImportError,
@@ -65,6 +65,7 @@ export default class BookshelfController {
         this.settingController = new SettingController({
             pageName: PageName.BOOKSHELF,
             container: this.bookshelfUi.root,
+            opener: this.headerUi.settingButton,
             settings: createBookshelfSettings(this.bookshelfUi.root, this.bookListUi.root),
         });
     }
@@ -98,7 +99,7 @@ export default class BookshelfController {
      */
     private readBook(bookId: string): void {
         if (!this.isActive() || this.busy) return;
-        bookshelfSession.scrollTop = this.bookListUi.root.scrollTop;
+        bookshelfSession.position = this.bookListUi.capturePosition();
         bookshelfSession.focusBookId = bookId;
         this.onReadBook(bookId);
     }
@@ -107,38 +108,64 @@ export default class BookshelfController {
      * 在重新读取期间允许切换分类，响应只更新最新请求且按当前筛选渲染。
      */
     private async refreshBooks(): Promise<void> {
+        const books = await this.readBooks();
+        if (books) this.presentBooks(books);
+    }
+
+    /**
+     * 读取当前摘要；与呈现分开，使导入结束可先恢复原入口焦点，再挂载新书卡。
+     */
+    private async readBooks(): Promise<BookSummary[] | null> {
         const version = ++this.refreshVersion;
         const firstLoad = this.books === null;
         if (firstLoad) this.bookListUi.renderLoadState("loading");
         try {
             const books = await getBookSummaries();
-            if (!this.isActive() || version !== this.refreshVersion) return;
-            this.books = books;
-            this.renderBooks();
-            // 查询或分类改变已将会话位置清零，不能再恢复进入页面时的旧位置。
-            if (firstLoad) {
-                this.bookListUi.root.scrollTop = bookshelfSession.scrollTop;
-                this.bookListUi.restoreBookFocus(bookshelfSession.focusBookId);
-            }
+            return this.isActive() && version === this.refreshVersion ? books : null;
         } catch (error) {
             // 已有摘要仍可保留；首次读取失败则提供原位重试，错误继续进入统一提示。
             if (this.isActive() && version === this.refreshVersion && this.books === null)
                 this.bookListUi.renderLoadState("error");
-            throw new OperationError(
-                "书架暂时无法读取",
-                "Aura 没有读到书架中的书籍信息，当前列表可能不是最新结果。",
-                error,
-                "请关闭提示后点击“重新读取”，或重新打开书架。"
-            );
+            throw this.createRefreshError(error);
         }
+    }
+
+    /**
+     * 读取期间的筛选变化已经更新会话，呈现时按最新筛选和内容位置恢复。
+     */
+    private presentBooks(books: BookSummary[]): void {
+        if (!this.isActive()) return;
+        const firstLoad = this.books === null;
+        this.books = books;
+        try {
+            this.renderBooks(firstLoad ? bookshelfSession.position : undefined);
+            if (firstLoad) this.bookListUi.restoreBookFocus(bookshelfSession.focusBookId);
+        } catch (error) {
+            throw this.createRefreshError(error);
+        }
+    }
+
+    /**
+     * 摘要读取或呈现失败都保留原始原因，并明确当前列表可能尚未更新。
+     */
+    private createRefreshError(error: unknown): OperationError {
+        return new OperationError(
+            "书架暂时无法读取",
+            "Aura 没有读到书架中的书籍信息，当前列表可能不是最新结果。",
+            error,
+            "请关闭提示后点击“重新读取”，或重新打开书架。"
+        );
     }
 
     /**
      * 数据已提交后，刷新失败只报告列表未更新，保留结果以免用户重复执行。
      */
-    private async refreshAfterChange(result: string): Promise<void> {
+    private async refreshAfterChange(
+        result: string,
+        refresh: () => void | Promise<void> = () => this.refreshBooks()
+    ): Promise<void> {
         try {
-            await this.refreshBooks();
+            await refresh();
         } catch (error) {
             throw new OperationError(
                 "操作已完成，书架尚未更新",
@@ -150,9 +177,9 @@ export default class BookshelfController {
     }
 
     /**
-     * 分类和书名搜索共用同一摘要列表，不发起并发分类查询。
+     * 分类和书名搜索共用全部摘要；位置由列表按内容锚点恢复，null 表示回到顶部。
      */
-    private renderBooks(): void {
+    private renderBooks(position?: BookListPosition | null): void {
         const category = getCategory(bookshelfSession.categoryId)?.name ?? "全部书籍";
         this.navUi.setActive(bookshelfSession.categoryId);
         if (this.books === null) {
@@ -174,7 +201,7 @@ export default class BookshelfController {
             : bookshelfSession.categoryId && this.books.length > 0
               ? "category"
               : "library";
-        this.bookListUi.renderBooks(books, emptyState);
+        this.bookListUi.renderBooks(books, emptyState, position);
         this.headerUi.render(category, books.length, bookshelfSession.search);
     }
 
@@ -187,15 +214,23 @@ export default class BookshelfController {
         // 批次开始时确定目标分类，文件接受范围与拒绝原因由导入服务统一判断。
         const categoryId = bookshelfSession.categoryId || DEFAULT_CATEGORY_ID;
         let result: BookImportResult = { books: [], rejectedFiles: [] };
+        let refreshedBooks: BookSummary[] | null = null;
 
         // 导入与列表刷新共用忙碌状态，避免结果尚未可见就接受下一次操作。
         this.busy = true;
         try {
             await this.bookshelfUi.runBusy(`正在导入 ${String(files.length)} 个文件…`, async (setStatus) => {
                 result = await importBooks(files, categoryId, setStatus);
-                await this.refreshAfterChange(this.describeImport(result));
+                await this.refreshAfterChange(this.describeImport(result), async () => {
+                    refreshedBooks = await this.readBooks();
+                });
             });
             if (!this.isActive()) return;
+
+            // 同一收尾链内先还原入口焦点，再更新列表，避免焦点强制排版刚挂载的整窗书卡。
+            await this.refreshAfterChange(this.describeImport(result), () => {
+                if (refreshedBooks) this.presentBooks(refreshedBooks);
+            });
 
             // 部分跳过用结果对话框展示明细，全成功只提供短暂反馈。
             const skipped = result.rejectedFiles.length;
@@ -236,7 +271,6 @@ export default class BookshelfController {
             throw error;
         } finally {
             this.busy = false;
-            if (this.isActive()) this.bookListUi.restoreImportFocus();
         }
     }
 
@@ -341,9 +375,9 @@ export default class BookshelfController {
             }
             if (!this.isActive()) return true;
 
-            // 新快照让列表只更新归属发生变化的书卡，其余摘要可继续复用。
+            // 持久化结果更新摘要，列表按书籍 ID 更新已有控件。
             this.books = assertExists(this.books).map((item) =>
-                item === summary ? { ...item, book: { ...item.book, categoryId: category.id } } : item
+                item.book.id === bookId ? { ...item, book: { ...item.book, categoryId: category.id } } : item
             );
             this.renderBooks();
             this.bookshelfUi.showFeedback(`已移至${category.name}`);
@@ -425,9 +459,8 @@ export default class BookshelfController {
                 category: (categoryId) => {
                     if (this.busy) return;
                     bookshelfSession.categoryId = categoryId;
-                    bookshelfSession.scrollTop = 0;
-                    this.renderBooks();
-                    this.bookListUi.root.scrollTop = 0;
+                    bookshelfSession.position = null;
+                    this.renderBooks(null);
                 },
                 clear: () => this.clearBookshelf(),
                 reset: () => this.resetData(),
@@ -439,14 +472,10 @@ export default class BookshelfController {
         this.headerUi.bindEvents(
             (query) => {
                 bookshelfSession.search = query;
-                bookshelfSession.scrollTop = 0;
-                this.renderBooks();
-                this.bookListUi.root.scrollTop = 0;
+                bookshelfSession.position = null;
+                this.renderBooks(null);
             },
             (files) => this.importBooks(files),
-            (opener) => {
-                this.settingController.toggle(opener);
-            },
             signal
         );
 
@@ -469,13 +498,13 @@ export default class BookshelfController {
             signal
         );
 
-        // 将滚动位置写入内存会话，返回书架时由初始化流程恢复。
+        // 将内容锚点写入内存会话，返回时不依赖旧布局的像素位置。
         bind(
             this.bookListUi.root,
             "scroll",
             () => {
                 // 加载和错误提示不是书籍列表，不能覆盖仍待恢复的浏览位置。
-                if (this.books !== null) bookshelfSession.scrollTop = this.bookListUi.root.scrollTop;
+                if (this.books !== null) bookshelfSession.position = this.bookListUi.capturePosition();
             },
             { signal, passive: true }
         );

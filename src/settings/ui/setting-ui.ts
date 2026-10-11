@@ -8,6 +8,7 @@ import { PageName } from "@/constants/page-name";
 import type SettingConfiguration from "../models/setting-configuration";
 import Ui from "@/components/ui";
 import enableLightDismiss from "@/components/dialog/light-dismiss";
+import enablePanelFrame, { type PanelFrameUi } from "@/components/dialog/panel-frame";
 import { assertExists } from "@/utils/assert-util";
 import { createElementFromHtml } from "@/utils/dom-util";
 import { bind, run } from "@/utils/event-util";
@@ -32,13 +33,18 @@ export default class SettingUi extends Ui {
     private listener: SettingUiListener | undefined;
     private controlList: SettingControlList | undefined;
     private generalSettings: readonly Setting[] = [];
-    private opener: HTMLElement | undefined;
-    private returnFocusTarget: HTMLElement | undefined;
+    private readonly pendingDefaults = new Set<Setting>();
+    private defaultObserver: ResizeObserver | undefined;
+    private panelFrame: PanelFrameUi | undefined;
 
     /**
      * @param container - 设置对话框的挂载容器。
      */
-    public constructor(container: HTMLElement) {
+    public constructor(
+        private readonly container: HTMLElement,
+        private readonly opener: HTMLButtonElement,
+        private readonly canOpen: () => boolean
+    ) {
         super(container.appendChild(createElementFromHtml<HTMLDialogElement>(SettingUi.template)));
 
         // 主题和常规设置分别就位，后续只更新控件的当前值。
@@ -66,22 +72,84 @@ export default class SettingUi extends Ui {
             this.itemsElement,
             this.themeElement,
             configuration,
-            listener,
+            {
+                commit: (setting, value) => {
+                    // input 已实时保存；关闭后的迟到事件不能继续改变当前页面外观。
+                    if (this.root.open) listener.commit(setting, value);
+                },
+                resetSetting: (setting) => {
+                    listener.resetSetting(setting);
+                },
+            },
             signal
         );
-        this.refresh();
+        // 样式默认值在自然布局后读取，首个绘制前准备完整控件值。
+        this.defaultObserver = new ResizeObserver(() => {
+            this.defaultObserver?.disconnect();
+            const settings = [...this.pendingDefaults];
+            this.pendingDefaults.clear();
+            run(() => {
+                this.renderSettings(settings);
+            });
+        });
+        for (const setting of configuration.settings) this.pendingDefaults.add(setting);
+        this.defaultObserver.observe(this.container);
 
         enableLightDismiss(this.root, signal);
-
-        // 面板只发出重置操作，预览撤销、提交与刷新由会话所有者协调。
-        bind(
-            this.closeElement,
-            "click",
-            () => {
-                this.close();
-            },
-            { signal }
+        this.panelFrame = enablePanelFrame(
+            this.root,
+            assertExists(this.root.querySelector<HTMLElement>(":scope > header")),
+            () => !this.container.hasAttribute("data-mobile-controls"),
+            listener.getPanelFrame("settings"),
+            signal
         );
+
+        // 支持声明式命令时由按钮原生激活模态，脚本只维护外观会话和业务准入。
+        if ("commandForElement" in HTMLButtonElement.prototype) {
+            this.opener.commandForElement = this.root;
+            this.opener.command = "show-modal";
+            this.closeElement.commandForElement = this.root;
+            this.closeElement.command = "request-close";
+            bind(
+                this.root,
+                "command",
+                (event) => {
+                    if (!(event instanceof CommandEvent) || event.command !== "show-modal") return;
+                    if (event.source !== this.opener || !this.canOpen()) {
+                        event.preventDefault();
+                        return;
+                    }
+                    try {
+                        this.prepareOpen();
+                    } catch (error) {
+                        event.preventDefault();
+                        throw error;
+                    }
+                },
+                { signal }
+            );
+        } else {
+            bind(
+                this.opener,
+                "click",
+                () => {
+                    if (!this.canOpen() || this.root.open) return;
+                    this.prepareOpen();
+                    this.root.showModal();
+                },
+                { signal }
+            );
+            bind(
+                this.closeElement,
+                "click",
+                () => {
+                    this.root.close();
+                },
+                { signal }
+            );
+        }
+
+        // 面板只发出重置操作，保存与刷新由监听器协调。
         bind(
             this.resetElement,
             "click",
@@ -101,10 +169,11 @@ export default class SettingUi extends Ui {
         );
         bind(
             this.root,
-            "cancel",
-            (event) => {
-                event.preventDefault();
-                this.close();
+            "close",
+            () => {
+                if (this.root.open) return;
+                this.root.inert = true;
+                this.opener.setAttribute("aria-expanded", "false");
             },
             { signal }
         );
@@ -112,35 +181,12 @@ export default class SettingUi extends Ui {
             this.root,
             "keydown",
             (event: KeyboardEvent) => {
-                if (event.key === "Escape") event.stopPropagation();
-            },
-            { signal }
-        );
-
-        // 响应式布局隐藏宽度输入时，焦点始终回到可见的面板控件。
-        const widthVisibility = window.matchMedia("(max-width: 800px), (max-height: 500px) and (pointer: coarse)");
-        widthVisibility.addEventListener(
-            "change",
-            () => {
-                this.restoreVisibleFocus();
-            },
-            { signal }
-        );
-        bind(
-            this.root,
-            "focusout",
-            (event: FocusEvent) => {
-                const focused = event.target;
-                if (!(focused instanceof HTMLElement) || event.relatedTarget !== null) return;
-                queueMicrotask(() => {
-                    if (
-                        !signal.aborted &&
-                        document.activeElement === document.body &&
-                        focused.getClientRects().length === 0
-                    ) {
-                        this.restoreVisibleFocus();
-                    }
-                });
+                if (event.key !== "Escape" || event.isComposing) return;
+                event.preventDefault();
+                event.stopPropagation();
+                // 书架侧栏跨断点重新展示后，显式请求当前模态取消，不依赖关闭观察器的先后次序。
+                if (typeof this.root.requestClose === "function") this.root.requestClose();
+                else if (this.root.dispatchEvent(new Event("cancel", { cancelable: true }))) this.root.close();
             },
             { signal }
         );
@@ -156,17 +202,16 @@ export default class SettingUi extends Ui {
                     !event.target.open &&
                     (document.activeElement === document.body || event.target.contains(document.activeElement))
                 ) {
-                    this.restoreVisibleFocus();
+                    this.restoreVisibleFocus(event.target);
                 }
             },
             { capture: true, signal }
         );
 
         // 视口变化后同步范围并维持可见焦点，面板正文独立滚动。
-        const observer = new ResizeObserver(() => {
-            if (!this.root.open) return;
-            this.restoreVisibleFocus();
-            const focused = document.activeElement;
+        const observer = new ResizeObserver((entries) => {
+            if (this.root.open) this.restoreVisibleFocus();
+            const focused = this.root.open ? document.activeElement : null;
             if (focused instanceof HTMLElement && this.bodyElement.contains(focused)) {
                 const viewport = this.bodyElement.getBoundingClientRect();
                 const control = focused.getBoundingClientRect();
@@ -180,59 +225,76 @@ export default class SettingUi extends Ui {
                 if (control.top < top) this.bodyElement.scrollTop += control.top - top;
                 else if (control.bottom > bottom) this.bodyElement.scrollTop += control.bottom - bottom;
             }
+            // 页面尺寸影响响应式默认值；面板开合或分组展开只维护面板自身可见范围。
+            if (entries.some((entry) => entry.target === this.container))
+                run(() => {
+                    this.renderSettings();
+                });
         });
         observer.observe(this.bodyElement);
-        window.addEventListener(
-            "resize",
-            () => {
-                run(() => {
-                    this.refresh();
-                    this.restoreVisibleFocus();
-                });
-            },
-            { signal }
-        );
+        observer.observe(this.container);
 
-        // 销毁时释放观察器与模态状态，不向即将移除的页面回写预览。
+        // 销毁时释放观察器、待解析默认值和原生模态状态。
         signal.addEventListener(
             "abort",
             () => {
                 observer.disconnect();
-                this.close(true);
+                this.defaultObserver?.disconnect();
+                this.pendingDefaults.clear();
+                this.root.close();
+                this.root.inert = true;
+                this.opener.setAttribute("aria-expanded", "false");
             },
             { once: true }
         );
     }
 
     /**
-     * 打开或关闭面板；入口位于已收起的抽屉时，可指定另一个可见焦点目标。
+     * 按会话给出的显示值刷新受影响的控件；未指定范围时读取全部当前默认值。
      */
-    public toggle(opener: HTMLElement, returnFocusTarget = opener): void {
-        if (this.root.open) this.close();
-        else this.open(opener, returnFocusTarget);
+    public refresh(settings?: readonly Setting[]): void {
+        this.panelFrame?.refresh();
+        this.renderSettings(settings, settings !== undefined);
     }
 
     /**
-     * 按会话给出的显示值刷新控件；连续输入只刷新对应项，保留其他原生控件的状态。
+     * 面板几何提交只刷新重置入口，不中断正在进行的拖动或缩放。
      */
-    public refresh(setting?: Setting): void {
+    public refreshResetState(): void {
+        const listener = this.listener;
+        if (!listener) return;
+        const customized =
+            this.generalSettings.some((item) => listener.getValue(item) !== undefined) || listener.hasCustomLayout();
+        const disabled = String(!customized);
+        if (this.resetGeneralElement.getAttribute("aria-disabled") !== disabled)
+            this.resetGeneralElement.setAttribute("aria-disabled", disabled);
+    }
+
+    /**
+     * 已提交的显式值即时显示；重置产生的 CSS 默认值合并到下一次自然布局通知。
+     */
+    private renderSettings(settings?: readonly Setting[], deferDefaultStyles = false): void {
         const listener = this.listener;
         if (!this.controlList || !listener) return;
-        if (setting) this.controlList.renderSetting(setting, listener.getValue(setting));
-        else this.controlList.render((item) => listener.getValue(item));
-        const customized = this.generalSettings.some((item) => listener.getValue(item) !== undefined);
-        this.resetGeneralElement.setAttribute("aria-disabled", String(!customized));
+        if (settings?.length === 0) return;
+        const deferred = this.controlList.render((item) => listener.getValue(item), settings, deferDefaultStyles);
+        for (const setting of settings ?? []) this.pendingDefaults.delete(setting);
+        for (const setting of deferred) this.pendingDefaults.add(setting);
+        if (this.pendingDefaults.size > 0) this.defaultObserver?.observe(this.container);
+        else this.defaultObserver?.disconnect();
+        this.refreshResetState();
     }
 
     /**
      * 响应式隐藏控件或关闭错误弹窗后，恢复面板中的可见焦点。
      */
-    private restoreVisibleFocus(): void {
+    private restoreVisibleFocus(closedDialog?: HTMLDialogElement): void {
         if (!this.root.open || [...document.querySelectorAll("dialog:modal")].some((dialog) => dialog !== this.root))
             return;
         const focused = document.activeElement;
         if (
             focused === document.body ||
+            closedDialog?.contains(focused) ||
             (focused instanceof HTMLElement && this.root.contains(focused) && focused.getClientRects().length === 0)
         ) {
             this.closeElement.focus({ preventScroll: true });
@@ -240,38 +302,12 @@ export default class SettingUi extends Ui {
     }
 
     /**
-     * 原生模态隔离背景，并通过事件让阅读页面保存当前上下文。
+     * 在原生模态打开前恢复已提交的控件值，背景隔离和焦点由浏览器管理。
      */
-    private open(opener: HTMLElement, returnFocusTarget: HTMLElement): void {
-        this.root.inert = false;
-        this.root.showModal();
-        this.refresh();
-        this.opener = opener;
-        this.returnFocusTarget = returnFocusTarget;
+    private prepareOpen(): void {
+        this.controlList?.restoreValues();
         this.opener.setAttribute("aria-expanded", "true");
-
-        this.root.dispatchEvent(new Event("appearance-open", { bubbles: true }));
-    }
-
-    /**
-     * 恢复预览后关闭；即使恢复失败也释放模态状态，避免页面永久不可交互。
-     *
-     * @param discard - 页面销毁时仅关闭模态，不请求恢复预览或向旧页面派发关闭事件。
-     */
-    private close(discard = false): void {
-        if (!this.root.open) return;
-        try {
-            if (!discard) this.listener?.cancelPreviews();
-        } finally {
-            this.root.close();
-            this.root.inert = true;
-
-            this.opener?.setAttribute("aria-expanded", "false");
-            if (!discard && this.returnFocusTarget?.isConnected) this.returnFocusTarget.focus({ preventScroll: true });
-            this.opener = undefined;
-            this.returnFocusTarget = undefined;
-            if (!discard) this.root.dispatchEvent(new Event("appearance-close", { bubbles: true }));
-        }
+        this.root.inert = false;
     }
 
     private static readonly template = `

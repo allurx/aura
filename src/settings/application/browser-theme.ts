@@ -3,30 +3,26 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * 为浏览器提供当前页面的实际背景与明暗模式；阅读背景的显式设置优先于主题。
- * 页面初始化时创建元信息，后续主题及阅读背景变化复用相同节点。
- *
- */
-export function syncBrowserTheme(): void {
+// 页面切换、主题与显式背景可能在同一轮一起应用，只读取自然布局后的最终颜色。
+const observer = new ResizeObserver(() => {
+    observer.disconnect();
     const root = document.documentElement;
     const page = root.dataset["page"] === "reader" ? document.querySelector<HTMLElement>("#reader") : root;
-    const rootStyle = getComputedStyle(root);
     const background = getComputedStyle(page ?? root).backgroundColor;
 
-    updateMeta("theme-color", background);
-    updateMeta("color-scheme", rootStyle.colorScheme);
-}
-
-/**
- * 元信息由实际页面样式驱动，HTML 无需预置固定配色。
- */
-function updateMeta(name: "theme-color" | "color-scheme", content: string): void {
-    let meta = document.head.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+    let meta = document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     if (!meta) {
         meta = document.createElement("meta");
-        meta.name = name;
+        meta.name = "theme-color";
         document.head.append(meta);
     }
-    meta.content = content;
+    if (meta.content !== background) meta.content = background;
+});
+
+/**
+ * 为浏览器同步当前页面的实际背景，阅读背景的显式设置优先于主题。
+ * 明暗模式由根元素的 CSS color-scheme 统一管理，不重复写入会使全页样式失效的元信息。
+ */
+export function syncBrowserTheme(): void {
+    observer.observe(document.documentElement);
 }

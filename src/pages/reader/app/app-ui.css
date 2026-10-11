@@ -24,29 +24,141 @@ html[data-page="reader"] #app {
     }
 }
 
-/* 对称预留侧边空间保持正文居中，右栏独立于 Reader 的裁切和宽度拖动。 */
+/* 工具栏浮在正文之外，拖动和收起都不改变正文排版。 */
 #reader-actions {
-    grid-column: 3;
-    grid-row: 1;
-    align-self: center;
-    justify-self: start;
+    --tools-expanded-width: 60px;
+    --tools-collapsed-width: 56px;
+    --tools-safe-top: env(safe-area-inset-top, 0px);
+    --tools-safe-right: env(safe-area-inset-right, 0px);
+    --tools-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --tools-safe-left: env(safe-area-inset-left, 0px);
+    position: fixed;
+    z-index: 4;
+    view-transition-name: reading-tools-desktop;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    width: 64px;
-    max-height: calc(var(--viewport-height) - 32px);
-    margin-left: 12px;
-    padding: 8px 6px;
+    width: var(--tools-expanded-width);
+    max-height: calc(100dvh - max(8px, env(safe-area-inset-top)) - max(8px, env(safe-area-inset-bottom)));
+    padding: 5px;
     border: 1px solid var(--appearance-border);
     border-radius: 16px;
     background: var(--appearance-panel);
     color: var(--appearance-color);
     box-shadow: 0 4px 16px color-mix(in srgb, var(--appearance-shadow-color) 9%, transparent);
-    overflow-y: auto;
-    scrollbar-gutter: auto;
+    overflow: hidden;
     font-size: 12px;
 
     &[hidden] {
+        display: none;
+    }
+
+    &[data-collapsed] {
+        width: var(--tools-collapsed-width);
+    }
+
+    &:has(#page-position[data-long-count]:not([hidden])) {
+        --tools-expanded-width: 72px;
+    }
+
+    &:has(#page-position[data-wide-count]:not([hidden])) {
+        --tools-expanded-width: 80px;
+    }
+
+    .reader-tools-heading {
+        display: flex;
+        flex: none;
+        justify-content: center;
+        min-height: 24px;
+        border-bottom: 1px solid var(--appearance-border);
+        color: var(--appearance-muted-color);
+
+        > .icon-button {
+            --icon-button-size: 24px;
+            --icon-size: 18px;
+            flex-basis: auto;
+            width: 100%;
+            grid-template: 20px / 48px;
+            border-radius: 6px;
+        }
+    }
+
+    .reader-tools-drag {
+        cursor: grab;
+        touch-action: none;
+        --icon-image: url("../../../assets/images/drag-handle.svg");
+
+        > .icon {
+            rotate: 90deg;
+        }
+    }
+
+    .reader-tools-toggle {
+        --icon-button-size: 40px;
+        --icon-size: 22px;
+        --icon-image: url("../../../assets/images/collapse-vertical.svg");
+        grid-template: 28px / 44px;
+        align-self: center;
+        width: 100%;
+        margin-top: 0;
+        border-top: 1px solid var(--appearance-border);
+        border-radius: 0 0 10px 10px;
+        color: var(--appearance-muted-color);
+        line-height: 1.4;
+    }
+
+    &[data-collapsed] .reader-tools-heading {
+        display: none;
+    }
+
+    &[data-collapsed] .reader-tools-toggle {
+        --icon-button-size: 44px;
+        --icon-image: url("../../../assets/images/toolbar.svg");
+        --icon-size: 22px;
+        grid-template: 36px / 36px;
+        width: 44px;
+        margin-top: 0;
+        border: 0;
+        border-radius: 10px;
+        color: var(--appearance-color);
+        touch-action: none;
+    }
+
+    &[data-dragging] :is(.reader-tools-drag, .reader-tools-toggle) {
+        cursor: grabbing;
+    }
+
+    &[data-tools-animating] {
+        .reader-tools-heading,
+        .reader-tools-body {
+            position: absolute;
+            left: calc((100% - var(--tools-content-width)) / 2);
+            width: var(--tools-content-width);
+        }
+
+        .reader-tools-heading {
+            bottom: calc(46px + var(--tools-content-height));
+        }
+
+        .reader-tools-body {
+            bottom: 46px;
+            height: var(--tools-content-height);
+        }
+
+        .reader-tools-toggle {
+            margin-top: auto;
+        }
+    }
+
+    .reader-tools-body {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        gap: 0;
+        overflow-y: auto;
+        scrollbar-gutter: auto;
+    }
+
+    :is(.reader-tools-body, .reader-tools-drag)[hidden] {
         display: none;
     }
 
@@ -54,35 +166,64 @@ html[data-page="reader"] #app {
         display: flex;
         flex: none;
         flex-direction: column;
-        gap: 2px;
+        gap: 0;
         min-width: 0;
+        padding-block: 3px;
+    }
 
-        + .reader-action-group {
-            padding-top: 8px;
-            border-top: 1px solid var(--appearance-border);
-        }
+    .page-actions {
+        border-top: 1px solid var(--appearance-border);
     }
 
     .reader-action-group > button.reader-action {
         flex: none;
-        flex-direction: column;
-        gap: 4px;
+        --icon-size: 22px;
+        flex-direction: row;
+        gap: 8px;
         width: 100%;
-        min-height: 52px;
-        padding: 5px 2px;
+        min-height: 40px;
+        padding: 6px 4px;
         white-space: normal;
         overflow-wrap: anywhere;
+
+        > span:not([aria-hidden]) {
+            display: none;
+        }
+    }
+
+    .reader-action .appearance-mark {
+        flex-basis: 26px;
+        width: 26px;
+        height: 22px;
+        font-size: 22px;
+        white-space: nowrap;
+        overflow-wrap: normal;
     }
 
     .reading-status {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 4px;
-        padding-block: 8px 2px;
+        gap: 3px;
+        flex: none;
+        min-width: 0;
+        padding: 7px 0;
         border-top: 1px solid var(--appearance-border);
         text-align: center;
-        line-height: 1.5;
+        line-height: 1.4;
+    }
+
+    .page-label {
+        display: none;
+    }
+
+    .reading-status #progress-rate {
+        font-size: 11px;
+    }
+
+    #page-position[data-long-count] .page-count {
+        gap: 2px;
+        font-size: 10px;
     }
 }
 

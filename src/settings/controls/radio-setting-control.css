@@ -1,0 +1,66 @@
+/*
+ * Copyright 2026 allurx
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* 主题与常规单选共用原生分组和整项点击区，选项排版由各自控件维护。 */
+#setting {
+    .radio-setting {
+        position: relative;
+
+        > .reset-setting {
+            position: absolute;
+            top: 4px;
+            right: 0;
+        }
+
+        fieldset {
+            min-width: 0;
+            margin: 0;
+            padding: 0;
+            border: 0;
+        }
+    }
+
+    .items > .item.radio-setting {
+        display: block;
+
+        legend {
+            max-width: calc(100% - 52px);
+            min-height: 36px;
+            padding: 0;
+            align-content: center;
+            font-size: 14px;
+            font-weight: 500;
+        }
+    }
+
+    .radio-option {
+        position: relative;
+        cursor: pointer;
+
+        > input {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            opacity: 0;
+            cursor: inherit;
+        }
+
+        > span {
+            pointer-events: none;
+        }
+    }
+}
+
+/* 焦点画在可见选项上，透明输入只承载原生键盘交互。 */
+:where(html[data-keyboard-navigation]) #setting .radio-option:has(> input:focus-visible) {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+#setting .radio-option > input:focus-visible {
+    outline: none;
+}

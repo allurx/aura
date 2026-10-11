@@ -60,14 +60,20 @@ npm run dev
 
 [应用入口](../src/main.ts)根据路由创建页面，[页面生命周期](../src/pages/base-page.ts)管理挂载与销毁。按要修改的功能进入对应模块：
 
-| 功能      | 入口与职责                                                                                                                                                                                                                 |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 书架      | [Controller](../src/pages/bookshelf/bookshelf-controller.ts)协调导入、导出、分类、搜索和删除；[Service](../src/pages/bookshelf/bookshelf-service.ts)处理文件去重与写入事务                                                 |
-| 阅读      | [Controller](../src/pages/reader/reader-controller.ts)协调进度、目录、设置和页面；[正文](../src/pages/reader/content/content-ui.ts)管理窗口与导航；[UI](../src/pages/reader/reader-ui.ts)处理工具布局                      |
-| TXT 解析  | [parseChapters](../src/domain/chapter/chapter-parser.ts)在写事务前完成解码与分章，按源文件物理行定位内容                                                                                                                   |
-| EPUB 解析 | [归档读取](../src/domain/file/epub-archive.ts)按需解压与校验资源；[内容解析](../src/domain/file/epub.ts)按阅读顺序和目录建立安全内容模型；[正文渲染](../src/pages/reader/content/epub-content.ts)处理书内图片与链接        |
-| 持久化    | [数据库 schema](../src/database/database-schema.ts)集中定义元信息与记录类型映射；[连接与初始化](../src/database/database.ts)、[存储操作](../src/database/store.ts)和[事务入口](../src/database/transaction.ts)管理领域数据 |
-| 外观      | [SettingController](../src/settings/setting-controller.ts)管理主题、常规设置、预览与提交；两页外观各自保存到 `localStorage`                                                                                                |
+| 功能      | 入口与职责                                                                                                                                                                                                                                        |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 书架      | [Controller](../src/pages/bookshelf/bookshelf-controller.ts)协调导入、导出、分类、搜索和删除；[Service](../src/pages/bookshelf/bookshelf-service.ts)处理文件去重与写入事务                                                                        |
+| 阅读      | [Controller](../src/pages/reader/reader-controller.ts)协调进度、目录、设置和页面；[正文](../src/pages/reader/content/content-ui.ts)管理窗口与导航；[UI](../src/pages/reader/reader-ui.ts)处理工具布局                                             |
+| TXT 解析  | [parseChapters](../src/domain/chapter/chapter-parser.ts)在写事务前完成解码与分章，按源文件物理行定位内容                                                                                                                                          |
+| EPUB 解析 | [归档读取](../src/domain/file/epub-archive.ts)按需解压与校验资源；[内容解析](../src/domain/file/epub.ts)生成[受控内容模型](../src/domain/file/epub-content.ts)；[章节视图](../src/pages/reader/content/chapter-view.ts)负责安全渲染和图片资源释放 |
+| 持久化    | [数据库 schema](../src/database/database-schema.ts)集中定义元信息与记录类型映射；[连接与初始化](../src/database/database.ts)、[存储操作](../src/database/store.ts)和[事务入口](../src/database/transaction.ts)管理领域数据                        |
+| 外观      | [SettingController](../src/settings/setting-controller.ts)管理主题、常规设置的提交与重置；两页外观各自保存到 `localStorage`                                                                                                                       |
+
+书架的[窗口列表](../src/pages/bookshelf/book-list/book-list-ui.ts)管理挂载范围、滚动位置和操作焦点；[书卡](../src/pages/bookshelf/book-list/book-card-ui.ts)按书籍 ID 保留原生控件，更新标题、分类和进度。Controller 只提供最新摘要，不通过对象身份控制 DOM 复用。
+
+普通浮层开闭优先使用原生焦点行为；列表先保留并移动仍使用的节点，再回收离窗节点。只有节点被替换、隐藏或平台无法保留状态时，所属组件才接续焦点；业务流程不再重复恢复相同目标。
+
+主题、材质、翻页方式和封面选项共用[原生单选控件骨架](../src/settings/controls/radio-setting-control.ts)及其[基础样式](../src/settings/controls/radio-setting-control.css)，分组、点击区域和键盘焦点在此维护；各控件保留自己的图示、说明和排版。设置的值域和应用行为由[定义目录](../src/settings/definitions/)维护，连续控件在原生 input 时实时应用并保存有效值，选项在选择时生效；保存及失败恢复统一归外观 Controller，同值的 change 不重复应用或保存，不建立页面预览会话。
 
 数据库名、版本、store 主键、索引 `keyPath` 和 `unique` 由数据库 schema 统一维护，初始化直接读取这份描述。`StoreRecords` 将 store 名称关联到[领域记录类型](../src/domain/)，具体字段由领域类型定义；存储 API 在编译期约束所选 store 与索引名的组合。命名约束见 [AGENTS.md 的工程原则](../AGENTS.md#工程原则)。
 
@@ -77,11 +83,23 @@ npm run dev
 
 ### 阅读排版与定位
 
-[翻页方式](../src/pages/reader/reading-mode.ts)由阅读器常规设置保存：覆盖、平移和无动画共用动态分页，上下使用原生连续滚动。[正文 UI](../src/pages/reader/content/content-ui.ts)统一管理章节窗口、排版和导航完成后的实际位置，通过加载回调取得章节，再向 Controller 提交稳定的阅读快照。分页只挂载当前章；连续滚动按实际视窗及相邻方向的缓冲补充章节，并释放远处内容，不假定固定章节数量足以填满视窗。真实书尾的呈现留白使最后短章可以置顶，不计入正文位置。
+[翻页方式](../src/pages/reader/reading-mode.ts)由阅读器常规设置保存：覆盖、平移和无动画共用动态分页，上下使用原生连续滚动。[正文 UI](../src/pages/reader/content/content-ui.ts)统一管理正文窗口、排版和导航完成后的实际位置，通过加载回调取得章节，再向 Controller 提交稳定的阅读快照。分页只挂载当前章中靠近阅读位置的片段；连续滚动在章内和相邻章之间按视窗与缓冲补充片段，并释放远处内容。真实书尾的呈现留白使最后短章可以置顶，不计入正文位置。
+
+可见正文优先完成排版，精确章节页数与定位索引在不可交互的测量区域内分批计算。打开书籍或实时调整设置不等待整章计算，未知页码使用计算状态，不显示估算值。排版条件改变或页面退出时取消失效任务并释放测量资源；后台测量不得清除正文选区或抢走操作焦点。
+
+精确索引以当前可见内容的局部页界为种子，补全前后页数。原生分栏无法直接对齐时允许临时页尾留白，但不能跳过或重复源文字；索引完成只更新页码信息，不替换已显示的正文或移动阅读位置。局部页界不写入阅读进度，持久化仍使用源内容位置。
+
+[章节目录](../src/pages/reader/toc/toc-ui.ts)保留完整条目用于搜索与导航，由[目录窗口](../src/pages/reader/toc/toc-window.ts)挂载可见范围及焦点、选章操作中的条目。标题按实际宽度换行，测得的行高用于校正章节锚点；未测量高度仅提供临时滚动范围，不进入阅读进度。目录的浏览位置独立于正文位置，关闭重开和清空搜索均恢复对应浏览上下文。
+
+章节视图先准备受控内容片段与图片，再按正文窗口范围挂载；片段只是呈现范围，定位仍使用原内容块及块内源偏移。加载失败保留当前正文，准备取消或窗口移除时释放该章的图片 URL。全书资源索引在阅读会话内共用，章节只持有实际使用的 URL。
+
+表格、预格式化块和注音结构保留原生整体，不在其内部拆分窗口，以维持表格列、内部滚动和注音关系。单个超大结构的布局成本仍取决于该结构的内容量，不能用普通正文的分片预算推断其上限。
 
 [阅读输入](../src/pages/reader/reading-input.ts)统一处理正文键盘、触摸、触笔和滚轮，共用交互目标与内嵌滚动判断，各输入仍保留自身的修饰键、阈值和惯性规则。按钮和工具布局由阅读 UI 管理；Controller 协调进度持久化、目录、设置和页面导航。
 
-[阅读进度](../src/domain/progress/progress.ts)保存章节、内容块和块内源偏移。TXT 内容块对应原始行，EPUB 对应受控结构块；`contentOffset` 累计文本的 UTF-16 长度，图片、`br` 和 `hr` 各占一个位置。该契约在[正文定位](../src/pages/reader/content/content-location.ts)中用于 DOM 与源内容之间的映射，不依赖像素偏移、段落高度比例或页码。字体、宽度与视口变化后，用同一内容锚点恢复；临时视觉位置另保留锚点相对视窗的偏移。
+[阅读进度](../src/domain/progress/progress.ts)保存章节、内容块和块内源偏移。TXT 内容块对应原始行，EPUB 对应受控结构块；`contentOffset` 累计文本的 UTF-16 长度，图片、`br` 和 `hr` 各占一个位置。该契约在[正文定位](../src/pages/reader/content/content-location.ts)中用于 DOM 与源内容之间的映射，不依赖像素偏移、段落高度比例或页码。EPUB 书内锚点也先解析为源位置，再共用窗口准备和定位流程；空锚点无需生成可见节点，仍可指向对应内容边界。字体、宽度与视口变化后，用同一内容锚点恢复；临时视觉位置另保留锚点相对视窗的偏移。
+
+进度快照直接提交数据库事务，由 IndexedDB 对重叠 store 的事务按创建顺序调度。退出后重新打开书籍时，读取等待此前保存完成；页面实例不另建延迟创建事务的队列，以免新会话读到中间位置。保存失败仍通过统一错误路径反馈，成功后才更新内存中的已保存进度。
 
 覆盖和平移动画按浏览器的 View Transitions 能力启用；缺少能力或启用减少动态效果时直接切换页面，不改写保存的阅读方式。具体操作与章节边界见[使用指南](usage.md#阅读与目录)。
 
@@ -93,6 +111,10 @@ npm run dev
 | `npm run build:portable` | `dist/portable/aura.html`，单文件离线版 |
 
 每个构建命令先执行静态检查，只清理自身输出子目录。Web 目录包含入口、资源、安装元信息、响应头配置和许可声明，需整体使用；portable 将应用资源与许可声明嵌入单个 HTML。
+
+JS 与 CSS 使用 [Vite 的生产压缩](https://vite.dev/config/build-options.html#build-minify)，无用模块由构建器消除。构建日志中的 gzip 大小只是传输体积估计；Web 的实际编码由 [Cloudflare 内容压缩](https://developers.cloudflare.com/speed/optimization/content/compression/)与客户端协商，应检查线上响应的 `Content-Encoding`。portable 的直接交付大小以 HTML 文件字节数为准，不能把 gzip 或 Brotli 估计当作本地单文件大小。
+
+[Vite 配置](../vite.config.ts)组合交付方式、资源路径与插件；[Web 元信息插件](../build/web-app.ts)维护安装和公开站点信息，[portable 插件](../build/portable.ts)在内联完成后确定单文件入口名称，[许可插件](../build/licenses.ts)生成页面说明和分发文件，并核对最终入口中的声明完整性。`build/` 与根配置共用 Node.js 类型检查环境。
 
 开发服务器与 Web 构建共用安装元信息。可在本地 HTTPS 开发页或 `localhost` 预览中验证浏览器原生安装；安装和离线使用的区别见[使用指南](usage.md)。
 
@@ -124,7 +146,7 @@ npm run preview
 
 构建不能代替运行时检查。页面交互变更应实际验证导航、关闭与取消、焦点和位置恢复、错误反馈及持久化；涉及 portable 时还需实际打开 `file://` 产物。只改文档时检查内容、链接、示例和格式，不运行无关构建。
 
-阅读器变更应覆盖四种方式、前后跨章与目录跳转，以及字号、窗口、横竖屏、全屏和方式切换后的内容位置。分页检查长段落、图片与内部滚动内容；连续滚动检查相邻章替换前后的可见内容和进度。输入检查鼠标、键盘、触摸、滚轮惯性、选字与取消操作，并核对工具显隐和浮层关闭后的焦点、位置及模式保存。
+阅读器变更应覆盖四种方式、前后跨章与目录跳转，以及字号、窗口、横竖屏、全屏和方式切换后的内容位置。尺寸变化包括连续双向调整及窄、矮视窗；无主动导航时检查同一源锚点不漂移，恢复原尺寸后比较原可见内容和位置。全屏验证同时确认浏览器状态与实际窗口尺寸，不用仅改变视口的测试代替物理全屏。分页检查长段落、图片与内部滚动内容；连续滚动检查相邻章替换前后的可见内容和进度。输入检查鼠标、键盘、触摸、滚轮惯性、选字与取消操作，并核对工具显隐和浮层关闭后的焦点、位置及模式保存。
 
 文件流程变更需覆盖各格式的有效文件、明确拒绝的内容和大文件，并核对失败时已完成的导入结果。EPUB 检查目录锚点、书内链接、图片、资源限制和不可信内容。导出使用包含不同 TXT 编码及二进制资源的样本，对比导入文件和实际下载文件的 SHA-256，同时检查文件名；不能用重新解析后的正文相同代替字节一致。
 

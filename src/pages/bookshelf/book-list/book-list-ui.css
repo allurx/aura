@@ -4,8 +4,8 @@
  */
 
 #bookshelf #book-list {
-    --book-cover-width: 144px;
-    --book-title-font-size: 20px;
+    --book-cover-width: 120px;
+    --book-title-font-size: 18px;
     --book-column-gap: 20px;
     --book-row-gap: 28px;
     --ui-padding-top: 16px;
@@ -26,62 +26,78 @@
     color: var(--appearance-color);
     font-size: 1rem;
 
+    &[data-windowed] {
+        display: block;
+        overflow-anchor: none;
+    }
+    .book-window {
+        position: relative;
+        grid-template-columns: inherit;
+        column-gap: inherit;
+        justify-content: inherit;
+    }
+    .book-row {
+        position: absolute;
+        inset-inline: 0;
+        display: grid;
+        grid-template-columns: inherit;
+        column-gap: inherit;
+        justify-content: inherit;
+    }
     .book {
         --book-cover: hsl(var(--book-cover-hue) var(--appearance-cover-saturation) var(--appearance-cover-lightness));
         --book-cover-ink: var(--appearance-cover-ink);
         --book-title-lines: 4;
-        --book-cover-padding-block: 16px;
-        --book-depth: clamp(7px, calc(var(--book-cover-width) * 0.06), 11px);
-        --book-spine-width: clamp(9px, calc(var(--book-cover-width) * 0.08), 14px);
         --book-paper: hsl(var(--book-cover-hue) 12% calc(var(--appearance-cover-lightness) + 10%));
         --book-face: var(--book-cover);
         min-width: 0;
+        align-self: start;
         width: 100%;
         /* 换列只重新分配留白，书卡保持目标宽度，不随剩余空间拉伸。 */
         max-width: var(--book-cover-width);
     }
     .book-open {
+        --book-cover-padding-block: clamp(12px, calc(var(--book-cover-width) * 0.1), 20px);
+        --book-cover-padding-inline: clamp(12px, calc(var(--book-cover-width) * 0.12), 24px);
+        --book-art-height: clamp(24px, calc(var(--book-cover-width) * 0.24), 48px);
+        --book-depth: clamp(3px, calc(var(--book-cover-width) * 0.025), 5px);
+        --book-spine-width: clamp(5px, calc(var(--book-cover-width) * 0.045), 9px);
         position: relative;
         isolation: isolate;
         display: block;
         width: 100%;
-        aspect-ratio: 4 / 5.2;
-        /* 窄书封和大字号仍为完整标题行留足空间。 */
+        aspect-ratio: 5 / 7;
+        /* 标题与下方装帧各自留空，大字号只增加书封高度，不侵入装饰。 */
         min-height: calc(
-            var(--book-title-lines) * 1.35 * var(--book-title-font-size) + 2 * var(--book-cover-padding-block) +
-                var(--book-depth)
+            var(--book-title-lines) * 1.4 * var(--book-title-font-size) + 2 * var(--book-cover-padding-block) +
+                var(--book-art-height) + var(--book-depth)
         );
         padding: 0;
         border: 0;
-        border-radius: 4px 10px 10px 4px;
+        border-radius: 2px 5px 5px 2px;
         background: transparent;
         color: var(--book-cover-ink);
-        text-align: center;
+        text-align: start;
         transition: transform var(--motion-duration-fast) var(--motion-ease);
 
-        /* 封底与页芯收在正面之后，厚度集中在侧边和下缘，不形成一圈白色底板。 */
+        /* 页芯只露出窄侧边和下缘，封底承担统一投影。 */
         &::before {
             content: "";
             position: absolute;
             z-index: -2;
-            inset: 4px 0 0 2px;
+            inset: 2px 0 0 1px;
             border-radius: inherit;
-            background: color-mix(in srgb, var(--book-cover) 82%, var(--book-cover-ink));
-            box-shadow:
-                0 2px 3px color-mix(in srgb, var(--appearance-shadow-color) 16%, transparent),
-                2px 6px 10px -3px color-mix(in srgb, var(--appearance-shadow-color) 22%, transparent);
+            background: color-mix(in srgb, var(--book-cover) 75%, var(--book-cover-ink));
+            box-shadow: 2px 6px 10px -5px color-mix(in srgb, var(--appearance-shadow-color) 32%, transparent);
             pointer-events: none;
         }
         &::after {
             content: "";
             position: absolute;
             z-index: -1;
-            inset: 6px 1px 2px 7px;
-            border-radius: 1px 6px 7px 1px;
+            inset: 3px 1px 1px 4px;
+            border-radius: 1px 4px 4px 1px;
             background: var(--book-paper);
-            box-shadow:
-                inset -1px 0 1px color-mix(in srgb, var(--book-cover-ink) 16%, transparent),
-                inset 0 -2px 0 color-mix(in srgb, var(--book-cover-ink) 9%, transparent);
             pointer-events: none;
         }
     }
@@ -89,34 +105,40 @@
         position: absolute;
         inset: 0 calc(var(--book-depth) * 0.6) var(--book-depth) 0;
         display: flex;
-        align-items: center;
-        padding: var(--book-cover-padding-block) clamp(10px, calc(var(--book-cover-width) * 0.1), 20px)
-            var(--book-cover-padding-block) calc(var(--book-spine-width) + 10px);
+        align-items: start;
+        padding: var(--book-cover-padding-block) var(--book-cover-padding-inline)
+            calc(var(--book-cover-padding-block) + var(--book-art-height))
+            calc(var(--book-cover-padding-inline) + var(--book-spine-width));
         border-radius: inherit;
-        background:
-            linear-gradient(125deg, color-mix(in srgb, var(--book-paper) 24%, transparent), transparent 65%),
-            var(--book-face);
-        box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--book-paper) 50%, transparent),
-            inset -1px -1px 0 color-mix(in srgb, var(--book-cover-ink) 12%, transparent),
-            1px 2px 3px color-mix(in srgb, var(--book-cover-ink) 14%, transparent);
+        background-color: var(--book-face);
+        background-image: var(--material-image);
+        background-size: var(--material-size);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--book-cover-ink) 9%, transparent);
         pointer-events: none;
 
-        /* 书脊有连续的弧面与沟槽，避免用孤立的直线把封面切成两块。 */
+        /* 细书脊与低对比装帧线提供书的识别，正面不叠加高光浮雕。 */
         &::before {
             content: "";
             position: absolute;
             inset: 0 auto 0 0;
             width: var(--book-spine-width);
-            border-radius: 4px 0 0 4px;
+            border-radius: 2px 0 0 2px;
             background: linear-gradient(
                 90deg,
-                color-mix(in srgb, var(--book-cover-ink) 14%, transparent),
-                color-mix(in srgb, var(--book-paper) 28%, transparent) 28%,
-                transparent 62%,
-                color-mix(in srgb, var(--book-cover-ink) 13%, transparent) 88%,
-                color-mix(in srgb, var(--book-paper) 36%, transparent)
+                color-mix(in srgb, var(--book-cover-ink) 10%, transparent),
+                transparent 55%,
+                color-mix(in srgb, var(--book-cover-ink) 12%, transparent) 90%,
+                transparent
             );
+        }
+        &::after {
+            content: "";
+            position: absolute;
+            inset: auto var(--book-cover-padding-inline) var(--book-cover-padding-block)
+                calc(var(--book-cover-padding-inline) + var(--book-spine-width));
+            height: 20px;
+            border-block: 1px solid color-mix(in srgb, var(--book-cover-ink) 28%, transparent);
+            background: radial-gradient(circle at center, var(--book-cover-ink) 1px, transparent 1.5px);
         }
     }
     .book-title {
@@ -126,13 +148,16 @@
         overflow: hidden;
         font-size: var(--book-title-font-size);
         width: 100%;
-        line-height: 1.35;
-        letter-spacing: 0.025em;
+        line-height: 1.4;
+        letter-spacing: 0.035em;
         text-wrap: balance;
         overflow-wrap: anywhere;
-        font-weight: 600;
+        font-weight: 550;
     }
     .book-details {
+        /* 封面尺寸不影响进度与操作，截断无关继承，避免每次调整重算整组分类选项。 */
+        --book-cover-width: initial;
+        --book-title-font-size: initial;
         display: grid;
         grid-template-columns: minmax(0, 1fr) 32px 32px;
         align-items: center;
@@ -328,8 +353,26 @@
         font-size: 20px;
     }
 
+    .shelf-loading {
+        /* 快速读取时不闪出提示，只延后呈现，不延后书籍显示。 */
+        animation: shelf-loading-reveal 180ms step-end both;
+
+        > .shelf-illustration {
+            height: 92px;
+            margin-bottom: 12px;
+            transform: scale(0.68);
+            transform-origin: center bottom;
+        }
+
+        > p {
+            font-size: 14px;
+            font-weight: 400;
+            letter-spacing: 0.04em;
+        }
+    }
+
     /* 三本主题协调的实体书，以书脊、页边和投影代替孤立的小图标。 */
-    .shelf-empty-illustration {
+    .shelf-illustration {
         position: relative;
         isolation: isolate;
         flex: none;
@@ -364,7 +407,7 @@
         }
     }
 
-    .empty-book {
+    .illustration-book {
         position: absolute;
         bottom: 12px;
         width: 56px;
@@ -380,7 +423,7 @@
                 transparent 10px
             ),
             linear-gradient(150deg, color-mix(in srgb, var(--appearance-highlight) 40%, transparent), transparent 65%),
-            var(--empty-book-color);
+            var(--illustration-book-color);
         box-shadow:
             inset 0 1px 0 color-mix(in srgb, var(--appearance-highlight) 80%, transparent),
             3px 5px 6px color-mix(in srgb, var(--appearance-shadow-color) 15%, transparent),
@@ -420,24 +463,24 @@
         }
     }
 
-    .empty-book-mint {
-        --empty-book-color: hsl(162 var(--appearance-cover-saturation) var(--appearance-cover-lightness));
+    .illustration-book-mint {
+        --illustration-book-color: hsl(162 var(--appearance-cover-saturation) var(--appearance-cover-lightness));
         z-index: 1;
         left: 26px;
         height: 96px;
         transform: rotate(-13deg);
     }
 
-    .empty-book-peach {
-        --empty-book-color: hsl(28 var(--appearance-cover-saturation) var(--appearance-cover-lightness));
+    .illustration-book-peach {
+        --illustration-book-color: hsl(28 var(--appearance-cover-saturation) var(--appearance-cover-lightness));
         z-index: 2;
         left: 105px;
         height: 93px;
         transform: rotate(12deg);
     }
 
-    .empty-book-blue {
-        --empty-book-color: hsl(220 var(--appearance-cover-saturation) var(--appearance-cover-lightness));
+    .illustration-book-blue {
+        --illustration-book-color: hsl(220 var(--appearance-cover-saturation) var(--appearance-cover-lightness));
         z-index: 3;
         left: 67px;
         bottom: 10px;
@@ -484,7 +527,7 @@
             font-size: 22px;
         }
 
-        .shelf-empty-illustration {
+        .shelf-empty .shelf-illustration {
             margin-bottom: 18px;
         }
     }
@@ -495,7 +538,7 @@
             padding-block: 12px;
         }
 
-        .shelf-empty-illustration {
+        .shelf-empty .shelf-illustration {
             height: 90px;
             margin-top: -14px;
             margin-bottom: 6px;
@@ -522,7 +565,7 @@
     }
 
     @media (forced-colors: active) {
-        .shelf-empty-illustration {
+        .shelf-illustration {
             display: none;
         }
 
@@ -558,8 +601,6 @@
         --icon-feedback-color: color-mix(in srgb, currentColor 16%, transparent);
     }
     @media (max-width: 1024px) {
-        --book-cover-width: 128px;
-        --book-title-font-size: 18px;
         --book-column-gap: 18px;
         --book-row-gap: 21px;
     }
@@ -597,25 +638,40 @@
         .book-open::before {
             border: 1px solid CanvasText;
         }
+        .book-cover::before,
+        .book-cover::after {
+            display: none;
+        }
+    }
+}
+
+@keyframes shelf-loading-reveal {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
     }
 }
 
 /* 主题配色同时协调文字和页芯，深浅主题都使用各自的可读前景色。 */
 #bookshelf #book-list[data-cover-color="theme"] .book {
-    --book-cover: color-mix(in srgb, var(--appearance-accent) 14%, var(--appearance-surface));
+    --book-cover: color-mix(in srgb, var(--appearance-accent) 24%, var(--appearance-surface));
     --book-cover-ink: var(--appearance-color);
     --book-paper: color-mix(in srgb, var(--appearance-surface) 90%, var(--appearance-color));
 }
 
-/* 平面书封保留完整点击区域和材质，只移除书脊、页芯与立体投影。 */
+/* 平面以纸色标题区和抽象色块形成书刊版式，保留同一布局与完整阅读入口。 */
 #bookshelf #book-list[data-cover-style="flat"] {
     .book {
-        --book-depth: 0px;
-        --book-spine-width: 0px;
+        --book-paper: color-mix(in srgb, var(--book-cover) 18%, var(--appearance-surface));
     }
 
     .book-open {
-        border-radius: 10px;
+        --book-depth: 0px;
+        --book-spine-width: 0px;
+        border-radius: 3px;
+        color: var(--appearance-color);
     }
 
     .book-open::before,
@@ -625,27 +681,45 @@
     }
 
     .book-cover {
-        padding-inline: clamp(10px, calc(var(--book-cover-width) * 0.1), 20px);
+        padding-inline: var(--book-cover-padding-inline);
         border: 1px solid color-mix(in srgb, var(--book-cover-ink) 12%, transparent);
-        background-image: var(--material-image);
-        background-size: var(--material-size);
+        background-color: var(--book-paper);
         box-shadow: none;
 
-        @media (forced-colors: active) {
+        &::after {
+            inset: auto 0 0;
+            height: var(--book-art-height);
+            border: 0;
+            border-radius: 0 0 2px 2px;
+            background:
+                radial-gradient(
+                    ellipse 65% 140% at 95% 125%,
+                    color-mix(in srgb, var(--book-cover-ink) 65%, var(--book-face)) 0 70%,
+                    transparent calc(70% + 1px)
+                ),
+                radial-gradient(
+                    ellipse 65% 160% at 32% -10%,
+                    transparent 0 calc(70% - 1px),
+                    color-mix(in srgb, var(--book-cover-ink) 55%, transparent) 70%,
+                    transparent calc(70% + 1px)
+                ),
+                var(--book-face);
+        }
+    }
+
+    .book-title {
+        font-weight: 650;
+        letter-spacing: 0;
+    }
+
+    @media (forced-colors: active) {
+        .book-cover {
             border-color: CanvasText;
         }
     }
 }
 
 html:where([data-material]:not([data-material="standard"])) {
-    /* 书封保留自身配色和书脊，仅共用材质纹理。 */
-    #bookshelf #book-list .book-cover {
-        background-color: var(--book-face);
-        background-image: var(--material-image);
-        background-size: var(--material-size);
-        background-blend-mode: soft-light;
-    }
-
     #bookshelf #book-list .book-file-actions {
         background-color: var(--material-panel);
         background-image: var(--material-image);

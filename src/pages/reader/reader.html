@@ -22,42 +22,56 @@
 
     <main id="content" tabindex="0" aria-label="阅读正文"></main>
 
-    <nav id="reader-actions" class="panel-scroll" aria-label="阅读操作" hidden>
-        <div class="reader-action-group navigation-actions" role="group" aria-label="阅读导航">
+    <nav id="reader-actions" aria-label="阅读操作" hidden>
+        <div class="reader-tools-heading">
             <button
-                id="previous-page"
-                class="reader-action"
+                class="reader-tools-drag icon-button"
                 type="button"
-                aria-keyshortcuts="ArrowLeft PageUp Shift+Space"
+                aria-label="移动阅读工具"
+                title="拖动可移动位置，方向键微调"
             >
-                <span class="icon icon-arrow-left" aria-hidden="true"></span><span>上一页</span>
-            </button>
-            <button id="next-page" class="reader-action" type="button" aria-keyshortcuts="ArrowRight PageDown Space">
-                <span class="icon icon-arrow-right" aria-hidden="true"></span><span>下一页</span>
+                <span class="icon" aria-hidden="true"></span>
             </button>
         </div>
-        <div class="reader-action-group preference-actions" role="group" aria-label="阅读设置与全屏"></div>
-        <div class="reader-action-group bookshelf-actions" role="group" aria-label="返回书架"></div>
+        <div id="reader-tools-body" class="reader-tools-body panel-scroll">
+            <div class="reader-action-group navigation-actions" role="group" aria-label="阅读工具"></div>
+            <div class="reader-action-group page-actions" role="group" aria-label="页面操作"></div>
+        </div>
+        <button
+            class="reader-tools-toggle icon-button"
+            type="button"
+            aria-label="收起阅读工具"
+            title="收起阅读工具"
+            aria-expanded="true"
+            aria-controls="reader-tools-body"
+        >
+            <span class="icon" aria-hidden="true"></span>
+        </button>
     </nav>
 
     <footer id="footer" aria-hidden="true" inert>
-        <nav class="mobile-page-navigation" aria-label="阅读翻页">
-            <div class="reading-location">
-                <div id="chapter-title"></div>
-                <div class="reading-status">
-                    <span id="page-position" title="当前章节页码" role="status" aria-atomic="true" hidden>
-                        <span>本章</span><span class="page-count"></span>
+        <div class="reading-location" role="group" aria-label="阅读位置">
+            <div id="chapter-title"></div>
+            <div class="reading-status">
+                <span id="page-position" title="当前章节页码" role="status" aria-atomic="true" hidden>
+                    <span class="page-label">本章</span>
+                    <span class="page-count">
+                        <span class="current-page">—</span>
+                        <span class="page-separator">/</span>
+                        <span class="total-pages">—</span>
                     </span>
-                    <span id="progress-rate" title="全书阅读进度"></span>
-                </div>
+                </span>
+                <span id="progress-rate" title="全书阅读进度">—</span>
             </div>
-        </nav>
+        </div>
         <nav class="mobile-actions" aria-label="阅读操作">
             <button
                 id="toggle-toc-panel"
+                disabled
                 class="reader-action"
                 type="button"
                 aria-label="打开目录"
+                title="打开目录"
                 aria-controls="toc"
                 aria-expanded="false"
                 aria-haspopup="dialog"
@@ -66,6 +80,7 @@
             </button>
             <button
                 id="toggle-setting-panel"
+                disabled
                 class="reader-action"
                 type="button"
                 aria-label="阅读设置"
@@ -76,8 +91,12 @@
             >
                 <span class="appearance-mark" aria-hidden="true">Aa</span><span>设置</span>
             </button>
+            <button id="return-bookshelf" class="reader-action" type="button" aria-label="返回书架" title="返回书架">
+                <span class="icon icon-bookshelf" aria-hidden="true"></span><span>书架</span>
+            </button>
             <button
                 id="toggle-fullscreen"
+                disabled
                 class="reader-action"
                 type="button"
                 aria-label="进入全屏"
@@ -85,9 +104,6 @@
                 title="进入全屏"
             >
                 <span class="icon icon-fullscreen" aria-hidden="true"></span><span>全屏</span>
-            </button>
-            <button id="return-bookshelf" class="reader-action" type="button" aria-label="返回书架">
-                <span class="icon icon-bookshelf" aria-hidden="true"></span><span>书架</span>
             </button>
         </nav>
     </footer>

@@ -159,6 +159,8 @@
 
 /* 分页与滚动共用同一正文与源锚点，只改变视窗和章节的排版。 */
 #content > .reading-viewport {
+    /* 快照标识随正文生命周期保留，避免每次翻页反复改变分栏的绘制上下文。 */
+    view-transition-name: reading-page;
     flex: 1;
     min-width: 0;
     min-height: 0;
@@ -168,6 +170,17 @@
     scrollbar-gutter: auto;
     background-color: inherit;
     color: inherit;
+}
+
+/* 精确索引只测量一个有限片段；不参与正文布局、快照、命中或辅助技术导航。 */
+#content > .reading-measure-viewport {
+    position: absolute;
+    top: 0;
+    left: 0;
+    flex: none;
+    visibility: hidden;
+    pointer-events: none;
+    view-transition-name: none;
 }
 
 .reading-chapter {
@@ -191,20 +204,25 @@
 }
 
 #content:not([data-reading-mode="scroll"]) {
+    > .reading-viewport {
+        /* flex 已确定视窗尺寸，分页与媒体直接使用同一容器，不经脚本同步像素。 */
+        container-type: size;
+    }
+
     .reading-chapter {
-        height: var(--reading-page-height);
-        column-width: var(--reading-page-width);
+        height: 100cqh;
+        column-width: 100cqw;
         column-gap: 32px;
         column-fill: auto;
     }
 
     .epub-block img {
-        max-height: var(--reading-page-height);
+        max-height: 100cqh;
         break-inside: avoid;
     }
 
     .epub-block :is(table, pre) {
-        max-height: var(--reading-page-height);
+        max-height: 100cqh;
         overflow: auto;
         break-inside: avoid;
         overscroll-behavior: contain;
@@ -233,8 +251,9 @@
     }
 }
 
-/* 只为非滚动正文保留横扫，表格仍交给原生双轴滚动和缩放。 */
-#content:not([data-reading-mode="scroll"]) .reading-chapter > :not(:has(table, pre)) {
+/* TXT 直接保留横扫；仅 EPUB 结构块检查内嵌滚动内容，表格与预格式文本保留原生手势。 */
+#content:not([data-reading-mode="scroll"]) .reading-chapter > :is(p, .chapter-heading),
+#content:not([data-reading-mode="scroll"]) .reading-chapter > .epub-block:not(:has(table, pre)) {
     touch-action: pan-y pinch-zoom;
 }
 
@@ -242,6 +261,27 @@
 html[data-page-turn] {
     &::view-transition-old(root),
     &::view-transition-new(root) {
+        animation: none;
+        mix-blend-mode: normal;
+    }
+
+    /* 工具保持在正文上方，只显示实时新视图，避免透明材质被两份快照叠加。 */
+    &::view-transition-group(reading-tools-header),
+    &::view-transition-group(reading-tools-footer),
+    &::view-transition-group(reading-tools-desktop) {
+        z-index: 1;
+        animation: none;
+    }
+
+    &::view-transition-old(reading-tools-header),
+    &::view-transition-old(reading-tools-footer),
+    &::view-transition-old(reading-tools-desktop) {
+        display: none;
+    }
+
+    &::view-transition-new(reading-tools-header),
+    &::view-transition-new(reading-tools-footer),
+    &::view-transition-new(reading-tools-desktop) {
         animation: none;
         mix-blend-mode: normal;
     }

@@ -5,9 +5,7 @@
 
 :root {
     --font-size: 16px;
-    --ui-font-family:
-        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
-        "WenQuanYi Micro Hei", sans-serif;
+    --ui-font-family: system-ui, sans-serif;
     --control-radius: 12px;
     --viewport-height: 100dvh;
     --viewport-top: 0px;
@@ -63,6 +61,18 @@ html {
 :where(button, input, select, textarea) {
     font: inherit;
     accent-color: var(--appearance-accent);
+}
+
+/* 操作控件避免误选标签；正文、说明和状态信息继续使用原生文字选择。 */
+:where(button, select, summary, label) {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* 输入框可位于禁选的 label 内，编辑区域仍保留选字和复制。 */
+:where(input, textarea) {
+    -webkit-user-select: text;
+    user-select: text;
 }
 
 :where(button, select, input[type="checkbox"], input[type="radio"], input[type="range"]) {

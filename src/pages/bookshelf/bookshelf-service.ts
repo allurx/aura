@@ -27,6 +27,7 @@ import {
     getAllRecords,
     getRecord,
     getRecordByIndex,
+    mapRecords,
     putRecord,
 } from "@/database/store";
 
@@ -162,13 +163,14 @@ export async function clearBookshelf(): Promise<void> {
  */
 export async function getBookSummaries(): Promise<BookSummary[]> {
     return runTransaction(["book", "progress", "toc"], "readonly", async (transaction) => {
-        const [books, progress, tocs] = await Promise.all([
+        const [books, progress, chapterCounts] = await Promise.all([
             getAllRecords(transaction, "book"),
             getAllRecords(transaction, "progress"),
-            getAllRecords(transaction, "toc"),
+            // 目录可能包含数千条；逐本读取并立即投影，不同时反序列化整座书架的目录。
+            mapRecords(transaction, "toc", (toc) => [toc.fileId, toc.entries.length] as const),
         ]);
         const progressByBook = new Map(progress.map((item) => [item.bookId, item]));
-        const chaptersByFile = new Map(tocs.map((toc) => [toc.fileId, toc.entries.length]));
+        const chaptersByFile = new Map(chapterCounts);
 
         return books
             .toSorted((a, b) => a.createdTime - b.createdTime)

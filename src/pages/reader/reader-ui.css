@@ -50,9 +50,8 @@
     }
 }
 
-/* 工具移到底部时，设置沿入口所在边展开；面板内部呈现仍由设置组件负责。 */
+/* 工具移到底部时，设置也贴靠入口所在边；面板内部呈现仍由设置组件负责。 */
 #reader[data-mobile-controls] > #setting {
-    --setting-hidden-translation: translateY(100%);
     --setting-inset: auto 0 var(--viewport-bottom);
     --setting-width: 100%;
     --setting-max-height: min(
@@ -100,9 +99,14 @@
 /* 工具覆盖正文而不参与布局，显隐时保持滚动容器尺寸和阅读位置。 */
 #reader > :is(#header, #footer) {
     position: absolute;
-    left: 0;
-    right: 0;
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
     z-index: 3;
+    max-width: 520px;
+    margin-inline: auto;
+    border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+    border-radius: 16px;
+    box-shadow: var(--appearance-shadow-raised);
     opacity: 1;
     transform: none;
     transition:
@@ -112,11 +116,20 @@
 }
 
 #reader > #header {
-    --tools-offset: -100%;
+    --tools-offset: -12px;
 }
 
 #reader > #footer {
-    --tools-offset: 100%;
+    --tools-offset: 12px;
+}
+
+/* 展开的工具单独参与翻页快照，不被正文的具名快照盖住。 */
+#reader[data-reading-tools-visible] > #header {
+    view-transition-name: reading-tools-header;
+}
+
+#reader[data-reading-tools-visible] > #footer {
+    view-transition-name: reading-tools-footer;
 }
 
 #reader:not([data-reading-tools-visible]) > :is(#header, #footer) {
@@ -128,6 +141,11 @@
         opacity var(--motion-duration-fast) var(--motion-ease),
         transform var(--motion-duration-fast) var(--motion-ease),
         visibility 0s linear var(--motion-duration-fast);
+}
+
+/* 桌面只呈现侧栏；跨布局移动工具不播放移动栏的显隐动画或留下退出中的空壳。 */
+#reader:not([data-mobile-controls]) > :is(#header, #footer) {
+    display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -208,7 +226,7 @@
     }
 }
 
-/* 文字式外观符号与相邻图标共用视觉高度，不随工具所在布局改变大小。 */
+/* 文字式外观符号与相邻图标保持一致的视觉高度。 */
 :is(#reader, #reader-actions) .appearance-mark {
     display: inline-flex;
     flex: 0 0 22px;

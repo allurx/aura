@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { EpubResource } from "./epub";
+import type { EpubResource } from "./epub-content";
 
 /**
  * 同内容书籍共享原文件与阅读资源；source 的原始字节用于无损导出。

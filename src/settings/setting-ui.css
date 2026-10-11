@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+@import "./controls/radio-setting-control.css";
 @import "./controls/theme-setting-control.css";
 @import "./controls/reading-mode-setting-control.css";
 @import "./controls/material-setting-control.css";
@@ -11,11 +12,10 @@
 @import "./controls/switch-setting-control.css";
 @import "./ui/setting-groups.css";
 
-/* 页面通过布局变量协调展开方向；标题和重置固定，设置项在中部滚动。 */
+/* 页面通过布局变量协调面板位置；标题和重置固定，设置项在中部滚动。 */
 #setting {
     --setting-padding: 20px;
     --setting-hover-background: color-mix(in srgb, var(--appearance-color) 7%, transparent);
-    --setting-hidden-translation: translateX(calc(100% + max(1rem, env(safe-area-inset-right))));
     position: fixed;
     inset: var(
         --setting-inset,
@@ -42,29 +42,37 @@
     border-bottom: var(--setting-border-bottom, 1px solid var(--appearance-border));
     border-radius: var(--setting-border-radius, 20px);
     box-shadow: var(--appearance-shadow-floating);
-    overflow: clip;
+    overflow: hidden;
     font-size: 15px;
     font-family: var(--ui-font-family);
     line-height: 1.5;
     opacity: 0;
-    transform: var(--setting-hidden-translation);
+    /* 原生 select 随祖先位移会触发逐帧布局，淡入淡出保留稳定的控件位置。 */
     transition:
         opacity var(--motion-duration-normal) var(--motion-ease),
-        transform var(--motion-duration-slow) var(--motion-ease-out),
-        display var(--motion-duration-slow) allow-discrete,
-        overlay var(--motion-duration-slow) allow-discrete;
-    -webkit-user-select: none;
-    user-select: none;
+        display var(--motion-duration-normal) allow-discrete,
+        overlay var(--motion-duration-normal) allow-discrete;
 
     &[open] {
         display: flex;
         opacity: 1;
-        transform: none;
 
         @starting-style {
             opacity: 0;
-            transform: var(--setting-hidden-translation);
         }
+    }
+
+    /* 仅主动调整后的浮动面板覆盖几何，窄屏撤下属性后恢复原布局。 */
+    &[data-panel-positioned] {
+        inset: var(--panel-top) auto auto var(--panel-left);
+        width: var(--panel-width);
+        height: var(--panel-height);
+        max-width: var(--panel-maximum-width);
+        max-height: var(--panel-maximum-height);
+    }
+
+    &[data-panel-interacting] {
+        transition: none;
     }
 
     &:not([open]) {
@@ -79,8 +87,8 @@
         opacity: 0;
         transition:
             opacity var(--motion-duration-normal) var(--motion-ease),
-            display var(--motion-duration-slow) allow-discrete,
-            overlay var(--motion-duration-slow) allow-discrete;
+            display var(--motion-duration-normal) allow-discrete,
+            overlay var(--motion-duration-normal) allow-discrete;
     }
 
     &[open]::backdrop {
@@ -296,8 +304,6 @@
             font-variant-numeric: tabular-nums;
             text-align: right;
             overflow-wrap: anywhere;
-            user-select: text;
-            -webkit-user-select: text;
         }
     }
 
@@ -524,7 +530,6 @@
 @media (max-width: 560px) {
     #setting {
         --setting-padding: 16px;
-        --setting-hidden-translation: translateY(100%);
         --setting-inset: auto 0 var(--viewport-bottom);
         --setting-width: 100%;
         --setting-max-height: min(

@@ -5,6 +5,7 @@
 
 import { readLines } from "@/domain/file/text-file-reader";
 import type { SupportedTextEncoding } from "@/domain/file/text-encoding";
+import { yieldTask } from "@/utils/task-util";
 import type Chapter from "./chapter";
 
 /**
@@ -38,6 +39,8 @@ export async function parseChapters(file: File, fileId: string, encoding: Suppor
     let chapterTitle: string | null = null;
     let chapterLines: string[] = [];
     let currentBookLineNumber = 1;
+    let processedLines = 0;
+    let taskStarted = performance.now();
 
     /**
      * 封存章节并推进物理行号；显式标题虽不进入 lines，仍占原文件一行。
@@ -58,6 +61,13 @@ export async function parseChapters(file: File, fileId: string, encoding: Suppor
     };
 
     for await (const line of readLines(file, encoding)) {
+        // 流式读取和逐行 await 可能只让出微任务；按时间预算让浏览器处理输入与绘制。
+        // 间隔检查避免极短行反复读时钟，不能按固定行数给普通文件累加等待。
+        if (++processedLines % 256 === 0 && performance.now() - taskStarted >= 8) {
+            await yieldTask();
+            taskStarted = performance.now();
+        }
+
         // 未命中的行（包括空行）原样归入正文。
         if (!chapterRegex.test(line)) {
             chapterLines.push(line);

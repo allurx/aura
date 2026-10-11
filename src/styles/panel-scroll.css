@@ -11,22 +11,8 @@
     overscroll-behavior: contain;
     scroll-padding-block: 0.5rem;
 
-    &:focus-within {
-        scrollbar-color: color-mix(in srgb, currentColor 50%, transparent) transparent;
-    }
-
-    @media (hover: hover) and (pointer: fine) {
-        &:hover {
-            scrollbar-color: color-mix(in srgb, currentColor 50%, transparent) transparent;
-        }
-    }
-
     @media (forced-colors: active) {
-        &,
-        &:hover,
-        &:focus-within {
-            scrollbar-width: auto;
-            scrollbar-color: auto;
-        }
+        scrollbar-width: auto;
+        scrollbar-color: auto;
     }
 }

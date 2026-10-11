@@ -23,12 +23,12 @@ export function bindVisualViewport(signal: AbortSignal): void {
     const sync = (): void => {
         const focused = document.activeElement;
         const searching = focused instanceof HTMLInputElement && focused.type === "search" && !focused.readOnly;
+        if (!searching && !adjustingViewport) return;
         if (viewport.scale !== 1 || viewport.height >= root.clientHeight - 1) {
             clear();
             return;
         }
         // 点击关闭或选章会先使搜索框失焦；等键盘实际收起再恢复画布，避免按钮中途移位。
-        if (!searching && !adjustingViewport) return;
         adjustingViewport = true;
         root.style.setProperty("--viewport-height", `${String(viewport.height)}px`);
         root.style.setProperty("--viewport-top", `${String(viewport.offsetTop)}px`);

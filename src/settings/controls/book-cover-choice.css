@@ -8,48 +8,50 @@
 #setting .book-cover-color-preview > span {
     --preview-cover: hsl(205 var(--appearance-cover-saturation) var(--appearance-cover-lightness));
     --preview-cover-ink: var(--appearance-cover-ink);
+    --preview-paper: color-mix(in srgb, var(--preview-cover) 18%, var(--appearance-surface));
     position: relative;
     flex: none;
     border: 1px solid color-mix(in srgb, var(--preview-cover-ink) 12%, transparent);
-    border-radius: 2px 5px 5px 2px;
+    border-radius: 1px 3px 3px 1px;
     background-color: var(--preview-cover);
     background-image: var(--material-image);
     background-size: var(--material-size);
-    background-blend-mode: soft-light;
-    box-shadow: 2px 2px 0 color-mix(in srgb, var(--preview-cover) 75%, var(--appearance-panel));
+    box-shadow:
+        1px 1px 0 var(--preview-paper),
+        2px 2px 0 color-mix(in srgb, var(--preview-cover) 75%, var(--appearance-panel)),
+        1px 3px 4px color-mix(in srgb, var(--appearance-shadow-color) 12%, transparent);
 
     &::before {
         content: "";
         position: absolute;
         inset: 0 auto 0 2px;
-        width: 2px;
-        background: color-mix(in srgb, var(--preview-cover-ink) 12%, transparent);
+        width: 1px;
+        background: color-mix(in srgb, var(--preview-cover-ink) 16%, transparent);
+    }
+
+    &::after {
+        content: "";
+        position: absolute;
+        inset: 19% 15% 14% 23%;
+        background-image:
+            linear-gradient(90deg, color-mix(in srgb, var(--preview-cover-ink) 60%, transparent) 100%, transparent),
+            linear-gradient(90deg, color-mix(in srgb, var(--preview-cover-ink) 45%, transparent) 100%, transparent),
+            linear-gradient(90deg, color-mix(in srgb, var(--preview-cover-ink) 28%, transparent) 100%, transparent);
+        background-size:
+            100% 2px,
+            65% 1px,
+            75% 1px;
+        background-position:
+            left top,
+            left 5px,
+            left bottom;
+        background-repeat: no-repeat;
     }
 }
 
 #setting .book-cover-style-preview {
     width: 30px;
-    height: 38px;
-
-    &::after {
-        content: "";
-        position: absolute;
-        left: 8px;
-        right: 5px;
-        top: 13px;
-        height: 2px;
-        background: color-mix(in srgb, var(--preview-cover-ink) 45%, transparent);
-        box-shadow: 0 5px 0 color-mix(in srgb, var(--preview-cover-ink) 30%, transparent);
-    }
-
-    &[data-cover-style="flat"] {
-        border-radius: 4px;
-        box-shadow: none;
-
-        &::before {
-            display: none;
-        }
-    }
+    height: 42px;
 }
 
 #setting .book-cover-color-preview {
@@ -67,7 +69,7 @@
         );
         width: 12px;
         height: 27px;
-        border-radius: 2px 3px 3px 2px;
+        border-radius: 1px 2px 2px 1px;
 
         &:nth-child(2) {
             --preview-cover-hue: 150;
@@ -83,16 +85,36 @@
 
 html:has(#book-list[data-cover-color="theme"]) #setting .book-cover-style-preview,
 #setting .book-cover-color-preview[data-cover-color="theme"] > span {
-    --preview-cover: color-mix(in srgb, var(--appearance-accent) 14%, var(--appearance-surface));
+    --preview-cover: color-mix(in srgb, var(--appearance-accent) 24%, var(--appearance-surface));
     --preview-cover-ink: var(--appearance-color);
 }
 
+#setting .book-cover-style-preview[data-cover-style="flat"],
 html:has(#book-list[data-cover-style="flat"]) #setting .book-cover-color-preview > span {
-    border-radius: 3px;
+    overflow: hidden;
+    border-radius: 2px;
+    background-color: var(--preview-paper);
     box-shadow: none;
 
     &::before {
-        display: none;
+        inset: 68% 0 0;
+        width: auto;
+        background-color: var(--preview-cover);
+        background-image: radial-gradient(
+            circle at 80% 120%,
+            transparent 38%,
+            color-mix(in srgb, var(--preview-cover-ink) 18%, transparent) 40% 43%,
+            transparent 45% 62%,
+            color-mix(in srgb, var(--preview-cover-ink) 18%, transparent) 64% 67%,
+            transparent 69%
+        );
+    }
+
+    &::after {
+        inset-inline-start: 15%;
+        background-image:
+            linear-gradient(90deg, color-mix(in srgb, var(--appearance-color) 60%, transparent) 100%, transparent),
+            linear-gradient(90deg, color-mix(in srgb, var(--appearance-color) 45%, transparent) 100%, transparent);
     }
 }
 
@@ -100,5 +122,14 @@ html:has(#book-list[data-cover-style="flat"]) #setting .book-cover-color-preview
     #setting .book-cover-style-preview,
     #setting .book-cover-color-preview > span {
         border-color: CanvasText;
+
+        &::after {
+            border-block-start: 2px solid CanvasText;
+        }
+    }
+
+    #setting .book-cover-style-preview[data-cover-style="flat"]::before,
+    html:has(#book-list[data-cover-style="flat"]) #setting .book-cover-color-preview > span::before {
+        border-block-start: 1px solid CanvasText;
     }
 }

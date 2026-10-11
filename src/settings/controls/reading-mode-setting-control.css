@@ -5,31 +5,7 @@
 
 #setting {
     .items > .item.reading-mode-setting {
-        position: relative;
-        display: block;
         padding: 4px 0 12px;
-
-        > .reset-setting {
-            position: absolute;
-            top: 4px;
-            right: 0;
-        }
-
-        fieldset {
-            min-width: 0;
-            margin: 0;
-            padding: 0;
-            border: 0;
-        }
-
-        legend {
-            max-width: calc(100% - 52px);
-            min-height: 36px;
-            padding: 0;
-            align-content: center;
-            font-size: 14px;
-            font-weight: 500;
-        }
     }
 
     .reading-mode-options {
@@ -41,7 +17,6 @@
     }
 
     .reading-mode-option {
-        position: relative;
         display: flex;
         min-width: 0;
         min-height: 76px;
@@ -57,30 +32,13 @@
         font-size: 13px;
         line-height: 1.5;
         text-align: center;
-        cursor: pointer;
         transition:
             border-color var(--motion-duration-fast) var(--motion-ease),
             color var(--motion-duration-fast) var(--motion-ease);
 
-        > input {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            opacity: 0;
-            cursor: inherit;
-        }
-
-        > svg {
+        > .icon {
             width: 32px;
             height: 28px;
-            stroke-width: 1.8;
-            pointer-events: none;
-        }
-
-        > span {
-            pointer-events: none;
         }
 
         &:has(input:checked) {
@@ -100,6 +58,22 @@
         }
     }
 
+    .icon-reading-mode-cover {
+        --icon-image: url("../../assets/images/reading-mode-cover.svg");
+    }
+
+    .icon-reading-mode-slide {
+        --icon-image: url("../../assets/images/reading-mode-slide.svg");
+    }
+
+    .icon-reading-mode-scroll {
+        --icon-image: url("../../assets/images/reading-mode-scroll.svg");
+    }
+
+    .icon-reading-mode-none {
+        --icon-image: url("../../assets/images/reading-mode-none.svg");
+    }
+
     .reading-mode-description {
         min-height: 1.5em;
         margin: 7px 0 0;
@@ -114,10 +88,4 @@
             outline-offset: -3px;
         }
     }
-}
-
-/* 输入覆盖整张卡片，键盘焦点显示在可见卡片上。 */
-:where(html[data-keyboard-navigation]) #setting .reading-mode-option:has(> input:focus-visible) {
-    outline: 2px solid var(--focus-ring-color);
-    outline-offset: 2px;
 }
