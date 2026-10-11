@@ -154,6 +154,94 @@ for (const delivery of ["web", "portable"] as const) {
         }
     });
 
+    void test(`${delivery}: EPUB table links retain their source position through reflow and manual scrolling`, async () => {
+        const rows = Array.from(
+            { length: 80 },
+            (_, row) =>
+                "<tr>" +
+                Array.from(
+                    { length: 8 },
+                    (_, column) =>
+                        `<td>${row === 60 && column === 6 ? '<span id="target">定位目标</span>' : `行${String(row)}列${String(column)}`}${"这是表格正文。".repeat(3)}</td>`
+                ).join("") +
+                "</tr>"
+        ).join("");
+        for (const mode of ["none", "scroll"] as const) {
+            await withPage(delivery, async (page) => {
+                await importBooks(page, [
+                    {
+                        name: "table-position.epub",
+                        mimeType: "application/epub+zip",
+                        buffer: createEpubFixture(
+                            `<p><a href="chapter.xhtml#target">跳到表格</a></p><table><tbody>${rows}</tbody></table>`
+                        ),
+                    },
+                ]);
+                await openBook(page, "table-position.epub");
+                await setMode(page, mode);
+                await page.locator('#content a[data-book-fragment="target"]').click();
+                await settleReader(page);
+                const progress = await readProgress(page);
+
+                // 同时核对正文视窗和表格内部裁切，不能把屏外 Range 或只正确的进度记录当成成功。
+                const assertTargetVisible = async (): Promise<void> => {
+                    const visible = await page
+                        .locator("#content")
+                        .getByText("定位目标", { exact: true })
+                        .evaluate((target) => {
+                            const bounds = target.closest(".reading-viewport")?.getBoundingClientRect();
+                            if (!bounds) return false;
+                            const rect = target.getBoundingClientRect();
+                            const x = Math.max(bounds.left + 1, Math.min(bounds.right - 1, rect.left + rect.width / 2));
+                            const y = Math.max(bounds.top + 1, Math.min(bounds.bottom - 1, rect.top + rect.height / 2));
+                            return (
+                                rect.right > bounds.left &&
+                                rect.left < bounds.right &&
+                                rect.bottom > bounds.top &&
+                                rect.top < bounds.bottom &&
+                                target.contains(document.elementFromPoint(x, y))
+                            );
+                        });
+                    assert(visible, "The linked table cell must remain visible");
+                };
+                await assertTargetVisible();
+                for (const [width, height] of [
+                    [880, 660],
+                    [650, 450],
+                    [1000, 780],
+                    [1440, 900],
+                ] as const) {
+                    await page.setViewportSize({ width, height });
+                    await settleReader(page);
+                    assert.deepEqual(await readProgress(page), progress);
+                    await assertTargetVisible();
+                }
+                await page.reload();
+                await page.locator("#toggle-setting-panel:not([disabled])").waitFor();
+                await settleReader(page);
+                assert.deepEqual(await readProgress(page), progress);
+                await assertTargetVisible();
+
+                if (mode === "none") {
+                    // 程序恢复不采样新行首；用户随后滚动内嵌表格仍须更新并持久保存位置。
+                    await page.locator("#content table").hover();
+                    const scrollTop = await page.locator("#content table").evaluate((table) => table.scrollTop);
+                    await page.mouse.wheel(0, -240);
+                    await page.waitForFunction(
+                        (previous) => (document.querySelector("#content table")?.scrollTop ?? previous) < previous,
+                        scrollTop
+                    );
+                    await page.locator("#return-bookshelf").click();
+                    await page.locator("#bookshelf").waitFor();
+                    const scrolled = await readProgress(page);
+                    assert.notDeepEqual(scrolled, progress);
+                    await openBook(page, "table-position.epub");
+                    assert.deepEqual(await readProgress(page), scrolled);
+                }
+            });
+        }
+    });
+
     void test(`${delivery}: long chapters retain deep source positions while layout is pending`, async () => {
         await withPage(delivery, async (page) => {
             const book = textBook("windowed-progress.txt", 1, 6000);

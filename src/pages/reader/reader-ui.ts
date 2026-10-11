@@ -287,6 +287,15 @@ export default class ReaderUi extends Ui {
     }
 
     /**
+     * 目录完成选章后接续正文，桌面和移动端共用同一个焦点落点。
+     */
+    public resumeReading(): void {
+        if (this.hasOpenPanel()) return;
+        this.content.focus({ preventScroll: true });
+        this.hideReadingTools();
+    }
+
+    /**
      * 任意原生模态界面打开时，暂停背景切章、手势和工具显隐操作。
      */
     private hasOpenPanel(): boolean {

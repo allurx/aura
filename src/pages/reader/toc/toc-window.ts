@@ -87,9 +87,13 @@ export default class TocWindow {
     }
 
     /**
-     * 尺寸变化使旧换行高度失效；按章号及可视偏移恢复同一浏览位置。
+     * 尺寸变化使旧换行高度失效；直接恢复浏览锚点，或按指定章号居中。
+     * 居中时返回已挂载的按钮，供显式定位操作交接焦点。
      */
-    public updateLayout(position: TocScrollPosition | undefined): void {
+    public updateLayout(
+        position: TocScrollPosition | undefined,
+        chapterToCenter?: number
+    ): HTMLButtonElement | undefined {
         const width = this.root.clientWidth;
         const height = this.root.clientHeight;
         if (width !== this.width || height !== this.viewportHeight) {
@@ -111,11 +115,20 @@ export default class TocWindow {
                 this.observer?.observe(row);
             }
         }
-        this.centeredChapter = undefined;
+        const centeredIndex = chapterToCenter === undefined ? undefined : this.indexes.get(chapterToCenter);
+        this.centeredChapter = centeredIndex === undefined ? undefined : chapterToCenter;
+        if (centeredIndex !== undefined) {
+            this.restoringPosition = undefined;
+            this.focusToReveal = undefined;
+            this.setScroll(this.centeredScrollTop(centeredIndex), centeredIndex);
+            return this.buttonAt(centeredIndex);
+        }
+
         // 换行后的真实高度尚未送达时，旧偏移可能超出估计行高；不能据此改选锚点。
         this.restoringPosition =
             position?.chapterNumber !== undefined && !this.heights.has(position.chapterNumber) ? position : undefined;
         this.restorePosition(position);
+        return undefined;
     }
 
     /**
@@ -130,19 +143,6 @@ export default class TocWindow {
             offset: (this.offsets[index] ?? 0) - scrollTop,
             scrollTop,
         };
-    }
-
-    /**
-     * 首次打开及显式定位按当前章居中，测得长标题高度后继续校正中心。
-     */
-    public centerChapter(chapterNumber: number): HTMLButtonElement | undefined {
-        const index = this.indexes.get(chapterNumber);
-        if (index === undefined) return undefined;
-        this.restoringPosition = undefined;
-        this.focusToReveal = undefined;
-        this.centeredChapter = chapterNumber;
-        this.setScroll(this.centeredScrollTop(index), index);
-        return this.buttonAt(index);
     }
 
     /**
@@ -170,12 +170,8 @@ export default class TocWindow {
         event.preventDefault();
         this.centeredChapter = undefined;
         this.restoringPosition = undefined;
-        this.focusToReveal = undefined;
-        const top = assertExists(this.offsets[next]);
-        const bottom = assertExists(this.offsets[next + 1]);
-        const scrollTop = this.root.scrollTop;
-        const target = top < scrollTop ? top : Math.max(scrollTop, bottom - this.viewportHeight);
-        this.setScroll(target, next);
+        this.focusToReveal = assertExists(this.entries[next]).chapterNumber;
+        this.setScroll(this.revealFocusedScrollTop(this.root.scrollTop), next);
         this.buttonAt(next)?.focus({ preventScroll: true });
         this.onPosition(this.capturePosition());
     }
@@ -388,12 +384,12 @@ export default class TocWindow {
     }
 
     /**
-     * 响应式变化优先保留操作焦点；等该行真实换行高度到达后再校正可见范围。
+     * 键盘导航和响应式变化共用焦点可见范围；未测量时保留目标，等待真实行高校正。
      */
     private revealFocusedScrollTop(scrollTop: number): number {
         const number = this.focusToReveal;
-        if (number === undefined || !this.heights.has(number)) return scrollTop;
-        this.focusToReveal = undefined;
+        if (number === undefined) return scrollTop;
+        if (this.heights.has(number)) this.focusToReveal = undefined;
         const index = this.indexes.get(number);
         if (index === undefined) return scrollTop;
         const top = assertExists(this.offsets[index]);

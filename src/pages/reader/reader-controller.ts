@@ -181,7 +181,6 @@ export default class ReaderController {
     private async selectChapter(chapterNumber: number): Promise<boolean> {
         if (!this.canNavigate() || chapterNumber < 1 || chapterNumber > this.state.toc.entries.length) return false;
         const selected = await this.contentUi.showChapter(chapterNumber, "start");
-        if (selected && this.isActive()) this.readerUi.hideReadingTools();
         return selected && this.isActive();
     }
 
@@ -256,10 +255,11 @@ export default class ReaderController {
             {
                 onTurn: (direction) => this.turn(direction),
                 onChapter: async (direction) => {
-                    await this.selectChapter(
+                    const selected = await this.selectChapter(
                         (this.contentUi.readProgress()?.chapterNumber ?? this.state.progress.chapterNumber) +
                             (direction === ReadingDirection.PREV ? -1 : 1)
                     );
+                    if (selected) this.readerUi.hideReadingTools();
                 },
                 onCenterTap: () => {
                     if (this.canNavigate()) this.readerUi.toggleReadingTools();
@@ -271,7 +271,6 @@ export default class ReaderController {
 
         this.readerUi.bindToggleFullscreen(async () => {
             if (!this.canNavigate()) return;
-            const position = this.contentUi.readPosition();
             try {
                 await this.appUi.toggleFullscreen();
             } catch (error) {
@@ -283,9 +282,6 @@ export default class ReaderController {
                     "可以继续普通阅读，也可以关闭提示后再次尝试全屏。"
                 );
             }
-            if (signal.aborted) return;
-            if (position) this.contentUi.restorePosition(position);
-            await this.contentUi.refreshLocation();
         }, signal);
 
         this.contentUi.bindBookLinks(async (path, fragment) => {
@@ -306,11 +302,7 @@ export default class ReaderController {
         this.tocUi
             .delegateTocItemClick((chapterNumber) => this.selectChapter(chapterNumber), signal)
             .bindTocClose((selected) => {
-                if (selected) {
-                    this.readerUi.hideReadingTools();
-                    this.contentUi.root.focus({ preventScroll: true });
-                }
-                run(() => this.contentUi.refreshLocation());
+                if (selected) this.readerUi.resumeReading();
             }, signal);
     }
 }

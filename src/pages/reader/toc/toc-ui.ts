@@ -348,8 +348,10 @@ export default class TocUi extends Ui {
         if (!action && this.layoutSignature() === this.lastLayout) return;
         this.pendingLayout = undefined;
         const followCurrent = action === "locate" || (action === "open" && !this.browsingPosition);
-        this.chapterWindow.updateLayout(this.browsingPosition);
-        const current = followCurrent ? this.chapterWindow.centerChapter(this.currentChapterNumber) : undefined;
+        const current = this.chapterWindow.updateLayout(
+            this.browsingPosition,
+            followCurrent ? this.currentChapterNumber : undefined
+        );
         this.capturePosition();
         if (action === "locate") {
             this.unfilteredPosition = this.browsingPosition;

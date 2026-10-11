@@ -25,7 +25,7 @@ export interface ReadingLocation extends ContentLocation {
 /**
  * 同一处内容相对视窗的临时偏移，用于重排和章节窗口更新。
  */
-export interface ReadingPosition {
+interface ReadingPosition {
     readonly location: ReadingLocation;
     readonly top: number;
     readonly chapterStart: boolean;
@@ -74,10 +74,9 @@ export default class ContentUi extends Ui {
     private windowFrame: number | undefined;
     private resizeObserver: ResizeObserver | undefined;
     private layoutPending = false;
-    private restorePending = false;
     private position: ReadingPosition | undefined;
-    // 恢复位置后延迟到达的原生 scroll 不能把临时排版的行首写回源锚点。
-    private restoredScrollTop: number | undefined;
+    // 正文和内嵌区域共用恢复边界，延迟的程序滚动不能覆盖原源锚点。
+    private readonly restoredScrollPositions = new WeakMap<HTMLElement, { top: number; left: number }>();
     private layout = "";
     private turning = false;
     private updating = false;
@@ -210,20 +209,9 @@ export default class ContentUi extends Ui {
         this.root.dataset["readingMode"] = mode;
         if (this.views.size === 0) return;
         if (position) this.chapterNumber = position.location.chapterNumber;
-        this.activeWindow?.cancel();
-        this.activeWindow = undefined;
-        for (const [view, window] of this.windows) {
-            window.reset(
-                mode,
-                position?.location.chapterNumber === view.chapter.chapterNumber
-                    ? position.location
-                    : { blockNumber: 1, contentOffset: 0 }
-            );
-        }
+        this.position = position;
         this.mountViews();
-        if (position) this.restorePosition(position);
-        else this.scheduleLayout();
-        run(() => this.refreshLocation());
+        this.scheduleLayout();
     }
 
     /**
@@ -432,7 +420,7 @@ export default class ContentUi extends Ui {
                     if (!this.isActive()) return;
                     this.measure();
                     if (target === "end") this.moveToEnd();
-                    else this.restoreLocation({ ...location, chapterNumber });
+                    else this.restorePosition({ ...location, chapterNumber });
                 };
                 // 快照更新暂停渲染，必须同步完成一次最终排版，不能等待 ResizeObserver。
                 // 无快照的导航仍交给自然布局，避免在挂载正文后立即强制重排。
@@ -485,7 +473,7 @@ export default class ContentUi extends Ui {
             }
             this.install(views);
             this.measure();
-            this.applyPosition(current);
+            this.restorePosition(current);
         } finally {
             this.releasePrepared(views);
         }
@@ -536,7 +524,7 @@ export default class ContentUi extends Ui {
                         this.position = this.readVisiblePosition();
                         return;
                     }
-                    this.applyPosition(
+                    this.restorePosition(
                         previous ?? {
                             location,
                             top: 0,
@@ -622,7 +610,7 @@ export default class ContentUi extends Ui {
                     await this.afterLayout(() => {
                         if (!this.isActive() || layout !== window.layout) return;
                         this.measure();
-                        this.applyPosition(position);
+                        this.restorePosition(position);
                     });
                     if (!this.isActive() || layout !== window.layout) return;
                 }
@@ -737,10 +725,10 @@ export default class ContentUi extends Ui {
     }
 
     /**
-     * 外观和焦点恢复明确请求位置同步，不再伪造原生 scroll 事件。
+     * 正文导航与布局完成后同步位置，不通过页面控制器重复恢复或伪造 scroll 事件。
      * 已请求重排时由布局回调发布最终快照；本次请求直接返回，退出仍可读取稳定源锚点。
      */
-    public async refreshLocation(): Promise<void> {
+    private async refreshLocation(): Promise<void> {
         if (this.views.size === 0 || this.signal.aborted) return;
         if (this.layoutPending) return;
         if (this.updating) {
@@ -829,23 +817,20 @@ export default class ContentUi extends Ui {
     private flushLayout(): void {
         if (this.signal.aborted || this.views.size === 0) return;
         this.layoutPending = false;
-        if (!this.restorePending && this.layoutSignature() === this.layout) return;
-        this.restorePending = false;
+        if (this.layoutSignature() === this.layout) return;
         this.transition?.skipTransition();
         const position = this.position;
-        if (this.layoutSignature() !== this.layout) {
-            // 相邻长章共享字号和视窗条件，也要废弃旧索引；只为当前章重新启动测量。
-            for (const [view, window] of this.windows) {
-                const location =
-                    position?.location.chapterNumber === view.chapter.chapterNumber
-                        ? position.location
-                        : view.pieceLocation(window.range.start);
-                window.reset(this.mode, location, true);
-            }
-            this.activeWindow = undefined;
+        // 相邻长章共享字号和视窗条件，也要废弃旧索引；只为当前章重新启动测量。
+        for (const [view, window] of this.windows) {
+            const location =
+                position?.location.chapterNumber === view.chapter.chapterNumber
+                    ? position.location
+                    : view.pieceLocation(window.range.start);
+            window.reset(this.mode, location, true);
         }
+        this.activeWindow = undefined;
         this.measure();
-        if (position) this.applyPosition(position);
+        if (position) this.restorePosition(position);
         this.startActiveLayout();
         // 几何恢复仍在绘制前完成；窗口维护放到下一任务，避免在同轮观察通知中再次观察视窗。
         this.scheduleLocationSync(0);
@@ -917,7 +902,7 @@ export default class ContentUi extends Ui {
                         this.position = undefined;
                         this.moveToEnd();
                         this.position = this.readVisiblePosition();
-                    } else this.applyPosition(position);
+                    } else this.restorePosition(position);
                     this.layoutPending = false;
                 });
                 if (this.isActive() && window === this.activeWindow) await this.refreshLocation();
@@ -1014,7 +999,7 @@ export default class ContentUi extends Ui {
     /**
      * 保存文字位置和可视偏移，章首单独保留以保护标题及其留白。
      */
-    public readPosition(): ReadingPosition | undefined {
+    private readPosition(): ReadingPosition | undefined {
         if (this.position) return this.position;
         return this.readVisiblePosition();
     }
@@ -1035,62 +1020,45 @@ export default class ContentUi extends Ui {
     }
 
     /**
-     * 分页恢复包含锚点的页，滚动保留同一内容相对视窗的距离。
+     * 在已测量的排版中定位一次：显式导航对齐源内容，重排保留同一内容的可视偏移。
+     * 分页只定位包含锚点的页，不复用旧页码或块高度比例。
      */
-    public restorePosition(position: ReadingPosition): void {
-        this.position = position;
-        this.restorePending = true;
-        this.scheduleLayout();
-    }
-
-    /**
-     * 在排版已测量后恢复位置；外部请求通过 restorePosition 合并到布局恢复阶段。
-     */
-    private applyPosition(position: ReadingPosition): void {
-        this.restoreLocation(position.location);
-        const view = this.views.get(position.location.chapterNumber);
-        if (view && this.mode === "scroll") {
-            const rect = position.chapterStart
-                ? view.element.getBoundingClientRect()
-                : locateContentRect(view.element, position.location);
-            if (rect) this.viewport.scrollTop += rect.top - this.viewport.getBoundingClientRect().top - position.top;
-        }
-        this.position = position;
-        this.restoredScrollTop = this.viewport.scrollTop;
-    }
-
-    /**
-     * 将源位置映射到当前排版，不复用旧页码或块高度比例。
-     */
-    private restoreLocation(location: ReadingLocation): void {
+    private restorePosition(target: ReadingLocation | ReadingPosition): void {
+        const position = "location" in target ? target : undefined;
+        const location = "location" in target ? target.location : target;
         const view = this.views.get(location.chapterNumber);
         if (!view) return;
         this.chapterNumber = location.chapterNumber;
         if (this.mode !== "scroll" && view.element.parentElement !== this.viewport) this.mountViews();
-        if (location.blockNumber === 1 && location.contentOffset === 0) {
-            this.restoreChapterStart();
-            return;
-        }
-        this.restoreNestedScroll(view.element, location);
+        const chapterStart = position?.chapterStart ?? (location.blockNumber === 1 && location.contentOffset === 0);
+        if (!chapterStart) this.restoreNestedScroll(view.element, location);
         // 独立空块仍有源边界和布局位置，不要求其生成可见字符。
-        const rect =
-            locateContentRect(view.element, location) ??
-            locateContentRange(view.element, location)?.getBoundingClientRect();
+        const rect = chapterStart
+            ? view.element.getBoundingClientRect()
+            : (locateContentRect(view.element, location) ??
+              locateContentRange(view.element, location)?.getBoundingClientRect());
         if (!rect) return;
         const viewport = this.viewport.getBoundingClientRect();
-        if (this.mode === "scroll") this.viewport.scrollTop += rect.top - viewport.top;
+        if (this.mode === "scroll") this.viewport.scrollTop += rect.top - viewport.top - (position?.top ?? 0);
         else {
-            this.pageIndex = Math.min(
-                this.pageCount - 1,
-                Math.max(
-                    0,
-                    Math.floor((rect.left - view.element.getBoundingClientRect().left + 0.01) / this.pageStride)
-                )
-            );
+            this.pageIndex = chapterStart
+                ? 0
+                : Math.min(
+                      this.pageCount - 1,
+                      Math.max(
+                          0,
+                          Math.floor((rect.left - view.element.getBoundingClientRect().left + 0.01) / this.pageStride)
+                      )
+                  );
             this.viewport.scrollLeft = this.pageIndex * this.pageStride;
+            if (chapterStart) this.viewport.scrollTop = 0;
         }
-        this.position = { location, top: this.mode === "scroll" ? 0 : rect.top - viewport.top, chapterStart: false };
-        this.restoredScrollTop = this.viewport.scrollTop;
+        this.position = position ?? {
+            location,
+            top: this.mode === "scroll" || chapterStart ? 0 : rect.top - viewport.top,
+            chapterStart,
+        };
+        this.rememberRestoredScroll(this.viewport);
     }
 
     /**
@@ -1128,25 +1096,14 @@ export default class ContentUi extends Ui {
             else section.style.removeProperty("column-width");
             this.viewport.scrollLeft = scrollLeft;
         }
+        for (const { element: region } of regions) this.rememberRestoredScroll(region);
     }
 
     /**
-     * 显式选章从标题开始；相邻翻页回退由 moveToEnd 定位末页。
+     * 保存浏览器实际接受的最终滚动值，区分布局恢复的通知与用户后续滚动。
      */
-    private restoreChapterStart(): void {
-        const view = this.views.get(this.chapterNumber);
-        this.pageIndex = 0;
-        this.viewport.scrollLeft = 0;
-        if (view && this.mode === "scroll")
-            this.viewport.scrollTop +=
-                view.element.getBoundingClientRect().top - this.viewport.getBoundingClientRect().top;
-        else this.viewport.scrollTop = 0;
-        this.position = {
-            location: { chapterNumber: this.chapterNumber, blockNumber: 1, contentOffset: 0 },
-            top: 0,
-            chapterStart: true,
-        };
-        this.restoredScrollTop = this.viewport.scrollTop;
+    private rememberRestoredScroll(element: HTMLElement): void {
+        this.restoredScrollPositions.set(element, { top: element.scrollTop, left: element.scrollLeft });
     }
 
     /**
@@ -1252,13 +1209,11 @@ export default class ContentUi extends Ui {
                     this.layoutSignature() !== this.layout
                 )
                     return;
-                if (
-                    this.mode === "scroll" &&
-                    event.target === this.viewport &&
-                    this.viewport.scrollTop === this.restoredScrollTop
-                )
-                    return;
-                this.restoredScrollTop = undefined;
+                if (event.target instanceof HTMLElement) {
+                    const restored = this.restoredScrollPositions.get(event.target);
+                    if (restored?.top === event.target.scrollTop && restored.left === event.target.scrollLeft) return;
+                    this.restoredScrollPositions.delete(event.target);
+                }
                 if (this.mode === "scroll" && this.isOutsideChapterWindow()) {
                     this.scheduleWindow();
                     this.scheduleLocationSync();
