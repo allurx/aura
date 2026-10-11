@@ -70,7 +70,6 @@ export default class ChapterView {
     private readonly urls = new Map<string, string>();
     private readonly imageSizes = new Map<string, { width: number; height: number }>();
     private readonly sourceAnchors = new Map<string, ContentLocation>();
-    private readonly renderedAnchors = new Map<string, HTMLElement>();
     private readonly pieces: ChapterPiece[] = [];
 
     /**
@@ -197,13 +196,6 @@ export default class ChapterView {
     }
 
     /**
-     * 当前窗口中的原书锚点不污染应用 DOM ID。
-     */
-    public findAnchor(id: string): HTMLElement | undefined {
-        return this.renderedAnchors.get(id);
-    }
-
-    /**
      * 创建独立的正文片段供不可交互的测量视窗使用。
      * carry 只表示上一批末页已用的排版高度，不进入源内容或阅读进度。
      */
@@ -216,7 +208,7 @@ export default class ChapterView {
     ): HTMLElement {
         const section = document.createElement("section");
         this.configureSection(section);
-        this.fillWindow(section, start, end, carry, inlineCarry, new Map(), seams);
+        this.fillWindow(section, start, end, carry, inlineCarry, seams);
         return section;
     }
 
@@ -226,7 +218,7 @@ export default class ChapterView {
     public renderFrom(location: ContentLocation, end: number): HTMLElement {
         const section = document.createElement("section");
         this.configureSection(section);
-        this.fillRange(section, this.pieceIndex(location), end, 0, 0, new Map(), location);
+        this.fillRange(section, this.pieceIndex(location), end, 0, 0, location);
         return section;
     }
 
@@ -290,12 +282,9 @@ export default class ChapterView {
                   }
                 : undefined;
         const prepared = document.createElement("section");
-        const anchors = new Map<string, HTMLElement>();
-        this.fillWindow(prepared, start, end, carry, inlineCarry, anchors, seams);
+        this.fillWindow(prepared, start, end, carry, inlineCarry, seams);
         const oldNodes = renderedNodes(this.element);
         const desiredNodes = renderedNodes(prepared);
-        const anchorKeys = new Map([...anchors].map(([id, element]) => [id, renderedKey(element)]));
-        const previousAnchors = new Map(this.renderedAnchors);
         const desired = [...prepared.children];
         const installed: Element[] = [];
 
@@ -328,14 +317,6 @@ export default class ChapterView {
             if (desiredElement && element.style.cssText !== desiredElement.style.cssText)
                 element.style.cssText = desiredElement.style.cssText;
         }
-        this.renderedAnchors.clear();
-        for (const [id, candidate] of anchors) {
-            const key = anchorKeys.get(id);
-            const element = candidate === prepared ? this.element : key ? mountedNodes.get(key) : candidate;
-            const previous = previousAnchors.get(id);
-            if (element && this.element.contains(element)) this.renderedAnchors.set(id, element);
-            else if (previous && this.element.contains(previous)) this.renderedAnchors.set(id, previous);
-        }
         // Range 的活端点会随旧祖先移除而折叠；两端源节点仍在窗口中时恢复原方向与精确偏移。
         if (selected && this.element.contains(selected.anchor) && this.element.contains(selected.focus)) {
             if (
@@ -361,7 +342,6 @@ export default class ChapterView {
         for (const url of this.urls.values()) URL.revokeObjectURL(url);
         this.urls.clear();
         this.imageSizes.clear();
-        this.renderedAnchors.clear();
         this.sourceAnchors.clear();
     }
 
@@ -523,12 +503,11 @@ export default class ChapterView {
         end: number,
         carry: number,
         inlineCarry: number,
-        anchors: Map<string, HTMLElement>,
         seams: readonly ChapterSeam[]
     ): void {
         const boundaries = this.seamsInRange(start, end, seams);
         if (boundaries.length === 0) {
-            this.fillRange(section, start, end, carry, inlineCarry, anchors);
+            this.fillRange(section, start, end, carry, inlineCarry);
             return;
         }
         const result = document.createDocumentFragment();
@@ -543,7 +522,6 @@ export default class ChapterView {
                 end,
                 previous ? 0 : carry,
                 previous?.inlineCarry ?? inlineCarry,
-                anchors,
                 lower,
                 boundary?.location
             );
@@ -561,9 +539,6 @@ export default class ChapterView {
             lower = boundary?.location;
         }
         section.replaceChildren(result);
-        if (start === 0 && this.chapter.kind === "epub") {
-            for (const id of this.chapter.startAnchors ?? []) anchors.set(id, section);
-        }
     }
 
     /**
@@ -575,7 +550,6 @@ export default class ChapterView {
         end: number,
         carry: number,
         inlineCarry: number,
-        anchors: Map<string, HTMLElement>,
         lower?: ContentLocation,
         upper?: ContentLocation
     ): void {
@@ -624,7 +598,7 @@ export default class ChapterView {
             if (typeof piece.source === "string") block.textContent = piece.source.slice(contentStart, contentEnd);
             else {
                 block.className = "epub-block";
-                const node = this.createEpubSlice(piece.source, contentStart, contentEnd, anchors);
+                const node = this.createEpubSlice(piece.source, contentStart, contentEnd);
                 if (node) block.append(node);
             }
             // 批次边缘不等于章末，必须保留真实段落间距；块内续片没有额外段落间距。
@@ -642,20 +616,12 @@ export default class ChapterView {
             firstRendered = false;
         }
         section.replaceChildren(fragment);
-        if (start === 0 && this.chapter.kind === "epub") {
-            for (const id of this.chapter.startAnchors ?? []) anchors.set(id, section);
-        }
     }
 
     /**
      * 索引直接跳过范围外子树，只克隆源范围及其必要祖先；不挂载原书 DOM。
      */
-    private createEpubSlice(
-        source: SourceNode,
-        start: number,
-        end: number,
-        anchors: Map<string, HTMLElement>
-    ): Node | undefined {
+    private createEpubSlice(source: SourceNode, start: number, end: number): Node | undefined {
         if ((source.end <= start && source.end > source.start) || (source.start >= end && source.end > source.start))
             return undefined;
         const node = source.node;
@@ -689,7 +655,7 @@ export default class ChapterView {
             for (let index = low; index < source.children.length; index++) {
                 const child = source.children[index];
                 if (!child || child.start >= end) break;
-                const result = this.createEpubSlice(child, start, end, anchors);
+                const result = this.createEpubSlice(child, start, end);
                 if (result) element.append(result);
             }
             if (node.href) {
@@ -709,8 +675,6 @@ export default class ChapterView {
                 if (node.tag === "li" && source.start < start) element.style.listStyleType = "none";
             }
         }
-        if (node.id && source.start >= start && source.start < end && !anchors.has(node.id))
-            anchors.set(node.id, element);
         element.dataset["sourceKey"] = String(source.id);
         element.dataset["sourceStart"] = String(Math.max(start, source.start));
         element.dataset["sourceEnd"] = String(Math.min(end, source.end));

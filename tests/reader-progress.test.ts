@@ -8,6 +8,7 @@ import { Buffer } from "node:buffer";
 import { after, before, test } from "node:test";
 import type { Page } from "playwright-core";
 import type Progress from "../src/domain/progress/progress.ts";
+import { createEpubFixture } from "./fixtures/epub-fixtures.ts";
 import {
     importBooks,
     openBook,
@@ -77,6 +78,82 @@ async function readProgress(page: Page): Promise<Progress[]> {
 }
 
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: EPUB links to empty tail anchors retain their source location after reopening`, async () => {
+        for (const mode of ["none", "scroll"] as const) {
+            await withPage(delivery, async (page) => {
+                const content = "这是用于验证长段落尾部锚点的正文。".repeat(1600) + "尾部目标";
+                await importBooks(page, [
+                    {
+                        name: "empty-anchor.epub",
+                        mimeType: "application/epub+zip",
+                        buffer: createEpubFixture(
+                            `<p><a href="chapter.xhtml#tail">跳到末尾</a></p><p>${content}<span id="tail"></span></p>`
+                        ),
+                    },
+                ]);
+                await openBook(page, "empty-anchor.epub");
+                await setMode(page, mode);
+                await page.locator('#content a[data-book-fragment="tail"]').click();
+                await settleReader(page);
+
+                // 空锚点自身没有像素，验收其前方的真实内容，不能只检查 fragment 或已保存记录。
+                const tailVisible = (): Promise<void> =>
+                    page
+                        .waitForFunction(() => {
+                            const viewport = document.querySelector(
+                                "#content > .reading-viewport:not(.reading-measure-viewport)"
+                            );
+                            const bounds = viewport?.getBoundingClientRect();
+                            if (!viewport || !bounds) return false;
+                            const walker = document.createTreeWalker(viewport, NodeFilter.SHOW_TEXT);
+                            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+                                const offset = node.textContent?.indexOf("尾部目标") ?? -1;
+                                if (offset < 0) continue;
+                                const range = document.createRange();
+                                range.setStart(node, offset);
+                                range.setEnd(node, offset + 4);
+                                return [...range.getClientRects()].some(
+                                    (rect) =>
+                                        rect.right > bounds.left &&
+                                        rect.left < bounds.right &&
+                                        rect.bottom > bounds.top &&
+                                        rect.top < bounds.bottom
+                                );
+                            }
+                            return false;
+                        })
+                        .then(() => undefined);
+                await tailVisible();
+                const progress = await readProgress(page);
+                assert.equal(progress[0]?.blockNumber, 2);
+                assert.equal(progress[0].contentOffset, content.length);
+
+                await page.reload();
+                await page.locator("#toggle-setting-panel:not([disabled])").waitFor();
+                await settleReader(page);
+                await tailVisible();
+                assert.deepEqual(await readProgress(page), progress);
+
+                if (mode === "scroll") {
+                    // 恢复只保留原锚点；真实滚动仍须立即接受新位置，重入不能再退到临时片段行首。
+                    const previousRate = await page.locator("#progress-rate").textContent();
+                    await page.locator("#content").hover();
+                    await page.mouse.wheel(0, -180);
+                    await page.waitForFunction(
+                        (rate) => document.querySelector("#progress-rate")?.textContent !== rate,
+                        previousRate
+                    );
+                    const scrolled = await readProgress(page);
+                    assert.notDeepEqual(scrolled, progress);
+                    await page.reload();
+                    await page.locator("#toggle-setting-panel:not([disabled])").waitFor();
+                    await settleReader(page);
+                    assert.deepEqual(await readProgress(page), scrolled);
+                }
+            });
+        }
+    });
+
     void test(`${delivery}: long chapters retain deep source positions while layout is pending`, async () => {
         await withPage(delivery, async (page) => {
             const book = textBook("windowed-progress.txt", 1, 6000);

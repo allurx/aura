@@ -13,6 +13,7 @@ import ChapterView from "./chapter-view";
 import { endContentLocation, locateContentRange, locateContentRect, readContentLocation } from "./content-location";
 import type { ContentLocation } from "./content-location";
 import ChapterWindow from "./chapter-window";
+import { assertExists } from "@/utils/assert-util";
 
 /**
  * 阅读位置引用原始内容，页码仅由当前排版计算。
@@ -75,6 +76,8 @@ export default class ContentUi extends Ui {
     private layoutPending = false;
     private restorePending = false;
     private position: ReadingPosition | undefined;
+    // 恢复位置后延迟到达的原生 scroll 不能把临时排版的行首写回源锚点。
+    private restoredScrollTop: number | undefined;
     private layout = "";
     private turning = false;
     private updating = false;
@@ -281,14 +284,7 @@ export default class ContentUi extends Ui {
             if (!this.isActive()) return view;
             if (view.pieceCount > view.rangeEnd(0) && !this.windows.has(view)) {
                 const destination = number === chapterNumber ? target : number < chapterNumber ? "end" : "start";
-                const location =
-                    typeof destination === "object"
-                        ? "fragment" in destination
-                            ? (view.anchorLocation(destination.fragment) ?? { blockNumber: 1, contentOffset: 0 })
-                            : destination
-                        : destination === "end" && view.pieceCount > 0
-                          ? view.pieceLocation(view.pieceCount - 1)
-                          : { blockNumber: 1, contentOffset: 0 };
+                const location = targetLocation(view, destination);
                 this.windows.set(view, new ChapterWindow(view, this.mode, location));
             }
             return view;
@@ -309,12 +305,11 @@ export default class ContentUi extends Ui {
                 let offset = 0;
                 if (destination === "end") offset = Math.max(0, bounds.height - this.viewport.clientHeight);
                 else if (destination && typeof destination !== "string") {
+                    const location = targetLocation(view, destination);
                     const rect =
-                        "fragment" in destination
-                            ? view.findAnchor(destination.fragment)?.getClientRects()[0]
-                            : destination.blockNumber === 1 && destination.contentOffset === 0
-                              ? undefined
-                              : locateContentRect(view.element, destination);
+                        location.blockNumber === 1 && location.contentOffset === 0
+                            ? undefined
+                            : locateContentRect(view.element, location);
                     if (rect) offset = Math.max(0, rect.top - bounds.top);
                 }
                 if (destination !== undefined) offset = Math.max(0, offset - top);
@@ -428,27 +423,16 @@ export default class ContentUi extends Ui {
                 this.chapterNumber = chapterNumber;
                 this.position = undefined;
                 this.install(views);
-                const view = this.views.get(chapterNumber);
-                const window = view ? this.windows.get(view) : undefined;
+                const view = assertExists(this.views.get(chapterNumber), "Missing prepared reading chapter");
+                const window = this.windows.get(view);
                 this.pendingChapterEnd = target === "end" && window && !window.layout.complete ? window : undefined;
-                if (window) {
-                    const location =
-                        typeof target === "object"
-                            ? "fragment" in target
-                                ? (view?.anchorLocation(target.fragment) ?? { blockNumber: 1, contentOffset: 0 })
-                                : target
-                            : target === "end"
-                              ? window.view.pieceLocation(window.view.pieceCount - 1)
-                              : { blockNumber: 1, contentOffset: 0 };
-                    window.showLocation(location);
-                }
+                const location = targetLocation(view, target);
+                window?.showLocation(location);
                 const position = (): void => {
                     if (!this.isActive()) return;
                     this.measure();
                     if (target === "end") this.moveToEnd();
-                    else if (target === "start") this.restoreChapterStart();
-                    else if ("fragment" in target) this.scrollToFragment(target.fragment);
-                    else this.restoreLocation({ ...target, chapterNumber });
+                    else this.restoreLocation({ ...location, chapterNumber });
                 };
                 // 快照更新暂停渲染，必须同步完成一次最终排版，不能等待 ResizeObserver。
                 // 无快照的导航仍交给自然布局，避免在挂载正文后立即强制重排。
@@ -489,9 +473,11 @@ export default class ContentUi extends Ui {
 
         const position = this.readPosition();
         if (!position) return;
+        const scrollTop = this.viewport.scrollTop;
         const views = await this.prepareWindow(position.location.chapterNumber, position.location, position.top);
         try {
-            const current = this.readPosition();
+            // 准备相邻章节时正文仍可原生滚动；等待期间的新位置优先于开始补窗时的缓存。
+            const current = this.viewport.scrollTop === scrollTop ? this.readPosition() : this.readVisiblePosition();
             if (!this.isActive() || this.getMode() !== "scroll" || !current) return;
             if (!views.some(({ chapter }) => chapter.chapterNumber === current.location.chapterNumber)) {
                 this.windowPending = true;
@@ -523,7 +509,7 @@ export default class ContentUi extends Ui {
         const first = sourceElements[0]?.getBoundingClientRect();
         const last = sourceElements.at(-1)?.getBoundingClientRect();
         const outside = !first || !last || viewport.top < first.top - 1 || viewport.top >= last.bottom;
-        const previous = outside ? undefined : this.readVisiblePosition();
+        const previous = outside ? undefined : this.readPosition();
         const requestedTop = Math.max(0, viewport.top - view.element.getBoundingClientRect().top);
         const indexedTarget = window.layout.batches.some(
             (batch) => requestedTop >= batch.top && requestedTop < batch.top + batch.height
@@ -614,6 +600,7 @@ export default class ContentUi extends Ui {
                 if (this.signal.aborted) return;
                 const lineHeight = Number.parseFloat(getComputedStyle(this.root).lineHeight);
                 this.viewport.scrollTop += step * Math.max(lineHeight, this.viewport.clientHeight - lineHeight);
+                this.capturePosition();
                 return;
             }
             const window = this.currentWindow();
@@ -825,7 +812,7 @@ export default class ContentUi extends Ui {
     }
 
     /**
-     * 使用变化前保存的源锚点，统一处理 resize、字体和外观预览后的重排。
+     * 使用变化前保存的源锚点，统一处理 resize、字体和外观变化后的重排。
      */
     private scheduleLayout(): void {
         if (this.layoutPending || this.views.size === 0 || this.signal.aborted || !this.resizeObserver) return;
@@ -980,10 +967,10 @@ export default class ContentUi extends Ui {
     }
 
     /**
-     * 分页保留实际导航选定的源锚点，重排的新页首不能覆盖它。
+     * 保留实际导航选定的源锚点，临时排版的新页首或行首不能覆盖它。
      */
     public readProgress(): ReadingLocation | undefined {
-        if (this.mode !== "scroll" && this.position) return this.position.location;
+        if (this.position) return this.position.location;
         return this.readVisibleProgress();
     }
 
@@ -1028,7 +1015,7 @@ export default class ContentUi extends Ui {
      * 保存文字位置和可视偏移，章首单独保留以保护标题及其留白。
      */
     public readPosition(): ReadingPosition | undefined {
-        if (this.mode !== "scroll" && this.position) return this.position;
+        if (this.position) return this.position;
         return this.readVisiblePosition();
     }
 
@@ -1069,6 +1056,7 @@ export default class ContentUi extends Ui {
             if (rect) this.viewport.scrollTop += rect.top - this.viewport.getBoundingClientRect().top - position.top;
         }
         this.position = position;
+        this.restoredScrollTop = this.viewport.scrollTop;
     }
 
     /**
@@ -1084,7 +1072,10 @@ export default class ContentUi extends Ui {
             return;
         }
         this.restoreNestedScroll(view.element, location);
-        const rect = locateContentRect(view.element, location);
+        // 独立空块仍有源边界和布局位置，不要求其生成可见字符。
+        const rect =
+            locateContentRect(view.element, location) ??
+            locateContentRange(view.element, location)?.getBoundingClientRect();
         if (!rect) return;
         const viewport = this.viewport.getBoundingClientRect();
         if (this.mode === "scroll") this.viewport.scrollTop += rect.top - viewport.top;
@@ -1099,6 +1090,7 @@ export default class ContentUi extends Ui {
             this.viewport.scrollLeft = this.pageIndex * this.pageStride;
         }
         this.position = { location, top: this.mode === "scroll" ? 0 : rect.top - viewport.top, chapterStart: false };
+        this.restoredScrollTop = this.viewport.scrollTop;
     }
 
     /**
@@ -1154,6 +1146,7 @@ export default class ContentUi extends Ui {
             top: 0,
             chapterStart: true,
         };
+        this.restoredScrollTop = this.viewport.scrollTop;
     }
 
     /**
@@ -1221,30 +1214,6 @@ export default class ContentUi extends Ui {
     }
 
     /**
-     * 定位书内锚点所在页，滚动方式将目标移到视窗上缘。
-     */
-    private scrollToFragment(fragment: string): void {
-        const target = this.views.get(this.chapterNumber)?.findAnchor(fragment);
-        if (!fragment) this.restoreChapterStart();
-        else if (target) {
-            const rect = target.getClientRects()[0];
-            if (!rect) return;
-            const viewport = this.viewport.getBoundingClientRect();
-            if (this.mode === "scroll") this.viewport.scrollTop += rect.top - viewport.top;
-            else {
-                this.pageIndex = Math.min(
-                    this.pageCount - 1,
-                    Math.max(
-                        0,
-                        Math.floor((rect.left - viewport.left + this.viewport.scrollLeft + 0.01) / this.pageStride)
-                    )
-                );
-                this.viewport.scrollLeft = this.pageIndex * this.pageStride;
-            }
-        }
-    }
-
-    /**
      * 在稳定布局中保留重排前的源锚点。
      */
     private capturePosition(): ReadingPosition | undefined {
@@ -1283,6 +1252,13 @@ export default class ContentUi extends Ui {
                     this.layoutSignature() !== this.layout
                 )
                     return;
+                if (
+                    this.mode === "scroll" &&
+                    event.target === this.viewport &&
+                    this.viewport.scrollTop === this.restoredScrollTop
+                )
+                    return;
+                this.restoredScrollTop = undefined;
                 if (this.mode === "scroll" && this.isOutsideChapterWindow()) {
                     this.scheduleWindow();
                     this.scheduleLocationSync();
@@ -1344,4 +1320,17 @@ export default class ContentUi extends Ui {
     public bindLocationChange(handler: (snapshot: ReadingSnapshot) => Promise<void>): void {
         this.onLocationChange = handler;
     }
+}
+
+/**
+ * 书内链接与进度恢复共用源位置；空锚点也能指向边界内容，不依赖其是否生成可见 DOM。
+ * 章末仍由导航选择最后一页，这里的位置只决定需要准备的正文范围。
+ */
+function targetLocation(view: ChapterView, target: ChapterTarget): ContentLocation {
+    if (target === "end" && view.pieceCount > 0) return view.pieceEndLocation(view.pieceCount - 1);
+    if (typeof target === "string" || ("fragment" in target && !target.fragment))
+        return { blockNumber: 1, contentOffset: 0 };
+    if ("fragment" in target)
+        return assertExists(view.anchorLocation(target.fragment), "Missing EPUB source anchor: " + target.fragment);
+    return target;
 }
