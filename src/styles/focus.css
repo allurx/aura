@@ -28,7 +28,7 @@ html {
 :where(.panel-scroll[tabindex], #book-list):focus-visible,
 .icon-button:is(.icon-button-edge-left, .icon-button-edge-right):focus-visible,
 #bookshelf #category-navigation button:focus-visible,
-#reader #toc > .main > button:focus-visible {
+#reader #toc .toc-row > button:focus-visible {
     outline-offset: -2px;
 }
 
