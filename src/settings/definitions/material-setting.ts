@@ -10,7 +10,19 @@ import Setting from "./setting";
 /**
  * 页面表面的材质标识，与主题配色和阅读正文的显式样式独立。
  */
-export type Material = "standard" | "glass" | "paper" | "ceramic" | "linen" | "wood" | "metal" | "leather" | "stone";
+export type Material =
+    | "standard"
+    | "glass"
+    | "paper"
+    | "ceramic"
+    | "linen"
+    | "wood"
+    | "metal"
+    | "leather"
+    | "stone"
+    | "satin"
+    | "cork"
+    | "carbon";
 
 /**
  * 在当前页面的常规设置中保存材质，切页时同步覆盖根节点，避免沿用上一页的选择。
@@ -26,6 +38,9 @@ export default class MaterialSetting extends Setting {
         ["metal", { title: "拉丝金属", description: "顺向拉丝与清晰的金属反光。" }],
         ["leather", { title: "皮革", description: "细腻压纹与整齐缝边。" }],
         ["stone", { title: "砂岩", description: "矿物颗粒与哑光石材表面。" }],
+        ["satin", { title: "丝缎", description: "斜向细丝与柔和缎光，平滑而有层次。" }],
+        ["cork", { title: "软木", description: "不规则的细碎木粒，温润而哑光。" }],
+        ["carbon", { title: "碳纤", description: "细密的斜向交织，低光而有清晰纹理。" }],
     ]);
 
     public constructor(private readonly defaultMaterial: Material) {
@@ -46,7 +61,10 @@ export default class MaterialSetting extends Setting {
             value === "wood" ||
             value === "metal" ||
             value === "leather" ||
-            value === "stone"
+            value === "stone" ||
+            value === "satin" ||
+            value === "cork" ||
+            value === "carbon"
         );
     }
 

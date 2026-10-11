@@ -74,7 +74,7 @@
         145deg,
         var(--appearance-highlight),
         transparent 36% 65%,
-        color-mix(in srgb, var(--appearance-shadow-color) 9%, transparent)
+        color-mix(in srgb, var(--appearance-shadow-color) 7%, transparent)
     );
     --material-border: color-mix(in srgb, var(--appearance-highlight) 65%, var(--appearance-border));
     --material-inset-shadow:
@@ -111,13 +111,13 @@
         repeating-radial-gradient(
             ellipse 90px 900px at 10px -50px,
             transparent 0 4px,
-            color-mix(in srgb, var(--appearance-color) 5%, transparent) 5px,
+            color-mix(in srgb, var(--appearance-color) 2.6%, transparent) 5px,
             transparent 6px 11px
         ),
         repeating-linear-gradient(
             89deg,
             transparent 0 13px,
-            color-mix(in srgb, var(--appearance-color) 4%, transparent) 14px 15px,
+            color-mix(in srgb, var(--appearance-color) 1.8%, transparent) 14px 15px,
             transparent 18px 43px
         ),
         linear-gradient(90deg, var(--material-light), transparent 35% 70%, var(--material-light));
@@ -133,17 +133,17 @@
     --material-image:
         repeating-linear-gradient(
             0deg,
-            var(--material-light) 0 0.5px,
-            var(--material-ink) 0.5px 1px,
+            color-mix(in srgb, var(--appearance-highlight) 16%, transparent) 0 0.5px,
+            color-mix(in srgb, var(--appearance-color) 2%, transparent) 0.5px 1px,
             transparent 1px 3px
         ),
         linear-gradient(
             110deg,
-            color-mix(in srgb, var(--appearance-color) 8%, transparent),
-            var(--appearance-highlight) 24%,
+            color-mix(in srgb, var(--appearance-color) 3%, transparent),
+            color-mix(in srgb, var(--appearance-highlight) 32%, transparent) 24%,
             transparent 43% 55%,
-            var(--material-light) 72%,
-            color-mix(in srgb, var(--appearance-color) 8%, transparent)
+            color-mix(in srgb, var(--appearance-highlight) 18%, transparent) 72%,
+            color-mix(in srgb, var(--appearance-color) 3%, transparent)
         );
     --material-canvas-image: linear-gradient(
         120deg,
@@ -176,16 +176,90 @@
     --material-image:
         radial-gradient(
             circle at 16% 26%,
-            color-mix(in srgb, var(--appearance-color) 12%, transparent) 0.6px,
+            color-mix(in srgb, var(--appearance-color) 3%, transparent) 0.6px,
             transparent 1px
         ),
         radial-gradient(circle at 72% 64%, var(--material-light) 0.7px, transparent 1.3px),
-        radial-gradient(circle at 42% 82%, var(--material-ink) 0.5px, transparent 1.1px);
+        radial-gradient(
+            circle at 42% 82%,
+            color-mix(in srgb, var(--appearance-color) 2%, transparent) 0.5px,
+            transparent 1.1px
+        );
     --material-size: 11px 13px, 17px 11px, 7px 19px;
     --material-border: color-mix(in srgb, var(--appearance-color) 20%, transparent);
     --material-inset-shadow:
         inset 0 1px 0 var(--appearance-highlight),
         inset 0 -2px 0 color-mix(in srgb, var(--appearance-shadow-color) 12%, transparent);
+}
+
+:where(html, .material-swatch)[data-material="satin"] {
+    --material-panel: color-mix(in srgb, var(--appearance-panel) 84%, var(--appearance-tint));
+    --material-image:
+        linear-gradient(
+            132deg,
+            transparent 0 17%,
+            color-mix(in srgb, var(--appearance-color) 4%, transparent) 27%,
+            color-mix(in srgb, var(--appearance-highlight) 48%, transparent) 39%,
+            transparent 54% 68%,
+            color-mix(in srgb, var(--appearance-color) 3%, transparent) 82%,
+            transparent
+        ),
+        repeating-linear-gradient(
+            132deg,
+            color-mix(in srgb, var(--appearance-color) 2.5%, transparent) 0 0.5px,
+            transparent 0.5px 3px
+        );
+    --material-size: auto, 6px 6px;
+    --material-canvas-image: radial-gradient(ellipse at 18% 0%, var(--appearance-tint), transparent 74%);
+    --material-border: color-mix(in srgb, var(--appearance-color) 18%, transparent);
+    --material-inset-shadow:
+        inset 1px 0 0 var(--material-light),
+        inset -1px 0 0 color-mix(in srgb, var(--appearance-shadow-color) 9%, transparent);
+}
+
+:where(html, .material-swatch)[data-material="cork"] {
+    --material-panel: color-mix(in srgb, var(--appearance-panel) 80%, var(--appearance-glow));
+    --material-image:
+        radial-gradient(
+            ellipse 3.5px 1.7px at 17% 29%,
+            color-mix(in srgb, var(--appearance-color) 3.5%, transparent) 38%,
+            transparent 84%
+        ),
+        radial-gradient(
+            ellipse 2px 3px at 73% 68%,
+            color-mix(in srgb, var(--appearance-color) 3%, transparent) 36%,
+            transparent 82%
+        ),
+        radial-gradient(ellipse 3px 1.5px at 44% 83%, var(--material-light) 36%, transparent 86%),
+        radial-gradient(
+            ellipse 1px 1.5px at 61% 17%,
+            color-mix(in srgb, var(--appearance-color) 3%, transparent),
+            transparent 88%
+        );
+    --material-size: 17px 23px, 23px 19px, 29px 31px, 11px 17px;
+    --material-border: color-mix(in srgb, var(--appearance-color) 21%, transparent);
+    --material-inset-shadow: inset 0 0 0 2px color-mix(in srgb, var(--appearance-panel) 35%, transparent);
+}
+
+:where(html, .material-swatch)[data-material="carbon"] {
+    --material-panel: color-mix(in srgb, var(--appearance-panel) 80%, var(--appearance-muted-surface));
+    --material-image:
+        repeating-linear-gradient(
+            135deg,
+            transparent 0 2.5px,
+            color-mix(in srgb, var(--appearance-color) 4%, transparent) 2.5px 3.25px,
+            transparent 3.25px 6px
+        ),
+        repeating-linear-gradient(
+            45deg,
+            transparent 0 4px,
+            color-mix(in srgb, var(--appearance-color) 2.5%, transparent) 4px 4.5px,
+            transparent 4.5px 6px
+        ),
+        linear-gradient(125deg, color-mix(in srgb, var(--appearance-highlight) 12%, transparent), transparent 62%);
+    --material-size: auto;
+    --material-border: color-mix(in srgb, var(--appearance-color) 25%, transparent);
+    --material-inset-shadow: inset 0 0 0 1px color-mix(in srgb, var(--appearance-panel) 42%, transparent);
 }
 
 /* 普通控件使用淡化后的同源表面，不增加父子模糊。 */

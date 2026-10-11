@@ -17,6 +17,9 @@ export enum Theme {
     STARRY = "starry",
     DUSK = "dusk",
     OCEAN = "ocean",
+    EMBER = "ember",
+    FOREST = "forest",
+    GRAPHITE = "graphite",
 }
 
 const THEMES = new Set<string>(Object.values(Theme));

@@ -104,6 +104,15 @@
             outline-offset: -4px;
         }
 
+        &[data-material="satin"] {
+            border-radius: 7px;
+        }
+
+        &[data-material="cork"],
+        &[data-material="carbon"] {
+            border-radius: 3px;
+        }
+
         &::before {
             content: "";
             position: absolute;

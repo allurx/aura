@@ -16,7 +16,7 @@
         }
     }
 
-    /* 九个主题同时可见；紧凑色样与名称横排，不与材质的大样片争夺空间。 */
+    /* 主题按三列排列；紧凑色样与名称横排，不与材质的大样片争夺空间。 */
     .theme-options {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
