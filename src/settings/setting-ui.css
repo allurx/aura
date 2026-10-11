@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+@import "./controls/radio-setting-control.css";
 @import "./controls/theme-setting-control.css";
 @import "./controls/reading-mode-setting-control.css";
 @import "./controls/material-setting-control.css";

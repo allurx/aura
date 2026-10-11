@@ -5,31 +5,7 @@
 
 #setting {
     .items > .item.material-setting {
-        position: relative;
-        display: block;
         padding: 4px 0 16px;
-
-        > .reset-setting {
-            position: absolute;
-            top: 4px;
-            right: 0;
-        }
-
-        fieldset {
-            min-width: 0;
-            margin: 0;
-            padding: 0;
-            border: 0;
-        }
-
-        legend {
-            max-width: calc(100% - 52px);
-            min-height: 36px;
-            padding: 0;
-            align-content: center;
-            font-size: 14px;
-            font-weight: 500;
-        }
     }
 
     .material-options {
@@ -41,7 +17,6 @@
     }
 
     .material-option {
-        position: relative;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -54,24 +29,9 @@
         background: transparent;
         color: var(--appearance-color);
         line-height: 1.5;
-        cursor: pointer;
         transition:
             background-color var(--motion-duration-fast) var(--motion-ease),
             border-color var(--motion-duration-fast) var(--motion-ease);
-
-        > input {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            opacity: 0;
-            cursor: inherit;
-        }
-
-        > span {
-            pointer-events: none;
-        }
 
         &:has(input:checked) {
             border-color: color-mix(in srgb, var(--setting-accent-color) 50%, transparent);
@@ -193,10 +153,4 @@
             outline-offset: -3px;
         }
     }
-}
-
-/* 原生单选组的焦点落在整项上，选择状态与键盘焦点独立表达。 */
-:where(html[data-keyboard-navigation]) #setting .material-option:has(> input:focus-visible) {
-    outline: 2px solid var(--focus-ring-color);
-    outline-offset: 2px;
 }

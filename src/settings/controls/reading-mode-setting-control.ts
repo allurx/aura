@@ -30,7 +30,7 @@ export default class ReadingModeSettingControl extends RadioSettingControl {
 
         for (const [mode, { title }] of readingModeSetting.options) {
             const { label } = this.createOption(mode);
-            label.className = "reading-mode-option";
+            label.classList.add("reading-mode-option");
             const icon = document.createElement("span");
             icon.className = `icon icon-reading-mode-${mode}`;
             icon.setAttribute("aria-hidden", "true");

@@ -24,7 +24,7 @@ export default class ThemeSettingControl extends RadioSettingControl {
         for (const [value, title] of themeSetting.options) {
             // 单选输入管理选中状态，外层 label 让整个色样都可点击。
             const { label } = this.createOption(value);
-            label.className = "theme-option";
+            label.classList.add("theme-option");
 
             // 紧凑色样保留表面与三册书封，直接继承真实主题的调色板。
             const swatch = document.createElement("span");

@@ -24,6 +24,7 @@ export default abstract class RadioSettingControl extends SettingControl {
         private readonly groupName: string
     ) {
         super(setting, listener, signal);
+        this.element.classList.add("radio-setting");
         this.legend.textContent = setting.title;
         this.fieldset.append(this.legend, this.optionsElement);
         this.element.prepend(this.fieldset);
@@ -34,6 +35,7 @@ export default abstract class RadioSettingControl extends SettingControl {
      */
     protected createOption(value: string): { label: HTMLLabelElement; input: HTMLInputElement } {
         const label = document.createElement("label");
+        label.className = "radio-option";
         const input = document.createElement("input");
         input.type = "radio";
         input.name = this.groupName;

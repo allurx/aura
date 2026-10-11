@@ -28,7 +28,7 @@ export default class MaterialSettingControl extends RadioSettingControl {
 
         for (const [material, { title, description }] of materialSetting.options) {
             const { label, input } = this.createOption(material);
-            label.className = "material-option";
+            label.classList.add("material-option");
 
             // 彩色底层供透明材质透出；样片只展示效果，不参与控件名称。
             const preview = document.createElement("span");

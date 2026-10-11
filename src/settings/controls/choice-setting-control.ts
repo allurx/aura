@@ -27,7 +27,7 @@ export default class ChoiceSettingControl extends RadioSettingControl {
 
         for (const [value, title] of choice.options) {
             const { label: option } = this.createOption(value);
-            option.className = "choice-option";
+            option.classList.add("choice-option");
             decorate?.(option, value);
 
             const caption = document.createElement("span");
