@@ -46,15 +46,16 @@
                 <div id="chapter-title"></div>
                 <div class="reading-status">
                     <span id="page-position" title="当前章节页码" role="status" aria-atomic="true" hidden>
-                        <span>本章</span><span class="page-count"></span>
+                        <span>本章</span><span class="page-count">— / —</span>
                     </span>
-                    <span id="progress-rate" title="全书阅读进度"></span>
+                    <span id="progress-rate" title="全书阅读进度">—</span>
                 </div>
             </div>
         </nav>
         <nav class="mobile-actions" aria-label="阅读操作">
             <button
                 id="toggle-toc-panel"
+                disabled
                 class="reader-action"
                 type="button"
                 aria-label="打开目录"
@@ -66,6 +67,7 @@
             </button>
             <button
                 id="toggle-setting-panel"
+                disabled
                 class="reader-action"
                 type="button"
                 aria-label="阅读设置"
@@ -78,6 +80,7 @@
             </button>
             <button
                 id="toggle-fullscreen"
+                disabled
                 class="reader-action"
                 type="button"
                 aria-label="进入全屏"

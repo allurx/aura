@@ -20,6 +20,25 @@ interface ContentUnit {
 }
 
 /**
+ * 嵌套正文的源结构，不保存盒模型或排版状态。
+ */
+interface ContentBranch {
+    readonly node: HTMLElement;
+    readonly children: readonly (ContentBranch | ContentUnit)[];
+}
+
+/**
+ * 结构树用于排除不可见内容，连续单元用于按源偏移还原位置。
+ */
+interface ContentIndex {
+    readonly children: readonly (ContentBranch | ContentUnit)[];
+    readonly units: readonly ContentUnit[];
+}
+
+// 章节渲染后正文结构不再改变；索引只保存源顺序，几何信息始终从当前排版读取。
+const contentIndexes = new WeakMap<HTMLElement, ContentIndex>();
+
+/**
  * 读取视窗内按内容顺序出现的首个可见字符或媒体；分页和滚动共用同一位置。
  * 标题可见时使用章首位置，临时视觉偏移由调用方独立保存。
  */
@@ -38,33 +57,13 @@ export function readContentLocation(section: HTMLElement, viewport: DOMRectReadO
         if (!Number.isInteger(blockNumber) || blockNumber < 1) continue;
         const blockVisible = [...block.getClientRects()].some((rect) => intersects(rect, viewport));
         if (!blockVisible) continue;
-        let hasUnits = false;
-        const scrollRegions = new Set<HTMLElement>();
-        for (const unit of contentUnits(block)) {
-            hasUnits = true;
-            const region = scrollRegion(unit.node, block);
-            if (region) {
-                if (!scrollRegions.has(region)) {
-                    scrollRegions.add(region);
-                    const offset = readScrollRegionOffset(block, region, viewport);
-                    if (offset !== undefined) return { blockNumber, contentOffset: offset };
-                }
-                continue;
-            }
-
-            const visible = visibleViewport(unit.node, block, viewport);
-            if (!visible) continue;
-            if (unit.node instanceof Text) {
-                const offset = firstVisibleTextOffset(unit.node, visible);
-                if (offset !== undefined) return { blockNumber, contentOffset: unit.offset + offset };
-            } else if ([...unit.node.getClientRects()].some((rect) => intersects(rect, visible))) {
-                return { blockNumber, contentOffset: unit.offset };
-            }
-        }
+        const content = contentIndex(block);
+        const offset = readBranchOffset(content.children, block, viewport, document.createRange());
+        if (offset !== undefined) return { blockNumber, contentOffset: sourceOffset(block) + offset };
 
         // 无文本的空结构仍可成为位置，不能借用跨多列的整体包围盒判断可见性。
-        if (!hasUnits) {
-            return { blockNumber, contentOffset: 0 };
+        if (content.units.length === 0) {
+            return { blockNumber, contentOffset: sourceOffset(block) };
         }
     }
     return undefined;
@@ -107,13 +106,14 @@ export function endContentLocation(section: HTMLElement): ContentLocation | unde
         const blockNumber = Number(block.dataset["blockNumber"]);
         if (!Number.isInteger(blockNumber) || blockNumber < 1) continue;
 
-        const units = [...contentUnits(block)];
+        const units = [...contentIndex(block).units];
         for (const unit of units.reverse()) {
             if (unit.node instanceof Text) {
                 const offset = lastTextOffset(unit.node);
-                if (offset !== undefined) return { blockNumber, contentOffset: unit.offset + offset };
+                if (offset !== undefined)
+                    return { blockNumber, contentOffset: sourceOffset(block) + unit.offset + offset };
             } else if ([...unit.node.getClientRects()].some((rect) => rect.height > 0)) {
-                return { blockNumber, contentOffset: unit.offset };
+                return { blockNumber, contentOffset: sourceOffset(block) + unit.offset };
             }
         }
     }
@@ -125,24 +125,37 @@ export function endContentLocation(section: HTMLElement): ContentLocation | unde
  * 内容末尾位置归于最后一个单元；不存在的内容块返回 undefined。
  */
 export function locateContentRange(section: HTMLElement, location: ContentLocation): Range | undefined {
-    const block = [...section.children].find(
+    const block = [...section.children].findLast(
         (element): element is HTMLElement =>
-            element instanceof HTMLElement && Number(element.dataset["blockNumber"]) === location.blockNumber
+            element instanceof HTMLElement &&
+            Number(element.dataset["blockNumber"]) === location.blockNumber &&
+            sourceOffset(element) <= location.contentOffset
     );
     if (!block) return undefined;
 
-    let last: ContentUnit | undefined;
-    for (const unit of contentUnits(block)) {
-        last = unit;
-        if (location.contentOffset < unit.offset + unit.length) {
-            return unitRange(unit, Math.max(0, location.contentOffset - unit.offset));
-        }
+    const offset = location.contentOffset - sourceOffset(block);
+    const units = contentIndex(block).units;
+    let low = 0;
+    let high = units.length;
+    while (low < high) {
+        const middle = Math.floor((low + high) / 2);
+        const unit = units[middle];
+        if (unit && offset >= unit.offset + unit.length) low = middle + 1;
+        else high = middle;
     }
-    if (last) return unitRange(last, last.length - 1);
+    const unit = units[low] ?? units[units.length - 1];
+    if (unit) return unitRange(unit, Math.min(unit.length - 1, Math.max(0, offset - unit.offset)));
 
     const range = document.createRange();
     range.selectNode(block);
     return range;
+}
+
+/**
+ * 显示片段仍引用原始内容块；片段起点不改变持久化的 UTF-16 源偏移。
+ */
+function sourceOffset(block: HTMLElement): number {
+    return Number(block.dataset["contentOffset"] ?? 0);
 }
 
 /**
@@ -157,23 +170,89 @@ export function locateContentRect(section: HTMLElement, location: ContentLocatio
 }
 
 /**
- * 按受控 DOM 的内容顺序遍历文本和媒体，内联标签不占位置。
+ * 索引受控 DOM 的源偏移和嵌套结构；内联标签不占位置，不因排版而重建。
  */
-function* contentUnits(block: HTMLElement): Generator<ContentUnit> {
-    const walker = document.createTreeWalker(block, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+function contentIndex(block: HTMLElement): ContentIndex {
+    const existing = contentIndexes.get(block);
+    if (existing) return existing;
+
+    const units: ContentUnit[] = [];
     let offset = 0;
-    let node = walker.nextNode();
-    while (node) {
-        if (
-            (node instanceof Text && node.length > 0) ||
-            (node instanceof HTMLElement && ["IMG", "BR", "HR"].includes(node.tagName))
-        ) {
-            const length = node instanceof Text ? node.length : 1;
-            yield { node, offset, length };
-            offset += length;
+    const visit = (parent: HTMLElement): (ContentBranch | ContentUnit)[] => {
+        const children: (ContentBranch | ContentUnit)[] = [];
+        for (const node of parent.childNodes) {
+            if (
+                (node instanceof Text && node.length > 0) ||
+                (node instanceof HTMLElement && ["IMG", "BR", "HR"].includes(node.tagName))
+            ) {
+                const length = node instanceof Text ? node.length : 1;
+                const unit = { node, offset, length };
+                children.push(unit);
+                units.push(unit);
+                offset += length;
+            } else if (node instanceof HTMLElement) {
+                children.push({ node, children: visit(node) });
+            }
         }
-        node = walker.nextNode();
+        return children;
+    };
+    const index = { children: visit(block), units };
+    contentIndexes.set(block, index);
+    return index;
+}
+
+/**
+ * 按源顺序排除不可见子树，再读取其实际字符；不假定表格、浮动或双向文字的坐标单调。
+ * Range 包含整个子树的片段，其包围盒只用于排除；命中后仍由实际字符确认可见性。
+ * 溢出父元素的内容仍参与搜索，独立滚动区交由原生命中测试。
+ */
+function readBranchOffset(
+    children: readonly (ContentBranch | ContentUnit)[],
+    block: HTMLElement,
+    viewport: DOMRectReadOnly,
+    range: Range,
+    start = 0,
+    end = children.length
+): number | undefined {
+    // 章首的常见路径只读取首个子节点，不先测量长章节的一半内容。
+    if (start === 0 && end > 1) {
+        const first = readBranchOffset(children, block, viewport, range, 0, 1);
+        if (first !== undefined) return first;
+        start = 1;
     }
+
+    if (end - start > 1) {
+        const middle = Math.floor((start + end) / 2);
+        const first = children[start];
+        const last = children[middle - 1];
+        if (first && last) {
+            range.setStartBefore(first.node);
+            range.setEndAfter(last.node);
+            if (intersects(range.getBoundingClientRect(), viewport)) {
+                const offset = readBranchOffset(children, block, viewport, range, start, middle);
+                if (offset !== undefined) return offset;
+            }
+        }
+        return readBranchOffset(children, block, viewport, range, middle, end);
+    }
+
+    const child = children[start];
+    if (!child) return undefined;
+    if ("children" in child) {
+        return isScrollRegion(child.node)
+            ? readScrollRegionOffset(block, child.node, viewport)
+            : readBranchOffset(child.children, block, viewport, range);
+    }
+
+    const visible = visibleViewport(child.node, block, viewport);
+    if (!visible) return undefined;
+    if (child.node instanceof Text) {
+        const offset = firstVisibleTextOffset(child.node, visible);
+        if (offset !== undefined) return child.offset + offset;
+    } else if ([...child.node.getClientRects()].some((rect) => intersects(rect, visible))) {
+        return child.offset;
+    }
+    return undefined;
 }
 
 /**
@@ -245,20 +324,14 @@ function unitRange(unit: ContentUnit, offset: number): Range {
 }
 
 /**
- * 查找独立滚动正文的最外层视窗，内嵌内容由浏览器命中测试确定实际可见位置。
+ * 独立滚动正文由浏览器命中测试确定实际可见位置，外层遍历先处理最外层视窗。
  */
-function scrollRegion(node: Node, block: HTMLElement): HTMLElement | undefined {
-    let region: HTMLElement | undefined;
-    for (let element = node.parentElement; element && element !== block; element = element.parentElement) {
-        const style = getComputedStyle(element);
-        if (
-            (["auto", "scroll"].includes(style.overflowX) && element.scrollWidth > element.clientWidth) ||
-            (["auto", "scroll"].includes(style.overflowY) && element.scrollHeight > element.clientHeight)
-        ) {
-            region = element;
-        }
-    }
-    return region;
+function isScrollRegion(element: HTMLElement): boolean {
+    const style = getComputedStyle(element);
+    return (
+        (["auto", "scroll"].includes(style.overflowX) && element.scrollWidth > element.clientWidth) ||
+        (["auto", "scroll"].includes(style.overflowY) && element.scrollHeight > element.clientHeight)
+    );
 }
 
 /**
@@ -297,7 +370,7 @@ function readScrollRegionOffset(
 
     if (node instanceof Text) {
         if (node.length === 0) return undefined;
-        for (const unit of contentUnits(block)) {
+        for (const unit of contentIndex(block).units) {
             if (unit.node === node) {
                 return unit.offset + codePointStart(node.data, Math.min(offset, node.length - 1));
             }
@@ -310,7 +383,7 @@ function readScrollRegionOffset(
     const following = node.childNodes[offset];
     const child = following ?? node.childNodes[offset - 1] ?? node;
     let candidate: ContentUnit | undefined;
-    for (const unit of contentUnits(block)) {
+    for (const unit of contentIndex(block).units) {
         if (!child.contains(unit.node)) continue;
         candidate = unit;
         if (following) break;

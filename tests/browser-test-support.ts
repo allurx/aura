@@ -68,6 +68,12 @@ export async function withPage(delivery: Delivery, operation: (page: Page) => Pr
     context.on("page", (page) => page.on("pageerror", (error) => errors.push(error.message)));
     try {
         const page = await context.newPage();
+        await page.addInitScript(() => {
+            window.addEventListener("error", (event) => {
+                // 原生渲染错误可能没有异常对象，浏览器的 pageerror 事件无法完整覆盖。
+                if (event.error === null || event.error === undefined) console.error(event.message);
+            });
+        });
         page.on("console", (message) => {
             if (message.type() === "error" || message.type() === "warning") errors.push(message.text());
         });
@@ -118,8 +124,13 @@ export async function waitForBookCount(page: Page, count: number): Promise<void>
  */
 export async function openBook(page: Page, name: string): Promise<void> {
     await page.getByTitle(name, { exact: true }).click();
+    await page.locator("#reader").waitFor();
     await page.locator("#reader-actions:not([hidden])").waitFor();
-    await page.locator("#content .reading-chapter").first().waitFor();
+    await page.locator("#toggle-setting-panel:not([disabled])").waitFor();
+    await page
+        .locator("#content > .reading-viewport:not(.reading-measure-viewport) .reading-chapter")
+        .first()
+        .waitFor();
     await settleReader(page);
 }
 
@@ -148,28 +159,41 @@ export async function selectChapter(page: Page, number: number): Promise<void> {
 }
 
 /**
- * 连续帧核对正文、位置及动画均稳定，不用固定睡眠采样过渡中的页码。
+ * 连续帧核对可见正文、位置及动画稳定；后台测量不阻止用户继续操作。
  */
 export async function settleReader(page: Page): Promise<void> {
     await page.waitForFunction(async () => {
+        // 快照准备阶段尚无 running 动画，但正文仍在一次翻页操作中。
+        if (document.documentElement.hasAttribute("data-page-turn")) return false;
         const signature = (): string => {
-            const viewport = document.querySelector(".reading-viewport");
+            const viewport = document.querySelector("#content > .reading-viewport:not(.reading-measure-viewport)");
             return JSON.stringify([
+                viewport?.scrollLeft,
                 viewport?.scrollTop,
                 viewport?.scrollHeight,
                 viewport?.clientHeight,
                 viewport?.clientWidth,
                 document.querySelector("#chapter-title")?.textContent,
                 document.querySelector("#page-position")?.textContent,
-                document.querySelector("#content")?.textContent,
+                viewport?.textContent,
             ]);
         };
         const initial = signature();
         for (let frame = 0; frame < 6; frame++) await new Promise(requestAnimationFrame);
         return (
-            initial === signature() && document.getAnimations().every((animation) => animation.playState !== "running")
+            !document.documentElement.hasAttribute("data-page-turn") &&
+            initial === signature() &&
+            document.getAnimations().every((animation) => animation.playState !== "running")
         );
     });
+}
+
+/**
+ * 仅在断言精确章内页码或总页数时等待索引完成，不把它当作阅读可用的前置条件。
+ */
+export async function waitForChapterLayout(page: Page): Promise<void> {
+    await page.waitForFunction(() => document.querySelector("#page-position")?.getAttribute("aria-busy") === "false");
+    await settleReader(page);
 }
 
 /**

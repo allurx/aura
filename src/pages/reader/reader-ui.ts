@@ -40,11 +40,22 @@ export default class ReaderUi extends Ui {
      * 移动工具默认收起；进入移动布局时保留正在使用的入口及浮层返回路径。
      */
     public bindResponsiveControls(signal: AbortSignal): void {
+        let pendingFocus: { target: HTMLElement; previous: Element } | undefined;
+        const focusObserver = new ResizeObserver(() => {
+            const pending = pendingFocus;
+            pendingFocus = undefined;
+            focusObserver.disconnect();
+            if (signal.aborted || !pending?.target.isConnected) return;
+            if (document.activeElement === document.body || document.activeElement === pending.previous)
+                pending.target.focus({ preventScroll: true });
+        });
         this.renderFullscreenState();
         this.root.after(this.actions);
         signal.addEventListener(
             "abort",
             () => {
+                focusObserver.disconnect();
+                pendingFocus = undefined;
                 this.actions.remove();
             },
             { once: true }
@@ -68,6 +79,15 @@ export default class ReaderUi extends Ui {
         ];
 
         /**
+         * 非原子移动丢失焦点时，等布局完成后恢复；用户已经选择的新焦点优先。
+         */
+        const restoreFocus = (target: HTMLElement, previous: Element): void => {
+            pendingFocus = { target, previous };
+            focusObserver.disconnect();
+            focusObserver.observe(target);
+        };
+
+        /**
          * 同步排布和焦点，仅在移动端需要接续操作时展开工具。
          */
         const sync = (): void => {
@@ -87,8 +107,10 @@ export default class ReaderUi extends Ui {
             for (const { button, desktopParent, mobileParent } of controls) {
                 const parent = mobile.matches ? mobileParent : desktopParent;
                 if (button.parentElement === parent) continue;
-                if (mobile.matches && button === this.previousButton) parent.prepend(button);
-                else parent.append(button);
+                const before = mobile.matches && button === this.previousButton ? parent.firstChild : null;
+                // 原子移动保留原生焦点，不在改变布局后再次 focus 触发正文同步重排。
+                if (typeof parent.moveBefore === "function") parent.moveBefore(button, before);
+                else parent.insertBefore(button, before);
             }
 
             // 页码和全书进度一起跟随工具区域，切换布局不重建阅读状态。
@@ -97,10 +119,10 @@ export default class ReaderUi extends Ui {
             this.renderToolsVisibility();
 
             // 移动原按钮后恢复焦点，移动辅助入口退出布局时归还正文。
-            if (focusedControl) {
-                focused.focus({ preventScroll: true });
+            if (focusedControl && document.activeElement !== focused) {
+                restoreFocus(focused, focused);
             } else if (focused === this.toolsEntry && !this.mobileControls) {
-                this.content.focus({ preventScroll: true });
+                restoreFocus(this.content, focused);
             }
         };
 
@@ -162,7 +184,8 @@ export default class ReaderUi extends Ui {
             [this.previousButton, `上一${unit}`],
             [this.nextButton, `下一${unit}`],
         ] as const) {
-            assertExists(button.querySelector("span:last-child")).textContent = label;
+            const text = assertExists(button.querySelector("span:last-child"));
+            if (text.textContent !== label) text.textContent = label;
             button.setAttribute("aria-label", label);
             button.title = label;
         }
@@ -173,9 +196,28 @@ export default class ReaderUi extends Ui {
     /**
      * 页码只描述当前章节的排版结果；全书进度独立使用稳定内容位置。
      */
-    public renderPageInfo(pageNumber: number, pageCount: number): void {
-        assertExists(this.pagePosition.querySelector(".page-count")).textContent = `${pageNumber} / ${pageCount}`;
-        this.pagePosition.setAttribute("aria-label", `本章第 ${pageNumber} 页，共 ${pageCount} 页`);
+    public renderPageInfo(pageNumber: number | undefined, pageCount: number | undefined): void {
+        const text = assertExists(this.pagePosition.querySelector(".page-count"));
+        const value = pageNumber === undefined ? "正在排版" : `${pageNumber} / ${pageCount ?? "…"}`;
+        if (text.textContent !== value) text.textContent = value;
+        this.pagePosition.setAttribute(
+            "aria-label",
+            pageNumber === undefined
+                ? "正在计算本章页码"
+                : pageCount === undefined
+                  ? `本章第 ${pageNumber} 页，正在计算总页数`
+                  : `本章第 ${pageNumber} 页，共 ${pageCount} 页`
+        );
+        this.pagePosition.setAttribute("aria-busy", String(pageNumber === undefined || pageCount === undefined));
+    }
+
+    /**
+     * 正文和事件准备完成后启用相关操作；加载期间始终保留返回入口。
+     */
+    public enableReadingControls(): void {
+        this.tocButton.disabled = false;
+        this.settingButton.disabled = false;
+        this.fullscreenButton.disabled = false;
     }
 
     /**
@@ -354,7 +396,7 @@ export default class ReaderUi extends Ui {
      * 切章后同步章名与全书进度，显示节点可随桌面或移动布局移动。
      */
     public renderChapterInfo(title: string, bookPosition: number, positionCount: number): void {
-        this.chapterTitle.textContent = title;
+        if (this.chapterTitle.textContent !== title) this.chapterTitle.textContent = title;
         this.chapterTitle.title = title;
         this.renderProgress(bookPosition, positionCount);
     }
@@ -364,6 +406,7 @@ export default class ReaderUi extends Ui {
      */
     public renderProgress(bookPosition: number, positionCount: number): void {
         const ratio = positionCount === 0 ? 0 : Math.min(Math.max(bookPosition / positionCount, 0), 1);
-        this.progressRate.textContent = `${(ratio * 100).toFixed(2)}%`;
+        const value = `${(ratio * 100).toFixed(2)}%`;
+        if (this.progressRate.textContent !== value) this.progressRate.textContent = value;
     }
 }

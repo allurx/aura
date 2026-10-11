@@ -35,17 +35,3 @@
         translate: 0 0;
     }
 }
-
-/* 路由使用浏览器快照淡化旧视图；正文自身不缩放或移动。 */
-::view-transition-old(root),
-::view-transition-new(root) {
-    animation-duration: var(--motion-duration-normal);
-    animation-timing-function: var(--motion-ease);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    ::view-transition-old(root),
-    ::view-transition-new(root) {
-        animation: none;
-    }
-}

@@ -71,6 +71,7 @@ export default class ReaderController {
             { once: true }
         );
         this.settingController.init(signal);
+        this.readerUi.renderNavigation({ canPrevious: false, canNext: false, mode: this.contentUi.getMode() });
         this.readerUi.bindResponsiveControls(signal);
         // 初始化失败时也保留页面内的恢复入口，不让书架按钮依赖书籍成功加载。
         this.readerUi.bindReturnToBookshelf(() => this.returnToBookshelf(), signal);
@@ -112,6 +113,7 @@ export default class ReaderController {
                 if (!this.appearancePosition) await this.updateProgress(snapshot.location);
             });
             this.bindEvent(signal);
+            this.readerUi.enableReadingControls();
         } catch (error) {
             if (!signal.aborted) this.readerUi.showReadingTools();
             if (error instanceof OperationError) throw error;
@@ -217,7 +219,8 @@ export default class ReaderController {
             this.onReturnToBookshelf();
             return;
         }
-        if (!this.canNavigate()) return;
+        // 退出保存当前稳定源位置，不等待分页索引或正在准备的下一页。
+        if (!this.isActive()) return;
         const position = this.contentUi.readProgress();
         this.returningToBookshelf = true;
         this.contentUi.cancelPendingScroll();

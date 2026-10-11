@@ -17,6 +17,7 @@ import {
     stopBrowserTests,
     textBook,
     waitForBookCount,
+    waitForChapterLayout,
     withPage,
 } from "./browser-test-support.ts";
 import { createEpubFixture } from "./fixtures/epub-fixtures.ts";
@@ -126,12 +127,36 @@ for (const delivery of ["web", "portable"] as const) {
 
     void test(`${delivery}: navigation, layout changes and reload preserve reading content`, async () => {
         await withPage(delivery, async (page) => {
+            // 正常动效也必须完成布局，不能等浏览器超时跳过 View Transition 后才继续。
+            await page.emulateMedia({ reducedMotion: "no-preference" });
             await importBooks(page, [textBook("reading.txt", 3, 80)]);
-            await openBook(page, "reading.txt");
+            await page.getByTitle("reading.txt", { exact: true }).click();
+            await page.locator("#toggle-setting-panel:enabled").waitFor({ timeout: 2000 });
+            await settleReader(page);
+
+            for (const mode of ["cover", "slide"] as const) {
+                await setMode(page, mode);
+                await selectChapter(page, 2);
+                await page.locator("#previous-page").click();
+                await page.waitForFunction(
+                    () => document.querySelector("#chapter-title")?.textContent.includes("第1章"),
+                    undefined,
+                    { timeout: 2000 }
+                );
+                await settleReader(page);
+                await page.locator("#next-page").click();
+                await page.waitForFunction(
+                    () => document.querySelector("#chapter-title")?.textContent.includes("第2章"),
+                    undefined,
+                    { timeout: 2000 }
+                );
+                await settleReader(page);
+            }
+
             await setMode(page, "none");
             await selectChapter(page, 2);
             await page.locator("#previous-page").click();
-            await settleReader(page);
+            await waitForChapterLayout(page);
             const lastPage = (await page.locator("#page-position").getAttribute("aria-label"))?.match(/\d+/g);
             assert(lastPage?.length === 2);
             assert.equal(lastPage[0], lastPage[1]);
@@ -144,21 +169,25 @@ for (const delivery of ["web", "portable"] as const) {
 
             // 断言实际可见正文，不把内部页码或像素当作跨排版的内容位置。
             const visibleParagraphs = () =>
-                page.locator("#content p").evaluateAll((paragraphs) => {
-                    const viewport = document.querySelector(".reading-viewport")?.getBoundingClientRect();
-                    if (!viewport) throw new Error("Missing reading viewport");
-                    return paragraphs
-                        .filter((paragraph) =>
-                            [...paragraph.getClientRects()].some(
-                                (rect) =>
-                                    rect.bottom > viewport.top + 1 &&
-                                    rect.top < viewport.bottom - 1 &&
-                                    rect.right > viewport.left + 1 &&
-                                    rect.left < viewport.right - 1
+                page
+                    .locator("#content > .reading-viewport:not(.reading-measure-viewport) p")
+                    .evaluateAll((paragraphs) => {
+                        const viewport = document
+                            .querySelector("#content > .reading-viewport:not(.reading-measure-viewport)")
+                            ?.getBoundingClientRect();
+                        if (!viewport) throw new Error("Missing reading viewport");
+                        return paragraphs
+                            .filter((paragraph) =>
+                                [...paragraph.getClientRects()].some(
+                                    (rect) =>
+                                        rect.bottom > viewport.top + 1 &&
+                                        rect.top < viewport.bottom - 1 &&
+                                        rect.right > viewport.left + 1 &&
+                                        rect.left < viewport.right - 1
+                                )
                             )
-                        )
-                        .map((paragraph) => paragraph.textContent);
-                });
+                            .map((paragraph) => paragraph.textContent);
+                    });
             const anchor = (await visibleParagraphs())[0];
             assert(anchor);
             for (const mode of ["scroll", "cover", "slide", "none"] as const) {
@@ -168,18 +197,20 @@ for (const delivery of ["web", "portable"] as const) {
             await page.locator("#toggle-setting-panel").click();
             await page.locator("#setting-control-font-size").fill("25");
             await page.locator("#setting .close").click();
-            await settleReader(page);
+            await waitForChapterLayout(page);
             assert((await visibleParagraphs()).includes(anchor));
             const saved = await page.locator("#page-position").getAttribute("aria-label");
             await page.reload();
-            await page.locator("#content .reading-chapter").waitFor();
-            await settleReader(page);
+            await page
+                .locator("#content > .reading-viewport:not(.reading-measure-viewport) .reading-chapter")
+                .waitFor();
+            await waitForChapterLayout(page);
             assert.equal(await page.locator("#page-position").getAttribute("aria-label"), saved);
             assert((await visibleParagraphs()).includes(anchor));
 
             await selectChapter(page, 3);
             await setMode(page, "scroll");
-            await page.locator(".reading-viewport").evaluate((viewport) => {
+            await page.locator("#content > .reading-viewport:not(.reading-measure-viewport)").evaluate((viewport) => {
                 viewport.scrollTop = viewport.scrollHeight;
             });
             await page.waitForFunction(() => document.querySelector<HTMLButtonElement>("#next-page")?.disabled);

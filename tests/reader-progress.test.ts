@@ -5,6 +5,8 @@
 
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
+import type { Page } from "playwright-core";
+import type Progress from "../src/domain/progress/progress.ts";
 import {
     importBooks,
     openBook,
@@ -13,18 +15,120 @@ import {
     startBrowserTests,
     stopBrowserTests,
     textBook,
+    waitForChapterLayout,
     withPage,
 } from "./browser-test-support.ts";
 
 before(startBrowserTests);
 after(stopBrowserTests);
 
+/**
+ * 读取实际显示的正文，不能只用保存记录或页码证明画面恢复。
+ */
+async function readVisibleText(page: Page): Promise<string | null | undefined> {
+    return page.locator("#content > .reading-viewport:not(.reading-measure-viewport) p").evaluateAll((paragraphs) => {
+        const viewport = document
+            .querySelector("#content > .reading-viewport:not(.reading-measure-viewport)")
+            ?.getBoundingClientRect();
+        if (!viewport) throw new Error("Missing reading viewport");
+        return paragraphs.find((paragraph) =>
+            [...paragraph.getClientRects()].some(
+                (rect) =>
+                    rect.bottom > viewport.top + 1 &&
+                    rect.top < viewport.bottom - 1 &&
+                    rect.right > viewport.left + 1 &&
+                    rect.left < viewport.right - 1
+            )
+        )?.textContent;
+    });
+}
+
+/**
+ * 只读取测试上下文通过真实阅读保存的领域记录，不以 DOM 页码代替持久化位置。
+ */
+async function readProgress(page: Page): Promise<Progress[]> {
+    return page.evaluate(async () => {
+        const database = await new Promise<IDBDatabase>((resolve, reject) => {
+            const request = indexedDB.open("aura");
+            request.onsuccess = () => {
+                resolve(request.result);
+            };
+            request.onerror = () => {
+                reject(request.error ?? new Error("Unable to open the test database"));
+            };
+        });
+        try {
+            return await new Promise<Progress[]>((resolve, reject) => {
+                const request = database.transaction("progress").objectStore("progress").getAll() as IDBRequest<
+                    Progress[]
+                >;
+                request.onsuccess = () => {
+                    resolve(request.result);
+                };
+                request.onerror = () => {
+                    reject(request.error ?? new Error("Unable to read the saved progress"));
+                };
+            });
+        } finally {
+            database.close();
+        }
+    });
+}
+
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: viewport reflow preserves the source anchor until explicit navigation`, async () => {
+        await withPage(delivery, async (page) => {
+            await importBooks(page, [textBook("reflow-progress.txt", 3, 240)]);
+            await openBook(page, "reflow-progress.txt");
+            for (const mode of ["cover", "slide", "none"] as const) {
+                await setMode(page, mode);
+                for (let index = 0; index < 7; index++) {
+                    await page.locator("#next-page").click();
+                    await settleReader(page);
+                }
+                await waitForChapterLayout(page);
+                const progress = await readProgress(page);
+                const position = await page.locator("#page-position").getAttribute("aria-label");
+                const visibleText = await readVisibleText(page);
+                assert(visibleText);
+
+                // 连续跨越工具布局与正文留白的断点，并反向恢复；每个中间状态都不得改写源锚点。
+                for (let round = 0; round < 2; round++) {
+                    for (const width of [1000, 801, 800, 601, 600, 390, 600, 601, 800, 801, 1000, 1440]) {
+                        await page.setViewportSize({ width, height: 900 });
+                        await settleReader(page);
+                        assert.deepEqual(await readProgress(page), progress, `${mode}, width ${String(width)}`);
+                    }
+                    await waitForChapterLayout(page);
+                    assert.equal(await page.locator("#page-position").getAttribute("aria-label"), position);
+                    assert.equal(await readVisibleText(page), visibleText);
+                }
+                await page.reload();
+                await page
+                    .locator("#content > .reading-viewport:not(.reading-measure-viewport) .reading-chapter")
+                    .waitFor();
+                await waitForChapterLayout(page);
+                assert.deepEqual(await readProgress(page), progress);
+                assert.equal(await page.locator("#page-position").getAttribute("aria-label"), position);
+                assert.equal(await readVisibleText(page), visibleText);
+
+                // 冻结只属于重排；真实的向前和向后阅读仍须更新并恢复持久化进度。
+                await page.locator("#next-page").click();
+                await settleReader(page);
+                assert.notDeepEqual(await readProgress(page), progress);
+                await page.locator("#previous-page").click();
+                await settleReader(page);
+                assert.deepEqual(await readProgress(page), progress);
+            }
+        });
+    });
+
     void test(`${delivery}: reopening a reader waits for all earlier progress transactions`, async () => {
         await withPage(delivery, async (page) => {
             await importBooks(page, [textBook("pending-progress.txt", 3, 160)]);
             await openBook(page, "pending-progress.txt");
             await setMode(page, "none");
+            await waitForChapterLayout(page);
 
             // 同源的另一事务占用进度 store，模拟批量数据操作；不修改记录或替换数据库 API。
             await page.evaluate(async () => {
@@ -61,22 +165,8 @@ for (const delivery of ["web", "portable"] as const) {
                 await page.locator("#next-page").click();
                 await settleReader(page);
             }
-            const readVisibleText = () =>
-                page.locator("#content p").evaluateAll((paragraphs) => {
-                    const viewport = document.querySelector(".reading-viewport")?.getBoundingClientRect();
-                    if (!viewport) throw new Error("Missing reading viewport");
-                    return paragraphs.find((paragraph) =>
-                        [...paragraph.getClientRects()].some(
-                            (rect) =>
-                                rect.bottom > viewport.top + 1 &&
-                                rect.top < viewport.bottom - 1 &&
-                                rect.right > viewport.left + 1 &&
-                                rect.left < viewport.right - 1
-                        )
-                    )?.textContent;
-                });
             const position = await page.locator("#page-position").getAttribute("aria-label");
-            const visibleText = await readVisibleText();
+            const visibleText = await readVisibleText(page);
             assert.match(position ?? "", /第 3 页/);
             assert(visibleText);
             await page.goBack();
@@ -88,15 +178,19 @@ for (const delivery of ["web", "portable"] as const) {
             });
 
             // 新会话必须读到离开前的最终位置；再次刷新也不能把中间位置写回。
-            await page.locator("#content .reading-chapter").waitFor();
-            await settleReader(page);
+            await page
+                .locator("#content > .reading-viewport:not(.reading-measure-viewport) .reading-chapter")
+                .waitFor();
+            await waitForChapterLayout(page);
             assert.equal(await page.locator("#page-position").getAttribute("aria-label"), position);
-            assert.equal(await readVisibleText(), visibleText);
+            assert.equal(await readVisibleText(page), visibleText);
             await page.reload();
-            await page.locator("#content .reading-chapter").waitFor();
-            await settleReader(page);
+            await page
+                .locator("#content > .reading-viewport:not(.reading-measure-viewport) .reading-chapter")
+                .waitFor();
+            await waitForChapterLayout(page);
             assert.equal(await page.locator("#page-position").getAttribute("aria-label"), position);
-            assert.equal(await readVisibleText(), visibleText);
+            assert.equal(await readVisibleText(page), visibleText);
         });
     });
 }

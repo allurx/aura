@@ -20,7 +20,6 @@ class Main {
     private readonly appRoot: HTMLElement;
     private readonly router: Router;
     private currentPage: Page | null = null;
-    private renderVersion = 0;
     private readonly errorDialog = new Dialog({ containerElement: document.body });
     private errorVisible = false;
 
@@ -38,7 +37,7 @@ class Main {
     public async start(): Promise<void> {
         // 同步错误和未处理的 Promise 拒绝共用一个用户提示入口。
         window.addEventListener("error", (event) => {
-            void this.showError(event.error);
+            void this.showError(event.error ?? new Error(event.message));
         });
         window.addEventListener("unhandledrejection", (event) => {
             void this.showError(event.reason);
@@ -79,26 +78,10 @@ class Main {
      * 页面替换前结束旧生命周期，避免遗留监听器和异步任务继续操作界面。
      */
     private async render(route: AppRoute): Promise<void> {
-        const version = ++this.renderVersion;
-        const replacePage = async (): Promise<void> => {
-            // 原生过渡会延迟 DOM 更新，快速导航时只挂载最新请求。
-            if (version !== this.renderVersion) return;
-            this.currentPage?.dispose();
-            this.currentPage = this.createPage(route);
-            await this.currentPage.mount(this.appRoot);
-        };
-
-        // 新页面和阅读位置准备好后再淡入，首次加载与减少动效模式直接呈现。
-        if (
-            this.currentPage &&
-            typeof document.startViewTransition === "function" &&
-            !window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ) {
-            const transition = document.startViewTransition(replacePage);
-            // 快速导航或视口变化可能取消快照动画；DOM 更新失败仍由下面两个 Promise 传播。
-            void transition.ready.catch(() => undefined);
-            await Promise.all([transition.updateCallbackDone, transition.finished]);
-        } else await replacePage();
+        this.currentPage?.dispose();
+        this.currentPage = this.createPage(route);
+        // 页面初始化需要自然布局；View Transition 会暂停渲染，不能包住整个异步生命周期。
+        await this.currentPage.mount(this.appRoot);
     }
 
     /**
