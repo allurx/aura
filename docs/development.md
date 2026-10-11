@@ -71,6 +71,8 @@ npm run dev
 
 书架的[窗口列表](../src/pages/bookshelf/book-list/book-list-ui.ts)管理挂载范围、滚动位置和操作焦点；[书卡](../src/pages/bookshelf/book-list/book-card-ui.ts)按书籍 ID 保留原生控件，更新标题、分类和进度。Controller 只提供最新摘要，不通过对象身份控制 DOM 复用。
 
+普通浮层开闭优先使用原生焦点行为；列表先保留并移动仍使用的节点，再回收离窗节点。只有节点被替换、隐藏或平台无法保留状态时，所属组件才接续焦点；业务流程不再重复恢复相同目标。
+
 主题、材质、翻页方式和封面选项共用[原生单选控件骨架](../src/settings/controls/radio-setting-control.ts)及其[基础样式](../src/settings/controls/radio-setting-control.css)，分组、点击区域和键盘焦点在此维护；各控件保留自己的图示、说明和排版。设置的值域和应用行为由[定义目录](../src/settings/definitions/)维护，连续控件在原生 input 时实时应用并保存有效值，选项在选择时生效；保存及失败恢复统一归外观 Controller，同值的 change 不重复应用或保存，不建立页面预览会话。
 
 数据库名、版本、store 主键、索引 `keyPath` 和 `unique` 由数据库 schema 统一维护，初始化直接读取这份描述。`StoreRecords` 将 store 名称关联到[领域记录类型](../src/domain/)，具体字段由领域类型定义；存储 API 在编译期约束所选 store 与索引名的组合。命名约束见 [AGENTS.md 的工程原则](../AGENTS.md#工程原则)。

@@ -134,7 +134,7 @@ export default class SettingUi extends Ui {
                 this.closeElement,
                 "click",
                 () => {
-                    this.close();
+                    this.root.close();
                 },
                 { signal }
             );
@@ -160,22 +160,11 @@ export default class SettingUi extends Ui {
         );
         bind(
             this.root,
-            "cancel",
-            () => {
-                this.prepareClose();
-            },
-            { signal }
-        );
-        bind(
-            this.root,
             "close",
             () => {
                 if (this.root.open) return;
                 this.root.inert = true;
                 this.opener.setAttribute("aria-expanded", "false");
-                // 原生关闭恢复入口；不覆盖用户在迟到的 close 事件前已经移动的新焦点。
-                if (document.activeElement === document.body || this.root.contains(document.activeElement))
-                    this.opener.focus({ preventScroll: true });
             },
             { signal }
         );
@@ -184,25 +173,6 @@ export default class SettingUi extends Ui {
             "keydown",
             (event: KeyboardEvent) => {
                 if (event.key === "Escape") event.stopPropagation();
-            },
-            { signal }
-        );
-
-        bind(
-            this.root,
-            "focusout",
-            (event: FocusEvent) => {
-                const focused = event.target;
-                if (!(focused instanceof HTMLElement) || event.relatedTarget !== null) return;
-                queueMicrotask(() => {
-                    if (
-                        !signal.aborted &&
-                        document.activeElement === document.body &&
-                        focused.getClientRects().length === 0
-                    ) {
-                        this.restoreVisibleFocus();
-                    }
-                });
             },
             { signal }
         );
@@ -218,14 +188,14 @@ export default class SettingUi extends Ui {
                     !event.target.open &&
                     (document.activeElement === document.body || event.target.contains(document.activeElement))
                 ) {
-                    this.restoreVisibleFocus();
+                    this.restoreVisibleFocus(event.target);
                 }
             },
             { capture: true, signal }
         );
 
         // 视口变化后同步范围并维持可见焦点，面板正文独立滚动。
-        const observer = new ResizeObserver(() => {
+        const observer = new ResizeObserver((entries) => {
             if (this.root.open) this.restoreVisibleFocus();
             const focused = this.root.open ? document.activeElement : null;
             if (focused instanceof HTMLElement && this.bodyElement.contains(focused)) {
@@ -241,10 +211,11 @@ export default class SettingUi extends Ui {
                 if (control.top < top) this.bodyElement.scrollTop += control.top - top;
                 else if (control.bottom > bottom) this.bodyElement.scrollTop += control.bottom - bottom;
             }
-            // 关闭时也在自然布局后维护默认值；打开后的首次绘制无需再同步测量页面。
-            run(() => {
-                this.renderSettings();
-            });
+            // 页面尺寸影响响应式默认值；面板开合或分组展开只维护面板自身可见范围。
+            if (entries.some((entry) => entry.target === this.container))
+                run(() => {
+                    this.renderSettings();
+                });
         });
         observer.observe(this.bodyElement);
         observer.observe(this.container);
@@ -292,12 +263,13 @@ export default class SettingUi extends Ui {
     /**
      * 响应式隐藏控件或关闭错误弹窗后，恢复面板中的可见焦点。
      */
-    private restoreVisibleFocus(): void {
+    private restoreVisibleFocus(closedDialog?: HTMLDialogElement): void {
         if (!this.root.open || [...document.querySelectorAll("dialog:modal")].some((dialog) => dialog !== this.root))
             return;
         const focused = document.activeElement;
         if (
             focused === document.body ||
+            closedDialog?.contains(focused) ||
             (focused instanceof HTMLElement && this.root.contains(focused) && focused.getClientRects().length === 0)
         ) {
             this.closeElement.focus({ preventScroll: true });
@@ -311,23 +283,6 @@ export default class SettingUi extends Ui {
         this.controlList?.restoreValues();
         this.opener.setAttribute("aria-expanded", "true");
         this.root.inert = false;
-    }
-
-    /**
-     * 关闭按钮、Escape 和遮罩请求统一结束输入，保留已经实时保存的外观。
-     */
-    private prepareClose(): void {
-        this.opener.setAttribute("aria-expanded", "false");
-        this.root.inert = true;
-    }
-
-    /**
-     * 不支持按钮命令的浏览器仍通过同一关闭流程使用原生模态。
-     */
-    private close(): void {
-        if (!this.root.open) return;
-        this.prepareClose();
-        this.root.close();
     }
 
     private static readonly template = `
