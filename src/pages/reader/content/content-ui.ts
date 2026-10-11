@@ -497,7 +497,8 @@ export default class ContentUi extends Ui {
         );
         const first = sourceElements[0]?.getBoundingClientRect();
         const last = sourceElements.at(-1)?.getBoundingClientRect();
-        const outside = !first || !last || viewport.top < first.top - 1 || viewport.top >= last.bottom;
+        // 章末滚动值可能被夹取，上缘留白不代表真实正文已经离开视窗。
+        const outside = this.isOutsideChapterWindow();
         const previous = outside ? undefined : this.readPosition();
         const requestedTop = Math.max(0, viewport.top - view.element.getBoundingClientRect().top);
         const indexedTarget = window.layout.batches.some(
@@ -536,6 +537,8 @@ export default class ContentUi extends Ui {
                             chapterStart: location.blockNumber === 1 && location.contentOffset === 0,
                         }
                     );
+                    // 估算只选取要挂载的范围；被滚动边界夹取后，以真实可见文字及偏移保存。
+                    if (!previous) this.position = this.readVisiblePosition();
                 });
             }
         }

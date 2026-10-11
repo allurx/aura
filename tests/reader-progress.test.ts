@@ -282,14 +282,21 @@ for (const delivery of ["web", "portable"] as const) {
             await openBook(page, "windowed-progress.txt");
             await setMode(page, "scroll");
             await page.locator("#content > .reading-viewport:not(.reading-measure-viewport)").evaluate((viewport) => {
-                viewport.scrollTop = (viewport.scrollHeight - viewport.clientHeight) * 0.75;
+                const blocks = [...viewport.querySelectorAll<HTMLElement>("[data-block-number]")];
+                const first = blocks[1];
+                const last = blocks.at(-1);
+                if (!first || !last) throw new Error("Missing rendered source blocks");
+                const distance = Number(last.dataset["blockNumber"]) - Number(first.dataset["blockNumber"]);
+                // 未测全章的占位高度会随字体变化；以实际段落间距进入深处，并留出继续翻页的空间。
+                viewport.scrollTop =
+                    ((last.getBoundingClientRect().top - first.getBoundingClientRect().top) / distance) * 3000;
             });
             await page.waitForFunction(
                 () => Number.parseFloat(document.querySelector("#progress-rate")?.textContent ?? "0") > 30
             );
             const progress = await readProgress(page);
             const anchor = progress[0];
-            assert(anchor && anchor.blockNumber > 2000);
+            assert(anchor && anchor.blockNumber > 2000 && anchor.blockNumber < 4000);
 
             // 连续有效输入和模式切换保留同一源位置，不要求后台全章排版先完成。
             await page.locator("#toggle-setting-panel").click();
@@ -354,6 +361,29 @@ for (const delivery of ["web", "portable"] as const) {
             );
             const pages = (await page.locator("#page-position").getAttribute("aria-label"))?.match(/\d+/g);
             assert(pages && Number(pages[0]) > 1 && Number(pages[0]) <= Number(pages[1]));
+
+            // 章末补窗可能被最大滚动值夹取，视窗上缘的留白不得使字号重排丢掉真实源锚点。
+            await setMode(page, "scroll");
+            await page.locator("#toggle-setting-panel").click();
+            await page.locator("#setting-control-font-size").fill("16");
+            await page.locator("#setting .close").click();
+            await page.locator("#content > .reading-viewport:not(.reading-measure-viewport)").evaluate((viewport) => {
+                viewport.scrollTop = viewport.scrollHeight;
+            });
+            await page.waitForFunction(
+                () => Number.parseFloat(document.querySelector("#progress-rate")?.textContent ?? "0") > 99
+            );
+            const tail = await readProgress(page);
+            assert(tail[0] && tail[0].blockNumber > 5900);
+            await page.locator("#toggle-setting-panel").click();
+            for (const fontSize of [22, 25, 18, 23]) {
+                await page.locator("#setting-control-font-size").fill(String(fontSize));
+                await settleReader(page);
+                assert.deepEqual(await readProgress(page), tail);
+            }
+            await page.locator("#setting .close").click();
+            await settleReader(page);
+            assert.deepEqual(await readProgress(page), tail);
         });
     });
 
