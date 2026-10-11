@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import chardet, { type EncodingName } from "chardet";
+import { analyse, type EncodingName } from "chardet";
 import type { SupportedTextEncoding } from "./text-encoding";
 import { canDecode } from "./text-file-reader";
 
@@ -37,7 +37,7 @@ export async function detectTextEncoding(file: File): Promise<SupportedTextEncod
     if (await canDecode(file, "utf-8")) return "utf-8";
 
     // chardet 按置信度降序返回候选，只接受受支持且置信度足够的首选。
-    const matches = chardet.analyse(sample);
+    const matches = analyse(sample);
     const bestMatch = matches[0];
     if (!bestMatch || bestMatch.confidence < MIN_CONFIDENCE_SCORE) return null;
 
