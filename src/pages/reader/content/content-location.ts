@@ -13,6 +13,19 @@ export interface ContentLocation {
     readonly contentOffset: number;
 }
 
+/**
+ * 选区端点保留插入边界，允许落在文本或媒体之后；生成的 TXT 章标题独立于正文源偏移。
+ */
+export type ContentBoundary = ContentLocation | { readonly headingOffset: number };
+
+/**
+ * 选择方向与两端源边界，正文片段替换后仍可还原同一选区。
+ */
+export interface ContentSelection {
+    readonly anchor: ContentBoundary;
+    readonly focus: ContentBoundary;
+}
+
 interface ContentUnit {
     readonly node: Text | HTMLElement;
     readonly offset: number;
@@ -149,6 +162,112 @@ export function locateContentRange(section: HTMLElement, location: ContentLocati
     const range = document.createRange();
     range.selectNode(block);
     return range;
+}
+
+/**
+ * 把原生插入点转换为源边界；文本使用 UTF-16，图片、换行与分隔线各占一个源位置。
+ */
+function readContentBoundary(section: HTMLElement, node: Node, offset: number): ContentBoundary | undefined {
+    if (!section.contains(node)) return undefined;
+    const point = document.createRange();
+    point.setStart(node, offset);
+    point.collapse(true);
+    let previous: ContentBoundary | undefined;
+    for (const child of section.children) {
+        if (!(child instanceof HTMLElement)) continue;
+        if (child.classList.contains("chapter-heading")) {
+            if (point.comparePoint(child, 0) >= 0) return { headingOffset: 0 };
+            if (child.contains(node)) {
+                const prefix = document.createRange();
+                prefix.selectNodeContents(child);
+                prefix.setEnd(node, offset);
+                return { headingOffset: prefix.toString().length };
+            }
+            previous = { headingOffset: child.textContent.length };
+            continue;
+        }
+        const blockNumber = Number(child.dataset["blockNumber"]);
+        if (!Number.isSafeInteger(blockNumber) || blockNumber < 1) continue;
+        const start = sourceOffset(child);
+        if (point.comparePoint(child, 0) >= 0) return { blockNumber, contentOffset: start };
+        const units = contentIndex(child).units;
+        let end = 0;
+        for (const unit of units) {
+            if (unit.node === node && node instanceof Text)
+                return { blockNumber, contentOffset: start + unit.offset + offset };
+            const parent = unit.node.parentNode;
+            if (parent) {
+                const index = [...parent.childNodes].indexOf(unit.node);
+                if (point.comparePoint(parent, index) >= 0) return { blockNumber, contentOffset: start + unit.offset };
+            }
+            end = unit.offset + unit.length;
+        }
+        previous = { blockNumber, contentOffset: start + end };
+        if (child.contains(node)) return previous;
+    }
+    return previous;
+}
+
+/**
+ * 只保存正文中的非折叠选区，不恢复没有编辑语义的 DOM 光标或已过时的容器子节点索引。
+ */
+export function readContentSelection(section: HTMLElement, selection: Selection | null): ContentSelection | undefined {
+    if (!selection || selection.isCollapsed || !selection.anchorNode || !selection.focusNode) return undefined;
+    const anchor = readContentBoundary(section, selection.anchorNode, selection.anchorOffset);
+    const focus = readContentBoundary(section, selection.focusNode, selection.focusOffset);
+    return anchor && focus ? { anchor, focus } : undefined;
+}
+
+/**
+ * 两端仍在挂载范围内时按源位置恢复选区；显式导航离开的内容不重新挂载。
+ */
+export function restoreContentSelection(section: HTMLElement, selection: Selection, saved: ContentSelection): void {
+    const anchor = locateContentBoundary(section, saved.anchor);
+    const focus = locateContentBoundary(section, saved.focus);
+    if (
+        anchor &&
+        focus &&
+        (selection.anchorNode !== anchor.node ||
+            selection.anchorOffset !== anchor.offset ||
+            selection.focusNode !== focus.node ||
+            selection.focusOffset !== focus.offset)
+    )
+        selection.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
+}
+
+/**
+ * 插入点不同于单字符 Range，文本末尾与媒体之后必须保留在完整单元之后。
+ */
+function locateContentBoundary(
+    section: HTMLElement,
+    boundary: ContentBoundary
+): { readonly node: Node; readonly offset: number } | undefined {
+    if ("headingOffset" in boundary) {
+        const heading = section.querySelector<HTMLElement>(".chapter-heading");
+        const text = heading?.firstChild;
+        return text instanceof Text && boundary.headingOffset <= text.length
+            ? { node: text, offset: boundary.headingOffset }
+            : undefined;
+    }
+    for (const block of [...section.children].reverse()) {
+        if (!(block instanceof HTMLElement) || Number(block.dataset["blockNumber"]) !== boundary.blockNumber) continue;
+        const offset = boundary.contentOffset - sourceOffset(block);
+        const units = contentIndex(block).units;
+        const last = units.at(-1);
+        const length = last ? last.offset + last.length : 0;
+        if (offset < 0 || offset > length) continue;
+        if (!last) return { node: block, offset: 0 };
+        for (const unit of units) {
+            if (offset >= unit.offset + unit.length) continue;
+            if (unit.node instanceof Text) return { node: unit.node, offset: offset - unit.offset };
+            const parent = unit.node.parentNode;
+            return parent ? { node: parent, offset: [...parent.childNodes].indexOf(unit.node) } : undefined;
+        }
+        if (last.node instanceof Text) return { node: last.node, offset: last.length };
+        const parent = last.node.parentNode;
+        return parent ? { node: parent, offset: [...parent.childNodes].indexOf(last.node) + 1 } : undefined;
+    }
+    return undefined;
 }
 
 /**

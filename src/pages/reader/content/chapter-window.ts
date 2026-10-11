@@ -3,7 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import ChapterLayout, { waitForChapterLayout, type ChapterLayoutWindow } from "./chapter-layout";
+import ChapterLayout, {
+    waitForChapterLayout,
+    type ChapterLayoutSeed,
+    type ChapterLayoutWindow,
+} from "./chapter-layout";
 import type ChapterView from "./chapter-view";
 import type { ContentLocation } from "./content-location";
 import { locateContentRange, locateContentRect, readContentLocation } from "./content-location";
@@ -42,11 +46,24 @@ export default class ChapterWindow {
      */
     public reset(mode: ReadingMode, location: ContentLocation, preserveRange = false): void {
         this.cancel();
-        const sameMode = this.mode === mode;
+        const sameMode = (this.mode === "scroll") === (mode === "scroll");
         this.mode = mode;
         this.layout = this.createLayout();
         if (!preserveRange || !sameMode) {
-            this.range = this.previewRange(location);
+            const range = this.previewRange(location);
+            const selection = document.getSelection();
+            const keepSelection =
+                mode !== "scroll" &&
+                selection &&
+                !selection.isCollapsed &&
+                selection.anchorNode &&
+                selection.focusNode &&
+                this.view.element.contains(selection.anchorNode) &&
+                this.view.element.contains(selection.focusNode);
+            // 新页界不丢弃仍在选择的源内容；只保留两个重叠的有界窗口，不扩展到全文。
+            this.range = keepSelection
+                ? { ...range, start: Math.min(range.start, this.range.start), end: Math.max(range.end, this.range.end) }
+                : range;
             this.mount();
         }
         this.exact =
@@ -79,13 +96,17 @@ export default class ChapterWindow {
         parent.append(probe);
         this.probe = probe;
         const layout = this.layout;
+        const seed = this.mode === "scroll" ? undefined : this.readLayoutSeed(bounds);
         const ready = (async () => {
             try {
-                await layout.build(probe, lifetime, () => {
-                    if (!lifetime.aborted) {
-                        onProgress();
-                    }
-                });
+                await layout.build(
+                    probe,
+                    lifetime,
+                    () => {
+                        if (!lifetime.aborted) onProgress();
+                    },
+                    seed
+                );
                 if (!lifetime.aborted) onProgress();
             } finally {
                 probe.remove();
@@ -96,12 +117,25 @@ export default class ChapterWindow {
     }
 
     /**
+     * 后台测量只补全当前画面的精确页码，不挂载正文或改变滚动位置。
+     * 返回值表示当前可见窗口已与这份索引对应，可以发布页码。
+     */
+    public commitLayout(): boolean {
+        if (this.mode === "scroll") return false;
+        const pageBase = this.layout.pageBaseForWindow(this.range);
+        if (pageBase === undefined) return false;
+        this.range = { ...this.range, pageBase };
+        this.exact = true;
+        return true;
+    }
+
+    /**
      * 精确前缀尚未得到时，优先显示包含源位置的片段；得到后使用真实续排高度。
      */
     public showLocation(location: ContentLocation): boolean {
         const exact = this.layout.windowForLocation(location);
         const range = exact ?? this.previewRange(location);
-        return this.replace(range, exact !== undefined || range.start === 0);
+        return this.replace(range, exact !== undefined || (range.start === 0 && !range.seams?.length));
     }
 
     /**
@@ -205,7 +239,11 @@ export default class ChapterWindow {
             // 在已显示页首保留明确页界；前补内容完整结束于该源位置，不等待全章前缀或跳过文字。
             const boundary = this.view.safeBoundary(visible);
             const oldBoundary = alignmentRect(this.view.element, boundary);
-            const suffix = this.view.renderFrom(boundary, end);
+            const firstLocation = this.view.pieceLocation(start);
+            const pageStart =
+                boundary.blockNumber !== firstLocation.blockNumber ||
+                boundary.contentOffset !== firstLocation.contentOffset;
+            const suffix = this.view.renderFrom(boundary, end, pageStart);
             probe.replaceChildren(suffix);
             await waitForChapterLayout(suffix, lifetime);
             if (lifetime.aborted || this.layout !== layout) return false;
@@ -292,7 +330,7 @@ export default class ChapterWindow {
             start++;
             end = this.view.rangeEnd(start);
         }
-        return {
+        const range: ChapterLayoutWindow = {
             start,
             end: Math.min(this.view.pieceCount, end + 1),
             carry: 0,
@@ -300,6 +338,39 @@ export default class ChapterWindow {
             pageBase: 0,
             top: this.mode === "scroll" ? start * this.averageHeight() : 0,
             height: 0,
+        };
+        if (this.mode === "scroll") return range;
+        const chapterEnd = this.view.pieceEndLocation(this.view.pieceCount - 1);
+        // 章末导航显示最后一页，不能把最后一个字符独立切成新的页面。
+        if (location.blockNumber === chapterEnd.blockNumber && location.contentOffset === chapterEnd.contentOffset)
+            return range;
+        const boundary = this.view.safeBoundary(location);
+        const seams = this.view.seamsInRange(start, range.end, [{ location: boundary, carry: 0, inlineCarry: 0 }]);
+        return seams.length > 0 ? { ...range, seams } : range;
+    }
+
+    /**
+     * 以实际可见的源边界约束后台排版，局部页号只用于推导同一画面的全章页号。
+     */
+    private readLayoutSeed(bounds: DOMRectReadOnly): ChapterLayoutSeed | undefined {
+        const visible =
+            readContentLocation(
+                this.view.element,
+                new DOMRect(bounds.left + 1, bounds.top, Math.max(0, bounds.width - 2), bounds.height)
+            ) ?? this.view.pieceLocation(this.range.start);
+        const location = this.view.safeBoundary(visible);
+        const rect = alignmentRect(this.view.element, location);
+        if (!rect) return undefined;
+        const origin = this.view.element.getBoundingClientRect();
+        const gap = Number.parseFloat(getComputedStyle(this.view.element).columnGap) || 0;
+        const stride = Math.max(1, bounds.width + gap);
+        const page = Math.max(0, Math.floor((rect.left - origin.left + 0.01) / stride));
+        return {
+            range: this.range,
+            location,
+            top: rect.top - origin.top,
+            inline: rect.left - origin.left - page * stride,
+            page,
         };
     }
 
@@ -314,7 +385,13 @@ export default class ChapterWindow {
             previous.top !== range.top;
         this.range = range;
         this.exact = exact;
-        if (changed) this.mount();
+        if (changed) {
+            this.mount();
+            if (!exact && this.mode !== "scroll") {
+                this.cancel();
+                this.layout = this.createLayout();
+            }
+        }
         return changed;
     }
 

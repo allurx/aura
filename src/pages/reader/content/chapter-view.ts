@@ -7,6 +7,7 @@ import type Chapter from "@/domain/chapter/chapter";
 import type { EpubNode } from "@/domain/file/epub-content";
 import { assertExists } from "@/utils/assert-util";
 import type { ContentLocation } from "./content-location";
+import { readContentSelection, restoreContentSelection } from "./content-location";
 
 interface SourceNode {
     readonly id: number;
@@ -28,7 +29,7 @@ interface ChapterPiece {
 }
 
 /**
- * 全章索引尚未到达时保留已显示页的临时源边界；准确索引提交后即可丢弃。
+ * 已显示窗口的临时源页界；后台索引沿用仍影响可见内容的边界，窗口回收后不累计保留。
  */
 export interface ChapterSeam {
     readonly location: ContentLocation;
@@ -214,11 +215,12 @@ export default class ChapterView {
 
     /**
      * 仅用于对齐临时页首，从精确源位置开始准备同一受控结构。
+     * 页内窗口起点保留原边距；真实新页首沿用原生分栏丢弃起始外边距的行为。
      */
-    public renderFrom(location: ContentLocation, end: number): HTMLElement {
+    public renderFrom(location: ContentLocation, end: number, pageStart = true): HTMLElement {
         const section = document.createElement("section");
         this.configureSection(section);
-        this.fillRange(section, this.pieceIndex(location), end, 0, 0, location);
+        this.fillRange(section, this.pieceIndex(location), end, 0, 0, location, undefined, pageStart);
         return section;
     }
 
@@ -268,19 +270,7 @@ export default class ChapterView {
         seams: readonly ChapterSeam[] = []
     ): void {
         const selection = document.getSelection();
-        const selected =
-            selection?.rangeCount === 1 &&
-            selection.anchorNode &&
-            selection.focusNode &&
-            this.element.contains(selection.anchorNode) &&
-            this.element.contains(selection.focusNode)
-                ? {
-                      anchor: selection.anchorNode,
-                      anchorOffset: selection.anchorOffset,
-                      focus: selection.focusNode,
-                      focusOffset: selection.focusOffset,
-                  }
-                : undefined;
+        const selected = readContentSelection(this.element, selection);
         const prepared = document.createElement("section");
         this.fillWindow(prepared, start, end, carry, inlineCarry, seams);
         const oldNodes = renderedNodes(this.element);
@@ -317,22 +307,8 @@ export default class ChapterView {
             if (desiredElement && element.style.cssText !== desiredElement.style.cssText)
                 element.style.cssText = desiredElement.style.cssText;
         }
-        // Range 的活端点会随旧祖先移除而折叠；两端源节点仍在窗口中时恢复原方向与精确偏移。
-        if (selected && this.element.contains(selected.anchor) && this.element.contains(selected.focus)) {
-            if (
-                selection?.anchorNode !== selected.anchor ||
-                selection.anchorOffset !== selected.anchorOffset ||
-                selection.focusNode !== selected.focus ||
-                selection.focusOffset !== selected.focusOffset
-            ) {
-                selection?.setBaseAndExtent(
-                    selected.anchor,
-                    selected.anchorOffset,
-                    selected.focus,
-                    selected.focusOffset
-                );
-            }
-        }
+        // 新页界可能拆开原 Text；按源边界恢复，不复用旧 DOM 的子节点索引。
+        if (selection && selected) restoreContentSelection(this.element, selection, selected);
     }
 
     /**
@@ -523,14 +499,15 @@ export default class ChapterView {
                 previous ? 0 : carry,
                 previous?.inlineCarry ?? inlineCarry,
                 lower,
-                boundary?.location
+                boundary?.location,
+                previous !== undefined
             );
             if (previous) {
                 const separator = document.createElement("div");
                 separator.className = "reading-carry";
                 separator.setAttribute("aria-hidden", "true");
                 separator.style.breakBefore = "column";
-                // 非空断页载体保留下一段的原生上边距；等量负外边距使其净高度仍等于 carry。
+                // 非空载体确保断页生效；首段起始边距由 fillRange 按原生列首语义去除。
                 separator.style.height = `${Math.max(0, previous.carry) + 1}px`;
                 separator.style.marginBottom = `${Math.min(0, previous.carry) - 1}px`;
                 result.append(separator);
@@ -551,7 +528,8 @@ export default class ChapterView {
         carry: number,
         inlineCarry: number,
         lower?: ContentLocation,
-        upper?: ContentLocation
+        upper?: ContentLocation,
+        pageStart = false
     ): void {
         const fragment = document.createDocumentFragment();
         if (carry !== 0) {
@@ -598,7 +576,7 @@ export default class ChapterView {
             if (typeof piece.source === "string") block.textContent = piece.source.slice(contentStart, contentEnd);
             else {
                 block.className = "epub-block";
-                const node = this.createEpubSlice(piece.source, contentStart, contentEnd);
+                const node = this.createEpubSlice(piece.source, contentStart, contentEnd, firstRendered && pageStart);
                 if (node) block.append(node);
             }
             // 批次边缘不等于章末，必须保留真实段落间距；块内续片没有额外段落间距。
@@ -621,7 +599,7 @@ export default class ChapterView {
     /**
      * 索引直接跳过范围外子树，只克隆源范围及其必要祖先；不挂载原书 DOM。
      */
-    private createEpubSlice(source: SourceNode, start: number, end: number): Node | undefined {
+    private createEpubSlice(source: SourceNode, start: number, end: number, pageStart = false): Node | undefined {
         if ((source.end <= start && source.end > source.start) || (source.start >= end && source.end > source.start))
             return undefined;
         const node = source.node;
@@ -655,7 +633,7 @@ export default class ChapterView {
             for (let index = low; index < source.children.length; index++) {
                 const child = source.children[index];
                 if (!child || child.start >= end) break;
-                const result = this.createEpubSlice(child, start, end);
+                const result = this.createEpubSlice(child, start, end, pageStart);
                 if (result) element.append(result);
             }
             if (node.href) {
@@ -669,8 +647,9 @@ export default class ChapterView {
             if (node.value !== undefined) element.setAttribute("value", String(node.value));
             if (node.reversed) element.setAttribute("reversed", "");
             if (node.dir) element.dir = source.direction ?? node.dir;
-            if (blockTags.has(node.tag)) {
-                if (source.start < start) element.style.marginBlockStart = "0";
+            if (blockTags.has(node.tag) || node.tag === "pre") {
+                // 只处理新页首沿源边界展开的祖先链，不改变后续段落的正常间距。
+                if (source.start < start || (pageStart && source.start === start)) element.style.marginBlockStart = "0";
                 if (source.end > end) element.style.marginBlockEnd = "0";
                 if (node.tag === "li" && source.start < start) element.style.listStyleType = "none";
             }

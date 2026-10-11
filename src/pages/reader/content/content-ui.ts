@@ -203,15 +203,17 @@ export default class ContentUi extends Ui {
      */
     public setMode(mode: ReadingMode): void {
         if (mode === this.mode) return;
+        const layoutChanged = (mode === "scroll") !== (this.mode === "scroll");
         const position = this.readPosition();
         this.transition?.skipTransition();
         this.mode = mode;
         this.root.dataset["readingMode"] = mode;
-        if (this.views.size === 0) return;
+        if (!layoutChanged || this.views.size === 0) return;
         if (position) this.chapterNumber = position.location.chapterNumber;
         this.position = position;
         this.mountViews();
-        this.scheduleLayout();
+        // 模式切换同时改变滚动轴和正文窗口，必须在同次操作中完成定位后再交给浏览器绘制。
+        this.flushLayout();
     }
 
     /**
@@ -270,7 +272,7 @@ export default class ContentUi extends Ui {
                 (await ChapterView.create(await this.loadChapter(number), this.epubResources, this.signal));
             prepared.push(view);
             if (!this.isActive()) return view;
-            if (view.pieceCount > view.rangeEnd(0) && !this.windows.has(view)) {
+            if (view.pieceCount > 0 && !this.windows.has(view)) {
                 const destination = number === chapterNumber ? target : number < chapterNumber ? "end" : "start";
                 const location = targetLocation(view, destination);
                 this.windows.set(view, new ChapterWindow(view, this.mode, location));
@@ -506,8 +508,12 @@ export default class ContentUi extends Ui {
             ...window.locationAt(requestedTop),
             chapterNumber: view.chapter.chapterNumber,
         };
-        const index = view.pieceIndex(location);
-        const nearEdge = index < window.range.start + 3 || index >= window.range.end - 6;
+        // 一个源片段可能包含多屏正文，补窗以实际覆盖范围判断，不按固定片段数量反复重挂。
+        const nearEdge =
+            (window.range.start > 0 && first !== undefined && first.top > viewport.top - viewport.height) ||
+            (window.range.end < view.pieceCount &&
+                last !== undefined &&
+                last.bottom < viewport.bottom + viewport.height);
         if (outside || nearEdge) {
             const changed = window.showLocation(location);
             if (changed) {
@@ -604,15 +610,18 @@ export default class ContentUi extends Ui {
                         step > 0
                             ? Math.min(window.view.pieceCount - 1, window.range.end)
                             : Math.max(0, window.range.start - 1);
-                    if (layout.findLocation(window.view.pieceLocation(target))) window.showLocation(position.location);
-                    else await window.shiftLocal(position.location, step, this.root, this.viewport, this.signal);
-                    if (!this.isActive() || layout !== window.layout) return;
+                    const changed = layout.findLocation(window.view.pieceLocation(target))
+                        ? window.showLocation(position.location)
+                        : await window.shiftLocal(position.location, step, this.root, this.viewport, this.signal);
+                    if (!this.isActive() || (!changed && layout !== window.layout)) return;
+                    const currentLayout = window.layout;
                     await this.afterLayout(() => {
-                        if (!this.isActive() || layout !== window.layout) return;
+                        if (!this.isActive() || currentLayout !== window.layout) return;
                         this.measure();
                         this.restorePosition(position);
                     });
-                    if (!this.isActive() || layout !== window.layout) return;
+                    if (!this.isActive() || currentLayout !== window.layout) return;
+                    if (layout !== currentLayout) this.startActiveLayout(true);
                 }
                 const globalNext = window.range.pageBase + this.pageIndex + step;
                 const indexed = window.exact ? window.layout.windowForPage(globalNext) : undefined;
@@ -786,7 +795,7 @@ export default class ContentUi extends Ui {
     private layoutSignature(): string {
         const style = getComputedStyle(this.root);
         return [
-            this.mode,
+            this.mode === "scroll" ? "scroll" : "paged",
             this.viewport.getBoundingClientRect().width,
             this.viewport.getBoundingClientRect().height,
             this.viewport.firstElementChild?.getBoundingClientRect().width ?? 0,
@@ -820,18 +829,23 @@ export default class ContentUi extends Ui {
         if (this.layoutSignature() === this.layout) return;
         this.transition?.skipTransition();
         const position = this.position;
-        // 相邻长章共享字号和视窗条件，也要废弃旧索引；只为当前章重新启动测量。
+        // 相邻章节共享字号和视窗条件，也要废弃旧索引；只为当前章重新启动测量。
         for (const [view, window] of this.windows) {
             const location =
                 position?.location.chapterNumber === view.chapter.chapterNumber
                     ? position.location
                     : view.pieceLocation(window.range.start);
-            window.reset(this.mode, location, true);
+            const preserveRange =
+                this.mode === "scroll" || position?.location.chapterNumber !== view.chapter.chapterNumber;
+            window.reset(this.mode, location, preserveRange);
         }
         this.activeWindow = undefined;
         this.measure();
-        if (position) this.restorePosition(position);
-        this.startActiveLayout();
+        // 初次挂载的观察通知可能早于导航定位，索引只能从最终可见位置开始。
+        if (position) {
+            this.restorePosition(position);
+            this.startActiveLayout();
+        }
         // 几何恢复仍在绘制前完成；窗口维护放到下一任务，避免在同轮观察通知中再次观察视窗。
         this.scheduleLocationSync(0);
     }
@@ -845,11 +859,11 @@ export default class ContentUi extends Ui {
     }
 
     /**
-     * 只为正在阅读的长章节保留一个测量任务，导航与设置不等待全章索引。
+     * 只为正在阅读的章节保留一个测量任务，导航与设置不等待全章索引。
      */
-    private startActiveLayout(): void {
+    private startActiveLayout(restart = false): void {
         const window = this.currentWindow();
-        if (window === this.activeWindow) return;
+        if (window === this.activeWindow && !restart) return;
         this.activeWindow?.cancel();
         this.activeWindow = window;
         window?.build(this.root, this.viewport, this.signal, () => {
@@ -871,6 +885,16 @@ export default class ContentUi extends Ui {
             }
             const position = this.readPosition();
             if (position?.location.chapterNumber !== window.view.chapter.chapterNumber) return;
+            if (this.mode !== "scroll") {
+                // 后台索引服从已经显示的页界，只补充精确页码，不再重挂正文或恢复滚动。
+                const wasExact = window.exact;
+                const exact = window.commitLayout();
+                if (!window.layout.complete && (wasExact || !exact)) return;
+                if (window.layout.complete && this.pendingChapterEnd === window) this.pendingChapterEnd = undefined;
+                const snapshot = this.readSnapshot();
+                if (snapshot) run(() => this.onLocationChange?.(snapshot));
+                return;
+            }
             const wasExact = window.exact;
             const ending = this.pendingChapterEnd === window;
             if (ending && !window.layout.complete) return;
@@ -879,11 +903,6 @@ export default class ContentUi extends Ui {
             if (!shouldMount && !window.layout.complete) return;
             if (this.hasReadingInteraction()) {
                 this.indexRefreshPending = true;
-                return;
-            }
-            if (!shouldMount && this.mode !== "scroll") {
-                const snapshot = this.readSnapshot();
-                if (snapshot) run(() => this.onLocationChange?.(snapshot));
                 return;
             }
             this.layoutPending = true;

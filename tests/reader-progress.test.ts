@@ -27,22 +27,47 @@ after(stopBrowserTests);
 /**
  * 读取实际显示的正文，不能只用保存记录或页码证明画面恢复。
  */
-async function readVisibleText(page: Page): Promise<string | null | undefined> {
+async function readVisiblePage(page: Page): Promise<{ text: string; firstTop: number | undefined }> {
     return page.locator("#content > .reading-viewport:not(.reading-measure-viewport) p").evaluateAll((paragraphs) => {
         const viewport = document
             .querySelector("#content > .reading-viewport:not(.reading-measure-viewport)")
             ?.getBoundingClientRect();
         if (!viewport) throw new Error("Missing reading viewport");
-        return paragraphs.find((paragraph) =>
-            [...paragraph.getClientRects()].some(
-                (rect) =>
-                    rect.bottom > viewport.top + 1 &&
-                    rect.top < viewport.bottom - 1 &&
-                    rect.right > viewport.left + 1 &&
-                    rect.left < viewport.right - 1
-            )
-        )?.textContent;
+        const intersects = (rect: DOMRect): boolean =>
+            rect.bottom > viewport.top + 1 &&
+            rect.top < viewport.bottom - 1 &&
+            rect.right > viewport.left + 1 &&
+            rect.left < viewport.right - 1;
+        const visible: string[] = [];
+        let firstTop: number | undefined;
+        const range = document.createRange();
+        for (const paragraph of paragraphs) {
+            if (![...paragraph.getClientRects()].some(intersects)) continue;
+            const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
+            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+                const text = node.textContent ?? "";
+                let offset = 0;
+                for (const character of text) {
+                    range.setStart(node, offset);
+                    range.setEnd(node, offset + character.length);
+                    const rect = [...range.getClientRects()].find(intersects);
+                    if (rect) {
+                        firstTop ??= rect.top - viewport.top;
+                        visible.push(character);
+                    }
+                    offset += character.length;
+                }
+            }
+        }
+        return { text: visible.join(""), firstTop };
     });
+}
+
+/**
+ * 仅验证源正文时共用同一可见字符采样，不重复维护段落可见性的另一套定义。
+ */
+async function readVisibleText(page: Page): Promise<string> {
+    return (await readVisiblePage(page)).text;
 }
 
 /**
@@ -316,7 +341,7 @@ for (const delivery of ["web", "portable"] as const) {
 
             // 未知全章页号不能被解释为章首页；显式向前后，索引提交也不能覆盖新位置。
             await page.locator('#page-position[aria-busy="true"]').waitFor();
-            await page.locator("#next-page").click();
+            await page.locator("#content").press("ArrowRight");
             await settleReader(page);
             const advanced = await readProgress(page);
             assert(advanced[0] && advanced[0].blockNumber > anchor.blockNumber);
@@ -333,50 +358,81 @@ for (const delivery of ["web", "portable"] as const) {
     });
 
     void test(`${delivery}: viewport reflow preserves the source anchor until explicit navigation`, async () => {
-        await withPage(delivery, async (page) => {
-            await importBooks(page, [textBook("reflow-progress.txt", 3, 240)]);
-            await openBook(page, "reflow-progress.txt");
-            for (const mode of ["cover", "slide", "none"] as const) {
-                await setMode(page, mode);
-                for (let index = 0; index < 7; index++) {
-                    await page.locator("#next-page").click();
-                    await settleReader(page);
-                }
-                await waitForChapterLayout(page);
-                const progress = await readProgress(page);
-                const position = await page.locator("#page-position").getAttribute("aria-label");
-                const visibleText = await readVisibleText(page);
-                assert(visibleText);
-
-                // 连续跨越工具布局与正文留白的断点，并反向恢复；每个中间状态都不得改写源锚点。
-                for (let round = 0; round < 2; round++) {
-                    for (const width of [1000, 801, 800, 601, 600, 390, 600, 601, 800, 801, 1000, 1440]) {
-                        await page.setViewportSize({ width, height: 900 });
+        const books = [
+            textBook("reflow-progress.txt", 3, 240),
+            {
+                name: "reflow-progress.epub",
+                mimeType: "application/epub+zip",
+                buffer: createEpubFixture(
+                    Array.from(
+                        { length: 240 },
+                        (_, index) =>
+                            `<p>段落${String(index).padStart(4, "0")} ${"正文用于验证翻页后重排的内容与段间留白。".repeat(12)}</p>`
+                    ).join("")
+                ),
+            },
+        ];
+        for (const book of books) {
+            await withPage(delivery, async (page) => {
+                await importBooks(page, [book]);
+                await openBook(page, book.name);
+                for (const mode of ["cover", "slide", "none"] as const) {
+                    await setMode(page, mode);
+                    for (let index = 0; index < (book.name.endsWith(".epub") ? 2 : 7); index++) {
+                        await page.locator("#content").press("ArrowRight");
                         await settleReader(page);
-                        assert.deepEqual(await readProgress(page), progress, `${mode}, width ${String(width)}`);
                     }
                     await waitForChapterLayout(page);
+                    const progress = await readProgress(page);
+                    const position = await page.locator("#page-position").getAttribute("aria-label");
+                    const visiblePage = await readVisiblePage(page);
+                    const visibleText = visiblePage.text;
+                    assert(visibleText);
+                    assert(visiblePage.firstTop !== undefined);
+
+                    // 连续跨越工具布局与正文留白的断点，并反向恢复；每个中间状态都不得改写源锚点。
+                    for (let round = 0; round < 2; round++) {
+                        for (const width of [1000, 801, 800, 601, 600, 390, 600, 601, 800, 801, 1000, 1440]) {
+                            await page.setViewportSize({ width, height: 900 });
+                            await settleReader(page);
+                            assert.deepEqual(await readProgress(page), progress, `${mode}, width ${String(width)}`);
+                            const reflowed = await readVisiblePage(page);
+                            assert.equal(reflowed.text.slice(0, 24), visibleText.slice(0, 24));
+                            assert(reflowed.firstTop !== undefined);
+                            assert(
+                                Math.abs(reflowed.firstTop - visiblePage.firstTop) < 0.5,
+                                `${book.name}, ${mode}, width ${String(width)}: first line ${String(visiblePage.firstTop)} -> ${String(reflowed.firstTop)}`
+                            );
+                        }
+                        await waitForChapterLayout(page);
+                        assert.equal(await page.locator("#page-position").getAttribute("aria-label"), position);
+                        assert.equal(await readVisibleText(page), visibleText);
+                    }
+                    await page.reload();
+                    await page
+                        .locator("#content > .reading-viewport:not(.reading-measure-viewport) .reading-chapter")
+                        .waitFor();
+                    await waitForChapterLayout(page);
+                    assert.deepEqual(await readProgress(page), progress);
                     assert.equal(await page.locator("#page-position").getAttribute("aria-label"), position);
                     assert.equal(await readVisibleText(page), visibleText);
-                }
-                await page.reload();
-                await page
-                    .locator("#content > .reading-viewport:not(.reading-measure-viewport) .reading-chapter")
-                    .waitFor();
-                await waitForChapterLayout(page);
-                assert.deepEqual(await readProgress(page), progress);
-                assert.equal(await page.locator("#page-position").getAttribute("aria-label"), position);
-                assert.equal(await readVisibleText(page), visibleText);
+                    const reloaded = await readVisiblePage(page);
+                    assert(reloaded.firstTop !== undefined);
+                    assert(
+                        Math.abs(reloaded.firstTop - visiblePage.firstTop) < 0.5,
+                        `${book.name}, ${mode}: reload first line ${String(visiblePage.firstTop)} -> ${String(reloaded.firstTop)}`
+                    );
 
-                // 冻结只属于重排；真实的向前和向后阅读仍须更新并恢复持久化进度。
-                await page.locator("#next-page").click();
-                await settleReader(page);
-                assert.notDeepEqual(await readProgress(page), progress);
-                await page.locator("#previous-page").click();
-                await settleReader(page);
-                assert.deepEqual(await readProgress(page), progress);
-            }
-        });
+                    // 冻结只属于重排；真实的向前和向后阅读仍须更新并恢复持久化进度。
+                    await page.locator("#content").press("ArrowRight");
+                    await settleReader(page);
+                    assert.notDeepEqual(await readProgress(page), progress);
+                    await page.locator("#content").press("ArrowLeft");
+                    await settleReader(page);
+                    assert.deepEqual(await readProgress(page), progress);
+                }
+            });
+        }
     });
 
     void test(`${delivery}: reopening a reader waits for all earlier progress transactions`, async () => {
@@ -418,7 +474,7 @@ for (const delivery of ["web", "portable"] as const) {
 
             // 保存等待数据库时仍可连续阅读；浏览器历史退出不经过页内“返回书架”的等待路径。
             for (let index = 0; index < 2; index++) {
-                await page.locator("#next-page").click();
+                await page.locator("#content").press("ArrowRight");
                 await settleReader(page);
             }
             const position = await page.locator("#page-position").getAttribute("aria-label");

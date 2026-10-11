@@ -32,6 +32,17 @@ export interface ChapterLayoutBatch extends ChapterLayoutWindow {
 }
 
 /**
+ * 已显示的源位置及其页内坐标；后台索引必须延续这份画面，不重新选择可见页。
+ */
+export interface ChapterLayoutSeed {
+    readonly range: ChapterLayoutWindow;
+    readonly location: ContentLocation;
+    readonly top: number;
+    readonly inline: number;
+    readonly page: number;
+}
+
+/**
  * 有界正文的精确排版索引。逐批续排并让出帧，实际窗口与索引共用同一片段投影。
  */
 export default class ChapterLayout {
@@ -42,6 +53,9 @@ export default class ChapterLayout {
     public knownHeight = 0;
     private readonly mode: "paged" | "scroll";
     private readonly batchSize: number;
+    private seams: readonly ChapterSeam[] = [];
+    private seed: ChapterLayoutSeed | undefined;
+    private seedPageBase: number | undefined;
 
     /**
      * 每批片段数是工作预算，不改变源内容身份，也不强制创建书页边界。
@@ -60,17 +74,32 @@ export default class ChapterLayout {
     public async build(
         probeViewport: HTMLElement,
         signal: AbortSignal,
-        onBatch: (batch: ChapterLayoutBatch) => void
+        onBatch: (batch: ChapterLayoutBatch) => void,
+        seed?: ChapterLayoutSeed
     ): Promise<void> {
+        this.seed = this.mode === "paged" ? seed : undefined;
+        this.seedPageBase = undefined;
+        const initialSeed = this.seed;
+        // 可见页之前的临时页界不约束未显示的前缀；之后的页界仍属于当前窗口。
+        this.seams = initialSeed
+            ? (initialSeed.range.seams ?? []).filter(
+                  ({ location }) => compareLocation(location, initialSeed.location) > 0
+              )
+            : [];
+        const boundaries = new Set(this.seams.map(({ location }) => this.view.pieceIndex(location)));
+        const seedIndex = this.seed ? this.view.pieceIndex(this.seed.location) : undefined;
+        if (seedIndex !== undefined) boundaries.add(seedIndex);
         let pageBase = 0;
         let wantedTop: number | undefined;
         let wantedInline: number | undefined;
         for (let start = 0; start < this.view.pieceCount && !signal.aborted;) {
-            const end = this.view.rangeEnd(start, this.batchSize);
+            let end = this.view.rangeEnd(start, this.batchSize);
+            // 页界两侧在同一有限批次中测量，避免事后改变已发布前缀的孤行与断页结果。
+            while (end < this.view.pieceCount && boundaries.has(end)) end++;
             const lookahead = Math.min(this.view.pieceCount, end + 1);
             let carry = 0;
             let inlineCarry = 0;
-            let section = this.view.renderRange(start, lookahead);
+            let section = this.view.renderRange(start, lookahead, 0, 0, this.seams);
             probeViewport.replaceChildren(section);
             await waitForChapterLayout(section, signal);
             if (!isActive(signal)) return;
@@ -93,11 +122,61 @@ export default class ChapterLayout {
             }
             if (this.mode === "paged" && wantedTop !== undefined && first) carry = wantedTop - (first.top - origin.top);
             if (carry !== 0 || inlineCarry !== 0) {
-                section = this.view.renderRange(start, lookahead, carry, inlineCarry);
+                section = this.view.renderRange(start, lookahead, carry, inlineCarry, this.seams);
                 probeViewport.replaceChildren(section);
                 await waitForChapterLayout(section, signal);
                 if (!isActive(signal)) return;
                 origin = section.getBoundingClientRect();
+            }
+
+            const currentSeed = this.seed;
+            if (currentSeed && seedIndex !== undefined && seedIndex >= start && seedIndex < end) {
+                let anchored = layoutAnchorRect(section, currentSeed.location);
+                if (anchored) {
+                    const page = Math.max(0, Math.floor((anchored.left - origin.left + 0.01) / stride));
+                    const top = anchored.top - origin.top;
+                    const inline = anchored.left - origin.left - page * stride;
+                    if (Math.abs(top - currentSeed.top) >= 0.1 || Math.abs(inline - currentSeed.inline) >= 0.1) {
+                        // 仅自然分页与已显示页失配时建立源页界；相位相同的刷新与尺寸往返不增加页面。
+                        const pageStart = compareLocation(currentSeed.location, this.view.pieceLocation(start)) !== 0;
+                        const suffix = this.view.renderFrom(currentSeed.location, lookahead, pageStart);
+                        probeViewport.replaceChildren(suffix);
+                        await waitForChapterLayout(suffix, signal);
+                        if (!isActive(signal)) return;
+                        const suffixOrigin = suffix.getBoundingClientRect();
+                        const suffixRect = layoutAnchorRect(suffix, currentSeed.location);
+                        if (suffixRect) {
+                            const range = locateContentRange(suffix, currentSeed.location);
+                            const container = range?.startContainer;
+                            const element = container instanceof Element ? container : container?.parentElement;
+                            const rtl = element ? getComputedStyle(element).direction === "rtl" : false;
+                            const seam: ChapterSeam = {
+                                location: currentSeed.location,
+                                carry: currentSeed.top - (suffixRect.top - suffixOrigin.top),
+                                inlineCarry:
+                                    (currentSeed.inline - (suffixRect.left - suffixOrigin.left)) * (rtl ? -1 : 1),
+                            };
+                            if (compareLocation(currentSeed.location, this.view.pieceLocation(start)) === 0) {
+                                carry = seam.carry;
+                                inlineCarry = seam.inlineCarry;
+                            } else
+                                this.seams = [...this.seams, seam].toSorted((a, b) =>
+                                    compareLocation(a.location, b.location)
+                                );
+                        }
+                        section = this.view.renderRange(start, lookahead, carry, inlineCarry, this.seams);
+                        probeViewport.replaceChildren(section);
+                        await waitForChapterLayout(section, signal);
+                        if (!isActive(signal)) return;
+                        origin = section.getBoundingClientRect();
+                        anchored = layoutAnchorRect(section, currentSeed.location);
+                    }
+                    if (anchored)
+                        this.seedPageBase =
+                            pageBase +
+                            Math.max(0, Math.floor((anchored.left - origin.left + 0.01) / stride)) -
+                            currentSeed.page;
+                }
             }
 
             const rectangle = layoutContentRect(section, this.view.pieceEndLocation(end - 1));
@@ -135,6 +214,7 @@ export default class ChapterLayout {
                 endCarry,
                 top,
                 height: batchHeight,
+                ...(this.seams.length > 0 ? { seams: this.seams } : {}),
             };
             this.batches.push(batch);
             this.knownHeight = Math.max(this.knownHeight, top + batchHeight);
@@ -163,6 +243,20 @@ export default class ChapterLayout {
             this.totalHeight = this.mode === "scroll" ? section.getBoundingClientRect().height : 0;
             this.knownHeight = this.totalHeight;
         }
+    }
+
+    /**
+     * 只为仍在显示测量种子的窗口提供页码基数，不能把新的局部页界冒充旧索引的一部分。
+     */
+    public pageBaseForWindow(range: ChapterLayoutWindow): number | undefined {
+        const seed = this.seed?.range;
+        return range.start === seed?.start &&
+            range.end === seed.end &&
+            range.carry === seed.carry &&
+            range.inlineCarry === seed.inlineCarry &&
+            range.seams === seed.seams
+            ? this.seedPageBase
+            : undefined;
     }
 
     /**
@@ -212,8 +306,27 @@ export default class ChapterLayout {
             pageBase: first.pageBase,
             top: first.top,
             height: last.top + last.height - first.top,
+            ...(this.seams.length > 0 ? { seams: this.seams } : {}),
         };
     }
+}
+
+/**
+ * 内嵌滚动区的文字坐标由自身滚动决定，正文分页只对齐其原子外框。
+ */
+function layoutAnchorRect(section: HTMLElement, location: ContentLocation): DOMRect | undefined {
+    const range = locateContentRange(section, location);
+    const container = range?.startContainer;
+    const element = container instanceof Element ? container : container?.parentElement;
+    const region = element?.closest<HTMLElement>("table, pre");
+    return region && section.contains(region) ? region.getBoundingClientRect() : layoutContentRect(section, location);
+}
+
+/**
+ * 源位置按块号与块内偏移排序，不使用当前排版坐标。
+ */
+function compareLocation(a: ContentLocation, b: ContentLocation): number {
+    return a.blockNumber - b.blockNumber || a.contentOffset - b.contentOffset;
 }
 
 /**
