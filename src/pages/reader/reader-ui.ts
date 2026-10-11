@@ -7,17 +7,19 @@ import Ui from "@/components/ui";
 import { getBookTitle } from "@/domain/file/book-format";
 import { assertExists } from "@/utils/assert-util";
 import { bind } from "@/utils/event-util";
-import { ReadingDirection } from "./reading-direction";
+import type { ReadingDirection } from "./reading-direction";
 import bindReadingInput from "./reading-input";
 import type { ReadingMode } from "./reading-mode";
+import ReaderTools, { type ReaderToolsBinding } from "./reader-tools";
+
+export type { ReaderToolsBinding } from "./reader-tools";
 
 /**
  * 阅读器工具分组、跨设备布局和移动沉浸状态。
  */
 export default class ReaderUi extends Ui {
     private readonly actions = assertExists(this.root.querySelector<HTMLElement>("#reader-actions"));
-    private readonly previousButton = assertExists(this.actions.querySelector<HTMLButtonElement>("#previous-page"));
-    private readonly nextButton = assertExists(this.actions.querySelector<HTMLButtonElement>("#next-page"));
+    private readonly desktopTools = new ReaderTools(this.actions, this.root);
     private readonly returnButton = assertExists(this.root.querySelector<HTMLButtonElement>("#return-bookshelf"));
     public readonly tocButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-toc-panel"));
     public readonly settingButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-setting-panel"));
@@ -29,6 +31,8 @@ export default class ReaderUi extends Ui {
     private readonly progressRate = assertExists(this.root.querySelector<HTMLElement>("#progress-rate"));
     private readonly readingStatus = assertExists(this.root.querySelector<HTMLElement>(".reading-status"));
     private readonly pagePosition = assertExists(this.root.querySelector<HTMLElement>("#page-position"));
+    private readonly currentPage = assertExists(this.pagePosition.querySelector<HTMLElement>(".current-page"));
+    private readonly totalPages = assertExists(this.pagePosition.querySelector<HTMLElement>(".total-pages"));
     private readonly content = assertExists(this.root.querySelector<HTMLElement>("#content"));
     private readonly toolsEntry = assertExists(this.root.querySelector<HTMLButtonElement>("#reading-tools-entry"));
     private mobileControls = false;
@@ -36,7 +40,14 @@ export default class ReaderUi extends Ui {
     private cancelReadingGesture: (() => void) | undefined;
 
     /**
-     * 翻页、目录、设置、全屏与书架入口在桌面侧栏和移动底部间复用原节点，保留事件与 Tab 顺序。
+     * 首次异步加载正文前恢复工具栏外观，后续重置由设置控制器通知。
+     */
+    public bindToolsAppearance(binding: ReaderToolsBinding, signal: AbortSignal): void {
+        this.desktopTools.bindAppearance(binding, signal);
+    }
+
+    /**
+     * 目录、设置、书架与全屏入口在桌面侧栏和移动底部间复用原节点，保留事件与 Tab 顺序。
      * 移动工具默认收起；进入移动布局时保留正在使用的入口及浮层返回路径。
      */
     public bindResponsiveControls(signal: AbortSignal): void {
@@ -51,6 +62,7 @@ export default class ReaderUi extends Ui {
         });
         this.renderFullscreenState();
         this.root.after(this.actions);
+        this.desktopTools.bindControls(signal);
         signal.addEventListener(
             "abort",
             () => {
@@ -64,18 +76,14 @@ export default class ReaderUi extends Ui {
         // 响应式切换只移动节点，不重建事件与展开状态。
         const mobile = window.matchMedia("(max-width: 800px), (pointer: coarse)");
         const toolbar = assertExists(this.root.querySelector<HTMLElement>(".mobile-actions"));
-        const mobileNavigation = assertExists(this.root.querySelector<HTMLElement>(".mobile-page-navigation"));
         const location = assertExists(this.root.querySelector<HTMLElement>(".reading-location"));
         const navigation = assertExists(this.actions.querySelector<HTMLElement>(".navigation-actions"));
-        const preferences = assertExists(this.actions.querySelector<HTMLElement>(".preference-actions"));
-        const bookshelf = assertExists(this.actions.querySelector<HTMLElement>(".bookshelf-actions"));
+        const pageActions = assertExists(this.actions.querySelector<HTMLElement>(".page-actions"));
         const controls = [
-            { button: this.previousButton, desktopParent: navigation, mobileParent: mobileNavigation },
-            { button: this.nextButton, desktopParent: navigation, mobileParent: mobileNavigation },
             { button: this.tocButton, desktopParent: navigation, mobileParent: toolbar },
-            { button: this.settingButton, desktopParent: preferences, mobileParent: toolbar },
-            { button: this.fullscreenButton, desktopParent: preferences, mobileParent: toolbar },
-            { button: this.returnButton, desktopParent: bookshelf, mobileParent: toolbar },
+            { button: this.settingButton, desktopParent: navigation, mobileParent: toolbar },
+            { button: this.returnButton, desktopParent: pageActions, mobileParent: toolbar },
+            { button: this.fullscreenButton, desktopParent: pageActions, mobileParent: toolbar },
         ];
 
         /**
@@ -95,7 +103,8 @@ export default class ReaderUi extends Ui {
             if (this.mobileControls !== mobile.matches) this.cancelReadingGesture?.();
             const focused = document.activeElement;
             const focusedControl = focused instanceof HTMLElement && controls.some(({ button }) => button === focused);
-            if (mobile.matches && !this.mobileControls && (focusedControl || this.hasOpenPanel())) {
+            const focusedDesktopTools = focused instanceof HTMLElement && this.actions.contains(focused);
+            if (mobile.matches && !this.mobileControls && (focusedDesktopTools || this.hasOpenPanel())) {
                 this.toolsVisible = true;
             }
             this.mobileControls = mobile.matches;
@@ -107,20 +116,23 @@ export default class ReaderUi extends Ui {
             for (const { button, desktopParent, mobileParent } of controls) {
                 const parent = mobile.matches ? mobileParent : desktopParent;
                 if (button.parentElement === parent) continue;
-                const before = mobile.matches && button === this.previousButton ? parent.firstChild : null;
                 // 原子移动保留原生焦点，不在改变布局后再次 focus 触发正文同步重排。
-                if (typeof parent.moveBefore === "function") parent.moveBefore(button, before);
-                else parent.insertBefore(button, before);
+                if (typeof parent.moveBefore === "function") parent.moveBefore(button, null);
+                else parent.append(button);
             }
 
             // 页码和全书进度一起跟随工具区域，切换布局不重建阅读状态。
-            const progressParent = mobile.matches ? location : this.actions;
+            const progressParent = mobile.matches ? location : this.desktopTools.body;
             if (this.readingStatus.parentElement !== progressParent) progressParent.append(this.readingStatus);
+            this.desktopTools.setDesktop(!mobile.matches);
             this.renderToolsVisibility();
 
             // 移动原按钮后恢复焦点，移动辅助入口退出布局时归还正文。
-            if (focusedControl && document.activeElement !== focused) {
-                restoreFocus(focused, focused);
+            if (focusedControl) {
+                const target = this.desktopTools.getFocusTarget(focused);
+                if (document.activeElement !== target) restoreFocus(target, focused);
+            } else if (focusedDesktopTools && this.mobileControls) {
+                restoreFocus(this.tocButton, focused);
             } else if (focused === this.toolsEntry && !this.mobileControls) {
                 restoreFocus(this.content, focused);
             }
@@ -128,6 +140,16 @@ export default class ReaderUi extends Ui {
 
         // 响应式监听与辅助入口随页面清理，键盘打开工具后聚焦第一个操作入口。
         mobile.addEventListener("change", sync, { signal });
+        for (const dialog of this.root.querySelectorAll<HTMLDialogElement>("dialog")) {
+            bind(
+                dialog,
+                "close",
+                () => {
+                    if (dialog.returnValue !== "chapter-selected") this.desktopTools.restoreFocusAfterClose(dialog);
+                },
+                { signal }
+            );
+        }
         bind(
             this.toolsEntry,
             "click",
@@ -166,29 +188,9 @@ export default class ReaderUi extends Ui {
     }
 
     /**
-     * 阅读导航按当前模式前后翻页或逐屏滚动，目录和章节快捷键保留明确的跳章语义。
+     * 页码只用于分页阅读，连续滚动保留章节和全书进度。
      */
-    public renderNavigation({
-        canPrevious,
-        canNext,
-        mode,
-    }: {
-        canPrevious: boolean;
-        canNext: boolean;
-        mode: ReadingMode;
-    }): this {
-        this.previousButton.disabled = !canPrevious;
-        this.nextButton.disabled = !canNext;
-        const unit = mode === "scroll" ? "屏" : "页";
-        for (const [button, label] of [
-            [this.previousButton, `上一${unit}`],
-            [this.nextButton, `下一${unit}`],
-        ] as const) {
-            const text = assertExists(button.querySelector("span:last-child"));
-            if (text.textContent !== label) text.textContent = label;
-            button.setAttribute("aria-label", label);
-            button.title = label;
-        }
+    public renderReadingMode(mode: ReadingMode): this {
         this.pagePosition.hidden = mode === "scroll";
         return this;
     }
@@ -197,9 +199,12 @@ export default class ReaderUi extends Ui {
      * 页码只描述当前章节的排版结果；全书进度独立使用稳定内容位置。
      */
     public renderPageInfo(pageNumber: number | undefined, pageCount: number | undefined): void {
-        const text = assertExists(this.pagePosition.querySelector(".page-count"));
-        const value = pageNumber === undefined ? "正在排版" : `${pageNumber} / ${pageCount ?? "…"}`;
-        if (text.textContent !== value) text.textContent = value;
+        const current = pageNumber === undefined ? "—" : String(pageNumber);
+        const total = pageCount === undefined ? "—" : String(pageCount);
+        if (this.currentPage.textContent !== current) this.currentPage.textContent = current;
+        if (this.totalPages.textContent !== total) this.totalPages.textContent = total;
+        this.pagePosition.toggleAttribute("data-long-count", current.length + total.length > 6);
+        this.pagePosition.toggleAttribute("data-wide-count", current.length + total.length > 8);
         this.pagePosition.setAttribute(
             "aria-label",
             pageNumber === undefined
@@ -221,7 +226,7 @@ export default class ReaderUi extends Ui {
     }
 
     /**
-     * 将按钮、正文键盘与有效手势统一为阅读意图，浮层打开时不接受背景导航。
+     * 正文键盘与有效手势统一为阅读意图，浮层打开时不接受背景导航。
      */
     public bindReadingNavigation(
         handlers: {
@@ -232,21 +237,12 @@ export default class ReaderUi extends Ui {
         },
         signal: AbortSignal
     ): this {
-        /**
-         * 所有翻页入口遵守同一浮层约束，业务层不依赖具体面板结构。
-         */
-        const navigate = async (direction: ReadingDirection): Promise<void> => {
-            if (!this.hasOpenPanel()) await handlers.onTurn(direction);
-        };
-        bind(this.previousButton, "click", () => navigate(ReadingDirection.PREV), { signal });
-        bind(this.nextButton, "click", () => navigate(ReadingDirection.NEXT), { signal });
-
         // 输入能力独立于工具布局：触摸大屏也可翻页，鼠标正文始终保留选择行为。
         this.cancelReadingGesture = bindReadingInput(
             this.content,
             {
                 isEnabled: () => !this.hasOpenPanel(),
-                onTurn: navigate,
+                onTurn: handlers.onTurn,
                 onChapter: handlers.onChapter,
                 onCenterTap: handlers.onCenterTap,
                 getMode: handlers.getMode,

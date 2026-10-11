@@ -38,7 +38,6 @@ export interface ReadingSnapshot {
     readonly location: ReadingLocation;
     readonly chapter: Chapter;
     readonly mode: ReadingMode;
-    readonly canPrevious: boolean;
     readonly canNext: boolean;
     readonly pageNumber: number | undefined;
     readonly pageCount: number | undefined;
@@ -1151,11 +1150,6 @@ export default class ContentUi extends Ui {
             location,
             chapter,
             mode: this.mode,
-            canPrevious:
-                current > 1 ||
-                (this.mode === "scroll"
-                    ? this.viewport.scrollTop > 1
-                    : this.pageIndex > 0 || (window?.range.start ?? 0) > 0),
             canNext:
                 current < this.chapterCount ||
                 (this.mode === "scroll"

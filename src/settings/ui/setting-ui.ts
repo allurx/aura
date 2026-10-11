@@ -8,6 +8,7 @@ import { PageName } from "@/constants/page-name";
 import type SettingConfiguration from "../models/setting-configuration";
 import Ui from "@/components/ui";
 import enableLightDismiss from "@/components/dialog/light-dismiss";
+import enablePanelFrame, { type PanelFrameUi } from "@/components/dialog/panel-frame";
 import { assertExists } from "@/utils/assert-util";
 import { createElementFromHtml } from "@/utils/dom-util";
 import { bind, run } from "@/utils/event-util";
@@ -34,6 +35,7 @@ export default class SettingUi extends Ui {
     private generalSettings: readonly Setting[] = [];
     private readonly pendingDefaults = new Set<Setting>();
     private defaultObserver: ResizeObserver | undefined;
+    private panelFrame: PanelFrameUi | undefined;
 
     /**
      * @param container - 设置对话框的挂载容器。
@@ -94,6 +96,13 @@ export default class SettingUi extends Ui {
         this.defaultObserver.observe(this.container);
 
         enableLightDismiss(this.root, signal);
+        this.panelFrame = enablePanelFrame(
+            this.root,
+            assertExists(this.root.querySelector<HTMLElement>(":scope > header")),
+            () => !this.container.hasAttribute("data-mobile-controls"),
+            listener.getPanelFrame("settings"),
+            signal
+        );
 
         // 支持声明式命令时由按钮原生激活模态，脚本只维护外观会话和业务准入。
         if ("commandForElement" in HTMLButtonElement.prototype) {
@@ -172,7 +181,12 @@ export default class SettingUi extends Ui {
             this.root,
             "keydown",
             (event: KeyboardEvent) => {
-                if (event.key === "Escape") event.stopPropagation();
+                if (event.key !== "Escape" || event.isComposing) return;
+                event.preventDefault();
+                event.stopPropagation();
+                // 书架侧栏跨断点重新展示后，显式请求当前模态取消，不依赖关闭观察器的先后次序。
+                if (typeof this.root.requestClose === "function") this.root.requestClose();
+                else if (this.root.dispatchEvent(new Event("cancel", { cancelable: true }))) this.root.close();
             },
             { signal }
         );
@@ -239,7 +253,21 @@ export default class SettingUi extends Ui {
      * 按会话给出的显示值刷新受影响的控件；未指定范围时读取全部当前默认值。
      */
     public refresh(settings?: readonly Setting[]): void {
+        this.panelFrame?.refresh();
         this.renderSettings(settings, settings !== undefined);
+    }
+
+    /**
+     * 面板几何提交只刷新重置入口，不中断正在进行的拖动或缩放。
+     */
+    public refreshResetState(): void {
+        const listener = this.listener;
+        if (!listener) return;
+        const customized =
+            this.generalSettings.some((item) => listener.getValue(item) !== undefined) || listener.hasCustomLayout();
+        const disabled = String(!customized);
+        if (this.resetGeneralElement.getAttribute("aria-disabled") !== disabled)
+            this.resetGeneralElement.setAttribute("aria-disabled", disabled);
     }
 
     /**
@@ -254,10 +282,7 @@ export default class SettingUi extends Ui {
         for (const setting of deferred) this.pendingDefaults.add(setting);
         if (this.pendingDefaults.size > 0) this.defaultObserver?.observe(this.container);
         else this.defaultObserver?.disconnect();
-        const customized = this.generalSettings.some((item) => listener.getValue(item) !== undefined);
-        const disabled = String(!customized);
-        if (this.resetGeneralElement.getAttribute("aria-disabled") !== disabled)
-            this.resetGeneralElement.setAttribute("aria-disabled", disabled);
+        this.refreshResetState();
     }
 
     /**

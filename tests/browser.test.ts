@@ -26,6 +26,47 @@ before(startBrowserTests);
 after(stopBrowserTests);
 
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: panel geometry shares appearance persistence and survives viewport constraints`, async () => {
+        await withPage(delivery, async (page) => {
+            const openSettings = async (): Promise<void> => {
+                await page.locator("#toggle-setting-panel").click();
+                await page.locator("#setting[open]").waitFor();
+            };
+            const bounds = () =>
+                page.locator("#setting").evaluate((dialog) => {
+                    const { left, top, width, height } = dialog.getBoundingClientRect();
+                    return { left, top, width, height };
+                });
+            await openSettings();
+            await page.locator("#setting > header").press("ArrowLeft");
+            await page.locator("#setting > header").press("Shift+ArrowLeft");
+            const savedBounds = await bounds();
+
+            // 常规控件提交与浮层布局共用快照，不能互相覆盖。
+            const size = page.locator('#setting input[type="range"]').first();
+            await size.press("ArrowRight");
+            const savedSize = await size.inputValue();
+            const savedAppearance = await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance"));
+            await page.setViewportSize({ width: 720, height: 600 });
+            await page.setViewportSize({ width: 1440, height: 900 });
+            assert.deepEqual(await bounds(), savedBounds);
+            assert.equal(await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance")), savedAppearance);
+
+            await page.reload();
+            await page.locator(".shelf-empty-import").waitFor();
+            await openSettings();
+            assert.deepEqual(await bounds(), savedBounds);
+            assert.equal(await size.inputValue(), savedSize);
+
+            // 面板单项还原不删除其余外观，也不依赖自定义缩放按钮。
+            await page.locator("#setting > header").press("Home");
+            assert.notDeepEqual(await bounds(), savedBounds);
+            assert.equal(await size.inputValue(), savedSize);
+            await page.locator("#setting > header").press("Escape");
+            await page.locator("#setting").waitFor({ state: "hidden" });
+        });
+    });
+
     void test(`${delivery}: windowed bookshelf keeps offscreen books searchable and readable after deletion`, async () => {
         await withPage(delivery, async (page) => {
             await page.setViewportSize({ width: 900, height: 650 });
@@ -137,14 +178,14 @@ for (const delivery of ["web", "portable"] as const) {
             for (const mode of ["cover", "slide"] as const) {
                 await setMode(page, mode);
                 await selectChapter(page, 2);
-                await page.locator("#previous-page").click();
+                await page.locator("#content").press("ArrowLeft");
                 await page.waitForFunction(
                     () => document.querySelector("#chapter-title")?.textContent.includes("第1章"),
                     undefined,
                     { timeout: 2000 }
                 );
                 await settleReader(page);
-                await page.locator("#next-page").click();
+                await page.locator("#content").press("ArrowRight");
                 await page.waitForFunction(
                     () => document.querySelector("#chapter-title")?.textContent.includes("第2章"),
                     undefined,
@@ -155,17 +196,17 @@ for (const delivery of ["web", "portable"] as const) {
 
             await setMode(page, "none");
             await selectChapter(page, 2);
-            await page.locator("#previous-page").click();
+            await page.locator("#content").press("ArrowLeft");
             await page.waitForFunction(() => document.querySelector("#chapter-title")?.textContent.includes("第1章"));
             await waitForChapterLayout(page);
             const lastPage = (await page.locator("#page-position").getAttribute("aria-label"))?.match(/\d+/g);
             assert(lastPage?.length === 2);
             assert.equal(lastPage[0], lastPage[1]);
-            await page.locator("#next-page").click();
+            await page.locator("#content").press("ArrowRight");
             await settleReader(page);
             assert.match((await page.locator("#chapter-title").textContent()) ?? "", /第2章/);
             assert.match((await page.locator("#page-position").getAttribute("aria-label")) ?? "", /第\s*1\s*页/);
-            await page.locator("#next-page").click();
+            await page.locator("#content").press("ArrowRight");
             await settleReader(page);
 
             // 断言实际可见正文，不把内部页码或像素当作跨排版的内容位置。
@@ -214,7 +255,9 @@ for (const delivery of ["web", "portable"] as const) {
             await page.locator("#content > .reading-viewport:not(.reading-measure-viewport)").evaluate((viewport) => {
                 viewport.scrollTop = viewport.scrollHeight;
             });
-            await page.waitForFunction(() => document.querySelector<HTMLButtonElement>("#next-page")?.disabled);
+            await page.waitForFunction(
+                () => Number.parseFloat(document.querySelector("#progress-rate")?.textContent ?? "") === 100
+            );
             assert.equal(Number.parseFloat((await page.locator("#progress-rate").textContent()) ?? ""), 100);
         });
     });

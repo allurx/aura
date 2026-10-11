@@ -72,19 +72,22 @@ function renderThirdPartyLicenses(parts: string[]): string {
     if (preamble === undefined || components.length === 0) throw new Error("Third-party notice sections are missing");
 
     const items = components.map((text) => {
-        const heading = /^--- (.+?) (\d+\.\d+\.\d+)[^\r\n]* ---\r?$/m.exec(text);
+        const heading = /^--- (.+?) ---\r?$/m.exec(text)?.[1];
+        const versioned = heading ? /^(.+?) (\d+\.\d+\.\d+)(?: .*)?$/.exec(heading) : null;
         const source = /^Source: (https:\/\/\S+)\r?$/m.exec(text)?.[1];
         const license = /^License: ([\w.-]+)\r?$/m.exec(text)?.[1];
-        const name = heading?.[1];
-        const version = heading?.[2];
-        if (!name || !version || !source || !license) throw new Error("Third-party notice metadata is incomplete");
+        const name = versioned?.[1] ?? heading;
+        const version = versioned?.[2];
+        if (!name || !source || !license) throw new Error("Third-party notice metadata is incomplete");
 
+        // 独立图标等资源按固定来源标识，不为适配组件列表虚构软件版本号。
+        const label = version ? `${name} ${version}` : name;
         const sourceUrl = new URL(source).href;
         const licenseUrl = `https://spdx.org/licenses/${encodeURIComponent(license)}.html`;
         return `<li class="license-item">
             <div class="license-item-heading">
-                <a class="license-source" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" aria-label="查看 ${escapeHtml(name)} ${escapeHtml(version)} 项目（新窗口）">
-                    <span>${escapeHtml(name)}</span><span class="license-version">${escapeHtml(version)}</span>
+                <a class="license-source" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" aria-label="查看 ${escapeHtml(label)} 项目（新窗口）">
+                    <span>${escapeHtml(name)}</span>${version ? `<span class="license-version">${escapeHtml(version)}</span>` : ""}
                     <span class="icon icon-external-link" aria-hidden="true"></span>
                 </a>
                 <a class="license-badge" href="${licenseUrl}" target="_blank" rel="noopener noreferrer" aria-label="查看 ${escapeHtml(license)} 官方许可证（新窗口）">${escapeHtml(license)}</a>

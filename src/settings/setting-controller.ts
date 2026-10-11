@@ -13,6 +13,9 @@ import AppearanceRepository from "./persistence/appearance-repository";
 import SettingUi from "./ui/setting-ui";
 import type { PageName } from "@/constants/page-name";
 import OperationError from "@/errors/operation-error";
+import type { PanelFrameBinding } from "@/components/dialog/panel-frame";
+import type { PanelName } from "./models/page-appearance";
+import type { ReaderToolsAppearance } from "./models/page-appearance";
 
 /**
  * 管理页面已提交外观，协调持久化、失败恢复和外部宽度变化。
@@ -24,6 +27,7 @@ export default class SettingController implements SettingUiListener {
     private readonly width: WidthSetting | undefined;
     private readonly widthSynchronizer: WidthSynchronizer | undefined;
     private appearance: PageAppearance;
+    private toolbarChanged: (() => void) | undefined;
 
     public constructor({
         pageName,
@@ -81,6 +85,65 @@ export default class SettingController implements SettingUiListener {
     }
 
     /**
+     * 面板与控件使用同一页面快照，拖动保存不会覆盖同时生效的主题或其他设置。
+     */
+    public getPanelFrame(name: PanelName): PanelFrameBinding {
+        return {
+            getValue: () => this.appearance.getPanel(name),
+            commit: (bounds) => {
+                const previous = this.appearance.getPanel(name);
+                if (
+                    previous?.left === bounds?.left &&
+                    previous?.top === bounds?.top &&
+                    previous?.width === bounds?.width &&
+                    previous?.height === bounds?.height
+                )
+                    return;
+                const next = this.appearance.withPanel(name, bounds);
+                this.save(next, []);
+                this.settingUi.refreshResetState();
+            },
+        };
+    }
+
+    /**
+     * 浮层布局同样属于常规外观，单独调整后也应能使用常规重置。
+     */
+    public hasCustomLayout(): boolean {
+        return this.appearance.hasCustomLayout();
+    }
+
+    /**
+     * 阅读工具栏共用页面外观保存；重置时通知当前界面，其他设置不会覆盖工具栏偏好。
+     */
+    public getToolbarBinding() {
+        return {
+            getValue: (): ReaderToolsAppearance => this.appearance.getToolbar() ?? { collapsed: false },
+            commit: (value: ReaderToolsAppearance): void => {
+                const previous = this.appearance.getToolbar();
+                if (
+                    (previous?.collapsed ?? false) === value.collapsed &&
+                    previous?.position?.left === value.position?.left &&
+                    previous?.position?.top === value.position?.top
+                )
+                    return;
+                this.save(this.appearance.withToolbar(value), []);
+                this.settingUi.refreshResetState();
+            },
+            subscribe: (listener: () => void, signal: AbortSignal): void => {
+                this.toolbarChanged = listener;
+                signal.addEventListener(
+                    "abort",
+                    () => {
+                        this.toolbarChanged = undefined;
+                    },
+                    { once: true }
+                );
+            },
+        };
+    }
+
+    /**
      * 保存成功后更新快照，失败时恢复提交前的页面与控件。
      */
     public commit(setting: Setting, value: string): void {
@@ -107,7 +170,7 @@ export default class SettingController implements SettingUiListener {
      */
     public resetGeneral(): void {
         this.performAndRefresh(this.configuration.general, () => {
-            this.resetSettings(this.configuration.general);
+            this.resetSettings(this.configuration.general, true);
         });
     }
 
@@ -142,13 +205,14 @@ export default class SettingController implements SettingUiListener {
     /**
      * 一次保存重置结果，并确保旧 resize 值不会延迟写回。
      */
-    private resetSettings(settings: readonly Setting[]): void {
+    private resetSettings(settings: readonly Setting[], resetLayout = false): void {
         if (settings.length === 0) return;
         if (this.width && settings.includes(this.width)) this.widthSynchronizer?.cancelPending();
         let nextAppearance = this.appearance;
         for (const setting of settings) {
             nextAppearance = setting.reset(nextAppearance, this.configuration.defaultTheme);
         }
+        if (resetLayout) nextAppearance = nextAppearance.withoutLayout();
         this.save(nextAppearance, settings);
     }
 
@@ -184,6 +248,7 @@ export default class SettingController implements SettingUiListener {
                 restoreErrors.length > 0 ? "请重新打开当前页面后再调整。" : "请处理失败原因后重新调整。"
             );
         }
+        if (previousAppearance.getToolbar() !== nextAppearance.getToolbar()) this.toolbarChanged?.();
     }
 
     /**

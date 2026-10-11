@@ -76,8 +76,9 @@ export default class ReaderController {
             { once: true }
         );
         this.settingController.init(signal);
-        this.readerUi.renderNavigation({ canPrevious: false, canNext: false, mode: this.contentUi.getMode() });
+        this.readerUi.renderReadingMode(this.contentUi.getMode());
         this.readerUi.bindResponsiveControls(signal);
+        this.readerUi.bindToolsAppearance(this.settingController.getToolbarBinding(), signal);
         // 初始化失败时也保留页面内的恢复入口，不让书架按钮依赖书籍成功加载。
         this.readerUi.bindReturnToBookshelf(() => this.returnToBookshelf(), signal);
 
@@ -190,7 +191,7 @@ export default class ReaderController {
     private renderLocation(snapshot: ReadingSnapshot | undefined = this.contentUi.readSnapshot()): void {
         if (!snapshot) return;
         const { location, chapter } = snapshot;
-        this.readerUi.renderNavigation(snapshot);
+        this.readerUi.renderReadingMode(snapshot.mode);
         this.readerUi.renderPageInfo(snapshot.pageNumber, snapshot.pageCount);
         const count = numberOfPositions(this.state.toc);
         this.readerUi.renderChapterInfo(
@@ -301,8 +302,12 @@ export default class ReaderController {
 
         this.tocUi
             .delegateTocItemClick((chapterNumber) => this.selectChapter(chapterNumber), signal)
-            .bindTocClose((selected) => {
-                if (selected) this.readerUi.resumeReading();
-            }, signal);
+            .bindTocClose(
+                (selected) => {
+                    if (selected) this.readerUi.resumeReading();
+                },
+                signal,
+                this.settingController.getPanelFrame("toc")
+            );
     }
 }

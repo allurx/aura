@@ -5,6 +5,7 @@
 
 import Ui from "@/components/ui";
 import enableLightDismiss from "@/components/dialog/light-dismiss";
+import enablePanelFrame, { type PanelFrameBinding } from "@/components/dialog/panel-frame";
 import { assertExists } from "@/utils/assert-util";
 import { delegate, bind } from "@/utils/event-util";
 import type TocEntry from "@/domain/toc/toc-entry";
@@ -130,9 +131,21 @@ export default class TocUi extends Ui {
     /**
      * 绑定搜索、关闭与滚动恢复；页面销毁时移除监听、断开 Observer 并关闭原生目录。
      */
-    public bindTocClose(handler: (chapterSelected: boolean) => void, signal: AbortSignal): this {
+    public bindTocClose(
+        handler: (chapterSelected: boolean) => void,
+        signal: AbortSignal,
+        panelFrame: PanelFrameBinding
+    ): this {
         let composing = false;
         enableLightDismiss(this.dialog, signal);
+        const titleBar = assertExists(this.dialog.querySelector<HTMLElement>(":scope > header"));
+        enablePanelFrame(
+            this.dialog,
+            titleBar,
+            () => !this.dialog.parentElement?.hasAttribute("data-mobile-controls"),
+            panelFrame,
+            signal
+        );
 
         // 尺寸改变时恢复章节锚点，普通滚动才更新当前浏览快照。
         const observer = new ResizeObserver(() => {
@@ -208,12 +221,17 @@ export default class TocUi extends Ui {
                     event.preventDefault();
                     event.stopPropagation();
                 }
-                if (!composing)
+                if (!composing) {
                     this.chapterWindow.moveFocus(
                         event,
                         this.searchInput,
-                        this.locateCurrentButton.disabled ? this.closeButton : this.locateCurrentButton
+                        titleBar.tabIndex === 0
+                            ? titleBar
+                            : this.locateCurrentButton.disabled
+                              ? this.closeButton
+                              : this.locateCurrentButton
                     );
+                }
             },
             { signal }
         );

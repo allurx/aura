@@ -265,6 +265,27 @@ html[data-page-turn] {
         mix-blend-mode: normal;
     }
 
+    /* 工具保持在正文上方，只显示实时新视图，避免透明材质被两份快照叠加。 */
+    &::view-transition-group(reading-tools-header),
+    &::view-transition-group(reading-tools-footer),
+    &::view-transition-group(reading-tools-desktop) {
+        z-index: 1;
+        animation: none;
+    }
+
+    &::view-transition-old(reading-tools-header),
+    &::view-transition-old(reading-tools-footer),
+    &::view-transition-old(reading-tools-desktop) {
+        display: none;
+    }
+
+    &::view-transition-new(reading-tools-header),
+    &::view-transition-new(reading-tools-footer),
+    &::view-transition-new(reading-tools-desktop) {
+        animation: none;
+        mix-blend-mode: normal;
+    }
+
     &::view-transition-group(reading-page) {
         overflow: clip;
         animation-duration: 220ms;

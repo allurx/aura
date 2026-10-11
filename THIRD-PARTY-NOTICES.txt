@@ -3,6 +3,16 @@ Third-party notices for Aura
 This file accompanies all Aura editions. Applicability is stated for each
 component; build-time dependencies not included in the application are omitted.
 
+--- Material Symbols (Toolbar icon) ---
+Applies to: all editions (the Reader toolbar toggle icon).
+Source: https://github.com/google/material-design-icons/blob/7ae513ad66b256ecf429f89e82c29350a7a2c840/symbols/web/toolbar/materialsymbolsoutlined/toolbar_24px.svg
+License: Apache-2.0
+
+Material Symbols by Google. The original toolbar artwork is unchanged;
+Aura adds source and license annotations to the SVG file.
+The full Apache License 2.0 text accompanies all editions as Aura's project
+license and is also available in About Aura.
+
 --- chardet 2.2.0 ---
 Applies to: all editions (TXT encoding detection).
 Source: https://github.com/runk/node-chardet/tree/v2.2.0

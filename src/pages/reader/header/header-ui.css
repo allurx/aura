@@ -4,21 +4,17 @@
  */
 
 #reader > #header {
-    top: 0;
-    --ui-padding-left: 16px;
-    --ui-padding-right: 16px;
+    top: max(12px, env(safe-area-inset-top));
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    min-height: 48px;
+    min-height: 50px;
     align-items: center;
-    padding: max(8px, env(safe-area-inset-top)) max(var(--ui-padding-right), env(safe-area-inset-right)) 8px
-        max(var(--ui-padding-left), env(safe-area-inset-left));
+    padding: 12px 16px;
     color: var(--reader-color);
     background-color: var(--reader-surface);
-    border-bottom: 1px solid color-mix(in srgb, currentColor 7%, transparent);
-    font-size: 13px;
-    user-select: none;
-    z-index: 1;
+    font-family: var(--ui-font-family);
+    font-size: 16px;
+    line-height: 1.45;
 
     #book-title {
         min-width: 0;
@@ -26,13 +22,14 @@
         text-overflow: ellipsis;
         white-space: nowrap;
         font-size: inherit;
-        font-weight: 500;
+        font-weight: 600;
         text-align: center;
-        opacity: 0.8;
     }
     @media (max-height: 500px) {
-        min-height: 44px;
-        padding-top: max(4px, env(safe-area-inset-top));
+        top: max(8px, env(safe-area-inset-top));
+        min-height: 40px;
+        padding-block: 8px;
+        font-size: 14px;
         padding-bottom: 4px;
     }
 }

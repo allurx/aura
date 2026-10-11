@@ -5,6 +5,8 @@
 
 import PageAppearance from "../models/page-appearance";
 import type SettingConfiguration from "../models/setting-configuration";
+import { PageName } from "@/constants/page-name";
+import type { PanelName } from "../models/page-appearance";
 
 /**
  * 页面外观的同步 localStorage 仓库。
@@ -70,10 +72,54 @@ export default class AppearanceRepository {
         }
 
         const general = value["general"];
-        if (!this.isRecord(general)) return appearance;
-        for (const setting of this.configuration.general) {
-            const settingValue = general[setting.key];
-            if (setting.accepts(settingValue)) appearance = setting.update(appearance, settingValue);
+        if (this.isRecord(general)) {
+            for (const setting of this.configuration.general) {
+                const settingValue = general[setting.key];
+                if (setting.accepts(settingValue)) appearance = setting.update(appearance, settingValue);
+            }
+        }
+        const panels = value["panels"];
+        if (this.isRecord(panels)) {
+            const names: readonly PanelName[] =
+                this.configuration.pageName === PageName.READER ? ["settings", "toc"] : ["settings"];
+            for (const name of names) {
+                const bounds = panels[name];
+                if (!this.isRecord(bounds)) continue;
+                const { left, top, width, height } = bounds;
+                if (
+                    typeof left === "number" &&
+                    Number.isFinite(left) &&
+                    typeof top === "number" &&
+                    Number.isFinite(top) &&
+                    typeof width === "number" &&
+                    Number.isFinite(width) &&
+                    width > 0 &&
+                    typeof height === "number" &&
+                    Number.isFinite(height) &&
+                    height > 0
+                )
+                    appearance = appearance.withPanel(name, { left, top, width, height });
+            }
+        }
+        const toolbar = value["toolbar"];
+        if (
+            this.configuration.pageName === PageName.READER &&
+            this.isRecord(toolbar) &&
+            typeof toolbar["collapsed"] === "boolean"
+        ) {
+            const position = toolbar["position"];
+            const validPosition =
+                this.isRecord(position) &&
+                typeof position["left"] === "number" &&
+                Number.isFinite(position["left"]) &&
+                typeof position["top"] === "number" &&
+                Number.isFinite(position["top"])
+                    ? { left: position["left"], top: position["top"] }
+                    : undefined;
+            appearance = appearance.withToolbar({
+                collapsed: toolbar["collapsed"],
+                ...(validPosition ? { position: validPosition } : {}),
+            });
         }
         return appearance;
     }

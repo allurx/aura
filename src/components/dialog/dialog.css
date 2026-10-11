@@ -20,8 +20,6 @@
     height: fit-content;
     max-width: none;
     max-height: calc(var(--viewport-height) - var(--dialog-top) - var(--dialog-bottom));
-    user-select: none;
-    -webkit-user-select: none;
     /* 仅打开时采用 flex 布局，正文滚动不带走标题和操作区。 */
     display: none;
     flex-direction: column;
@@ -140,8 +138,6 @@
     }
 
     .body {
-        user-select: text;
-        -webkit-user-select: text;
         min-height: 0;
         padding: 20px var(--dialog-padding);
         overflow: auto;
