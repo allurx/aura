@@ -162,38 +162,53 @@ export async function selectChapter(page: Page, number: number): Promise<void> {
  * 连续帧核对可见正文、位置及动画稳定；后台测量不阻止用户继续操作。
  */
 export async function settleReader(page: Page): Promise<void> {
-    await page.waitForFunction(async () => {
-        // 快照准备阶段尚无 running 动画，但正文仍在一次翻页操作中。
-        if (document.documentElement.hasAttribute("data-page-turn")) return false;
-        const signature = (): string => {
-            const viewport = document.querySelector("#content > .reading-viewport:not(.reading-measure-viewport)");
-            return JSON.stringify([
-                viewport?.scrollLeft,
-                viewport?.scrollTop,
-                viewport?.scrollHeight,
-                viewport?.clientHeight,
-                viewport?.clientWidth,
-                document.querySelector("#chapter-title")?.textContent,
-                document.querySelector("#page-position")?.textContent,
-                viewport?.textContent,
-            ]);
-        };
-        const initial = signature();
-        for (let frame = 0; frame < 6; frame++) await new Promise(requestAnimationFrame);
-        return (
-            !document.documentElement.hasAttribute("data-page-turn") &&
-            initial === signature() &&
-            document.getAnimations().every((animation) => animation.playState !== "running")
+    await waitForReaderState(page, false);
+}
+
+/**
+ * 精确索引与可见画面在同一次采样中确认，不能先接受旧章节的完成状态再等待新画面。
+ */
+async function waitForReaderState(page: Page, requireExactLayout: boolean): Promise<void> {
+    const state = await page.evaluateHandle(() => ({ signature: "", stableFrames: 0 }));
+    try {
+        // waitForFunction 按帧轮询同步结果；async 谓词会以 Promise 为真值提前停止轮询。
+        await page.waitForFunction(
+            ({ sample, exactLayout }) => {
+                const ready =
+                    !document.documentElement.hasAttribute("data-page-turn") &&
+                    (!exactLayout || document.querySelector("#page-position")?.getAttribute("aria-busy") === "false") &&
+                    document.getAnimations().every((animation) => animation.playState !== "running");
+                if (!ready) {
+                    sample.stableFrames = 0;
+                    return false;
+                }
+                const viewport = document.querySelector("#content > .reading-viewport:not(.reading-measure-viewport)");
+                const signature = JSON.stringify([
+                    viewport?.scrollLeft,
+                    viewport?.scrollTop,
+                    viewport?.scrollHeight,
+                    viewport?.clientHeight,
+                    viewport?.clientWidth,
+                    document.querySelector("#chapter-title")?.textContent,
+                    document.querySelector("#page-position")?.textContent,
+                    viewport?.textContent,
+                ]);
+                sample.stableFrames = signature === sample.signature ? sample.stableFrames + 1 : 0;
+                sample.signature = signature;
+                return sample.stableFrames >= 6;
+            },
+            { sample: state, exactLayout: requireExactLayout }
         );
-    });
+    } finally {
+        await state.dispose();
+    }
 }
 
 /**
  * 仅在断言精确章内页码或总页数时等待索引完成，不把它当作阅读可用的前置条件。
  */
 export async function waitForChapterLayout(page: Page): Promise<void> {
-    await page.waitForFunction(() => document.querySelector("#page-position")?.getAttribute("aria-busy") === "false");
-    await settleReader(page);
+    await waitForReaderState(page, true);
 }
 
 /**

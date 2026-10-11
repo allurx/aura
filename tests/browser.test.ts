@@ -156,6 +156,7 @@ for (const delivery of ["web", "portable"] as const) {
             await setMode(page, "none");
             await selectChapter(page, 2);
             await page.locator("#previous-page").click();
+            await page.waitForFunction(() => document.querySelector("#chapter-title")?.textContent.includes("第1章"));
             await waitForChapterLayout(page);
             const lastPage = (await page.locator("#page-position").getAttribute("aria-label"))?.match(/\d+/g);
             assert(lastPage?.length === 2);
