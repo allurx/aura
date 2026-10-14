@@ -115,7 +115,12 @@ for (const delivery of ["web", "portable"] as const) {
     void test(`${delivery}: EPUB links to empty tail anchors retain their source location after reopening`, async () => {
         for (const mode of ["none", "scroll"] as const) {
             await withPage(delivery, async (page) => {
-                const content = "这是用于验证长段落尾部锚点的正文。".repeat(1600) + "尾部目标";
+                // 唯一序号使可见片段能够区分长段落中的不同源位置。
+                const content =
+                    Array.from(
+                        { length: 1600 },
+                        (_, index) => `${String(index).padStart(4, "0")}这是用于验证长段落尾部锚点的正文。`
+                    ).join("") + "尾部目标";
                 await importBooks(page, [
                     {
                         name: "empty-anchor.epub",
@@ -177,12 +182,17 @@ for (const delivery of ["web", "portable"] as const) {
                         (rate) => document.querySelector("#progress-rate")?.textContent !== rate,
                         previousRate
                     );
+                    await settleReader(page);
                     const scrolled = await readProgress(page);
                     assert.notDeepEqual(scrolled, progress);
+                    const scrolledText = (await readVisiblePage(page, 64)).text;
+                    assert(scrolledText);
                     await page.reload();
                     await page.locator("#toggle-setting-panel:not([disabled])").waitFor();
                     await settleReader(page);
                     assert.deepEqual(await readProgress(page), scrolled);
+                    // 刷新按源位置重新对齐，不要求保留滚轮留下的临时像素偏移。
+                    assert((await readVisibleText(page)).includes(scrolledText));
                 }
             });
         }
@@ -258,6 +268,28 @@ for (const delivery of ["web", "portable"] as const) {
 
                 if (mode === "none") {
                     // 程序恢复不采样新行首；用户随后滚动内嵌表格仍须更新并持久保存位置。
+                    const firstVisibleCell = () =>
+                        page.locator("#content table td").evaluateAll((cells) => {
+                            for (const cell of cells) {
+                                const viewport = cell.closest(".reading-viewport")?.getBoundingClientRect();
+                                const table = cell.closest("table")?.getBoundingClientRect();
+                                if (!viewport || !table) continue;
+                                const rect = cell.getBoundingClientRect();
+                                const left = Math.max(rect.left, viewport.left, table.left);
+                                const right = Math.min(rect.right, viewport.right, table.right);
+                                const top = Math.max(rect.top, viewport.top, table.top);
+                                const bottom = Math.min(rect.bottom, viewport.bottom, table.bottom);
+                                if (
+                                    right > left + 1 &&
+                                    bottom > top + 1 &&
+                                    cell.contains(document.elementFromPoint((left + right) / 2, (top + bottom) / 2))
+                                )
+                                    return cell.textContent;
+                            }
+                            return undefined;
+                        });
+                    const originalCell = await firstVisibleCell();
+                    assert(originalCell);
                     await page.locator("#content table").hover();
                     const scrollTop = await page.locator("#content table").evaluate((table) => table.scrollTop);
                     await page.mouse.wheel(0, -240);
@@ -265,12 +297,17 @@ for (const delivery of ["web", "portable"] as const) {
                         (previous) => (document.querySelector("#content table")?.scrollTop ?? previous) < previous,
                         scrollTop
                     );
+                    await settleReader(page);
+                    const scrolledCell = await firstVisibleCell();
+                    assert(scrolledCell);
+                    assert.notEqual(scrolledCell, originalCell);
                     await page.locator("#return-bookshelf").click();
                     await page.locator("#bookshelf").waitFor();
                     const scrolled = await readProgress(page);
                     assert.notDeepEqual(scrolled, progress);
                     await openBook(page, "table-position.epub");
                     assert.deepEqual(await readProgress(page), scrolled);
+                    assert.equal(await firstVisibleCell(), scrolledCell);
                 }
             });
         }
@@ -384,15 +421,19 @@ for (const delivery of ["web", "portable"] as const) {
             );
             const tail = await readProgress(page);
             assert(tail[0] && tail[0].blockNumber > 5900);
+            const tailText = (await readVisiblePage(page, 64)).text;
+            assert(tailText);
             await page.locator("#toggle-setting-panel").click();
             for (const fontSize of [22, 25, 18, 23]) {
                 await page.locator("#setting-control-font-size").fill(String(fontSize));
                 await settleReader(page);
                 assert.deepEqual(await readProgress(page), tail);
+                assert((await readVisibleText(page)).includes(tailText));
             }
             await page.locator("#setting .close").click();
             await settleReader(page);
             assert.deepEqual(await readProgress(page), tail);
+            assert((await readVisibleText(page)).includes(tailText));
         });
     });
 

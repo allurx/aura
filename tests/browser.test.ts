@@ -47,7 +47,40 @@ for (const delivery of ["web", "portable"] as const) {
             await size.press("ArrowRight");
             const savedSize = await size.inputValue();
             const savedAppearance = await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance"));
-            await page.setViewportSize({ width: 720, height: 600 });
+
+            // 跨过浮动几何的 800px 边界及窄屏底部面板，逐次验证约束和关闭重开。
+            for (const width of [801, 800, 390, 800, 801]) {
+                await page.setViewportSize({ width, height: 600 });
+                await page
+                    .locator(width > 800 ? "#setting[data-panel-adjustable]" : "#setting:not([data-panel-adjustable])")
+                    .waitFor();
+                await size.click({ trial: true });
+                const constrainedBounds = await bounds();
+                assert(
+                    constrainedBounds.left >= 0 &&
+                        constrainedBounds.top >= 0 &&
+                        constrainedBounds.width > 0 &&
+                        constrainedBounds.height > 0 &&
+                        constrainedBounds.left + constrainedBounds.width <= width &&
+                        constrainedBounds.top + constrainedBounds.height <= 600,
+                    `Settings panel exceeds the ${String(width)}×600 viewport: ${JSON.stringify(constrainedBounds)}`
+                );
+                assert.equal(await size.inputValue(), savedSize);
+                assert.equal(
+                    await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance")),
+                    savedAppearance
+                );
+
+                await page.getByRole("button", { name: "关闭设置", exact: true }).click();
+                await page.locator("#setting").waitFor({ state: "hidden" });
+                await openSettings();
+                assert.deepEqual(await bounds(), constrainedBounds);
+                assert.equal(
+                    await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance")),
+                    savedAppearance
+                );
+            }
+
             await page.setViewportSize({ width: 1440, height: 900 });
             assert.deepEqual(await bounds(), savedBounds);
             assert.equal(await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance")), savedAppearance);
