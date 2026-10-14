@@ -128,7 +128,7 @@
                 margin: 10px 0 0;
                 padding: 12px;
                 border-radius: 10px;
-                background: var(--appearance-selection);
+                background: var(--appearance-muted-surface);
                 font-family: ui-monospace, monospace;
                 font-size: 12px;
                 white-space: pre-wrap;
