@@ -82,6 +82,16 @@ for (const delivery of ["web", "portable"] as const) {
             }
 
             await page.setViewportSize({ width: 1440, height: 900 });
+            // 视口命令完成后 resize 回调仍可能未执行，等待面板实际恢复首选几何。
+            await page.waitForFunction((expected) => {
+                const actual = document.querySelector("#setting")?.getBoundingClientRect();
+                return (
+                    actual?.left === expected.left &&
+                    actual.top === expected.top &&
+                    actual.width === expected.width &&
+                    actual.height === expected.height
+                );
+            }, savedBounds);
             assert.deepEqual(await bounds(), savedBounds);
             assert.equal(await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance")), savedAppearance);
 
