@@ -224,7 +224,7 @@ Aura 自动识别 UTF-8、GB18030、Big5 和带 BOM 的 UTF-16，不提供手动
 
 ## 帮助与许可
 
-在书架导航底部的“管理与帮助”中选择“关于 Aura”，可查看项目链接与许可信息；手机先打开左上角导航。点击“项目源码”前往 [GitHub 仓库](https://github.com/allurx/aura)，阅读说明或[反馈问题](https://github.com/allurx/aura/issues)。访问 GitHub 需要联网。
+在书架导航底部的“管理与帮助”中选择“关于 Aura”，可查看项目链接、QQ 交流群与许可信息；手机先打开左上角导航。QQ群号为 **1038423789**，也可在“关于 Aura”中选中复制。点击“项目源码”前往 [GitHub 仓库](https://github.com/allurx/aura)，阅读说明或[反馈问题](https://github.com/allurx/aura/issues)。访问 GitHub 需要联网。
 
 项目许可证与第三方声明随应用提供，全文默认收起，按需展开；portable 无需联网即可查看。仓库中的维护源为[项目许可证](../LICENSE.txt)和[第三方声明](../THIRD-PARTY-NOTICES.txt)。
 
