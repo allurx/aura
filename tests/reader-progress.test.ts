@@ -26,41 +26,50 @@ after(stopBrowserTests);
 
 /**
  * 读取实际显示的正文，不能只用保存记录或页码证明画面恢复。
+ * 前缀长度按 UTF-16 代码单元计算，只扫描断言需要的可见文字。
  */
-async function readVisiblePage(page: Page): Promise<{ text: string; firstTop: number | undefined }> {
-    return page.locator("#content > .reading-viewport:not(.reading-measure-viewport) p").evaluateAll((paragraphs) => {
-        const viewport = document
-            .querySelector("#content > .reading-viewport:not(.reading-measure-viewport)")
-            ?.getBoundingClientRect();
-        if (!viewport) throw new Error("Missing reading viewport");
-        const intersects = (rect: DOMRect): boolean =>
-            rect.bottom > viewport.top + 1 &&
-            rect.top < viewport.bottom - 1 &&
-            rect.right > viewport.left + 1 &&
-            rect.left < viewport.right - 1;
-        const visible: string[] = [];
-        let firstTop: number | undefined;
-        const range = document.createRange();
-        for (const paragraph of paragraphs) {
-            if (![...paragraph.getClientRects()].some(intersects)) continue;
-            const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
-            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-                const text = node.textContent ?? "";
-                let offset = 0;
-                for (const character of text) {
-                    range.setStart(node, offset);
-                    range.setEnd(node, offset + character.length);
-                    const rect = [...range.getClientRects()].find(intersects);
-                    if (rect) {
-                        firstTop ??= rect.top - viewport.top;
-                        visible.push(character);
+async function readVisiblePage(
+    page: Page,
+    maxTextLength = Infinity
+): Promise<{ text: string; firstTop: number | undefined }> {
+    return page
+        .locator("#content > .reading-viewport:not(.reading-measure-viewport) p")
+        .evaluateAll((paragraphs, limit) => {
+            const viewport = document
+                .querySelector("#content > .reading-viewport:not(.reading-measure-viewport)")
+                ?.getBoundingClientRect();
+            if (!viewport) throw new Error("Missing reading viewport");
+            const intersects = (rect: DOMRect): boolean =>
+                rect.bottom > viewport.top + 1 &&
+                rect.top < viewport.bottom - 1 &&
+                rect.right > viewport.left + 1 &&
+                rect.left < viewport.right - 1;
+            const visible: string[] = [];
+            let visibleLength = 0;
+            let firstTop: number | undefined;
+            const range = document.createRange();
+            for (const paragraph of paragraphs) {
+                if (![...paragraph.getClientRects()].some(intersects)) continue;
+                const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
+                for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+                    const text = node.textContent ?? "";
+                    let offset = 0;
+                    for (const character of text) {
+                        range.setStart(node, offset);
+                        range.setEnd(node, offset + character.length);
+                        const rect = [...range.getClientRects()].find(intersects);
+                        if (rect) {
+                            firstTop ??= rect.top - viewport.top;
+                            visible.push(character);
+                            visibleLength += character.length;
+                            if (visibleLength >= limit) return { text: visible.join("").slice(0, limit), firstTop };
+                        }
+                        offset += character.length;
                     }
-                    offset += character.length;
                 }
             }
-        }
-        return { text: visible.join(""), firstTop };
-    });
+            return { text: visible.join(""), firstTop };
+        }, maxTextLength);
 }
 
 /**
@@ -420,14 +429,19 @@ for (const delivery of ["web", "portable"] as const) {
                     assert(visibleText);
                     assert(visiblePage.firstTop !== undefined);
 
-                    // 连续跨越工具布局与正文留白的断点，并反向恢复；每个中间状态都不得改写源锚点。
-                    for (let round = 0; round < 2; round++) {
-                        for (const width of [1000, 801, 800, 601, 600, 390, 600, 601, 800, 801, 1000, 1440]) {
+                    // 三种模式共用分页布局；无动画模式覆盖完整断点矩阵及累计漂移，其余模式保留窄屏往返。
+                    const widths =
+                        mode === "none"
+                            ? [1000, 801, 800, 601, 600, 390, 600, 601, 800, 801, 1000, 1440]
+                            : [800, 600, 390, 600, 800, 1440];
+                    const rounds = mode === "none" ? 2 : 1;
+                    for (let round = 0; round < rounds; round++) {
+                        for (const width of widths) {
                             await page.setViewportSize({ width, height: 900 });
                             await settleReader(page);
                             assert.deepEqual(await readProgress(page), progress, `${mode}, width ${String(width)}`);
-                            const reflowed = await readVisiblePage(page);
-                            assert.equal(reflowed.text.slice(0, 24), visibleText.slice(0, 24));
+                            const reflowed = await readVisiblePage(page, 24);
+                            assert.equal(reflowed.text, visibleText.slice(0, 24));
                             assert(reflowed.firstTop !== undefined);
                             assert(
                                 Math.abs(reflowed.firstTop - visiblePage.firstTop) < 0.5,
@@ -445,8 +459,8 @@ for (const delivery of ["web", "portable"] as const) {
                     await waitForChapterLayout(page);
                     assert.deepEqual(await readProgress(page), progress);
                     assert.equal(await page.locator("#page-position").getAttribute("aria-label"), position);
-                    assert.equal(await readVisibleText(page), visibleText);
                     const reloaded = await readVisiblePage(page);
+                    assert.equal(reloaded.text, visibleText);
                     assert(reloaded.firstTop !== undefined);
                     assert(
                         Math.abs(reloaded.firstTop - visiblePage.firstTop) < 0.5,

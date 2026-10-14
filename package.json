@@ -13,7 +13,7 @@
         "lint": "eslint . --max-warnings 0",
         "type-check": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.test.json --noEmit",
         "check": "npm run format:check && npm run lint && npm run type-check",
-        "test": "vite build && vite build --mode portable && node --test --test-concurrency=1 tests/*.test.ts",
+        "test": "vite build && vite build --mode portable && node --test --test-concurrency=2 tests/*.test.ts",
         "verify": "npm run check && npm test",
         "build": "npm run check && vite build",
         "build:portable": "npm run check && vite build --mode portable",
