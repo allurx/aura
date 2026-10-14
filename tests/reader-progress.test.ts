@@ -26,41 +26,50 @@ after(stopBrowserTests);
 
 /**
  * 读取实际显示的正文，不能只用保存记录或页码证明画面恢复。
+ * 前缀长度按 UTF-16 代码单元计算，只扫描断言需要的可见文字。
  */
-async function readVisiblePage(page: Page): Promise<{ text: string; firstTop: number | undefined }> {
-    return page.locator("#content > .reading-viewport:not(.reading-measure-viewport) p").evaluateAll((paragraphs) => {
-        const viewport = document
-            .querySelector("#content > .reading-viewport:not(.reading-measure-viewport)")
-            ?.getBoundingClientRect();
-        if (!viewport) throw new Error("Missing reading viewport");
-        const intersects = (rect: DOMRect): boolean =>
-            rect.bottom > viewport.top + 1 &&
-            rect.top < viewport.bottom - 1 &&
-            rect.right > viewport.left + 1 &&
-            rect.left < viewport.right - 1;
-        const visible: string[] = [];
-        let firstTop: number | undefined;
-        const range = document.createRange();
-        for (const paragraph of paragraphs) {
-            if (![...paragraph.getClientRects()].some(intersects)) continue;
-            const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
-            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-                const text = node.textContent ?? "";
-                let offset = 0;
-                for (const character of text) {
-                    range.setStart(node, offset);
-                    range.setEnd(node, offset + character.length);
-                    const rect = [...range.getClientRects()].find(intersects);
-                    if (rect) {
-                        firstTop ??= rect.top - viewport.top;
-                        visible.push(character);
+async function readVisiblePage(
+    page: Page,
+    maxTextLength = Infinity
+): Promise<{ text: string; firstTop: number | undefined }> {
+    return page
+        .locator("#content > .reading-viewport:not(.reading-measure-viewport) p")
+        .evaluateAll((paragraphs, limit) => {
+            const viewport = document
+                .querySelector("#content > .reading-viewport:not(.reading-measure-viewport)")
+                ?.getBoundingClientRect();
+            if (!viewport) throw new Error("Missing reading viewport");
+            const intersects = (rect: DOMRect): boolean =>
+                rect.bottom > viewport.top + 1 &&
+                rect.top < viewport.bottom - 1 &&
+                rect.right > viewport.left + 1 &&
+                rect.left < viewport.right - 1;
+            const visible: string[] = [];
+            let visibleLength = 0;
+            let firstTop: number | undefined;
+            const range = document.createRange();
+            for (const paragraph of paragraphs) {
+                if (![...paragraph.getClientRects()].some(intersects)) continue;
+                const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
+                for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+                    const text = node.textContent ?? "";
+                    let offset = 0;
+                    for (const character of text) {
+                        range.setStart(node, offset);
+                        range.setEnd(node, offset + character.length);
+                        const rect = [...range.getClientRects()].find(intersects);
+                        if (rect) {
+                            firstTop ??= rect.top - viewport.top;
+                            visible.push(character);
+                            visibleLength += character.length;
+                            if (visibleLength >= limit) return { text: visible.join("").slice(0, limit), firstTop };
+                        }
+                        offset += character.length;
                     }
-                    offset += character.length;
                 }
             }
-        }
-        return { text: visible.join(""), firstTop };
-    });
+            return { text: visible.join(""), firstTop };
+        }, maxTextLength);
 }
 
 /**
@@ -106,7 +115,12 @@ for (const delivery of ["web", "portable"] as const) {
     void test(`${delivery}: EPUB links to empty tail anchors retain their source location after reopening`, async () => {
         for (const mode of ["none", "scroll"] as const) {
             await withPage(delivery, async (page) => {
-                const content = "这是用于验证长段落尾部锚点的正文。".repeat(1600) + "尾部目标";
+                // 唯一序号使可见片段能够区分长段落中的不同源位置。
+                const content =
+                    Array.from(
+                        { length: 1600 },
+                        (_, index) => `${String(index).padStart(4, "0")}这是用于验证长段落尾部锚点的正文。`
+                    ).join("") + "尾部目标";
                 await importBooks(page, [
                     {
                         name: "empty-anchor.epub",
@@ -168,12 +182,17 @@ for (const delivery of ["web", "portable"] as const) {
                         (rate) => document.querySelector("#progress-rate")?.textContent !== rate,
                         previousRate
                     );
+                    await settleReader(page);
                     const scrolled = await readProgress(page);
                     assert.notDeepEqual(scrolled, progress);
+                    const scrolledText = (await readVisiblePage(page, 64)).text;
+                    assert(scrolledText);
                     await page.reload();
                     await page.locator("#toggle-setting-panel:not([disabled])").waitFor();
                     await settleReader(page);
                     assert.deepEqual(await readProgress(page), scrolled);
+                    // 刷新按源位置重新对齐，不要求保留滚轮留下的临时像素偏移。
+                    assert((await readVisibleText(page)).includes(scrolledText));
                 }
             });
         }
@@ -249,6 +268,28 @@ for (const delivery of ["web", "portable"] as const) {
 
                 if (mode === "none") {
                     // 程序恢复不采样新行首；用户随后滚动内嵌表格仍须更新并持久保存位置。
+                    const firstVisibleCell = () =>
+                        page.locator("#content table td").evaluateAll((cells) => {
+                            for (const cell of cells) {
+                                const viewport = cell.closest(".reading-viewport")?.getBoundingClientRect();
+                                const table = cell.closest("table")?.getBoundingClientRect();
+                                if (!viewport || !table) continue;
+                                const rect = cell.getBoundingClientRect();
+                                const left = Math.max(rect.left, viewport.left, table.left);
+                                const right = Math.min(rect.right, viewport.right, table.right);
+                                const top = Math.max(rect.top, viewport.top, table.top);
+                                const bottom = Math.min(rect.bottom, viewport.bottom, table.bottom);
+                                if (
+                                    right > left + 1 &&
+                                    bottom > top + 1 &&
+                                    cell.contains(document.elementFromPoint((left + right) / 2, (top + bottom) / 2))
+                                )
+                                    return cell.textContent;
+                            }
+                            return undefined;
+                        });
+                    const originalCell = await firstVisibleCell();
+                    assert(originalCell);
                     await page.locator("#content table").hover();
                     const scrollTop = await page.locator("#content table").evaluate((table) => table.scrollTop);
                     await page.mouse.wheel(0, -240);
@@ -256,12 +297,17 @@ for (const delivery of ["web", "portable"] as const) {
                         (previous) => (document.querySelector("#content table")?.scrollTop ?? previous) < previous,
                         scrollTop
                     );
+                    await settleReader(page);
+                    const scrolledCell = await firstVisibleCell();
+                    assert(scrolledCell);
+                    assert.notEqual(scrolledCell, originalCell);
                     await page.locator("#return-bookshelf").click();
                     await page.locator("#bookshelf").waitFor();
                     const scrolled = await readProgress(page);
                     assert.notDeepEqual(scrolled, progress);
                     await openBook(page, "table-position.epub");
                     assert.deepEqual(await readProgress(page), scrolled);
+                    assert.equal(await firstVisibleCell(), scrolledCell);
                 }
             });
         }
@@ -375,15 +421,19 @@ for (const delivery of ["web", "portable"] as const) {
             );
             const tail = await readProgress(page);
             assert(tail[0] && tail[0].blockNumber > 5900);
+            const tailText = (await readVisiblePage(page, 64)).text;
+            assert(tailText);
             await page.locator("#toggle-setting-panel").click();
             for (const fontSize of [22, 25, 18, 23]) {
                 await page.locator("#setting-control-font-size").fill(String(fontSize));
                 await settleReader(page);
                 assert.deepEqual(await readProgress(page), tail);
+                assert((await readVisibleText(page)).includes(tailText));
             }
             await page.locator("#setting .close").click();
             await settleReader(page);
             assert.deepEqual(await readProgress(page), tail);
+            assert((await readVisibleText(page)).includes(tailText));
         });
     });
 
@@ -420,14 +470,19 @@ for (const delivery of ["web", "portable"] as const) {
                     assert(visibleText);
                     assert(visiblePage.firstTop !== undefined);
 
-                    // 连续跨越工具布局与正文留白的断点，并反向恢复；每个中间状态都不得改写源锚点。
-                    for (let round = 0; round < 2; round++) {
-                        for (const width of [1000, 801, 800, 601, 600, 390, 600, 601, 800, 801, 1000, 1440]) {
+                    // 三种模式共用分页布局；无动画模式覆盖完整断点矩阵及累计漂移，其余模式保留窄屏往返。
+                    const widths =
+                        mode === "none"
+                            ? [1000, 801, 800, 601, 600, 390, 600, 601, 800, 801, 1000, 1440]
+                            : [800, 600, 390, 600, 800, 1440];
+                    const rounds = mode === "none" ? 2 : 1;
+                    for (let round = 0; round < rounds; round++) {
+                        for (const width of widths) {
                             await page.setViewportSize({ width, height: 900 });
                             await settleReader(page);
                             assert.deepEqual(await readProgress(page), progress, `${mode}, width ${String(width)}`);
-                            const reflowed = await readVisiblePage(page);
-                            assert.equal(reflowed.text.slice(0, 24), visibleText.slice(0, 24));
+                            const reflowed = await readVisiblePage(page, 24);
+                            assert.equal(reflowed.text, visibleText.slice(0, 24));
                             assert(reflowed.firstTop !== undefined);
                             assert(
                                 Math.abs(reflowed.firstTop - visiblePage.firstTop) < 0.5,
@@ -445,8 +500,8 @@ for (const delivery of ["web", "portable"] as const) {
                     await waitForChapterLayout(page);
                     assert.deepEqual(await readProgress(page), progress);
                     assert.equal(await page.locator("#page-position").getAttribute("aria-label"), position);
-                    assert.equal(await readVisibleText(page), visibleText);
                     const reloaded = await readVisiblePage(page);
+                    assert.equal(reloaded.text, visibleText);
                     assert(reloaded.firstTop !== undefined);
                     assert(
                         Math.abs(reloaded.firstTop - visiblePage.firstTop) < 0.5,

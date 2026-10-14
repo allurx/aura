@@ -55,7 +55,7 @@ export async function stopBrowserTests(): Promise<void> {
 }
 
 /**
- * 每个用例独立上下文与本地数据库；收集异常、控制台、资源失败与 DevTools Issues。
+ * 每个用例独立上下文与本地数据库；保留操作异常及浏览器诊断，清理失败不覆盖原错。
  */
 export async function withPage(delivery: Delivery, operation: (page: Page) => Promise<void>): Promise<void> {
     assert(browser);
@@ -65,6 +65,7 @@ export async function withPage(delivery: Delivery, operation: (page: Page) => Pr
         acceptDownloads: true,
     });
     const errors: string[] = [];
+    const failures: unknown[] = [];
     context.on("page", (page) => page.on("pageerror", (error) => errors.push(error.message)));
     try {
         const page = await context.newPage();
@@ -93,10 +94,20 @@ export async function withPage(delivery: Delivery, operation: (page: Page) => Pr
         await page.goto(url);
         await page.locator(".shelf-empty-import").waitFor();
         await operation(page);
-        assert.deepEqual(errors, []);
-    } finally {
-        await context.close();
+    } catch (error) {
+        failures.push(error);
     }
+
+    // 只报告用例运行期间的诊断，不将关闭上下文取消的请求视为应用错误。
+    if (errors.length > 0) failures.push(new Error(`Browser diagnostics:\n${errors.join("\n")}`));
+    try {
+        await context.close();
+    } catch (error) {
+        failures.push(error);
+    }
+
+    if (failures.length === 1) throw failures[0];
+    if (failures.length > 1) throw new AggregateError(failures, "Browser test failed.", { cause: failures[0] });
 }
 
 /**
