@@ -175,6 +175,12 @@ npm run preview
 
 ### 依赖更新
 
-第三方 Actions 使用完整 commit SHA 固定，并保留同一行版本注释。[Dependabot 配置](../.github/dependabot.yml)由默认分支 `main` 提供，每周向 `dev` 提交 Actions 与 npm 更新 PR。npm 的 minor 和 patch 更新合并为一组，major 更新单独评估；均由维护者核对并通过验证后合并，再随开发成果集成到 `main`。
+第三方 Actions 使用完整 commit SHA 固定，并保留同一行版本注释。[Dependabot 配置](../.github/dependabot.yml)由默认分支 `main` 提供，每周向 `dev` 提交 Actions 与 npm 版本更新 PR。两类更新各自将常规 minor、patch 分组，Web Foundation 更新独立提出。
+
+[CI 工作流](../.github/workflows/ci.yml)在完整站点验证成功后，对同仓库的 Dependabot PR 逐项检查更新类型与版本，再以 squash 方式合入 `dev`。稳定版本的 minor、patch 和 `0.x` 的 patch 可以自动合并；major、`0.x` 的 minor、无法识别的版本及 Web Foundation 更新交由维护者审核。合并前复核当前目标仍是 `dev`，并锁定本次 CI 对应的 head。合并任务不检出 PR 工作树或安装、执行项目依赖；构建任务保持只读，只有独立合并任务获得写权限。
+
+这一流程保留维护者直接推送 `dev` 的方式，不依赖仓库的原生 auto-merge 排队开关。使用 `GITHUB_TOKEN` 合并后不会再触发一次 `dev` push CI；该 PR 已完成前置验证，后续 `dev → main` 仍需通过严格的合并检查，合并后的 `main` 再验证并部署。参见 [GitHub 的工作流触发规则](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow)。
+
+Actions 更新分组也能减少多个 PR 同时修改同一工作流的情况。如果另一项变更先合入 `dev`，合并时需要组合出 PR 分支中尚不存在的工作流内容，GitHub 可能拒绝 `GITHUB_TOKEN` 合并并提示缺少 `workflows` 权限。此时由维护者更新 PR 分支并重新验证，保留 head 检查，不通过扩大普通 Actions 权限或绕过检查解决。平台权限边界见 [GitHub CLI 维护者说明](https://github.com/cli/cli/issues/11493)。
 
 共享工具升级先在 Web Foundation 验证，再将 Aura 的基础包 Git 引用和 CI 共享工作流引用统一更新到同一 Immutable Release 的具体 `vX.Y.Z` 标签，并更新锁文件。两条更新路径由 Dependabot 分别检查，合并前仍需核对版本对应关系。Node.js 运行时按基础包要求同步 `.node-version` 与 `engines.node`。具体更新约束见 [Web Foundation 依赖与更新](https://github.com/allurx/web-foundation/blob/main/docs/dependencies.md)。
