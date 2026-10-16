@@ -107,7 +107,8 @@ Aura 是一个轻量、离线优先的 Web 阅读器。变更应持续保护以�
 - 长期分支 `dev → main` 使用 Create a merge commit，保留祖先关系；不使用 squash、rebase 或线性历史要求。合并后按祖先关系把 `main` 同步回 `dev`，不重写历史或删除长期分支。
 - `main` 的远端保护在 GitHub 中配置，要求 PR、GitHub Actions 的 `site / verify` 检查通过，并禁止强推和删除。保护规则必须在 GitHub 端确认已启用；CI 检查和本地约定不能代替服务器端保护。
 - 本地与 CI 使用 `.node-version` 指定的完整 Node.js 版本；CI 的部署令牌由 GitHub 的 `production` Environment 提供，并限制为 `main` 使用。
-- 第三方 Actions 使用完整 commit SHA 固定，并保留同一行的版本注释。Dependabot 的 Actions 与 npm 更新 PR 以 `dev` 为目标，常规 npm 更新分组、大版本单独评估；共享工具兼容性先由 Web Foundation 验证，本库同步基础包、工作流引用及所需 Node.js 运行时，经验证和人工审核后合并，再随开发成果通过 PR 集成到 `main`。
+- 第三方 Actions 使用完整 commit SHA 固定，并保留同一行的版本注释。Dependabot 的 Actions 与 npm 版本更新 PR 以 `dev` 为目标，常规 minor、patch 更新分组。仅同仓库的 Dependabot PR 可在完整 CI 成功后自动 squash 合入 `dev`，合并前复核目标分支并匹配已验证的 head；大版本、`0.x` 的 minor、无法识别的版本与 Web Foundation 更新保留人工审核。自动合并任务不检出 PR 工作树或安装、执行项目依赖，写权限只授予该任务；不自动合入 `main` 或发布版本。
+- Web Foundation 更新独立提出 PR，兼容性先由基础库验证；本库同步基础包、共享工作流引用及所需 Node.js 运行时，经成套验证和人工审核后合并，再随开发成果通过 PR 集成到 `main`。
 
 ## 提交范围
 
