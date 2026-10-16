@@ -8,6 +8,13 @@ updates:
       target-branch: "dev"
       schedule:
           interval: "weekly"
+      groups:
+          routine-updates:
+              update-types:
+                  - "minor"
+                  - "patch"
+              exclude-patterns:
+                  - "allurx/web-foundation*"
     - package-ecosystem: "npm"
       directory: "/"
       target-branch: "dev"
@@ -18,3 +25,5 @@ updates:
               update-types:
                   - "minor"
                   - "patch"
+              exclude-patterns:
+                  - "@allurx/web-foundation"
