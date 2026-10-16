@@ -1,5 +1,5 @@
 {
-    "extends": "@allurx/web-foundation/tsconfig/browser",
+    "extends": "@allurx/js-config/tsconfig/browser",
     "compilerOptions": {
         "types": ["vite/client"],
         "paths": {

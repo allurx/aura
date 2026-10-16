@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 import { extname, resolve } from "node:path";
 import { defineConfig, mergeConfig, type UserConfig } from "vite";
-import foundation from "@allurx/web-foundation/vite";
+import baseConfig from "@allurx/js-config/vite";
 import { viteSingleFile } from "vite-plugin-singlefile";
 import { webAppPlugin } from "./build/web-app.ts";
 import { licensePlugin } from "./build/licenses.ts";
@@ -24,7 +24,7 @@ export default defineConfig(({ command, mode, isPreview }) => {
     const development = command === "serve" && !isPreview;
     const outputDirectory = portable ? "portable" : "web";
 
-    return mergeConfig(foundation, {
+    return mergeConfig(baseConfig, {
         // Hash Router 继续由单一入口处理导航。
         appType: "spa",
         // portable 内联资源并使用相对路径，Web 版按站点根路径部署。

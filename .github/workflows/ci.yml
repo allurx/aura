@@ -19,17 +19,8 @@ concurrency:
 
 jobs:
     site:
-        uses: allurx/web-foundation/.github/workflows/static-site.yml@main
+        uses: allurx/allurx-build/.github/workflows/cloudflare-static-site.yml@71684ece317c5344be9f5dae18f2512c88bc56b1 # v1.0.0
         secrets: inherit
         with:
             asset-directory: dist/web/
             production-url: https://aura.allurx.io
-
-    dependabot-merge:
-        needs: site
-        permissions:
-            contents: write
-            pull-requests: write
-        uses: allurx/web-foundation/.github/workflows/dependabot-merge.yml@main
-        with:
-            target-branch: dev
