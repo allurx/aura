@@ -19,67 +19,17 @@ concurrency:
 
 jobs:
     site:
-        uses: allurx/web-foundation/.github/workflows/static-site.yml@v1.0.2
+        uses: allurx/web-foundation/.github/workflows/static-site.yml@main
         secrets: inherit
         with:
             asset-directory: dist/web/
             production-url: https://aura.allurx.io
 
     dependabot-merge:
-        name: Merge routine Dependabot updates
         needs: site
-        if: >-
-            github.event_name == 'pull_request' &&
-            github.event.pull_request.user.login == 'dependabot[bot]' &&
-            github.event.pull_request.base.ref == 'dev' &&
-            github.event.pull_request.head.repo.full_name == github.repository
-        runs-on: ubuntu-24.04
-        timeout-minutes: 5
         permissions:
             contents: write
             pull-requests: write
-        steps:
-            - name: Read Dependabot metadata
-              id: metadata
-              uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
-
-            - name: Check automatic merge policy
-              id: policy
-              env:
-                  DEPENDENCIES: ${{ steps.metadata.outputs.updated-dependencies-json }}
-              run: |
-                  node --input-type=module <<'NODE'
-                  import { appendFileSync } from "node:fs";
-
-                  const updates = JSON.parse(process.env.DEPENDENCIES);
-                  const stableVersion = /^v?(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/;
-                  const eligible = updates.length > 0 && updates.every((update) => {
-                      const { dependencyName, packageEcosystem, updateType, prevVersion, newVersion } = update;
-                      if (!["npm_and_yarn", "github_actions"].includes(packageEcosystem)) return false;
-                      if (dependencyName === "@allurx/web-foundation" ||
-                          dependencyName === "allurx/web-foundation" ||
-                          dependencyName.startsWith("allurx/web-foundation/")) return false;
-                      if (!stableVersion.test(prevVersion) || !stableVersion.test(newVersion)) return false;
-
-                      return updateType === "version-update:semver-patch" ||
-                          (updateType === "version-update:semver-minor" && !/^v?0\./.test(prevVersion));
-                  });
-
-                  appendFileSync(process.env.GITHUB_OUTPUT, `eligible=${eligible}\n`);
-                  if (!eligible) console.log("This update requires manual review.");
-                  NODE
-
-            - name: Merge the verified pull request
-              if: steps.policy.outputs.eligible == 'true'
-              env:
-                  GH_TOKEN: ${{ github.token }}
-                  PR_URL: ${{ github.event.pull_request.html_url }}
-                  PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-              run: |
-                  current_base="$(gh pr view "$PR_URL" --json baseRefName --jq .baseRefName)"
-                  if [ "$current_base" != "dev" ]; then
-                      echo "The pull request no longer targets dev; skipping automatic merge."
-                      exit 0
-                  fi
-
-                  gh pr merge --squash --match-head-commit "$PR_HEAD_SHA" "$PR_URL"
+        uses: allurx/web-foundation/.github/workflows/dependabot-merge.yml@main
+        with:
+            target-branch: dev
