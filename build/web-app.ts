@@ -64,6 +64,11 @@ export function webAppPlugin(): Plugin {
                         attrs: { rel: "canonical", href: siteUrl },
                         injectTo: "head",
                     },
+                    {
+                        tag: "meta",
+                        attrs: { name: "baidu-site-verification", content: "codeva-BPm6QSCSHM" },
+                        injectTo: "head",
+                    },
                     ...[
                         ["og:type", "website"],
                         ["og:site_name", "Aura"],
