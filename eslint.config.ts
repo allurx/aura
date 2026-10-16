@@ -4,7 +4,7 @@
  */
 
 import { defineConfig, globalIgnores } from "eslint/config";
-import base, { browser, node, typeChecked } from "@allurx/web-foundation/eslint";
+import base, { browser, node, typeChecked } from "@allurx/js-config/eslint";
 
 export default defineConfig(
     globalIgnores(["dist/", ".vite/", ".wrangler/", ".certs/", "work/"]),

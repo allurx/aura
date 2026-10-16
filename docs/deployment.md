@@ -12,9 +12,9 @@
 
 ## 首次配置
 
-按 [Web Foundation 部署说明](https://github.com/allurx/web-foundation/blob/main/docs/deployment.md#保存部署凭据)准备 GitHub `production` Environment、Account ID 和 API token，并将允许部署的分支限制为 `main`。Account ID 和 API token 均保存在 `production` Environment，分别使用 variable 和 secret。首次部署前核对下文的[域名配置](#域名配置)。
+按 [allurx-build 部署说明](https://github.com/allurx/allurx-build/blob/main/docs/cloudflare-static-site.md)准备 GitHub `production` Environment、Account ID 和 API token，并将允许部署的分支限制为 `main`。Account ID 和 API token 均保存在 `production` Environment，分别使用 variable 和 secret。首次部署前核对下文的[域名配置](#域名配置)。
 
-[CI 工作流](../.github/workflows/ci.yml)跟随 Web Foundation 的 `main`，传入 Web 目录和正式站点地址，并通过 `secrets: inherit` 继承调用方可用的 secrets。基础包仍固定不可变发布标签和锁文件，更新方式见[共享依赖说明](https://github.com/allurx/web-foundation/blob/main/docs/dependencies.md)。部署 job 从 `production` Environment 读取 token；PR 和 `dev` 的验证不需要生产凭据。保持 Cloudflare Workers Builds 的 Git 集成关闭，避免同一提交从两个入口部署。
+[CI 工作流](../.github/workflows/ci.yml)固定 allurx-build 的完整 commit SHA，传入 Web 目录和正式站点地址，并通过 `secrets: inherit` 继承调用方可用的 secrets。配置包通过 npm 精确版本和锁文件固定，与工作流独立更新，方式见[共享依赖更新指南](https://github.com/allurx/allurx-build/blob/main/docs/dependency-updates.md)。部署 job 从 `production` Environment 读取 token；PR 和 `dev` 的验证不需要生产凭据。保持 Cloudflare Workers Builds 的 Git 集成关闭，避免同一提交从两个入口部署。
 
 ## 自动部署与结果查看
 

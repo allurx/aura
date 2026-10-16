@@ -4,7 +4,7 @@
 
 ## 环境准备
 
-Aura 使用原生 HTML、CSS 和 TypeScript。本地与 CI 使用 [.node-version](../.node-version) 指定的完整 Node.js LTS 版本，版本约束见 [package.json](../package.json) 的 `engines.node`；使用 npm 和仓库的锁文件安装依赖。检查工具、工具版本和基础构建配置由 [Web Foundation](https://github.com/allurx/web-foundation) 统一维护，Aura 只声明基础包和自身需要的依赖。
+Aura 使用原生 HTML、CSS 和 TypeScript。本地与 CI 使用 [.node-version](../.node-version) 指定的完整 Node.js LTS 版本，版本约束见 [package.json](../package.json) 的 `engines.node`；使用 npm 和仓库的锁文件安装依赖。共享检查与基础构建配置由 [JS Config](https://github.com/allurx/allurx-build/tree/main/js-config) 提供；Aura 直接声明配置包、开发工具和产品依赖的精确版本。
 
 在仓库根目录安装依赖：
 
@@ -14,9 +14,9 @@ npm ci
 
 ### 浏览器与类型环境
 
-支持桌面和移动端主流常青浏览器的当前及前一个稳定大版本。Vite 继承 Web Foundation 的 `baseline-widely-available` 构建目标，具体浏览器范围随固定的 Vite 版本确定；该目标不会补齐 Web API，也不等于完整的浏览器兼容保证。平台可选能力仍按实际支持情况检测，交互修改按受影响浏览器和输入方式验证。
+支持桌面和移动端主流常青浏览器的当前及前一个稳定大版本。Vite 继承 JS Config 的 `baseline-widely-available` 构建目标，具体浏览器范围随固定的 Vite 版本确定；该目标不会补齐 Web API，也不等于完整的浏览器兼容保证。平台可选能力仍按实际支持情况检测，交互修改按受影响浏览器和输入方式验证。
 
-[TypeScript 配置](../tsconfig.json)分别检查浏览器源码、Node.js 构建配置和测试，共享严格检查选项。浏览器侧只引入 DOM 与 Vite 客户端类型，构建侧使用 Node.js 类型；测试驱动同时描述 Node.js 操作和浏览器中的回调，使用独立配置，不向应用或构建配置泄漏全局 API。Vite/jiti 加载工具配置，因此这部分使用 bundler 模块解析。Vite 在共享构建配置上保留 Hash Router、资源路径、许可声明和 portable 插件；这些交付规则由 Aura 维护。
+[TypeScript 配置](../tsconfig.json)分别检查浏览器源码、Node.js 构建配置和测试，共享严格检查选项。浏览器侧只引入 DOM 与 Vite 客户端类型，构建侧使用 Node.js 类型；测试驱动同时描述 Node.js 操作和浏览器中的回调，使用独立配置，不向应用或构建配置泄漏全局 API。Vite 加载 TypeScript 构建配置，ESLint 通过显式开发依赖 jiti 加载 TypeScript 配置；这些工具配置纳入 Node.js 类型检查，并使用 bundler 模块解析。Vite 在共享构建配置上保留 Hash Router、资源路径、许可声明和 portable 插件；这些交付规则由 Aura 维护。
 
 ## 本地运行
 
@@ -175,10 +175,8 @@ npm run preview
 
 ### 依赖更新
 
-第三方 Actions 使用完整 commit SHA 固定，并保留同一行版本注释。[Dependabot 配置](../.github/dependabot.yml)由默认分支 `main` 提供，每周向 `dev` 提交 Actions 与 npm 版本更新 PR。两类更新各自将常规 minor、patch 分组，Web Foundation 更新独立提出。
+[Renovate 配置](../.github/renovate.json)继承 allurx-build 的版本化共享策略，向 `dev` 提交 npm、GitHub Actions 和 Node.js 更新。GitHub Actions 固定完整 commit SHA，并保留同一行版本注释；配置包和工具依赖保存 npm 精确版本及锁文件。
 
-[CI 工作流](../.github/workflows/ci.yml)在完整站点验证成功后，调用 Web Foundation 的共享依赖合并工作流，将符合策略的 Dependabot PR squash 合入 `dev`。公共版本策略、权限和失败处理见[共享依赖说明](https://github.com/allurx/web-foundation/blob/main/docs/dependencies.md)。Aura 只指定目标分支和前置站点验证，不复制判断脚本。
+Renovate 仅在共享策略允许且全部外部状态检查通过后自动合并，并遵守既有分支保护规则。配置包和共享工作流更新保留人工审核。安装启用、版本分组、排除范围与失败处理见[共享依赖更新指南](https://github.com/allurx/allurx-build/blob/main/docs/dependency-updates.md)。Aura 保留项目自己的完整站点验证和分支保护，不维护自动合并脚本。
 
-这一流程保留维护者直接推送 `dev` 的方式，不依赖仓库的原生 auto-merge 排队开关。使用 `GITHUB_TOKEN` 合并后不会再触发一次 `dev` push CI；该 PR 已完成前置验证，后续 `dev → main` 仍需通过严格的合并检查，合并后的 `main` 再验证并部署。参见 [GitHub 的工作流触发规则](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow)。
-
-基础包继续固定 Immutable Release 的具体 `vX.Y.Z` 标签和锁文件；共享工作流跟随基础库的 `main`，下次 CI 会采用更新后的流程，无需同步修改包版本。基础包升级先在 Web Foundation 验证，再在 Aura 验证 Web 与 portable 交付；Node.js 运行时按基础包要求同步 `.node-version` 与 `engines.node`。
+依赖 PR 合入 `dev` 后仍按正常的 `dev → main` 流程集成；`main` 的 CI 验证并部署实际提交。配置包和工作流独立更新，不能只更新引用而跳过对应验证。`@allurx/js-config` 或构建工具升级时验证 Web 与 portable 两种交付；Node.js 升级时同步 `.node-version` 与 `engines.node`。
