@@ -18,6 +18,7 @@ export default defineConfig(
             parserOptions: { tsconfigRootDir: import.meta.dirname },
         },
     },
+
     { files: ["src/**/*.ts"], extends: [browser] },
     { files: ["*.ts", "build/**/*.ts"], extends: [node] }
 );

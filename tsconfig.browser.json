@@ -1,6 +1,7 @@
 {
     "extends": "@allurx/js-config/tsconfig/browser",
     "compilerOptions": {
+        "tsBuildInfoFile": "./node_modules/.cache/typescript/tsconfig.browser.tsbuildinfo",
         "types": ["vite/client"],
         "paths": {
             "@/*": ["./src/*"]

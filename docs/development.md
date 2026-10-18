@@ -16,7 +16,7 @@ npm ci
 
 支持桌面和移动端主流常青浏览器的当前及前一个稳定大版本。Vite 继承 JS Config 的 `baseline-widely-available` 构建目标，具体浏览器范围随固定的 Vite 版本确定；该目标不会补齐 Web API，也不等于完整的浏览器兼容保证。平台可选能力仍按实际支持情况检测，交互修改按受影响浏览器和输入方式验证。
 
-[TypeScript 配置](../tsconfig.json)分别检查浏览器源码、Node.js 构建配置和测试，共享严格检查选项。浏览器侧只引入 DOM 与 Vite 客户端类型，构建侧使用 Node.js 类型；测试驱动同时描述 Node.js 操作和浏览器中的回调，使用独立配置，不向应用或构建配置泄漏全局 API。Vite 加载 TypeScript 构建配置，ESLint 通过显式开发依赖 jiti 加载 TypeScript 配置；这些工具配置纳入 Node.js 类型检查，并使用 bundler 模块解析。Vite 在共享构建配置上保留 Hash Router、资源路径、许可声明和 portable 插件；这些交付规则由 Aura 维护。
+[TypeScript 配置](../tsconfig.json)分别检查浏览器源码、Node.js 构建配置和测试，共享严格检查选项。浏览器侧只引入 DOM 与 Vite 客户端类型，构建侧继承共享 Node.js 配置；测试驱动同时描述 Node.js 操作和浏览器中的回调，使用独立配置，不向应用或构建配置泄漏全局 API。Vite 加载 TypeScript 构建配置，ESLint 通过显式开发依赖 jiti 加载 TypeScript 配置；这些工具配置均纳入 Node.js 类型检查。Vite 在共享构建配置上保留 Hash Router、资源路径、许可声明和 portable 插件；这些交付规则由 Aura 维护。
 
 ## 本地运行
 
@@ -110,7 +110,7 @@ npm run dev
 | `npm run build`          | `dist/web/`，Web 版                     |
 | `npm run build:portable` | `dist/portable/aura.html`，单文件离线版 |
 
-每个构建命令先执行静态检查，只清理自身输出子目录。Web 目录包含入口、资源、安装元信息、响应头配置和许可声明，需整体使用；portable 将应用资源与许可声明嵌入单个 HTML。
+构建命令只生成对应产物，并只清理自身输出子目录。静态检查使用 `npm run check`，包含检查、两种构建和行为回归的完整门禁使用 `npm run verify`。Web 目录包含入口、资源、安装元信息、响应头配置和许可声明，需整体使用；portable 将应用资源与许可声明嵌入单个 HTML。
 
 JS 与 CSS 使用 [Vite 的生产压缩](https://vite.dev/config/build-options.html#build-minify)，无用模块由构建器消除。构建日志中的 gzip 大小只是传输体积估计；Web 的实际编码由 [Cloudflare 内容压缩](https://developers.cloudflare.com/speed/optimization/content/compression/)与客户端协商，应检查线上响应的 `Content-Encoding`。portable 的直接交付大小以 HTML 文件字节数为准，不能把 gzip 或 Brotli 估计当作本地单文件大小。
 
@@ -134,7 +134,7 @@ npm run preview
 | `npm run format:check` | 只检查格式                           |
 | `npm run lint`         | 检查 ESLint 规则                     |
 | `npm run type-check`   | 检查 TypeScript 类型                 |
-| `npm run check`        | 依次执行上述三项只读检查             |
+| `npm run check`        | 依次执行上述三项静态检查             |
 | `npm test`             | 构建两种产物，再执行服务与浏览器回归 |
 | `npm run verify`       | 执行一次静态检查，再执行 `npm test`  |
 
