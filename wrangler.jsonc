@@ -11,6 +11,7 @@
         "port": 4173,
     },
     "assets": {
+        "not_found_handling": "404-page",
         "directory": "./dist/web",
     },
     "routes": [

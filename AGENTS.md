@@ -85,8 +85,8 @@ Aura 是一个轻量、离线优先的 Web 阅读器。变更应持续保护以�
 - 环境准备、命令与构建输出见[开发指南](docs/development.md)；站点操作见[部署指南](docs/deployment.md)，版本分发见[发布指南](docs/releasing.md)。以下规则规定 Agent 应选择的验证与授权范围。
 - 修改前检查 `git status`，识别并保留用户已有改动；以最小必要范围完成当前任务。
 - 开发循环先运行最小相关检查；实现稳定后复查实际 diff，非平凡修改进行独立 review。修复确认的问题后只重跑受影响的检查，最终状态再执行完整验证。
-- 使用 `npm` 和 `package-lock.json`；`package.json` 是脚本定义的事实来源。`npm run format` 会改写 Prettier 支持且未被 `.prettierignore` 排除的项目文件；最终只读静态门禁 `npm run check` 依次执行格式、lint 和类型检查，开发循环或定位单项问题时可分别运行对应命令。
-- TypeScript 变更通常至少运行 `npm run check`；影响运行时行为时还应运行对应生产构建，普通 Web 为 `npm run build`。构建脚本已包含静态门禁，最终验证无需紧邻重复运行 `npm run check`。
+- 使用 `npm` 和 `package-lock.json`；`package.json` 是脚本定义的事实来源。`npm run format` 会改写 Prettier 支持且未被 `.prettierignore` 排除的项目文件；静态门禁 `npm run check` 依次执行格式、lint 和类型检查，开发循环或定位单项问题时可分别运行对应命令。
+- TypeScript 变更通常至少运行 `npm run check`；影响运行时行为时还应运行对应生产构建，普通 Web 为 `npm run build`。构建命令只生成产物，完整门禁使用 `npm run verify`，最终验证无需紧邻重复执行其中已包含的检查。
 - 路由、入口、模板、资源路径、Vite 配置或 portable 相关变更，应同时运行 `npm run build` 和 `npm run build:portable`。
 - 只维护 Web 和 portable 两种交付，不提供混淆版本。两种产物集中在统一构建输出根目录下，各自使用独立子目录；单次构建只清理自身子目录，保持另一种产物不变。
 - Web 构建附带完整项目许可证与第三方声明文件；portable 将两者完整嵌入唯一 HTML。“关于 Aura”统一提供项目源码链接与许可信息，先展示名称、许可类型和来源链接，全文默认收起、按需展开，本地声明无需联网查看。构建和压缩不得丢失交付所需声明；实际分发的依赖或第三方资源变化时，同步核对声明维护源和两种产物。

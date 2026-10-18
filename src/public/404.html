@@ -1,0 +1,112 @@
+<!doctype html>
+<!--
+Copyright 2026 allurx
+SPDX-License-Identifier: Apache-2.0
+-->
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="color-scheme" content="light dark" />
+        <meta name="robots" content="noindex" />
+        <title>页面未找到 · Aura</title>
+        <link rel="icon" href="/icons/app-192.png" />
+        <style>
+            :root {
+                color-scheme: light dark;
+                --background: #f7f8fa;
+                --text: #202936;
+                --muted: #5c6777;
+                --accent: #6951bd;
+                font-family:
+                    system-ui,
+                    -apple-system,
+                    "Segoe UI",
+                    "Microsoft YaHei",
+                    sans-serif;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                min-height: 100svh;
+                display: grid;
+                place-items: center;
+                padding: clamp(24px, 6vw, 64px);
+                color: var(--text);
+                background: var(--background);
+            }
+
+            main {
+                width: min(100%, 480px);
+            }
+            .brand {
+                margin: 0 0 40px;
+                color: var(--muted);
+                font-size: 15px;
+                font-weight: 600;
+            }
+            .status {
+                margin: 0;
+                color: var(--accent);
+                font-size: clamp(72px, 20vw, 112px);
+                font-weight: 750;
+                line-height: 1;
+                letter-spacing: -0.06em;
+            }
+            h1 {
+                margin: 24px 0 12px;
+                font-size: clamp(26px, 6vw, 34px);
+                line-height: 1.3;
+            }
+            .description {
+                margin: 0;
+                color: var(--muted);
+                font-size: 16px;
+                line-height: 1.8;
+            }
+
+            a {
+                display: inline-block;
+                margin-top: 32px;
+                padding: 12px 22px;
+                border: 1px solid currentColor;
+                border-radius: 12px;
+                color: var(--accent);
+                font-weight: 600;
+                line-height: 1.5;
+                text-decoration: none;
+            }
+
+            a:hover {
+                text-decoration: underline;
+                text-underline-offset: 4px;
+            }
+            a:focus-visible {
+                outline: 3px solid currentColor;
+                outline-offset: 4px;
+            }
+
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --background: #151a22;
+                    --text: #edf1f7;
+                    --muted: #abb5c5;
+                    --accent: #bca5ff;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main aria-labelledby="page-title">
+            <p class="brand">Aura</p>
+            <p class="status" aria-hidden="true">404</p>
+            <h1 id="page-title">页面未找到</h1>
+            <p class="description">这个地址可能有误，或页面已经移动。<br />回到首页，继续浏览。</p>
+            <a href="/">返回首页</a>
+        </main>
+    </body>
+</html>
