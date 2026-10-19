@@ -115,10 +115,10 @@ for (const delivery of ["web", "portable"] as const) {
     void test(`${delivery}: EPUB links to empty tail anchors retain their source location after reopening`, async () => {
         for (const mode of ["none", "scroll"] as const) {
             await withPage(delivery, async (page) => {
-                // 唯一序号使可见片段能够区分长段落中的不同源位置。
+                // 唯一序号区分源位置，长段落覆盖恢复窗口与后台索引的换行差异。
                 const content =
                     Array.from(
-                        { length: 1600 },
+                        { length: 6400 },
                         (_, index) => `${String(index).padStart(4, "0")}这是用于验证长段落尾部锚点的正文。`
                     ).join("") + "尾部目标";
                 await importBooks(page, [
@@ -185,13 +185,23 @@ for (const delivery of ["web", "portable"] as const) {
                     await settleReader(page);
                     const scrolled = await readProgress(page);
                     assert.notDeepEqual(scrolled, progress);
-                    const scrolledText = (await readVisiblePage(page, 64)).text;
-                    assert(scrolledText);
+                    assert.equal(scrolled[0]?.blockNumber, 2);
+                    // 后台重排可能让锚点之前的字符进入同一行；恢复契约对应保存的源锚点。
+                    const scrolledText = content.slice(scrolled[0].contentOffset, scrolled[0].contentOffset + 64);
+                    assert.equal(scrolledText.length, 64);
+                    assert.equal(content.indexOf(scrolledText), scrolled[0].contentOffset);
+                    assert((await readVisibleText(page)).includes(scrolledText));
+
                     await page.reload();
                     await page.locator("#toggle-setting-panel:not([disabled])").waitFor();
                     await settleReader(page);
                     assert.deepEqual(await readProgress(page), scrolled);
                     // 刷新按源位置重新对齐，不要求保留滚轮留下的临时像素偏移。
+                    assert((await readVisibleText(page)).includes(scrolledText));
+
+                    // 先验收初始画面，再确认后台索引补全后同一源锚点仍然可见。
+                    await waitForChapterLayout(page);
+                    assert.deepEqual(await readProgress(page), scrolled);
                     assert((await readVisibleText(page)).includes(scrolledText));
                 }
             });
