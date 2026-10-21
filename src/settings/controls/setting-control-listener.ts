@@ -13,10 +13,10 @@ export default interface SettingControlListener {
     /**
      * 立即应用有效控件值并保存到当前页面。
      */
-    commit(setting: Setting, value: string): Promise<void>;
+    commit(setting: Setting, value: string): void;
 
     /**
      * 移除当前项的显式覆盖，恢复页面默认值。
      */
-    resetSetting(setting: Setting): Promise<void>;
+    resetSetting(setting: Setting): void;
 }

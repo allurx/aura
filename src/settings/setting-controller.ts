@@ -16,7 +16,6 @@ import OperationError from "@/errors/operation-error";
 import type { PanelFrameBinding } from "@/components/dialog/panel-frame";
 import type { PanelName } from "./models/page-appearance";
 import type { ReaderToolsAppearance } from "./models/page-appearance";
-import { run } from "@/utils/event-util";
 
 /**
  * 管理页面已提交外观，协调持久化、失败恢复和外部宽度变化。
@@ -30,8 +29,6 @@ export default class SettingController implements SettingUiListener {
     private appearance: PageAppearance;
     private readonly layoutChanges = new EventTarget();
     private signal: AbortSignal | undefined;
-    private readonly pendingInputs = new Map<Setting, number>();
-    private inputVersion = 0;
 
     public constructor({
         pageName,
@@ -68,18 +65,14 @@ export default class SettingController implements SettingUiListener {
         for (const setting of this.configuration.settings) setting.apply(setting.read(this.appearance));
 
         this.settingUi.init(this.configuration, this, signal);
-        this.repository.subscribe(() => {
-            run(() => {
-                this.refreshExternalAppearance();
-            });
-        }, signal);
-
         const width = this.width;
         if (width) {
             this.widthSynchronizer?.start(
                 {
                     getValue: () => width.read(this.appearance),
-                    commit: (value) => this.commit(width, value),
+                    commit: (value) => {
+                        this.commit(width, value);
+                    },
                 },
                 signal
             );
@@ -96,7 +89,9 @@ export default class SettingController implements SettingUiListener {
     public getPanelFrame(name: PanelName): PanelFrameBinding {
         return {
             getValue: () => this.appearance.getPanel(name),
-            commit: (bounds) => this.save((current) => current.withPanel(name, bounds), false, name),
+            commit: (bounds) => {
+                this.save(this.appearance.withPanel(name, bounds), [], false, name);
+            },
             subscribe: (listener, signal) => {
                 this.layoutChanges.addEventListener(name, listener, { signal });
             },
@@ -116,12 +111,14 @@ export default class SettingController implements SettingUiListener {
     public getToolbarBinding() {
         return {
             getValue: (): ReaderToolsAppearance => this.appearance.getToolbar() ?? { collapsed: false },
-            commit: (value: Partial<ReaderToolsAppearance>): Promise<void> =>
+            commit: (value: Partial<ReaderToolsAppearance>): void => {
                 this.save(
-                    (current) => current.withToolbar({ collapsed: false, ...current.getToolbar(), ...value }),
+                    this.appearance.withToolbar({ collapsed: false, ...this.appearance.getToolbar(), ...value }),
+                    [],
                     false,
                     "toolbar"
-                ),
+                );
+            },
             subscribe: (listener: () => void, signal: AbortSignal): void => {
                 this.layoutChanges.addEventListener("toolbar", listener, { signal });
             },
@@ -131,20 +128,14 @@ export default class SettingController implements SettingUiListener {
     /**
      * 保存成功后更新快照，失败时恢复提交前的页面与控件。
      */
-    public async commit(setting: Setting, value: string): Promise<void> {
+    public commit(setting: Setting, value: string): void {
         this.requireSetting(setting);
-        const version = ++this.inputVersion;
-        this.pendingInputs.set(setting, version);
-        let failure: unknown;
         try {
-            // 锁等待期间的新 input 替代同一控件的旧输入，避免排队值使滑块和页面倒退。
-            await this.save((current) =>
-                this.pendingInputs.get(setting) === version ? setting.update(current, value) : current
-            );
+            this.save(setting.update(this.appearance, value), [setting]);
         } catch (error) {
-            failure = error;
-            // 原生 resize 已经写入 inline 样式；只恢复仍属于本次失败的最新输入。
-            if (setting === this.width && this.pendingInputs.get(setting) === version && !this.signal?.aborted) {
+            let failure: unknown = error;
+            // 原生 resize 已经写入 inline 样式；保存失败时恢复已提交的宽度。
+            if (setting === this.width && !this.signal?.aborted) {
                 try {
                     setting.apply(setting.read(this.appearance));
                 } catch (restoreError) {
@@ -153,37 +144,32 @@ export default class SettingController implements SettingUiListener {
                     });
                 }
             }
+            this.refreshAfterOperation([setting], failure);
             throw failure;
-        } finally {
-            if (this.pendingInputs.get(setting) === version) {
-                this.pendingInputs.delete(setting);
-                this.refreshAfterOperation([setting], failure);
-            }
         }
     }
 
     /**
      * 重置单项，其他已提交设置保持不变。
      */
-    public async resetSetting(setting: Setting): Promise<void> {
+    public resetSetting(setting: Setting): void {
         this.requireSetting(setting);
-        await this.resetSettings([setting]);
+        this.resetSettings([setting]);
     }
 
     /**
      * 清除常规设置的显式值，保留当前页面主题。
      */
-    public async resetGeneral(): Promise<void> {
-        await this.resetSettings(this.configuration.general, true);
+    public resetGeneral(): void {
+        this.resetSettings(this.configuration.general, true);
     }
 
     /**
      * 清除当前页面全部设置，不影响另一页面。
      */
-    public async reset(): Promise<void> {
+    public reset(): void {
         this.widthSynchronizer?.cancelPending();
-        this.pendingInputs.clear();
-        await this.save(() => PageAppearance.defaults(this.configuration.defaultTheme), true);
+        this.save(PageAppearance.defaults(this.configuration.defaultTheme), this.configuration.settings, true);
     }
 
     /**
@@ -192,7 +178,7 @@ export default class SettingController implements SettingUiListener {
     private refreshAfterOperation(settings: readonly Setting[], error?: unknown): void {
         if (this.signal?.aborted) return;
         try {
-            this.settingUi.refresh(settings.filter((setting) => !this.pendingInputs.has(setting)));
+            this.settingUi.refresh(settings);
         } catch (refreshError) {
             if (error !== undefined) {
                 throw new AggregateError([error, refreshError], "Setting update and refresh failed", {
@@ -206,45 +192,45 @@ export default class SettingController implements SettingUiListener {
     /**
      * 一次保存重置结果，并确保旧 resize 值不会延迟写回。
      */
-    private async resetSettings(settings: readonly Setting[], resetLayout = false): Promise<void> {
+    private resetSettings(settings: readonly Setting[], resetLayout = false): void {
         if (settings.length === 0) return;
         if (this.width && settings.includes(this.width)) this.widthSynchronizer?.cancelPending();
-        for (const setting of settings) this.pendingInputs.delete(setting);
-        await this.save((current) => {
-            let next = current;
-            for (const setting of settings) next = setting.reset(next, this.configuration.defaultTheme);
-            return resetLayout ? next.withoutLayout() : next;
-        });
+        let next = this.appearance;
+        for (const setting of settings) next = setting.reset(next, this.configuration.defaultTheme);
+        this.save(resetLayout ? next.withoutLayout() : next, settings);
     }
 
     /**
-     * 只在锁内保存最新快照；排版和控件刷新在释放锁后执行，失败结果区分未保存与界面未更新。
+     * 同步保存当前页面的完整快照后再应用，区分保存失败与已保存但界面未更新。
      */
-    private async save(
-        update: (current: PageAppearance) => PageAppearance,
+    private save(
+        next: PageAppearance,
+        settings: readonly Setting[],
         removeSnapshot = false,
         ownLayout?: PanelName | "toolbar"
-    ): Promise<void> {
+    ): void {
         try {
-            await this.repository.transact((current) => {
-                const nextAppearance = update(current);
-                if (removeSnapshot) this.repository.reset();
-                else if (JSON.stringify(current) !== JSON.stringify(nextAppearance))
-                    this.repository.save(nextAppearance);
-            });
+            if (removeSnapshot) this.repository.reset();
+            else if (JSON.stringify(this.appearance) !== JSON.stringify(next)) this.repository.save(next);
         } catch (error) {
-            const failure = new OperationError(
+            throw new OperationError(
                 "外观设置未能保存",
                 "本次调整未保存，页面继续使用之前的外观。",
                 error,
                 "请处理失败原因后重新调整。"
             );
-            this.refreshAfterOperation(this.configuration.settings, failure);
-            throw failure;
         }
+        const previous = this.appearance;
+        this.appearance = next;
+        // 页面退出时仍保存原生 resize 的最后输入，但不重新启用已清理的界面观察器。
         if (this.signal?.aborted) return;
         try {
-            this.refreshExternalAppearance(ownLayout);
+            for (const setting of this.configuration.settings) {
+                if (setting.read(previous) !== setting.read(next)) setting.apply(setting.read(next));
+            }
+            this.notifyLayoutChanges(previous, ownLayout);
+            if (settings.length === 0) this.settingUi.refreshResetState();
+            else this.refreshAfterOperation(settings);
         } catch (error) {
             throw new OperationError(
                 "外观已保存，界面尚未更新",
@@ -256,22 +242,7 @@ export default class SettingController implements SettingUiListener {
     }
 
     /**
-     * 外部提交只更新确实改变的设置；已退出的页面不再应用样式或移动焦点。
-     */
-    private refreshExternalAppearance(ownLayout?: PanelName | "toolbar"): void {
-        if (this.signal?.aborted) return;
-        const previous = this.appearance;
-        const next = this.repository.load();
-        const changed = this.configuration.settings.filter((setting) => setting.read(previous) !== setting.read(next));
-        this.appearance = next;
-        for (const setting of changed) setting.apply(setting.read(next));
-        this.notifyLayoutChanges(previous, ownLayout);
-        if (changed.length === 0) this.settingUi.refreshResetState();
-        else this.refreshAfterOperation(changed);
-    }
-
-    /**
-     * 当前拖动由所属控件完成；其他面板、工具栏和跨标签更新收到相同的布局通知。
+     * 当前拖动由所属控件完成；页面内重置同时通知相关面板与工具栏。
      */
     private notifyLayoutChanges(previous: PageAppearance, ownLayout?: PanelName | "toolbar"): void {
         for (const name of ["settings", "toc"] as const) {

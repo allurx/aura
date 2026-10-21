@@ -170,6 +170,17 @@ export async function setMode(page: Page, mode: "cover" | "slide" | "scroll" | "
 }
 
 /**
+ * 在已打开的设置面板输入字号，等待实际样式生效，不等待后台全章排版。
+ */
+export async function setReaderFontSize(page: Page, value: number): Promise<void> {
+    await page.locator("#setting-control-font-size").fill(String(value));
+    await page.waitForFunction((expected) => {
+        const content = document.querySelector("#content");
+        return content !== null && getComputedStyle(content).fontSize === `${String(expected)}px`;
+    }, value);
+}
+
+/**
  * 选章完成后面板才关闭，避免把已点击目录当作正文已到达。
  */
 export async function selectChapter(page: Page, number: number): Promise<void> {

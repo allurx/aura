@@ -12,6 +12,7 @@ import {
     openBook,
     selectChapter,
     setMode,
+    setReaderFontSize,
     settleReader,
     startBrowserTests,
     stopBrowserTests,
@@ -46,7 +47,7 @@ for (const delivery of ["web", "portable"] as const) {
             const size = page.getByRole("slider", { name: "封面大小", exact: true });
             await size.press("ArrowRight");
             const savedSize = await size.inputValue();
-            // 原生控件先改变值，跨页面保存随后取得排他锁；只用已提交快照验证响应式夹取。
+            // 用已保存的首选值验证响应式夹取，避免将控件显示值当作持久化结果。
             await page.waitForFunction(
                 (expected) =>
                     localStorage.getItem("aura.bookshelf.appearance")?.includes(`"--book-cover-width":"${expected}px"`),
@@ -286,7 +287,7 @@ for (const delivery of ["web", "portable"] as const) {
                 assert((await visibleParagraphs()).includes(anchor));
             }
             await page.locator("#toggle-setting-panel").click();
-            await page.locator("#setting-control-font-size").fill("25");
+            await setReaderFontSize(page, 25);
             await page.locator("#setting .close").click();
             await waitForChapterLayout(page);
             assert((await visibleParagraphs()).includes(anchor));

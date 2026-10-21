@@ -68,152 +68,79 @@ for (const delivery of ["web", "portable"] as const) {
         );
     });
 
-    void test(`${delivery}: appearance updates preserve independent tabs, resets and accepted page-exit writes`, async () => {
+    void test(`${delivery}: page appearance persists through reopening and resets only its intended scope`, async () => {
         await withPage(delivery, async (page) => {
             await importBooks(page, [textBook("appearance.txt")]);
-            const other = await page.context().newPage();
-            const diagnostics: string[] = [];
-            other.on("console", (message) => {
-                if (message.type() === "error" || message.type() === "warning") diagnostics.push(message.text());
-            });
-            other.on("requestfailed", (request) => diagnostics.push(`Request failed: ${request.url()}`));
-            const session = await page.context().newCDPSession(other);
-            session.on("Audits.issueAdded", ({ issue }) => diagnostics.push(`DevTools ${issue.code}`));
-            await session.send("Audits.enable");
+            await page.locator("#toggle-setting-panel").click();
+            await page.locator('input[name="appearance-theme"][value="breeze"]').check();
+            const size = page.locator("#setting-control---book-cover-width");
+            for (let index = 0; index < 3; index++) await size.press("ArrowRight");
+            await page.locator("#setting > header").press("ArrowLeft");
+            const bookshelfAppearance = await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance"));
+            assert(bookshelfAppearance);
+            assert(bookshelfAppearance.includes('"123px"'));
+            assert(bookshelfAppearance.includes('"settings":{'));
 
-            try {
-                await other.goto(page.url());
-                await other.locator(".book-open").waitFor();
-                await page.locator("#toggle-setting-panel").click();
-                await other.locator("#toggle-setting-panel").click();
+            // 关闭与导航保留即时保存的值，刷新后恢复当前页面快照。
+            await page.locator("#setting .close").click();
+            await openBook(page, "appearance.txt");
+            await page.locator("#return-bookshelf").click();
+            await page.locator(".book-open").waitFor();
+            await page.reload();
+            await page.locator(".book-open").waitFor();
+            await page.locator("#toggle-setting-panel").click();
+            assert.equal(await size.inputValue(), "123");
+            assert.equal(await page.evaluate(() => document.documentElement.dataset["theme"]), "breeze");
+            assert.equal(await page.locator("#setting").getAttribute("data-panel-positioned"), "");
+            assert.equal(
+                await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance")),
+                bookshelfAppearance
+            );
 
-                // 两个标签先后修改不同字段，第二次提交不能恢复第一个标签的旧值。
-                await page.locator('input[name="appearance-theme"][value="starry"]').check();
-                await other.waitForFunction(() => document.documentElement.dataset["theme"] === "starry");
-                const size = other.locator("#setting-control---book-cover-width");
-                await size.press("ArrowRight");
-                await page.waitForFunction(() => {
-                    const input = document.querySelector<HTMLInputElement>("#setting-control---book-cover-width");
-                    return input?.value === "121" && document.documentElement.dataset["theme"] === "starry";
-                });
+            // 常规重置包括布局并保留主题，完整重置再恢复当前页面主题。
+            await page.locator("#setting .reset-general").click();
+            await page.waitForFunction(
+                () => document.querySelector<HTMLInputElement>("#setting-control---book-cover-width")?.value === "120"
+            );
+            assert.equal(await page.evaluate(() => document.documentElement.dataset["theme"]), "breeze");
+            assert.equal(await page.locator("#setting").getAttribute("data-panel-positioned"), null);
+            await page.locator("#setting .reset").click();
+            assert.equal(await page.evaluate(() => document.documentElement.dataset["theme"]), "sunny");
+            assert.equal(await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance")), null);
+            await size.press("ArrowRight");
+            await page.locator("#setting .close").click();
 
-                // 持有真正的同源锁，让两个标签在存储旧值相同时排队；释放后仍须保留全部独立字段。
-                const barrier = await page.evaluateHandle(() => {
-                    const state = { granted: false, release: (): void => undefined };
-                    void navigator.locks.request("aura.bookshelf.appearance", async () => {
-                        state.granted = true;
-                        await new Promise<void>((resolve) => {
-                            state.release = resolve;
-                        });
-                    });
-                    return state;
-                });
-                try {
-                    await page.waitForFunction((state) => state.granted, barrier);
-                    await page.locator('input[name="appearance-theme"][value="breeze"]').check();
-                    for (let index = 0; index < 3; index++) await size.press("ArrowRight");
-                    await page.locator("#setting > header").press("ArrowLeft");
-                    assert.equal(await size.inputValue(), "124");
-                } finally {
-                    await barrier.evaluate((state) => {
-                        state.release();
-                    });
-                    await barrier.dispose();
-                }
-                await other.waitForFunction(() => {
-                    const input = document.querySelector<HTMLInputElement>("#setting-control---book-cover-width");
-                    return (
-                        input?.value === "124" &&
-                        document.documentElement.dataset["theme"] === "breeze" &&
-                        document.querySelector("#setting")?.hasAttribute("data-panel-positioned")
-                    );
-                });
-                const saved = await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance"));
-                assert(saved);
-                assert(saved.includes('"theme":"breeze"'));
-                assert(saved.includes('"--book-cover-width":"124px"'));
-                assert(saved.includes('"settings":{'));
-
-                // 常规重置保留最新主题，布局与普通设置一起删除，并同步到另一标签。
-                await page.locator("#setting .reset-general").click();
-                await other.waitForFunction(() => {
-                    const input = document.querySelector<HTMLInputElement>("#setting-control---book-cover-width");
-                    return (
-                        input?.value === "120" &&
-                        document.documentElement.dataset["theme"] === "breeze" &&
-                        !document.querySelector("#setting")?.hasAttribute("data-panel-positioned")
-                    );
-                });
-
-                // 完整重置和随后输入使用同一顺序，不把重置当成从旧内存快照开始的整页覆盖。
-                await page.locator("#setting .reset").click();
-                await other.waitForFunction(() => document.documentElement.dataset["theme"] === "sunny");
-                await size.press("ArrowRight");
-                await page.waitForFunction(() =>
-                    localStorage.getItem("aura.bookshelf.appearance")?.includes('"121px"')
-                );
-
-                // 页面销毁只结束呈现，已接受的设置写入仍完成；重新进入时从持久化恢复。
-                const exitBarrier = await other.evaluateHandle(() => {
-                    const state = { granted: false, release: (): void => undefined };
-                    void navigator.locks.request("aura.bookshelf.appearance", async () => {
-                        state.granted = true;
-                        await new Promise<void>((resolve) => {
-                            state.release = resolve;
-                        });
-                    });
-                    return state;
-                });
-                try {
-                    await other.waitForFunction((state) => state.granted, exitBarrier);
-                    await page.locator("#setting-control---book-cover-width").press("ArrowRight");
-                    await page.locator("#setting .close").click();
-                    await openBook(page, "appearance.txt");
-                } finally {
-                    await exitBarrier.evaluate((state) => {
-                        state.release();
-                    });
-                    await exitBarrier.dispose();
-                }
-                await other.waitForFunction(() =>
-                    localStorage.getItem("aura.bookshelf.appearance")?.includes('"122px"')
-                );
-                await page.locator("#return-bookshelf").click();
-                await page.locator(".book-open").waitFor();
-                await page.locator("#toggle-setting-panel").click();
-                assert.equal(await page.locator("#setting-control---book-cover-width").inputValue(), "122");
-
-                // 阅读器的工具栏和常规设置共用同一快照；外部重置必须同时刷新两者。
-                await page.locator("#setting .close").click();
-                await other.locator("#setting .close").click();
-                await openBook(page, "appearance.txt");
-                await openBook(other, "appearance.txt");
-                await other.locator("#toggle-setting-panel").click();
-                await page.locator(".reader-tools-toggle").click();
-                await other.waitForFunction(() =>
-                    document.querySelector("#reader-actions")?.hasAttribute("data-collapsed")
-                );
-                await other.locator("#setting-control-font-size").press("ArrowRight");
-                await page.waitForFunction(() => {
-                    const saved = localStorage.getItem("aura.reader.appearance");
-                    return saved?.includes('"font-size"') && saved.includes('"collapsed":true');
-                });
-                await other.locator("#setting .reset-general").click();
-                await page.waitForFunction(() => {
-                    const saved = localStorage.getItem("aura.reader.appearance");
-                    return (
-                        !document.querySelector("#reader-actions")?.hasAttribute("data-collapsed") &&
-                        saved?.includes('"theme":"paper"') &&
-                        !saved.includes('"font-size"')
-                    );
-                });
-                assert(
-                    await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance")?.includes('"122px"'))
-                );
-                assert.deepEqual(diagnostics, []);
-            } finally {
-                await other.close();
-            }
+            // 阅读页的重置覆盖工具栏和面板，同时保留书架偏好与书籍。
+            await openBook(page, "appearance.txt");
+            await page.locator("#toggle-setting-panel").click();
+            const fontSize = page.locator("#setting-control-font-size");
+            const defaultFontSize = await fontSize.inputValue();
+            await page.locator("#setting .close").click();
+            await page.locator(".reader-tools-toggle").click();
+            await page.locator("#reader-actions[data-collapsed]").waitFor();
+            await page.reload();
+            await page.locator("#reader-actions[data-collapsed]").waitFor();
+            await page.locator("#toggle-setting-panel:not([disabled])").waitFor({ state: "attached" });
+            await page.locator(".reader-tools-toggle").click();
+            await page.locator("#toggle-setting-panel").click();
+            await fontSize.fill(String(Number(defaultFontSize) + 1));
+            await page.locator("#setting > header").press("ArrowLeft");
+            await page.locator("#setting .reset-general").click();
+            await page.waitForFunction(
+                (value) => document.querySelector<HTMLInputElement>("#setting-control-font-size")?.value === value,
+                defaultFontSize
+            );
+            assert.equal(await page.locator("#setting").getAttribute("data-panel-positioned"), null);
+            assert.equal(await page.locator(".reader-tools-toggle").getAttribute("aria-expanded"), "true");
+            const readerAppearance = await page.evaluate(() => localStorage.getItem("aura.reader.appearance"));
+            assert(readerAppearance);
+            assert(readerAppearance.includes('"theme":"paper"'));
+            assert(!readerAppearance.includes('"font-size"'));
+            assert(!readerAppearance.includes('"toolbar"'));
+            assert(await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance")?.includes('"121px"')));
+            await page.locator("#setting .close").click();
+            await page.locator("#return-bookshelf").click();
+            await page.locator(".book-open").waitFor();
         });
     });
 }
