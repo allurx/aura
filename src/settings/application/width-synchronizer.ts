@@ -8,7 +8,6 @@ import { run } from "@/utils/event-util";
 
 /**
  * 按原生 resize 的样式变更批次保存 inline 宽度；响应式实际尺寸不回写首选值。
- *
  */
 export default class WidthSynchronizer {
     private discardPending: (() => void) | undefined;
@@ -24,7 +23,7 @@ export default class WidthSynchronizer {
             commit,
         }: {
             getValue: () => string | undefined;
-            commit: (value: string) => Promise<void>;
+            commit: (value: string) => void;
         },
         signal: AbortSignal
     ): void {
@@ -35,7 +34,9 @@ export default class WidthSynchronizer {
             if (value === observedValue) return;
             observedValue = value;
             if (value === undefined || !this.width.accepts(value) || getValue() === value) return;
-            run(() => commit(value));
+            run(() => {
+                commit(value);
+            });
         };
         const observer = new MutationObserver(() => {
             if (!signal.aborted) submit();
@@ -58,7 +59,7 @@ export default class WidthSynchronizer {
     }
 
     /**
-     * 重置前清除尚未观察的旧宽度；已提交操作按同源写入顺序先完成，再执行重置。
+     * 重置前清除尚未观察的旧宽度，避免观察回调再次保存被重置的输入。
      */
     public cancelPending(): void {
         this.discardPending?.();

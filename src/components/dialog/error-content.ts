@@ -14,7 +14,7 @@ export function createErrorContent(error: unknown): { title: string; content: HT
     const knownCause = causes.find(
         (cause): cause is DOMException =>
             cause instanceof DOMException &&
-            ["QuotaExceededError", "SecurityError", "NotReadableError", "NotSupportedError"].includes(cause.name)
+            ["QuotaExceededError", "SecurityError", "NotReadableError"].includes(cause.name)
     );
     let title = "操作遇到问题";
     let reason: string | undefined;
@@ -34,11 +34,6 @@ export function createErrorContent(error: unknown): { title: string; content: HT
             title = "所选文件无法读取";
             reason = "浏览器无法读取所选文件。";
             recovery = "请确认文件可以打开，再重新选择。";
-            break;
-        case "NotSupportedError":
-            title = "当前环境不支持这项操作";
-            reason = "当前浏览器或打开方式不支持这项操作。";
-            recovery = "请更换支持的浏览器，或按使用指南调整打开方式。";
             break;
     }
 

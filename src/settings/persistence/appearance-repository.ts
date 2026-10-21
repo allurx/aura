@@ -14,62 +14,10 @@ import type { PanelName } from "../models/page-appearance";
  * 只读取当前设置清单允许的值，不转换旧结构或回写读取结果。
  */
 export default class AppearanceRepository {
-    private static readonly changes = new EventTarget();
     private readonly storageKey: string;
 
     public constructor(private readonly configuration: SettingConfiguration) {
         this.storageKey = `aura.${configuration.pageName}.appearance`;
-    }
-
-    /**
-     * 在同源排他锁内读取并修改最新快照；回调只执行同步操作，不在锁内等待布局或其他任务。
-     * 已接受的写入不随页面卸载取消，随后创建的同页实例也会收到完成通知。
-     */
-    public async transact(action: (appearance: PageAppearance) => void): Promise<void> {
-        const browser: { readonly locks?: LockManager } = navigator;
-        const locks = browser.locks;
-        if (!locks) {
-            throw new DOMException(
-                "当前环境不支持安全协调外观保存，请使用支持 Web Locks 的安全上下文。",
-                "NotSupportedError"
-            );
-        }
-        await locks.request(this.storageKey, () => {
-            action(this.load());
-        });
-        AppearanceRepository.changes.dispatchEvent(new CustomEvent(this.storageKey, { detail: this }));
-    }
-
-    /**
-     * 跨标签和同文档的其他页面实例都回读当前快照，不使用可能已经过期的事件值。
-     */
-    public subscribe(listener: () => void, signal: AbortSignal): void {
-        window.addEventListener(
-            "storage",
-            (event) => {
-                if (event.storageArea === localStorage && (event.key === this.storageKey || event.key === null))
-                    listener();
-            },
-            { signal }
-        );
-        AppearanceRepository.changes.addEventListener(
-            this.storageKey,
-            (event) => {
-                if (event instanceof CustomEvent && event.detail !== this) listener();
-            },
-            { signal }
-        );
-        // 部分浏览器的 file 页面共享存储却不可靠投递 storage，切回页面时重新读取。
-        if (location.protocol === "file:") {
-            window.addEventListener("focus", listener, { signal });
-            document.addEventListener(
-                "visibilitychange",
-                () => {
-                    if (document.visibilityState === "visible") listener();
-                },
-                { signal }
-            );
-        }
     }
 
     /**

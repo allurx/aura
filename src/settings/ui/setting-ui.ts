@@ -72,11 +72,13 @@ export default class SettingUi extends Ui {
             this.themeElement,
             configuration,
             {
-                commit: async (setting, value) => {
+                commit: (setting, value) => {
                     // input 已实时保存；关闭后的迟到事件不能继续改变当前页面外观。
-                    if (this.root.open) await listener.commit(setting, value);
+                    if (this.root.open) listener.commit(setting, value);
                 },
-                resetSetting: (setting) => listener.resetSetting(setting),
+                resetSetting: (setting) => {
+                    listener.resetSetting(setting);
+                },
             },
             signal
         );
@@ -147,13 +149,20 @@ export default class SettingUi extends Ui {
         }
 
         // 面板只发出重置操作，保存与刷新由监听器协调。
-        bind(this.resetElement, "click", () => listener.reset(), { signal });
+        bind(
+            this.resetElement,
+            "click",
+            () => {
+                listener.reset();
+            },
+            { signal }
+        );
         bind(
             this.resetGeneralElement,
             "click",
-            async () => {
+            () => {
                 if (this.resetGeneralElement.getAttribute("aria-disabled") === "true") return;
-                await listener.resetGeneral();
+                listener.resetGeneral();
             },
             { signal }
         );

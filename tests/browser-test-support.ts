@@ -170,7 +170,7 @@ export async function setMode(page: Page, mode: "cover" | "slide" | "scroll" | "
 }
 
 /**
- * 在已打开的设置面板输入字号，等待异步保存后的实际样式，不等待后台全章排版。
+ * 在已打开的设置面板输入字号，等待实际样式生效，不等待后台全章排版。
  */
 export async function setReaderFontSize(page: Page, value: number): Promise<void> {
     await page.locator("#setting-control-font-size").fill(String(value));

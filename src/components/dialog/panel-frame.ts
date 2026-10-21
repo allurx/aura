@@ -20,7 +20,7 @@ export interface PanelBounds {
  */
 export interface PanelFrameBinding {
     getValue(): PanelBounds | undefined;
-    commit(value: PanelBounds | undefined): Promise<void>;
+    commit(value: PanelBounds | undefined): void;
     subscribe(listener: () => void, signal: AbortSignal): void;
 }
 
@@ -48,7 +48,6 @@ export default function enablePanelFrame(
     let preferred = binding.getValue();
     let gesture: PanelGesture | undefined;
     let nativeSize = "";
-    let pendingCommits = 0;
     const pointers = new Set<number>();
     const title = header.querySelector("h2")?.textContent ?? "面板";
     const help = document.createElement("span");
@@ -139,7 +138,7 @@ export default function enablePanelFrame(
         if (current && !current.resize && header.hasPointerCapture(current.pointerId))
             header.releasePointerCapture(current.pointerId);
         clearNativeSize();
-        if (pendingCommits === 0) preferred = binding.getValue();
+        preferred = binding.getValue();
         apply();
     };
     const sync = (): void => {
@@ -149,31 +148,21 @@ export default function enablePanelFrame(
     /**
      * 有效输入即时保存；失败恢复权威旧值并保留原异常。
      */
-    const commit = async (value: PanelBounds | undefined): Promise<void> => {
-        pendingCommits++;
-        preferred = value;
-        apply();
+    const commit = (value: PanelBounds | undefined): void => {
         try {
-            await binding.commit(value);
+            binding.commit(value);
         } catch (error) {
-            if (!signal.aborted && pendingCommits === 1) {
-                preferred = binding.getValue();
-                finish();
-            }
+            finish();
             throw error;
-        } finally {
-            pendingCommits--;
-            if (!signal.aborted && pendingCommits === 0) {
-                preferred = binding.getValue();
-                apply();
-            }
         }
+        preferred = binding.getValue();
+        apply();
     };
 
     /**
      * 浏览器原生 resize 写入普通 width/height；CSS 变量变化不进入提交路径。
      */
-    const readNativeSize = async (): Promise<void> => {
+    const readNativeSize = (): void => {
         const width = dialog.style.width;
         const height = dialog.style.height;
         const signature = width + "|" + height;
@@ -185,7 +174,7 @@ export default function enablePanelFrame(
             return;
         }
         const bounds = dialog.getBoundingClientRect();
-        await commit({
+        commit({
             left: bounds.left,
             top: bounds.top,
             width: Math.max(320, bounds.width),
@@ -228,12 +217,12 @@ export default function enablePanelFrame(
         apply();
         if (!resizing) header.setPointerCapture(event.pointerId);
     };
-    const move = async (event: PointerEvent): Promise<void> => {
+    const move = (event: PointerEvent): void => {
         const current = gesture;
         if (current?.pointerId !== event.pointerId || current.resize) return;
         const left = current.bounds.left + event.clientX - current.x;
         const top = current.bounds.top + event.clientY - current.y;
-        await commit({
+        commit({
             left: Math.max(
                 current.viewport.left,
                 Math.min(left, current.viewport.left + current.viewport.width - current.bounds.width)
@@ -250,7 +239,7 @@ export default function enablePanelFrame(
     /**
      * 标题栏提供原生尺寸手柄之外的键盘入口，不占用内部输入和目录方向键。
      */
-    const keydown = async (event: KeyboardEvent): Promise<void> => {
+    const keydown = (event: KeyboardEvent): void => {
         if (!enabled() || !dialog.open || event.target !== header || event.altKey || event.ctrlKey || event.metaKey)
             return;
         const directions: Readonly<Record<string, readonly [number, number]>> = {
@@ -265,14 +254,14 @@ export default function enablePanelFrame(
         event.stopPropagation();
         finish();
         if (!direction) {
-            await commit(undefined);
+            commit(undefined);
             return;
         }
         const bounds = dialog.getBoundingClientRect();
         const viewport = available();
         const previous = preferred;
         if (event.shiftKey) {
-            await commit({
+            commit({
                 left: bounds.left,
                 top: bounds.top,
                 width:
@@ -291,7 +280,7 @@ export default function enablePanelFrame(
                           ),
             });
         } else {
-            await commit({
+            commit({
                 left: Math.max(
                     viewport.left,
                     Math.min(bounds.left + direction[0] * 8, viewport.left + viewport.width - bounds.width)
@@ -361,10 +350,9 @@ export default function enablePanelFrame(
         { signal }
     );
     const observer = new MutationObserver((records) => {
-        run(async () => {
+        run(() => {
             if (records.some((record) => record.target === dialog && record.attributeName === "style"))
-                await readNativeSize();
-            if (signal.aborted) return;
+                readNativeSize();
             if (records.some((record) => record.target !== dialog || record.attributeName === "open")) sync();
         });
     });

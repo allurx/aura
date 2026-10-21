@@ -75,7 +75,7 @@ npm run dev
 
 主题、材质、翻页方式和封面选项共用[原生单选控件骨架](../src/settings/controls/radio-setting-control.ts)及其[基础样式](../src/settings/controls/radio-setting-control.css)，分组、点击区域和键盘焦点在此维护；各控件保留自己的图示、说明和排版。设置的值域和应用行为由[定义目录](../src/settings/definitions/)维护，连续控件在原生 input 时实时应用并保存有效值，选项在选择时生效；保存及失败恢复统一归外观 Controller，同值的 change 不重复应用或保存，不建立页面预览会话。
 
-外观写入通过 [Web Locks](https://developer.mozilla.org/en-US/docs/Web/API/Web_Locks_API) 串行处理同源页面对同一快照的更新。取得锁后重新读取存储，只执行本次设置、重置或布局操作；不同字段分别保留，同一字段以最后成功提交为准。外部修改通过存储事件回读；本地文件页面还在重新获得焦点或恢复可见时读取，适应不同浏览器的通知行为。正在阅读的页面由正文布局恢复内容位置。缺少 Web Locks 的环境可读取已有外观，但保存会明确失败，不静默退回可能覆盖其他标签页的写法。
+外观以当前页面持有的完整快照同步写入 `localStorage`，保存成功后再应用到界面；保存失败时保留原值并显示错误。页面初始化时恢复已保存的快照，不提供跨页面实时同步或字段合并；多个同类页面同时调整外观时，以最后保存的整页快照为准。书架与阅读器使用独立键，互不覆盖。
 
 数据库名、版本、store 主键、索引 `keyPath` 和 `unique` 由数据库 schema 统一维护，初始化直接读取这份描述。`StoreRecords` 将 store 名称关联到[领域记录类型](../src/domain/)，具体字段由领域类型定义；存储 API 在编译期约束所选 store 与索引名的组合。命名约束见 [AGENTS.md 的工程原则](../AGENTS.md#工程原则)。
 
@@ -144,7 +144,7 @@ npm run preview
 
 `npm run format` 会改写 Prettier 支持且未被排除的文件，运行后应审查实际 diff。迭代时先运行与改动有关的检查，需要完整验证两种产物时执行 `npm run verify`。
 
-回归测试使用 Node.js 内置测试运行器和 Playwright 浏览器驱动。运行前安装 Google Chrome；测试会启动独立的无界面浏览器和隔离上下文，不连接日常浏览器资料，也不下载浏览器。GitHub Actions 的 Ubuntu runner 已提供 Chrome。[测试目录](../tests/)保留原文件保真、共享正文与事务完整性、EPUB 内容语义及资源边界、阅读定位和跨页面外观保存等核心契约。存储故障用例严格匹配预期诊断，其余浏览器错误、警告和 DevTools Issues 仍会使测试失败。具体控件、布局和一次性边界使用临时脚本验证，完成后清理。
+回归测试使用 Node.js 内置测试运行器和 Playwright 浏览器驱动。运行前安装 Google Chrome；测试会启动独立的无界面浏览器和隔离上下文，不连接日常浏览器资料，也不下载浏览器。GitHub Actions 的 Ubuntu runner 已提供 Chrome。[测试目录](../tests/)保留原文件保真、共享正文与事务完整性、EPUB 内容语义及资源边界、阅读定位和外观保存等核心契约。存储故障用例严格匹配预期诊断，其余浏览器错误、警告和 DevTools Issues 仍会使测试失败。具体控件、布局和一次性边界使用临时脚本验证，完成后清理。
 
 浏览器回归用 Vite 的预览 API 在临时端口提供已构建 Web 文件，服务和浏览器随测试结束关闭。它检查应用行为，不代替下文默认 Wrangler 预览中的正式响应头、部署配置及实际设备检查。
 
