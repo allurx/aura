@@ -7,16 +7,16 @@ import type WidthSetting from "../definitions/width-setting";
 import { run } from "@/utils/event-util";
 
 /**
- * 合并原生 resize 写入的 inline 宽度；响应式实际尺寸不回写首选值。
+ * 按原生 resize 的样式变更批次保存 inline 宽度；响应式实际尺寸不回写首选值。
  *
  */
 export default class WidthSynchronizer {
-    private timer: number | undefined;
+    private discardPending: (() => void) | undefined;
 
     public constructor(private readonly width: WidthSetting) {}
 
     /**
-     * 合并连续 inline 变化，排除已保存值和已失效的观察结果。
+     * 即时提交有效原生宽度；退出前读取最后一次尚未观察的值，不丢弃已接受的写入。
      */
     public start(
         {
@@ -24,47 +24,43 @@ export default class WidthSynchronizer {
             commit,
         }: {
             getValue: () => string | undefined;
-            commit: (value: string) => void;
+            commit: (value: string) => Promise<void>;
         },
         signal: AbortSignal
     ): void {
         let observedValue = this.width.readExternalValue();
 
-        const observer = new MutationObserver(() => {
-            if (signal.aborted) return;
+        const submit = (): void => {
             const value = this.width.readExternalValue();
             if (value === observedValue) return;
             observedValue = value;
-            this.cancelPending();
-            if (value === undefined || !this.width.accepts(value)) return;
-
-            this.timer = window.setTimeout(() => {
-                this.timer = undefined;
-                if (signal.aborted || this.width.readExternalValue() !== value) return;
-                if (getValue() === value) return;
-
-                run(() => {
-                    commit(value);
-                });
-            }, 300);
+            if (value === undefined || !this.width.accepts(value) || getValue() === value) return;
+            run(() => commit(value));
+        };
+        const observer = new MutationObserver(() => {
+            if (!signal.aborted) submit();
         });
+        this.discardPending = () => {
+            observer.takeRecords();
+            observedValue = this.width.readExternalValue();
+        };
 
         observer.observe(this.width.element, { attributes: true, attributeFilter: ["style"] });
         signal.addEventListener(
             "abort",
             () => {
+                submit();
                 observer.disconnect();
-                this.cancelPending();
+                this.discardPending = undefined;
             },
             { once: true }
         );
     }
 
     /**
-     * 重置或离开页面时取消尚未提交的原生宽度变化。
+     * 重置前清除尚未观察的旧宽度；已提交操作按同源写入顺序先完成，再执行重置。
      */
     public cancelPending(): void {
-        window.clearTimeout(this.timer);
-        this.timer = undefined;
+        this.discardPending?.();
     }
 }

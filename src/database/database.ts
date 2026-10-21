@@ -4,8 +4,34 @@
  */
 
 import { DATABASE_SCHEMA, type IndexDefinition } from "./database-schema";
+import OperationError from "@/errors/operation-error";
 
 let connectionPromise: Promise<IDBDatabase> | undefined;
+
+/**
+ * 标识已确认的格式不兼容，供页面提供恢复入口；不将普通读取故障归为需要重置。
+ */
+export class DatabaseFormatError extends OperationError {
+    public constructor(
+        public readonly newer: boolean,
+        cause?: unknown
+    ) {
+        super(
+            newer ? "书库版本高于当前支持范围" : "本地书库格式不兼容",
+            newer
+                ? "这份书库的数据库版本高于当前程序支持的版本，原数据仍保留。"
+                : "当前版本无法读取这份书库，原数据仍保留。",
+            cause,
+            newer
+                ? "请使用原来能读取这份书库的 Aura 版本。确认原文件已保存前，不要重置。"
+                : [
+                      "先保留原始书籍文件；没有原文件时，请在原来可读取书库的版本和浏览器中导出。",
+                      "确认文件已保存后，再重置并重新导入。原分类归属、阅读进度和外观设置不会恢复。",
+                  ]
+        );
+        this.name = "DatabaseFormatError";
+    }
+}
 
 /**
  * 复用当前数据库连接；只初始化当前结构，不迁移旧数据。
@@ -37,6 +63,14 @@ export function openDatabase(): Promise<IDBDatabase> {
                 return;
             }
 
+            // 缺少必需 store 时无法执行当前操作；无关的额外 store 不影响访问，也不清理。
+            const stores = Object.keys(DATABASE_SCHEMA.stores);
+            if (stores.some((name) => !database.objectStoreNames.contains(name))) {
+                database.close();
+                reject(new DatabaseFormatError(false));
+                return;
+            }
+
             // 数据库被升级或删除时释放连接，后续操作重新打开。
             database.onversionchange = () => {
                 database.close();
@@ -48,11 +82,22 @@ export function openDatabase(): Promise<IDBDatabase> {
             resolve(database);
         };
         request.onerror = () => {
-            reject(new Error("Database connection failed", { cause: request.error }));
+            reject(
+                request.error?.name === "VersionError"
+                    ? new DatabaseFormatError(true, request.error)
+                    : new Error("Database connection failed", { cause: request.error })
+            );
         };
         request.onblocked = () => {
             blocked = true;
-            reject(new Error("Database connection blocked. Please close other tabs."));
+            reject(
+                new OperationError(
+                    "书库正被其他页面占用",
+                    "其他 Aura 页面正在使用书库，原数据未改动。",
+                    new Error("Database connection blocked"),
+                    "请关闭其他 Aura 标签页或窗口，再点击“重新读取”。"
+                )
+            );
         };
     }).catch((error: unknown) => {
         connectionPromise = undefined;

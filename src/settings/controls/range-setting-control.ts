@@ -31,23 +31,13 @@ export default class RangeSettingControl extends StyleSettingControl {
         this.attachControl(this.inputElement);
 
         // input 同步保存每个有效值，关闭面板或离开页面无需等待最后一次 change。
-        bind(
-            this.inputElement,
-            "input",
-            (_, input) => {
-                listener.commit(rangeSetting, this.withUnit(input.value));
-            },
-            { signal }
-        );
+        bind(this.inputElement, "input", (_, input) => listener.commit(rangeSetting, this.withUnit(input.value)), {
+            signal,
+        });
 
-        bind(
-            this.inputElement,
-            "change",
-            (_, input) => {
-                listener.commit(rangeSetting, this.withUnit(input.value));
-            },
-            { signal }
-        );
+        bind(this.inputElement, "change", (_, input) => listener.commit(rangeSetting, this.withUnit(input.value)), {
+            signal,
+        });
     }
 
     public override render(value: string | undefined): void {

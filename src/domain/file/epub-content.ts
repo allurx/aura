@@ -99,6 +99,7 @@ export interface EpubElementNode {
     value?: number;
     reversed?: boolean;
     dir?: "ltr" | "rtl" | "auto";
+    lang?: string;
 }
 
 /**
@@ -109,6 +110,44 @@ export interface EpubImageNode {
     path: string;
     alt: string;
     id?: string;
+    dir?: "ltr" | "rtl" | "auto";
+    lang?: string;
 }
 
 export type EpubNode = EpubTextNode | EpubElementNode | EpubImageNode;
+
+const MAX_CONTIGUOUS_EMPTY_NODES = 1024;
+
+/**
+ * 同一源偏移上的空结构无法继续分片；保留常规空列表、表格，同时限制不可拆分的节点量。
+ * 文本按原始长度推进，空白、图片与换行均结束当前空结构序列；各源块独立计数。
+ */
+export function getEpubStructureRejection(blocks: readonly EpubNode[]): string | undefined {
+    let offset = 0;
+    let emptyNodes = 0;
+    const visit = (node: EpubNode): boolean => {
+        const start = offset;
+        if (node.type === "text") {
+            if (node.text.length > 0) {
+                offset += node.text.length;
+                emptyNodes = 0;
+            }
+        } else if (node.type === "image" || node.tag === "br" || node.tag === "hr") {
+            offset++;
+            emptyNodes = 0;
+        } else {
+            for (const child of node.children) {
+                if (!visit(child)) return false;
+            }
+        }
+        return offset !== start || ++emptyNodes <= MAX_CONTIGUOUS_EMPTY_NODES;
+    };
+
+    for (const block of blocks) {
+        offset = 0;
+        emptyNodes = 0;
+        if (!visit(block))
+            return `EPUB 同一内容位置包含过多空结构，最多支持 ${String(MAX_CONTIGUOUS_EMPTY_NODES)} 个零长度节点。`;
+    }
+    return undefined;
+}

@@ -47,8 +47,8 @@ export default abstract class RadioSettingControl extends SettingControl {
         bind(
             input,
             "change",
-            () => {
-                if (input.checked) this.listener.commit(this.setting, value);
+            async () => {
+                if (input.checked) await this.listener.commit(this.setting, value);
             },
             { signal: this.signal }
         );

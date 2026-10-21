@@ -26,6 +26,7 @@ export default class HeaderUi extends Ui {
         const label = count === null ? "" : `${String(count)} 本`;
         if (title.textContent !== category) title.textContent = category;
         if (amount.textContent !== label) amount.textContent = label;
+        this.importButton.disabled = count === null;
         this.renderedQuery = query;
         if (this.search.value !== query) this.search.value = query;
     }

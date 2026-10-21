@@ -7,6 +7,7 @@ import { EpubArchive, EpubImportError } from "./epub-archive";
 import { yieldTask } from "@/utils/task-util";
 import {
     EPUB_ELEMENT_TAGS,
+    getEpubStructureRejection,
     type EpubElementNode,
     type EpubElementTag,
     type EpubLinkTarget,
@@ -72,6 +73,7 @@ const MAX_CONTENT_NODES = 500_000;
 const MAX_ELEMENT_DEPTH = 200;
 const VIRTUAL_ORIGIN = "https://aura-epub.invalid";
 const XHTML_NAMESPACE = "http://www.w3.org/1999/xhtml";
+const XML_NAMESPACE = "http://www.w3.org/XML/1998/namespace";
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const elementTags = new Set<string>(EPUB_ELEMENT_TAGS);
 const discardedTags = new Set(["script", "style", "link", "meta", "head", "template", "noscript", "source"]);
@@ -400,6 +402,8 @@ async function parseSections(
         position: positions.get(element) ?? 0,
     }));
     const sections: EpubSection[] = [];
+    // 原始 html 和 body 不进入模型，按继承顺序把正文语义交给每个章节。
+    const semantics = { ...readSemantics(document.documentElement), ...readSemantics(body) };
     let pendingAnchors: string[] = [];
     let nextAnchor = 0;
     for (const [index, [start, sectionName]] of ordered.entries()) {
@@ -424,19 +428,27 @@ async function parseSections(
         }
         const ownedAnchors = [...pendingAnchors, ...sectionAnchors];
         const bodyId = body.getAttribute("id");
-        const direction = body.getAttribute("dir");
-        const dir = direction === "ltr" || direction === "rtl" || direction === "auto" ? direction : undefined;
-        if (dir || (bodyId && ownedAnchors.includes(bodyId))) {
+        if (semantics.dir !== undefined || (bodyId && ownedAnchors.includes(bodyId))) {
             blocks = [
                 {
                     type: "element",
                     tag: "div",
                     children: blocks,
-                    ...(dir ? { dir } : {}),
+                    ...semantics,
                     ...(bodyId && ownedAnchors.includes(bodyId) ? { id: bodyId } : {}),
                 },
             ];
+        } else if (semantics.lang !== undefined) {
+            // 仅语言继承不合并正文块，保持原有段间距和窗口准备粒度。
+            const lang = semantics.lang;
+            blocks = blocks.map((node): EpubNode =>
+                node.type === "text"
+                    ? { type: "element", tag: "span", lang, children: [node] }
+                    : { ...node, lang: node.lang ?? lang }
+            );
         }
+        const rejection = getEpubStructureRejection(blocks);
+        if (rejection) throw new EpubImportError(rejection);
         sections.push({
             title: sectionName,
             path,
@@ -500,6 +512,16 @@ function sectionTitle(document: Document): string {
 }
 
 /**
+ * 只保留语言和有效方向；XML 语言优先，空语言标记显式终止上层继承。
+ */
+function readSemantics(element: Element): Pick<EpubElementNode, "dir" | "lang"> {
+    const direction = element.getAttribute("dir")?.toLowerCase();
+    const dir = direction === "ltr" || direction === "rtl" || direction === "auto" ? direction : undefined;
+    const lang = element.getAttributeNS(XML_NAMESPACE, "lang") ?? element.getAttribute("lang");
+    return { ...(dir !== undefined ? { dir } : {}), ...(lang !== null ? { lang } : {}) };
+}
+
+/**
  * 顺序解析，避免同时解压多张大图片；空白文本保留以维持行内词间距。
  */
 async function parseChildren(
@@ -535,6 +557,7 @@ async function parseElement(element: Element, path: string, context: ParseContex
     if (discardedTags.has(tag)) return [];
     if (unsupportedTags.has(tag)) throw new EpubImportError(`EPUB 包含尚不支持的正文内容：${tag}`);
     const id = element.getAttribute("id") ?? (tag === "a" ? element.getAttribute("name") : null);
+    const semantics = readSemantics(element);
     if (
         tag === "img" ||
         tag === "image" ||
@@ -548,7 +571,15 @@ async function parseElement(element: Element, path: string, context: ParseContex
             "";
         const target = resolveRequired(reference, path, "EPUB 图片依赖外部资源或缺少路径，无法离线导入。");
         await loadImage(target.path, context);
-        return [{ type: "image", path: target.path, alt: element.getAttribute("alt") ?? "", ...(id ? { id } : {}) }];
+        return [
+            {
+                type: "image",
+                path: target.path,
+                alt: element.getAttribute("alt") ?? "",
+                ...(id ? { id } : {}),
+                ...semantics,
+            },
+        ];
     }
     if (tag === "object") throw new EpubImportError("EPUB 包含尚不支持的嵌入对象。");
     if (tag === "svg" && element.namespaceURI === SVG_NAMESPACE) {
@@ -561,7 +592,9 @@ async function parseElement(element: Element, path: string, context: ParseContex
             const image = images[0];
             if (image) {
                 const children = await parseElement(image, path, context, depth);
-                return id ? [{ type: "element", tag: "div", id, children }] : children;
+                return id || semantics.dir !== undefined || semantics.lang !== undefined
+                    ? [{ type: "element", tag: "div", ...(id ? { id } : {}), ...semantics, children }]
+                    : children;
             }
         }
         const resourcePath = `${path}#aura-inline-image-${String(++context.inlineImageCount)}`;
@@ -575,6 +608,7 @@ async function parseElement(element: Element, path: string, context: ParseContex
                 path: resourcePath,
                 alt: descendants(element, "title")[0]?.textContent ?? "",
                 ...(id ? { id } : {}),
+                ...semantics,
             },
         ];
     }
@@ -582,10 +616,11 @@ async function parseElement(element: Element, path: string, context: ParseContex
         throw new EpubImportError(`EPUB 包含尚不支持的 XML 正文：${tag}`);
 
     const children = await parseChildren(element, path, context, depth);
-    if (!isAllowedTag(tag)) return id ? [{ type: "element", tag: "span", id, children }] : children;
-    const result: EpubElementNode = { type: "element", tag, children, ...(id ? { id } : {}) };
-    const direction = element.getAttribute("dir");
-    if (direction === "ltr" || direction === "rtl" || direction === "auto") result.dir = direction;
+    if (!isAllowedTag(tag))
+        return id || semantics.dir !== undefined || semantics.lang !== undefined
+            ? [{ type: "element", tag: "span", ...(id ? { id } : {}), ...semantics, children }]
+            : children;
+    const result: EpubElementNode = { type: "element", tag, children, ...(id ? { id } : {}), ...semantics };
     if (tag === "a") {
         const href = element.getAttribute("href");
         const target = href ? resolveReference(href, path) : undefined;

@@ -20,6 +20,12 @@ import { ReadingDirection } from "./reading-direction";
 import { assertExists } from "@/utils/assert-util";
 import { PageName } from "@/constants/page-name";
 import OperationError from "@/errors/operation-error";
+import { DatabaseFormatError } from "@/database/database";
+
+/**
+ * 自动离开不可用阅读入口时替换历史；只有书籍已删除才清除阅读上下文。
+ */
+export type ReaderExitReason = "missing" | "unavailable";
 
 /**
  * 编排按页阅读、连续滚动、目录跳转和进度保存，章节仍是按需加载的领域单元。
@@ -41,7 +47,7 @@ export default class ReaderController {
     public constructor(
         appRoot: HTMLElement,
         readerRoot: HTMLElement,
-        private readonly onReturnToBookshelf: (missingBook?: boolean) => void
+        private readonly onReturnToBookshelf: (reason?: ReaderExitReason) => void
     ) {
         this.appUi = new AppUi(appRoot);
         this.readerUi = new ReaderUi(readerRoot);
@@ -86,17 +92,17 @@ export default class ReaderController {
             const state = await initReader(bookId);
             if (signal.aborted) return;
             if (!state) {
-                this.onReturnToBookshelf(true);
+                this.onReturnToBookshelf("missing");
                 return;
             }
-            // 旧进度使用排版比例，不能解释为当前源偏移；按项目约定提示重置，不做隐式迁移。
+            // 无法识别的旧进度不猜测为当前源偏移，保留原文件和原记录供用户处理。
             if (!Number.isSafeInteger(state.progress.contentOffset) || state.progress.contentOffset < 0) {
-                this.onReturnToBookshelf();
+                this.onReturnToBookshelf("unavailable");
                 throw new OperationError(
                     "这本书的阅读数据与当前版本不兼容",
-                    "此版本更新了阅读位置结构，旧位置不会自动转换。",
+                    "当前版本无法识别这本书保存的阅读位置，原有数据尚未改动。",
                     new Error("Unsupported stored reading position"),
-                    "请先从书架导出需要保留的原文件，再重置数据并重新导入。"
+                    ["返回书架，导出这本书的原文件。", "确认文件已保存后，删除这本书并重新导入。原阅读进度不会保留。"]
                 );
             }
             this.state = state;
@@ -121,6 +127,10 @@ export default class ReaderController {
             this.bindEvent(signal);
             this.readerUi.enableReadingControls();
         } catch (error) {
+            if (error instanceof DatabaseFormatError) {
+                if (!signal.aborted) this.onReturnToBookshelf("unavailable");
+                return;
+            }
             if (!signal.aborted) this.readerUi.showReadingTools();
             if (error instanceof OperationError) throw error;
             throw new OperationError(
@@ -153,7 +163,7 @@ export default class ReaderController {
         else if (this.isActive()) {
             this.returningToBookshelf = true;
             this.contentUi.cancelPendingScroll();
-            this.onReturnToBookshelf(true);
+            this.onReturnToBookshelf("missing");
         }
     }
 

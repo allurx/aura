@@ -30,10 +30,10 @@ export default interface SettingUiListener extends SettingControlListener {
     /**
      * 重置页面常规设置，保留主题。
      */
-    resetGeneral(): void;
+    resetGeneral(): Promise<void>;
 
     /**
      * 重置当前页面的主题和常规设置，不影响其他页面。
      */
-    reset(): void;
+    reset(): Promise<void>;
 }

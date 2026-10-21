@@ -5,14 +5,14 @@
 
 import type { ReaderToolsAppearance } from "@/settings/models/page-appearance";
 import { assertExists } from "@/utils/assert-util";
-import { bind } from "@/utils/event-util";
+import { bind, run } from "@/utils/event-util";
 
 /**
  * 工具栏只投影外观偏好，保存与重置通知由设置控制器提供。
  */
 export interface ReaderToolsBinding {
     getValue(): ReaderToolsAppearance;
-    commit(value: ReaderToolsAppearance): void;
+    commit(value: Partial<ReaderToolsAppearance>): Promise<void>;
     subscribe(listener: () => void, signal: AbortSignal): void;
 }
 
@@ -29,6 +29,8 @@ export default class ReaderTools {
     private desktop = false;
     private suppressClick = false;
     private transition: readonly Animation[] | undefined;
+    private signal: AbortSignal | undefined;
+    private pendingCommits = 0;
     private drag:
         | {
               pointerId: number;
@@ -56,6 +58,7 @@ export default class ReaderTools {
      */
     public bindAppearance(binding: ReaderToolsBinding, signal: AbortSignal): void {
         this.binding = binding;
+        this.signal = signal;
         const refresh = (): void => {
             this.appearance = binding.getValue();
             this.render();
@@ -107,14 +110,7 @@ export default class ReaderTools {
                 },
                 { signal }
             );
-            bind(
-                target,
-                "pointerup",
-                (event) => {
-                    this.finishDrag(event);
-                },
-                { signal }
-            );
+            bind(target, "pointerup", (event) => this.finishDrag(event), { signal });
             bind(
                 target,
                 "pointercancel",
@@ -131,14 +127,7 @@ export default class ReaderTools {
                 },
                 { signal }
             );
-            bind(
-                target,
-                "keydown",
-                (event) => {
-                    this.moveWithKeyboard(event, target);
-                },
-                { signal }
-            );
+            bind(target, "keydown", (event) => this.moveWithKeyboard(event, target), { signal });
         }
         bind(
             this.toggle,
@@ -191,14 +180,27 @@ export default class ReaderTools {
     }
 
     /**
-     * 保存成功后投影新状态；保存失败时保留旧偏好和显示，让统一错误入口反馈失败。
+     * 即时投影输入，最后一次保存结束后校准结果；相同结果不打断正在运行的动画。
      */
-    private commit(value: ReaderToolsAppearance): void {
+    private async commit(value: Partial<ReaderToolsAppearance>): Promise<void> {
+        this.pendingCommits++;
+        this.appearance = { ...this.appearance, ...value };
+        this.render();
         try {
-            this.binding?.commit(value);
-            this.appearance = value;
+            await this.binding?.commit(value);
         } finally {
-            this.render();
+            this.pendingCommits--;
+            if (!this.signal?.aborted && this.pendingCommits === 0) {
+                const saved = this.binding?.getValue() ?? this.appearance;
+                if (
+                    saved.collapsed !== this.appearance.collapsed ||
+                    saved.position?.left !== this.appearance.position?.left ||
+                    saved.position?.top !== this.appearance.position?.top
+                ) {
+                    this.appearance = saved;
+                    this.render();
+                }
+            }
         }
     }
 
@@ -236,13 +238,15 @@ export default class ReaderTools {
         this.renderCollapsed(collapsed);
         const bounds = this.root.getBoundingClientRect();
         const nextAnchor = this.toggle.getBoundingClientRect();
-        this.commit({
-            collapsed,
-            position: {
-                left: bounds.left + anchor.left + anchor.width / 2 - nextAnchor.left - nextAnchor.width / 2,
-                top: bounds.top + anchor.top + anchor.height / 2 - nextAnchor.top - nextAnchor.height / 2,
-            },
-        });
+        run(() =>
+            this.commit({
+                collapsed,
+                position: {
+                    left: bounds.left + anchor.left + anchor.width / 2 - nextAnchor.left - nextAnchor.width / 2,
+                    top: bounds.top + anchor.top + anchor.height / 2 - nextAnchor.top - nextAnchor.height / 2,
+                },
+            })
+        );
         if (!this.desktop || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
         const to = this.root.getBoundingClientRect();
         const targetButton = this.toggle.getBoundingClientRect();
@@ -391,14 +395,14 @@ export default class ReaderTools {
     /**
      * 完整拖动仅提交一次；指针取消与 Escape 回到拖动前的位置。
      */
-    private finishDrag(event: PointerEvent): void {
+    private async finishDrag(event: PointerEvent): Promise<void> {
         const drag = this.drag;
         if (drag?.pointerId !== event.pointerId) return;
         const bounds = this.root.getBoundingClientRect();
         this.releaseDrag();
         if (!drag.position) return;
         this.suppressClick = drag.target === this.toggle;
-        this.commit({ ...this.appearance, position: { left: bounds.left, top: bounds.top } });
+        await this.commit({ position: { left: bounds.left, top: bounds.top } });
     }
 
     /**
@@ -423,7 +427,7 @@ export default class ReaderTools {
     /**
      * 手柄与收起入口支持方向键，Shift 加快移动；不将此按键交给正文翻页。
      */
-    private moveWithKeyboard(event: KeyboardEvent, target: HTMLButtonElement): void {
+    private async moveWithKeyboard(event: KeyboardEvent, target: HTMLButtonElement): Promise<void> {
         if (!this.desktop || (target === this.toggle && !this.appearance.collapsed)) return;
         const dx = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
         const dy = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
@@ -435,6 +439,6 @@ export default class ReaderTools {
         const step = event.shiftKey ? 32 : 8;
         this.renderPosition({ left: bounds.left + dx * step, top: bounds.top + dy * step });
         const moved = this.root.getBoundingClientRect();
-        this.commit({ ...this.appearance, position: { left: moved.left, top: moved.top } });
+        await this.commit({ position: { left: moved.left, top: moved.top } });
     }
 }

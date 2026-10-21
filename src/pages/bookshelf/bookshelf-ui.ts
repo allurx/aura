@@ -74,11 +74,13 @@ export default class BookshelfUi extends Ui {
         return this.dialog.confirm(
             createElementFromHtml(`
                 <div class="reset-warning">
-                    <p class="reset-warning-title">
-                        <span class="icon icon-warning" aria-hidden="true"></span><strong>此操作无法撤销</strong>
+                    <p>
+                        将清除 Aura 中的全部书籍、分类归属、阅读进度和外观设置。<strong class="reset-warning-irreversible">此操作无法撤销。</strong>
                     </p>
-                    <p>将清除全部本地数据，包括书籍、阅读进度和外观设置。</p>
-                    <p class="reset-warning-note">请先保留原始书籍文件，并关闭其他 Aura 页面。<br>完成后自动刷新。</p>
+                    <ol class="recovery-steps">
+                        <li>先另存原始书籍文件，未备份请取消。</li>
+                        <li>重置后重新导入，原分类归属、阅读进度和外观设置不会恢复。</li>
+                    </ol>
                 </div>
             `),
             { title: "重置数据", confirmBtnText: "清除全部数据", destructive: true }

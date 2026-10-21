@@ -97,143 +97,151 @@ export default class ChapterLayout {
             // 页界两侧在同一有限批次中测量，避免事后改变已发布前缀的孤行与断页结果。
             while (end < this.view.pieceCount && boundaries.has(end)) end++;
             const lookahead = Math.min(this.view.pieceCount, end + 1);
-            let carry = 0;
-            let inlineCarry = 0;
-            let section = this.view.renderRange(start, lookahead, 0, 0, this.seams);
-            probeViewport.replaceChildren(section);
-            await waitForChapterLayout(section, signal);
-            if (!isActive(signal)) return;
-
-            let origin = section.getBoundingClientRect();
-            const width = probeViewport.getBoundingClientRect().width;
-            const gap = Number.parseFloat(getComputedStyle(section).columnGap) || 0;
-            const stride = Math.max(1, width + gap);
-            const first = layoutContentRect(section, this.view.pieceLocation(start));
-            const top =
-                this.mode === "scroll" && wantedTop !== undefined && first
-                    ? wantedTop - (first.top - origin.top) - leadingBlankSpace(section)
-                    : 0;
-            if (wantedInline !== undefined && first) {
-                const range = locateContentRange(section, this.view.pieceLocation(start));
-                const container = range?.startContainer;
-                const element = container instanceof Element ? container : container?.parentElement;
-                const rtl = element ? getComputedStyle(element).direction === "rtl" : false;
-                inlineCarry = (wantedInline - (first.left - origin.left)) * (rtl ? -1 : 1);
-            }
-            if (this.mode === "paged" && wantedTop !== undefined && first) carry = wantedTop - (first.top - origin.top);
-            if (carry !== 0 || inlineCarry !== 0) {
-                section = this.view.renderRange(start, lookahead, carry, inlineCarry, this.seams);
-                probeViewport.replaceChildren(section);
+            const release = await this.view.prepareRange(start, lookahead, signal);
+            if (!release) return;
+            try {
+                let carry = 0;
+                let inlineCarry = 0;
+                let section = this.view.renderRange(start, lookahead, 0, 0, this.seams);
+                this.view.mountMeasurement(probeViewport, section);
                 await waitForChapterLayout(section, signal);
                 if (!isActive(signal)) return;
-                origin = section.getBoundingClientRect();
-            }
 
-            const currentSeed = this.seed;
-            if (currentSeed && seedIndex !== undefined && seedIndex >= start && seedIndex < end) {
-                let anchored = layoutAnchorRect(section, currentSeed.location);
-                if (anchored) {
-                    const page = Math.max(0, Math.floor((anchored.left - origin.left + 0.01) / stride));
-                    const top = anchored.top - origin.top;
-                    const inline = anchored.left - origin.left - page * stride;
-                    if (Math.abs(top - currentSeed.top) >= 0.1 || Math.abs(inline - currentSeed.inline) >= 0.1) {
-                        // 仅自然分页与已显示页失配时建立源页界；相位相同的刷新与尺寸往返不增加页面。
-                        const pageStart = compareLocation(currentSeed.location, this.view.pieceLocation(start)) !== 0;
-                        const suffix = this.view.renderFrom(currentSeed.location, lookahead, pageStart);
-                        probeViewport.replaceChildren(suffix);
-                        await waitForChapterLayout(suffix, signal);
-                        if (!isActive(signal)) return;
-                        const suffixOrigin = suffix.getBoundingClientRect();
-                        const suffixRect = layoutAnchorRect(suffix, currentSeed.location);
-                        if (suffixRect) {
-                            const range = locateContentRange(suffix, currentSeed.location);
-                            const container = range?.startContainer;
-                            const element = container instanceof Element ? container : container?.parentElement;
-                            const rtl = element ? getComputedStyle(element).direction === "rtl" : false;
-                            const seam: ChapterSeam = {
-                                location: currentSeed.location,
-                                carry: currentSeed.top - (suffixRect.top - suffixOrigin.top),
-                                inlineCarry:
-                                    (currentSeed.inline - (suffixRect.left - suffixOrigin.left)) * (rtl ? -1 : 1),
-                            };
-                            if (compareLocation(currentSeed.location, this.view.pieceLocation(start)) === 0) {
-                                carry = seam.carry;
-                                inlineCarry = seam.inlineCarry;
-                            } else
-                                this.seams = [...this.seams, seam].toSorted((a, b) =>
-                                    compareLocation(a.location, b.location)
-                                );
-                        }
-                        section = this.view.renderRange(start, lookahead, carry, inlineCarry, this.seams);
-                        probeViewport.replaceChildren(section);
-                        await waitForChapterLayout(section, signal);
-                        if (!isActive(signal)) return;
-                        origin = section.getBoundingClientRect();
-                        anchored = layoutAnchorRect(section, currentSeed.location);
-                    }
-                    if (anchored)
-                        this.seedPageBase =
-                            pageBase +
-                            Math.max(0, Math.floor((anchored.left - origin.left + 0.01) / stride)) -
-                            currentSeed.page;
+                let origin = section.getBoundingClientRect();
+                const width = probeViewport.getBoundingClientRect().width;
+                const gap = Number.parseFloat(getComputedStyle(section).columnGap) || 0;
+                const stride = Math.max(1, width + gap);
+                const first = layoutContentRect(section, this.view.pieceLocation(start));
+                const top =
+                    this.mode === "scroll" && wantedTop !== undefined && first
+                        ? wantedTop - (first.top - origin.top) - leadingBlankSpace(section)
+                        : 0;
+                if (wantedInline !== undefined && first) {
+                    const range = locateContentRange(section, this.view.pieceLocation(start));
+                    const container = range?.startContainer;
+                    const element = container instanceof Element ? container : container?.parentElement;
+                    const rtl = element ? getComputedStyle(element).direction === "rtl" : false;
+                    inlineCarry = (wantedInline - (first.left - origin.left)) * (rtl ? -1 : 1);
                 }
-            }
+                if (this.mode === "paged" && wantedTop !== undefined && first)
+                    carry = wantedTop - (first.top - origin.top);
+                if (carry !== 0 || inlineCarry !== 0) {
+                    section = this.view.renderRange(start, lookahead, carry, inlineCarry, this.seams);
+                    this.view.mountMeasurement(probeViewport, section);
+                    await waitForChapterLayout(section, signal);
+                    if (!isActive(signal)) return;
+                    origin = section.getBoundingClientRect();
+                }
 
-            const rectangle = layoutContentRect(section, this.view.pieceEndLocation(end - 1));
-            const endPage =
-                this.mode === "paged"
-                    ? pageBase +
-                      Math.max(0, Math.floor(((rectangle?.left ?? origin.left) - origin.left + 0.01) / stride))
-                    : 0;
-            const next =
-                end < this.view.pieceCount ? layoutContentRect(section, this.view.pieceLocation(end)) : undefined;
-            const nextPage = next ? Math.max(0, Math.floor((next.left - origin.left + 0.01) / stride)) : 0;
-            const endCarry = next ? next.top - origin.top : 0;
-            wantedTop = next ? (this.mode === "scroll" ? top : 0) + next.top - origin.top : undefined;
-            wantedInline =
-                next && this.view.continuesText(end)
-                    ? next.left - origin.left - (this.mode === "paged" ? nextPage * stride : 0)
-                    : undefined;
+                const currentSeed = this.seed;
+                if (currentSeed && seedIndex !== undefined && seedIndex >= start && seedIndex < end) {
+                    let anchored = layoutAnchorRect(section, currentSeed.location);
+                    if (anchored) {
+                        const page = Math.max(0, Math.floor((anchored.left - origin.left + 0.01) / stride));
+                        const top = anchored.top - origin.top;
+                        const inline = anchored.left - origin.left - page * stride;
+                        if (Math.abs(top - currentSeed.top) >= 0.1 || Math.abs(inline - currentSeed.inline) >= 0.1) {
+                            // 仅自然分页与已显示页失配时建立源页界；相位相同的刷新与尺寸往返不增加页面。
+                            const pageStart =
+                                compareLocation(currentSeed.location, this.view.pieceLocation(start)) !== 0;
+                            const suffix = this.view.renderFrom(currentSeed.location, lookahead, pageStart);
+                            this.view.mountMeasurement(probeViewport, suffix);
+                            await waitForChapterLayout(suffix, signal);
+                            if (!isActive(signal)) return;
+                            const suffixOrigin = suffix.getBoundingClientRect();
+                            const suffixRect = layoutAnchorRect(suffix, currentSeed.location);
+                            if (suffixRect) {
+                                const range = locateContentRange(suffix, currentSeed.location);
+                                const container = range?.startContainer;
+                                const element = container instanceof Element ? container : container?.parentElement;
+                                const rtl = element ? getComputedStyle(element).direction === "rtl" : false;
+                                const seam: ChapterSeam = {
+                                    location: currentSeed.location,
+                                    carry: currentSeed.top - (suffixRect.top - suffixOrigin.top),
+                                    inlineCarry:
+                                        (currentSeed.inline - (suffixRect.left - suffixOrigin.left)) * (rtl ? -1 : 1),
+                                };
+                                if (compareLocation(currentSeed.location, this.view.pieceLocation(start)) === 0) {
+                                    carry = seam.carry;
+                                    inlineCarry = seam.inlineCarry;
+                                } else
+                                    this.seams = [...this.seams, seam].toSorted((a, b) =>
+                                        compareLocation(a.location, b.location)
+                                    );
+                            }
+                            section = this.view.renderRange(start, lookahead, carry, inlineCarry, this.seams);
+                            this.view.mountMeasurement(probeViewport, section);
+                            await waitForChapterLayout(section, signal);
+                            if (!isActive(signal)) return;
+                            origin = section.getBoundingClientRect();
+                            anchored = layoutAnchorRect(section, currentSeed.location);
+                        }
+                        if (anchored)
+                            this.seedPageBase =
+                                pageBase +
+                                Math.max(0, Math.floor((anchored.left - origin.left + 0.01) / stride)) -
+                                currentSeed.page;
+                    }
+                }
 
-            let batchHeight = 0;
-            if (this.mode === "scroll") {
-                // 源段落可在两批中共享一行；分别测量真实范围，不累加重叠行或四舍五入间距。
-                section = this.view.renderRange(start, end, 0, inlineCarry);
-                probeViewport.replaceChildren(section);
-                await waitForChapterLayout(section, signal);
-                if (!isActive(signal)) return;
-                batchHeight = section.getBoundingClientRect().height;
-            }
-            const batch: ChapterLayoutBatch = {
-                start,
-                end,
-                carry,
-                inlineCarry,
-                pageBase,
-                endPage,
-                endCarry,
-                top,
-                height: batchHeight,
-                ...(this.seams.length > 0 ? { seams: this.seams } : {}),
-            };
-            this.batches.push(batch);
-            this.knownHeight = Math.max(this.knownHeight, top + batchHeight);
-            if (end === this.view.pieceCount) {
-                this.pageCount =
+                const rectangle = layoutContentRect(section, this.view.pieceEndLocation(end - 1));
+                const endPage =
                     this.mode === "paged"
-                        ? pageBase + Math.max(1, Math.round((section.scrollWidth + gap) / stride))
-                        : 1;
-                this.totalHeight = top + batchHeight;
-                this.complete = true;
+                        ? pageBase +
+                          Math.max(0, Math.floor(((rectangle?.left ?? origin.left) - origin.left + 0.01) / stride))
+                        : 0;
+                const next =
+                    end < this.view.pieceCount ? layoutContentRect(section, this.view.pieceLocation(end)) : undefined;
+                const nextPage = next ? Math.max(0, Math.floor((next.left - origin.left + 0.01) / stride)) : 0;
+                const endCarry = next ? next.top - origin.top : 0;
+                wantedTop = next ? (this.mode === "scroll" ? top : 0) + next.top - origin.top : undefined;
+                wantedInline =
+                    next && this.view.continuesText(end)
+                        ? next.left - origin.left - (this.mode === "paged" ? nextPage * stride : 0)
+                        : undefined;
+
+                let batchHeight = 0;
+                if (this.mode === "scroll") {
+                    // 源段落可在两批中共享一行；分别测量真实范围，不累加重叠行或四舍五入间距。
+                    section = this.view.renderRange(start, end, 0, inlineCarry);
+                    this.view.mountMeasurement(probeViewport, section);
+                    await waitForChapterLayout(section, signal);
+                    if (!isActive(signal)) return;
+                    batchHeight = section.getBoundingClientRect().height;
+                }
+                const batch: ChapterLayoutBatch = {
+                    start,
+                    end,
+                    carry,
+                    inlineCarry,
+                    pageBase,
+                    endPage,
+                    endCarry,
+                    top,
+                    height: batchHeight,
+                    ...(this.seams.length > 0 ? { seams: this.seams } : {}),
+                };
+                this.batches.push(batch);
+                this.knownHeight = Math.max(this.knownHeight, top + batchHeight);
+                if (end === this.view.pieceCount) {
+                    this.pageCount =
+                        this.mode === "paged"
+                            ? pageBase + Math.max(1, Math.round((section.scrollWidth + gap) / stride))
+                            : 1;
+                    this.totalHeight = top + batchHeight;
+                    this.complete = true;
+                }
+                onBatch(batch);
+                pageBase += nextPage;
+                start = end;
+                await nextFrame(signal);
+            } finally {
+                release();
             }
-            onBatch(batch);
-            pageBase += nextPage;
-            start = end;
-            await nextFrame(signal);
         }
         if (!signal.aborted && this.view.pieceCount === 0) {
             const section = this.view.renderRange(0, 0);
-            probeViewport.replaceChildren(section);
+            this.view.mountMeasurement(probeViewport, section);
             await waitForChapterLayout(section, signal);
             if (!isActive(signal)) return;
             const gap = Number.parseFloat(getComputedStyle(section).columnGap) || 0;

@@ -24,23 +24,9 @@ export default class ColorSettingControl extends StyleSettingControl {
         this.attachControl(this.inputElement);
 
         // 原生选色窗口每次提供有效颜色时都立即应用并保存。
-        bind(
-            this.inputElement,
-            "input",
-            (_, input) => {
-                listener.commit(setting, input.value);
-            },
-            { signal }
-        );
+        bind(this.inputElement, "input", (_, input) => listener.commit(setting, input.value), { signal });
 
-        bind(
-            this.inputElement,
-            "change",
-            (_, input) => {
-                listener.commit(setting, input.value);
-            },
-            { signal }
-        );
+        bind(this.inputElement, "change", (_, input) => listener.commit(setting, input.value), { signal });
     }
 
     public override render(value: string | undefined): void {
