@@ -5,7 +5,7 @@
 
 import template from "./reader.html?raw";
 import BasePage from "@/pages/base-page";
-import ReaderController from "./reader-controller";
+import ReaderController, { type ReaderExitReason } from "./reader-controller";
 
 /**
  * 阅读器页面。
@@ -13,11 +13,11 @@ import ReaderController from "./reader-controller";
 export default class Reader extends BasePage {
     /**
      * 保存路由提供的书籍标识与返回动作，实际数据在挂载后加载。
-     * @param onReturnToBookshelf - 参数为 true 时，书籍已确认不存在，路由应丢弃失效阅读上下文。
+     * @param onReturnToBookshelf - 自动退出需替换失效历史，书籍已删除时另清除阅读上下文。
      */
     public constructor(
         public readonly bookId: string,
-        private readonly onReturnToBookshelf: (missingBook?: boolean) => void
+        private readonly onReturnToBookshelf: (reason?: ReaderExitReason) => void
     ) {
         super(template);
     }

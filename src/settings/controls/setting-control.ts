@@ -32,8 +32,8 @@ export default abstract class SettingControl {
         bind(
             this.resetElement,
             "click",
-            () => {
-                if (this.resetElement.getAttribute("aria-disabled") !== "true") listener.resetSetting(setting);
+            async () => {
+                if (this.resetElement.getAttribute("aria-disabled") !== "true") await listener.resetSetting(setting);
             },
             { signal }
         );

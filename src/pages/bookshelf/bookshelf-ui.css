@@ -79,19 +79,18 @@
 
     .reset-warning {
         display: grid;
-        gap: 0.65rem;
+        gap: 20px;
         white-space: normal;
+        text-align: start;
 
-        .reset-warning-title {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: var(--appearance-danger);
-            font-size: 1.0625rem;
+        p {
+            text-wrap: balance;
         }
-        .reset-warning-note {
-            color: var(--appearance-muted-color);
-            font-size: 0.875rem;
+
+        .reset-warning-irreversible {
+            color: var(--appearance-danger);
+            font-size: inherit;
+            font-weight: 600;
         }
     }
     @media (max-width: 768px) {

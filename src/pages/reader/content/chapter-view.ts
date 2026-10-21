@@ -5,6 +5,8 @@
 
 import type Chapter from "@/domain/chapter/chapter";
 import type { EpubNode } from "@/domain/file/epub-content";
+import { getEpubStructureRejection } from "@/domain/file/epub-content";
+import OperationError from "@/errors/operation-error";
 import { assertExists } from "@/utils/assert-util";
 import type { ContentLocation } from "./content-location";
 import { readContentSelection, restoreContentSelection } from "./content-location";
@@ -69,7 +71,11 @@ const blockTags = new Set([
 export default class ChapterView {
     public readonly element = document.createElement("section");
     private readonly urls = new Map<string, string>();
+    private readonly preparingImages = new Map<string, number>();
     private readonly imageSizes = new Map<string, { width: number; height: number }>();
+    private readonly images: { location: ContentLocation; path: string }[] = [];
+    private readonly lifetime = new AbortController();
+    private readonly measurements = new Set<HTMLElement>();
     private readonly sourceAnchors = new Map<string, ContentLocation>();
     private readonly pieces: ChapterPiece[] = [];
 
@@ -84,7 +90,7 @@ export default class ChapterView {
     }
 
     /**
-     * 准备源片段及图片尺寸；初始只安装一个有界窗口，后续由排版器选择范围。
+     * 只准备源片段；目标窗口确定后再读取其图片尺寸，不提前挂载无关的章首内容。
      */
     public static async create(
         chapter: Chapter,
@@ -98,7 +104,7 @@ export default class ChapterView {
         signal.addEventListener("abort", cancel, { once: true });
         try {
             await view.prepare(signal);
-            if (!signal.aborted) view.mountRange(0, view.rangeEnd(0));
+            if (!signal.aborted && view.pieceCount === 0) view.mountRange(0, 0);
             return view;
         } catch (error) {
             view.dispose();
@@ -133,6 +139,80 @@ export default class ChapterView {
             end++;
         }
         return end;
+    }
+
+    /**
+     * 挂载或测量前只准备目标范围内的图片；尺寸仅在本章节会话内复用。
+     * 成功后返回释放函数，调用方在挂载或取消后释放准备引用；undefined 表示已经取消。
+     */
+    public async prepareRange(start: number, end: number, signal: AbortSignal): Promise<(() => void) | undefined> {
+        const lifetime = AbortSignal.any([signal, this.lifetime.signal]);
+        if (lifetime.aborted) return undefined;
+        const paths = this.imagePaths(start, end);
+        for (const path of paths) this.preparingImages.set(path, (this.preparingImages.get(path) ?? 0) + 1);
+        let released = false;
+        const release = (): void => {
+            if (released) return;
+            released = true;
+            for (const path of paths) {
+                const remaining = (this.preparingImages.get(path) ?? 0) - 1;
+                if (remaining > 0) this.preparingImages.set(path, remaining);
+                else this.preparingImages.delete(path);
+            }
+            this.releaseUnusedResources();
+        };
+        try {
+            for (const path of paths) {
+                if (this.imageSizes.has(path)) continue;
+                const size = await readImageSize(this.imageUrl(path), path, lifetime);
+                if (!size || !isActive(lifetime)) {
+                    release();
+                    return undefined;
+                }
+                this.imageSizes.set(path, size);
+            }
+            if (!isActive(lifetime)) {
+                release();
+                return undefined;
+            }
+            return release;
+        } catch (error) {
+            release();
+            throw error;
+        }
+    }
+
+    /**
+     * 同步重排只能使用尺寸已知的范围，不能先提交未知图片再等待它改变页界。
+     */
+    public isRangeReady(start: number, end: number): boolean {
+        return this.imagePaths(start, end).every((path) => this.imageSizes.has(path));
+    }
+
+    /**
+     * 图片位置按源顺序排列，只查目标片段的引用，不为每次窗口更新重扫全章结构。
+     */
+    private imagePaths(start: number, end: number): string[] {
+        const first = this.pieces[start];
+        const last = this.pieces[end - 1];
+        if (!first || !last || start >= end) return [];
+        const from = { blockNumber: first.blockNumber, contentOffset: first.start };
+        const to = { blockNumber: last.blockNumber, contentOffset: last.end };
+        let low = 0;
+        let high = this.images.length;
+        while (low < high) {
+            const middle = Math.floor((low + high) / 2);
+            const image = this.images[middle];
+            if (image && compareLocation(image.location, from) < 0) low = middle + 1;
+            else high = middle;
+        }
+        const paths = new Set<string>();
+        for (let index = low; index < this.images.length; index++) {
+            const image = this.images[index];
+            if (!image || compareLocation(image.location, to) >= 0) break;
+            paths.add(image.path);
+        }
+        return [...paths];
     }
 
     /**
@@ -225,6 +305,24 @@ export default class ChapterView {
     }
 
     /**
+     * 测量视窗只持有当前片段的图片，替换后立即回收不再被正文或其他测量引用的 URL。
+     */
+    public mountMeasurement(viewport: HTMLElement, section: HTMLElement): void {
+        this.measurements.add(viewport);
+        viewport.replaceChildren(section);
+        this.releaseUnusedResources();
+    }
+
+    /**
+     * 测量完成或取消时释放其图片引用；当前可见正文使用的 URL 继续保留。
+     */
+    public releaseMeasurement(viewport: HTMLElement): void {
+        this.measurements.delete(viewport);
+        viewport.replaceChildren();
+        this.releaseUnusedResources();
+    }
+
+    /**
      * 表格、预格式文本与注音整体跨窗口，临时页界不能截断这些原生单元。
      */
     public safeBoundary(location: ContentLocation): ContentLocation {
@@ -309,16 +407,47 @@ export default class ChapterView {
         }
         // 新页界可能拆开原 Text；按源边界恢复，不复用旧 DOM 的子节点索引。
         if (selection && selected) restoreContentSelection(this.element, selection, selected);
+        this.releaseUnusedResources();
     }
 
     /**
      * 释放章节创建的图片 URL；准备失败、取消与移出窗口均可重复调用。
      */
     public dispose(): void {
+        this.lifetime.abort();
         for (const url of this.urls.values()) URL.revokeObjectURL(url);
         this.urls.clear();
+        this.preparingImages.clear();
         this.imageSizes.clear();
+        this.measurements.clear();
         this.sourceAnchors.clear();
+    }
+
+    /**
+     * 引用由实际挂载的有限正文与测量片段决定，后台索引不会累计整章图片 URL。
+     */
+    private releaseUnusedResources(): void {
+        const retained = new Set<string>();
+        for (const root of [this.element, ...this.measurements]) {
+            for (const image of root.querySelectorAll<HTMLImageElement>("img")) retained.add(image.src);
+        }
+        for (const [path, url] of this.urls) {
+            if (retained.has(url) || this.preparingImages.has(path)) continue;
+            URL.revokeObjectURL(url);
+            this.urls.delete(path);
+        }
+    }
+
+    /**
+     * 尺寸准备与随后呈现共用 URL，避免同一图片在两个资源身份下重复加载。
+     */
+    private imageUrl(path: string): string {
+        let url = this.urls.get(path);
+        if (!url) {
+            url = URL.createObjectURL(assertExists(this.resources?.get(path), "Missing EPUB image: " + path));
+            this.urls.set(path, url);
+        }
+        return url;
     }
 
     /**
@@ -331,10 +460,9 @@ export default class ChapterView {
     }
 
     /**
-     * 源模型按块准备，定期让出主线程；图片先解码，排版期间不再等待尺寸变化。
+     * 源模型按块准备并定期让出主线程；图片仅在其片段进入正文或测量窗口时创建 URL。
      */
     private async prepare(signal: AbortSignal): Promise<void> {
-        const imagePaths = new Set<string>();
         if (this.chapter.kind === "text") {
             for (const [index, line] of this.chapter.lines.entries()) {
                 this.addPieces(index + 1, line, line.length, textBreaks(line));
@@ -343,6 +471,14 @@ export default class ChapterView {
             }
         } else {
             if (!this.resources) throw new Error("Content format does not match the opened book");
+            const rejection = getEpubStructureRejection(this.chapter.blocks);
+            if (rejection)
+                throw new OperationError(
+                    "这本书的内容超出支持范围",
+                    "连续空结构过多，无法安全排版。原文件仍保留。",
+                    new Error(rejection),
+                    "请返回书架导出原文件，尝试用其他阅读器打开。"
+                );
             for (const id of this.chapter.startAnchors ?? [])
                 this.sourceAnchors.set(id, { blockNumber: 1, contentOffset: 0 });
             for (const [index, node] of this.chapter.blocks.entries()) {
@@ -364,7 +500,10 @@ export default class ChapterView {
                         for (const boundary of textBreaks(current.text)) boundaries.push(offset + boundary);
                         offset += current.text.length;
                     } else if (current.type === "image") {
-                        imagePaths.add(current.path);
+                        this.images.push({
+                            location: { blockNumber: index + 1, contentOffset: offset },
+                            path: current.path,
+                        });
                         offset++;
                     } else if (current.tag === "br" || current.tag === "hr") offset++;
                     else {
@@ -404,20 +543,6 @@ export default class ChapterView {
                 if (signal.aborted) return;
             }
         }
-        for (const path of imagePaths) {
-            if (signal.aborted) return;
-            const url = URL.createObjectURL(assertExists(this.resources?.get(path), "Missing EPUB image: " + path));
-            this.urls.set(path, url);
-            const image = new Image();
-            image.src = url;
-            try {
-                await image.decode();
-            } catch (error) {
-                if (isActive(signal)) throw error;
-                return;
-            }
-            if (isActive(signal)) this.imageSizes.set(path, { width: image.naturalWidth, height: image.naturalHeight });
-        }
     }
 
     /**
@@ -442,7 +567,7 @@ export default class ChapterView {
                     end,
                     source,
                     length,
-                    nodeCount: typeof source === "string" ? 2 : countSourceNodes(source, start, end),
+                    nodeCount: typeof source === "string" ? 2 : countSourceNodes(source, start, end, end === length),
                 });
                 start = end;
             }
@@ -454,7 +579,7 @@ export default class ChapterView {
                     end,
                     source,
                     length,
-                    nodeCount: typeof source === "string" ? 2 : countSourceNodes(source, start, end),
+                    nodeCount: typeof source === "string" ? 2 : countSourceNodes(source, start, end, end === length),
                 });
                 start = end;
             }
@@ -466,7 +591,7 @@ export default class ChapterView {
                 end,
                 source,
                 length,
-                nodeCount: typeof source === "string" ? 2 : countSourceNodes(source, start, end),
+                nodeCount: typeof source === "string" ? 2 : countSourceNodes(source, start, end, end === length),
             });
     }
 
@@ -576,7 +701,13 @@ export default class ChapterView {
             if (typeof piece.source === "string") block.textContent = piece.source.slice(contentStart, contentEnd);
             else {
                 block.className = "epub-block";
-                const node = this.createEpubSlice(piece.source, contentStart, contentEnd, firstRendered && pageStart);
+                const node = this.createEpubSlice(
+                    piece.source,
+                    contentStart,
+                    contentEnd,
+                    firstRendered && pageStart,
+                    contentEnd === piece.length
+                );
                 if (node) block.append(node);
             }
             // 批次边缘不等于章末，必须保留真实段落间距；块内续片没有额外段落间距。
@@ -598,10 +729,16 @@ export default class ChapterView {
 
     /**
      * 索引直接跳过范围外子树，只克隆源范围及其必要祖先；不挂载原书 DOM。
+     * 接缝处的零长度兄弟归属后续片段；已完整结束的祖先保留自己的尾部空结构。
      */
-    private createEpubSlice(source: SourceNode, start: number, end: number, pageStart = false): Node | undefined {
-        if ((source.end <= start && source.end > source.start) || (source.start >= end && source.end > source.start))
-            return undefined;
+    private createEpubSlice(
+        source: SourceNode,
+        start: number,
+        end: number,
+        pageStart: boolean,
+        includeEnd: boolean
+    ): Node | undefined {
+        if (!intersectsSourceRange(source, start, end, includeEnd)) return undefined;
         const node = source.node;
         if (node.type === "text") {
             return document.createTextNode(
@@ -610,17 +747,16 @@ export default class ChapterView {
         }
         let element: HTMLElement;
         if (node.type === "image") {
+            const size = assertExists(this.imageSizes.get(node.path), "Missing prepared EPUB image: " + node.path);
             const image = document.createElement("img");
-            image.src = assertExists(this.urls.get(node.path), "Missing decoded EPUB image: " + node.path);
+            image.src = this.imageUrl(node.path);
             image.alt = node.alt;
-            const size = this.imageSizes.get(node.path);
-            if (size) {
-                image.width = size.width;
-                image.height = size.height;
-            }
+            image.width = size.width;
+            image.height = size.height;
             element = image;
         } else {
             element = document.createElement(node.tag);
+            const includeTrailing = includeEnd || source.end === end;
             // 源子节点按偏移有序，巨型顶层容器不为每个显示片段重扫全树。
             let low = 0;
             let high = source.children.length;
@@ -632,8 +768,8 @@ export default class ChapterView {
             }
             for (let index = low; index < source.children.length; index++) {
                 const child = source.children[index];
-                if (!child || child.start >= end) break;
-                const result = this.createEpubSlice(child, start, end, pageStart);
+                if (!child || child.start > end || (child.start === end && !includeTrailing)) break;
+                const result = this.createEpubSlice(child, start, end, pageStart, includeTrailing);
                 if (result) element.append(result);
             }
             if (node.href) {
@@ -646,7 +782,6 @@ export default class ChapterView {
             if (node.start !== undefined) element.setAttribute("start", String(node.start));
             if (node.value !== undefined) element.setAttribute("value", String(node.value));
             if (node.reversed) element.setAttribute("reversed", "");
-            if (node.dir) element.dir = source.direction ?? node.dir;
             if (blockTags.has(node.tag) || node.tag === "pre") {
                 // 只处理新页首沿源边界展开的祖先链，不改变后续段落的正常间距。
                 if (source.start < start || (pageStart && source.start === start)) element.style.marginBlockStart = "0";
@@ -654,6 +789,8 @@ export default class ChapterView {
                 if (node.tag === "li" && source.start < start) element.style.listStyleType = "none";
             }
         }
+        if (node.dir) element.dir = source.direction ?? node.dir;
+        if (node.lang !== undefined) element.lang = node.lang;
         element.dataset["sourceKey"] = String(source.id);
         element.dataset["sourceStart"] = String(Math.max(start, source.start));
         element.dataset["sourceEnd"] = String(Math.min(end, source.end));
@@ -687,6 +824,44 @@ function renderedKey(element: Element): string | undefined {
 }
 
 /**
+ * 取消立即结束尺寸读取，迟到的解码结果不进入章节状态；URL 由调用方管理。
+ */
+async function readImageSize(
+    url: string,
+    path: string,
+    signal: AbortSignal
+): Promise<{ width: number; height: number } | undefined> {
+    if (signal.aborted) return undefined;
+    const image = new Image();
+    let cancel: (() => void) | undefined;
+    try {
+        return await new Promise((resolve, reject) => {
+            cancel = () => {
+                resolve(undefined);
+            };
+            signal.addEventListener("abort", cancel, { once: true });
+            image.src = url;
+            void image.decode().then(
+                () => {
+                    if (signal.aborted) resolve(undefined);
+                    else if (image.naturalWidth > 0 && image.naturalHeight > 0)
+                        resolve({ width: image.naturalWidth, height: image.naturalHeight });
+                    else reject(new Error("EPUB image has no intrinsic size: " + path));
+                },
+                (error: unknown) => {
+                    if (signal.aborted) resolve(undefined);
+                    else reject(new Error("Unable to decode EPUB image: " + path, { cause: error }));
+                }
+            );
+            if (signal.aborted) cancel();
+        });
+    } finally {
+        if (cancel) signal.removeEventListener("abort", cancel);
+        image.removeAttribute("src");
+    }
+}
+
+/**
  * 仅索引当前有界窗口，复用完成后即可回收，不持有全章 DOM 缓存。
  */
 function renderedNodes(section: HTMLElement): Map<string, HTMLElement> {
@@ -710,24 +885,34 @@ function moveElement(parent: HTMLElement, element: Element, reference: Element |
 /**
  * 按索引统计将要克隆的节点预算，完全包含的子树不再逐节点遍历。
  */
-function countSourceNodes(source: SourceNode, start: number, end: number): number {
-    if (source.end <= start || source.start >= end) return 0;
+function countSourceNodes(source: SourceNode, start: number, end: number, includeEnd: boolean): number {
+    if (!intersectsSourceRange(source, start, end, includeEnd)) return 0;
     if (source.start >= start && source.end <= end) return source.nodeCount;
+    const includeTrailing = includeEnd || source.end === end;
     let count = 1;
     let low = 0;
     let high = source.children.length;
     while (low < high) {
         const middle = Math.floor((low + high) / 2);
         const child = source.children[middle];
-        if (child && child.end <= start) low = middle + 1;
+        if (child && child.end < start) low = middle + 1;
         else high = middle;
     }
     for (let index = low; index < source.children.length; index++) {
         const child = source.children[index];
-        if (!child || child.start >= end) break;
-        count += countSourceNodes(child, start, end);
+        if (!child || child.start > end || (child.start === end && !includeTrailing)) break;
+        count += countSourceNodes(child, start, end, includeTrailing);
     }
     return count;
+}
+
+/**
+ * 计数与投影共用源范围归属：零长度节点留在后续片段，完整结束的祖先保留尾部空结构。
+ */
+function intersectsSourceRange(source: SourceNode, start: number, end: number, includeEnd: boolean): boolean {
+    return source.start === source.end
+        ? source.start >= start && (source.start < end || (source.start === end && includeEnd))
+        : source.end > start && source.start < end;
 }
 
 /**

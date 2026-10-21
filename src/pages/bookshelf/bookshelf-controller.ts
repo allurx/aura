@@ -21,7 +21,7 @@ import {
 import { bookshelfSession } from "./bookshelf-state";
 import { resetData } from "./reset-data";
 import { DEFAULT_CATEGORY_ID, getCategory } from "@/domain/category/category";
-import { bind } from "@/utils/event-util";
+import { bind, run } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
 import { createBookshelfSettings } from "@/settings/definitions/setting-catalog";
 import SettingController from "@/settings/setting-controller";
@@ -29,6 +29,7 @@ import { PageName } from "@/constants/page-name";
 import OperationError from "@/errors/operation-error";
 import { BOOK_FILE_ACCEPT } from "@/domain/file/book-format";
 import { createErrorContent } from "@/components/dialog/error-content";
+import { DatabaseFormatError } from "@/database/database";
 
 /**
  * 编排书架筛选、数据操作与页面外观，并在异步渲染前核对页面生命周期。
@@ -123,6 +124,17 @@ export default class BookshelfController {
             const books = await getBookSummaries();
             return this.isActive() && version === this.refreshVersion ? books : null;
         } catch (error) {
+            if (error instanceof DatabaseFormatError) {
+                if (this.isActive() && version === this.refreshVersion) {
+                    this.books = null;
+                    this.renderBooks();
+                    this.bookListUi.renderLoadState("error", {
+                        ...createErrorContent(error),
+                        canReset: !error.newer,
+                    });
+                }
+                return null;
+            }
             // 已有摘要仍可保留；首次读取失败则提供原位重试，错误继续进入统一提示。
             if (this.isActive() && version === this.refreshVersion && this.books === null)
                 this.bookListUi.renderLoadState("error");
@@ -149,11 +161,12 @@ export default class BookshelfController {
      * 摘要读取或呈现失败都保留原始原因，并明确当前列表可能尚未更新。
      */
     private createRefreshError(error: unknown): OperationError {
+        if (error instanceof OperationError) return error;
         return new OperationError(
             "书架暂时无法读取",
-            "Aura 没有读到书架中的书籍信息，当前列表可能不是最新结果。",
+            "书架未能读取，当前列表可能尚未更新。",
             error,
-            "请关闭提示后点击“重新读取”，或重新打开书架。"
+            this.books === null ? "请关闭提示后点击“重新读取”。" : "请刷新页面，重新读取书架。"
         );
     }
 
@@ -167,12 +180,7 @@ export default class BookshelfController {
         try {
             await refresh();
         } catch (error) {
-            throw new OperationError(
-                "操作已完成，书架尚未更新",
-                result,
-                error,
-                "请重新打开书架查看，无需重复执行刚才的操作。"
-            );
+            throw new OperationError("操作已完成，书架尚未更新", result, error, "请刷新页面查看结果，无需重复操作。");
         }
     }
 
@@ -209,7 +217,7 @@ export default class BookshelfController {
      * 单次批量导入结束后汇总所有结果，继续允许同内容建立不同书籍记录。
      */
     private async importBooks(files: File[]): Promise<void> {
-        if (files.length === 0 || this.busy || !this.isActive()) return;
+        if (files.length === 0 || this.books === null || this.busy || !this.isActive()) return;
 
         // 批次开始时确定目标分类，文件接受范围与拒绝原因由导入服务统一判断。
         const categoryId = bookshelfSession.categoryId || DEFAULT_CATEGORY_ID;
@@ -240,7 +248,7 @@ export default class BookshelfController {
                         result.books.length > 0 ? "部分文件未导入" : "所选文件未能导入",
                         this.describeImport(result),
                         undefined,
-                        "请按上面的原因检查文件，确认后只重新导入未成功的文件。"
+                        "请检查文件后，仅重新导入未成功的文件。"
                     )
                 );
                 await this.bookshelfUi.dialog.alert(content, { title, confirmBtnText: "知道了", tone: "error" });
@@ -351,7 +359,7 @@ export default class BookshelfController {
     }
 
     /**
-     * 持久化成功后才更新页面摘要，保存失败时由选择器恢复原值。
+     * 持久化成功后才更新页面摘要；只在保存失败时让选择器恢复原值。
      * @returns 是否接受目标分类；提交成功后即使页面已退出也返回 true
      */
     private async moveBook(bookId: string, categoryId: string): Promise<boolean> {
@@ -379,8 +387,13 @@ export default class BookshelfController {
             this.books = assertExists(this.books).map((item) =>
                 item.book.id === bookId ? { ...item, book: { ...item.book, categoryId: category.id } } : item
             );
-            this.renderBooks();
-            this.bookshelfUi.showFeedback(`已移至${category.name}`);
+            // 告知选择器已保存；后续呈现失败单独报告，不能将控件退回未保存的旧分类。
+            run(() =>
+                this.refreshAfterChange(`《${summary.title}》已移至“${category.name}”。`, () => {
+                    this.renderBooks();
+                    this.bookshelfUi.showFeedback(`已移至${category.name}`);
+                })
+            );
             return true;
         } finally {
             this.busy = false;
@@ -494,6 +507,7 @@ export default class BookshelfController {
                 retry: async () => {
                     if (this.isActive() && !this.busy) await this.refreshBooks();
                 },
+                reset: () => this.resetData(),
             },
             signal
         );

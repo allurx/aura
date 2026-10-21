@@ -20,14 +20,8 @@ export interface PanelBounds {
  */
 export interface PanelFrameBinding {
     getValue(): PanelBounds | undefined;
-    commit(value: PanelBounds | undefined): void;
-}
-
-/**
- * 外观重置后重新读取首选矩形。
- */
-export interface PanelFrameUi {
-    refresh(): void;
+    commit(value: PanelBounds | undefined): Promise<void>;
+    subscribe(listener: () => void, signal: AbortSignal): void;
 }
 
 interface PanelGesture {
@@ -50,10 +44,11 @@ export default function enablePanelFrame(
     isFloating: () => boolean,
     binding: PanelFrameBinding,
     signal: AbortSignal
-): PanelFrameUi {
+): void {
     let preferred = binding.getValue();
     let gesture: PanelGesture | undefined;
     let nativeSize = "";
+    let pendingCommits = 0;
     const pointers = new Set<number>();
     const title = header.querySelector("h2")?.textContent ?? "面板";
     const help = document.createElement("span");
@@ -144,7 +139,7 @@ export default function enablePanelFrame(
         if (current && !current.resize && header.hasPointerCapture(current.pointerId))
             header.releasePointerCapture(current.pointerId);
         clearNativeSize();
-        preferred = binding.getValue();
+        if (pendingCommits === 0) preferred = binding.getValue();
         apply();
     };
     const sync = (): void => {
@@ -154,21 +149,31 @@ export default function enablePanelFrame(
     /**
      * 有效输入即时保存；失败恢复权威旧值并保留原异常。
      */
-    const commit = (value: PanelBounds | undefined): void => {
-        try {
-            binding.commit(value);
-        } catch (error) {
-            finish();
-            throw error;
-        }
-        preferred = binding.getValue();
+    const commit = async (value: PanelBounds | undefined): Promise<void> => {
+        pendingCommits++;
+        preferred = value;
         apply();
+        try {
+            await binding.commit(value);
+        } catch (error) {
+            if (!signal.aborted && pendingCommits === 1) {
+                preferred = binding.getValue();
+                finish();
+            }
+            throw error;
+        } finally {
+            pendingCommits--;
+            if (!signal.aborted && pendingCommits === 0) {
+                preferred = binding.getValue();
+                apply();
+            }
+        }
     };
 
     /**
      * 浏览器原生 resize 写入普通 width/height；CSS 变量变化不进入提交路径。
      */
-    const readNativeSize = (): void => {
+    const readNativeSize = async (): Promise<void> => {
         const width = dialog.style.width;
         const height = dialog.style.height;
         const signature = width + "|" + height;
@@ -180,7 +185,7 @@ export default function enablePanelFrame(
             return;
         }
         const bounds = dialog.getBoundingClientRect();
-        commit({
+        await commit({
             left: bounds.left,
             top: bounds.top,
             width: Math.max(320, bounds.width),
@@ -208,6 +213,7 @@ export default function enablePanelFrame(
         )
             return;
         if (!resizing) event.preventDefault();
+        const preference = preferred;
         preferred = { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height };
         gesture = {
             pointerId: event.pointerId,
@@ -216,18 +222,18 @@ export default function enablePanelFrame(
             y: event.clientY,
             bounds: preferred,
             viewport: available(),
-            preference: binding.getValue(),
+            preference,
         };
         dialog.setAttribute("data-panel-interacting", "");
         apply();
         if (!resizing) header.setPointerCapture(event.pointerId);
     };
-    const move = (event: PointerEvent): void => {
+    const move = async (event: PointerEvent): Promise<void> => {
         const current = gesture;
         if (current?.pointerId !== event.pointerId || current.resize) return;
         const left = current.bounds.left + event.clientX - current.x;
         const top = current.bounds.top + event.clientY - current.y;
-        commit({
+        await commit({
             left: Math.max(
                 current.viewport.left,
                 Math.min(left, current.viewport.left + current.viewport.width - current.bounds.width)
@@ -244,7 +250,7 @@ export default function enablePanelFrame(
     /**
      * 标题栏提供原生尺寸手柄之外的键盘入口，不占用内部输入和目录方向键。
      */
-    const keydown = (event: KeyboardEvent): void => {
+    const keydown = async (event: KeyboardEvent): Promise<void> => {
         if (!enabled() || !dialog.open || event.target !== header || event.altKey || event.ctrlKey || event.metaKey)
             return;
         const directions: Readonly<Record<string, readonly [number, number]>> = {
@@ -259,14 +265,14 @@ export default function enablePanelFrame(
         event.stopPropagation();
         finish();
         if (!direction) {
-            commit(undefined);
+            await commit(undefined);
             return;
         }
         const bounds = dialog.getBoundingClientRect();
         const viewport = available();
-        const previous = binding.getValue();
+        const previous = preferred;
         if (event.shiftKey) {
-            commit({
+            await commit({
                 left: bounds.left,
                 top: bounds.top,
                 width:
@@ -285,7 +291,7 @@ export default function enablePanelFrame(
                           ),
             });
         } else {
-            commit({
+            await commit({
                 left: Math.max(
                     viewport.left,
                     Math.min(bounds.left + direction[0] * 8, viewport.left + viewport.width - bounds.width)
@@ -339,6 +345,10 @@ export default function enablePanelFrame(
     bind(header, "lostpointercapture", finish, { signal });
     bind(header, "keydown", keydown, { signal });
     bind(dialog, "close", finish, { signal });
+    binding.subscribe(() => {
+        preferred = binding.getValue();
+        finish();
+    }, signal);
     window.addEventListener("resize", sync, { signal });
     window.visualViewport?.addEventListener("resize", sync, { signal });
     window.visualViewport?.addEventListener("scroll", sync, { signal });
@@ -351,9 +361,10 @@ export default function enablePanelFrame(
         { signal }
     );
     const observer = new MutationObserver((records) => {
-        run(() => {
+        run(async () => {
             if (records.some((record) => record.target === dialog && record.attributeName === "style"))
-                readNativeSize();
+                await readNativeSize();
+            if (signal.aborted) return;
             if (records.some((record) => record.target !== dialog || record.attributeName === "open")) sync();
         });
     });
@@ -380,5 +391,4 @@ export default function enablePanelFrame(
         },
         { once: true }
     );
-    return { refresh: sync };
 }

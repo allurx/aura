@@ -353,6 +353,25 @@
         font-size: 20px;
     }
 
+    .shelf-data-error .error-content {
+        width: min(100%, 32rem);
+        margin-top: 16px;
+        text-align: start;
+        overflow-wrap: anywhere;
+
+        p {
+            max-width: none;
+            margin: 0;
+            color: inherit;
+            font-size: inherit;
+        }
+
+        pre {
+            max-height: 12rem;
+            overflow: auto;
+        }
+    }
+
     .shelf-loading {
         /* 快速读取时不闪出提示，只延后呈现，不延后书籍显示。 */
         animation: shelf-loading-reveal 180ms step-end both;
@@ -488,7 +507,8 @@
     }
 
     .shelf-empty-import,
-    .shelf-retry {
+    .shelf-retry,
+    .shelf-reset {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -555,7 +575,8 @@
         }
 
         .shelf-empty-import,
-        .shelf-retry {
+        .shelf-retry,
+        .shelf-reset {
             margin-top: 16px;
         }
 
@@ -570,7 +591,8 @@
         }
 
         .shelf-empty-import,
-        .shelf-retry {
+        .shelf-retry,
+        .shelf-reset {
             border-color: ButtonText;
         }
     }

@@ -49,6 +49,14 @@ export interface ReadingSnapshot {
 type ChapterTarget = ContentLocation | "start" | "end" | { readonly fragment: string };
 
 /**
+ * 新窗口提交或放弃前保留准备资源，避免尺寸读取后立即撤销同一图片的 URL。
+ */
+interface PreparedChapters {
+    readonly views: ChapterView[];
+    readonly releaseResources: () => void;
+}
+
+/**
  * 正文排版、内容锚点与翻页呈现。滚动保留相邻章节，分页由浏览器自然断行。
  */
 export default class ContentUi extends Ui {
@@ -104,7 +112,9 @@ export default class ContentUi extends Ui {
         signal: AbortSignal
     ): void {
         this.epubResources =
-            file.format === "epub" ? new Map(file.resources.map(({ path, blob }) => [path, blob])) : undefined;
+            file.format === "epub"
+                ? new Map(file.resources.map((resource) => [resource.path, resource.blob]))
+                : undefined;
         this.chapterCount = chapterCount;
         this.loadChapter = loadChapter;
         this.signal = signal;
@@ -240,8 +250,15 @@ export default class ContentUi extends Ui {
      * 按目标位置两侧的实际高度准备窗口，短章继续补充真实内容。
      * 新章节在不可交互的测量视窗中排版，加载失败不替换仍可阅读的正文。
      */
-    private async prepareWindow(chapterNumber: number, target: ChapterTarget, top = 0): Promise<ChapterView[]> {
+    private async prepareWindow(chapterNumber: number, target: ChapterTarget, top = 0): Promise<PreparedChapters> {
         const prepared: ChapterView[] = [];
+        const resourceReleases: (() => void)[] = [];
+        const result = {
+            views: prepared,
+            releaseResources: (): void => {
+                for (const release of resourceReleases) release();
+            },
+        };
         const measureViewport = document.createElement("div");
         measureViewport.className = this.viewport.className;
         measureViewport.inert = true;
@@ -274,7 +291,12 @@ export default class ContentUi extends Ui {
             if (view.pieceCount > 0 && !this.windows.has(view)) {
                 const destination = number === chapterNumber ? target : number < chapterNumber ? "end" : "start";
                 const location = targetLocation(view, destination);
-                this.windows.set(view, new ChapterWindow(view, this.mode, location));
+                this.windows.set(view, await ChapterWindow.create(view, this.mode, location, this.signal));
+            } else if (number === chapterNumber) {
+                const release = await this.windows
+                    .get(view)
+                    ?.prepareLocation(targetLocation(view, target), this.signal);
+                if (release) resourceReleases.push(release);
             }
             return view;
         };
@@ -311,7 +333,7 @@ export default class ContentUi extends Ui {
 
         try {
             const current = await getView(chapterNumber);
-            if (this.signal.aborted || this.mode !== "scroll") return prepared;
+            if (this.signal.aborted || this.mode !== "scroll") return result;
             const viewportHeight = this.viewport.clientHeight;
             const metrics = measureView(current, target);
             let after = metrics.height - metrics.offset;
@@ -320,16 +342,18 @@ export default class ContentUi extends Ui {
             // 正文后一屏预取，前一屏保留；数量由章高决定，不假定每章至少一屏。
             for (let number = chapterNumber + 1; after < viewportHeight * 2 && number <= this.chapterCount; number++) {
                 const view = await getView(number);
-                if (!this.isActive() || this.getMode() !== "scroll") return prepared;
+                if (!this.isActive() || this.getMode() !== "scroll") return result;
                 after += measureView(view).height;
             }
             for (let number = chapterNumber - 1; before < viewportHeight && number >= 1; number--) {
                 const view = await getView(number);
-                if (!this.isActive() || this.getMode() !== "scroll") return prepared;
+                if (!this.isActive() || this.getMode() !== "scroll") return result;
                 before += measureView(view).height;
             }
-            return prepared.sort((a, b) => a.chapter.chapterNumber - b.chapter.chapterNumber);
+            prepared.sort((a, b) => a.chapter.chapterNumber - b.chapter.chapterNumber);
+            return result;
         } catch (error) {
+            result.releaseResources();
             this.releasePrepared(prepared);
             throw error;
         } finally {
@@ -405,7 +429,8 @@ export default class ContentUi extends Ui {
         direction: ReadingDirection
     ): Promise<void> {
         const mode = this.mode;
-        const views = await this.prepareWindow(chapterNumber, target);
+        const prepared = await this.prepareWindow(chapterNumber, target);
+        const views = prepared.views;
         try {
             if (this.signal.aborted || this.mode !== mode) return;
             await this.changePage(async (animated) => {
@@ -430,6 +455,7 @@ export default class ContentUi extends Ui {
             }, direction);
             this.startActiveLayout();
         } finally {
+            prepared.releaseResources();
             this.releasePrepared(views);
         }
     }
@@ -463,7 +489,8 @@ export default class ContentUi extends Ui {
         const position = this.readPosition();
         if (!position) return;
         const scrollTop = this.viewport.scrollTop;
-        const views = await this.prepareWindow(position.location.chapterNumber, position.location, position.top);
+        const prepared = await this.prepareWindow(position.location.chapterNumber, position.location, position.top);
+        const views = prepared.views;
         try {
             // 准备相邻章节时正文仍可原生滚动；等待期间的新位置优先于开始补窗时的缓存。
             const current = this.viewport.scrollTop === scrollTop ? this.readPosition() : this.readVisiblePosition();
@@ -476,6 +503,7 @@ export default class ContentUi extends Ui {
             this.measure();
             this.restorePosition(current);
         } finally {
+            prepared.releaseResources();
             this.releasePrepared(views);
         }
     }
@@ -515,31 +543,47 @@ export default class ContentUi extends Ui {
                 last !== undefined &&
                 last.bottom < viewport.bottom + viewport.height);
         if (outside || nearEdge) {
-            const changed = window.showLocation(location);
-            if (changed) {
-                await this.afterLayout(() => {
-                    if (!this.isActive() || this.mode !== "scroll" || this.windows.get(view) !== window) return;
-                    window.updateScrollSpace();
-                    this.measure();
-                    if (!previous && indexedTarget) {
-                        // 滚动条可以落在已测批次中间；保留请求位置，再从实际正文读取源锚点。
-                        this.viewport.scrollTop +=
-                            view.element.getBoundingClientRect().top +
-                            requestedTop -
-                            this.viewport.getBoundingClientRect().top;
-                        this.position = this.readVisiblePosition();
-                        return;
-                    }
-                    this.restorePosition(
-                        previous ?? {
-                            location,
-                            top: 0,
-                            chapterStart: location.blockNumber === 1 && location.contentOffset === 0,
+            const layout = window.layout;
+            const scrollTop = this.viewport.scrollTop;
+            const release = await window.prepareLocation(location, this.signal);
+            if (!release) return;
+            try {
+                if (window.layout !== layout) return;
+                if (!this.isActive() || this.mode !== "scroll" || this.windows.get(view) !== window) return;
+                // 图片准备期间仍允许原生滚动；较新的用户位置优先，下一轮重新选择窗口。
+                if (this.viewport.scrollTop !== scrollTop) {
+                    if (!this.isOutsideChapterWindow()) this.position = this.readVisiblePosition();
+                    this.windowPending = true;
+                    return;
+                }
+                const changed = window.showLocation(location);
+                if (changed) {
+                    await this.afterLayout(() => {
+                        if (!this.isActive() || this.mode !== "scroll" || this.windows.get(view) !== window) return;
+                        window.updateScrollSpace();
+                        this.measure();
+                        if (!previous && indexedTarget) {
+                            // 滚动条可以落在已测批次中间；保留请求位置，再从实际正文读取源锚点。
+                            this.viewport.scrollTop +=
+                                view.element.getBoundingClientRect().top +
+                                requestedTop -
+                                this.viewport.getBoundingClientRect().top;
+                            this.position = this.readVisiblePosition();
+                            return;
                         }
-                    );
-                    // 估算只选取要挂载的范围；被滚动边界夹取后，以真实可见文字及偏移保存。
-                    if (!previous) this.position = this.readVisiblePosition();
-                });
+                        this.restorePosition(
+                            previous ?? {
+                                location,
+                                top: 0,
+                                chapterStart: location.blockNumber === 1 && location.contentOffset === 0,
+                            }
+                        );
+                        // 估算只选取要挂载的范围；被滚动边界夹取后，以真实可见文字及偏移保存。
+                        if (!previous) this.position = this.readVisiblePosition();
+                    });
+                }
+            } finally {
+                release();
             }
         }
         if (!this.isActive() || this.mode !== "scroll" || this.windows.get(view) !== window) return;

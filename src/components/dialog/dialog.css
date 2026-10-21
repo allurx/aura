@@ -3,6 +3,67 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* 错误可出现在对话框或书架原位状态，两处共用结果、恢复步骤和技术详情的排版。 */
+.error-content {
+    display: grid;
+    gap: 20px;
+    font-size: 15px;
+    line-height: 1.7;
+    text-align: start;
+    white-space: normal;
+
+    p {
+        margin: 0;
+        text-wrap: balance;
+    }
+
+    .error-result {
+        display: grid;
+        gap: 6px;
+    }
+
+    .error-description {
+        white-space: pre-line;
+    }
+
+    .error-diagnostics {
+        margin-top: -8px;
+        font-size: 13px;
+
+        summary {
+            cursor: pointer;
+            color: var(--appearance-muted-color);
+        }
+
+        pre {
+            margin: 10px 0 0;
+            padding: 12px;
+            border-radius: 10px;
+            background: var(--appearance-muted-surface);
+            font-family: ui-monospace, monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+    }
+}
+
+.recovery-steps {
+    margin: 0;
+    padding-inline-start: 1.4em;
+    list-style: decimal outside;
+    text-align: start;
+
+    li {
+        padding-inline-start: 0.15em;
+        text-wrap: balance;
+    }
+
+    li + li {
+        margin-top: 6px;
+    }
+}
+
 .dialog {
     --dialog-padding: 20px;
     font-family: var(--ui-font-family);
@@ -102,49 +163,15 @@
         display: inline-block;
     }
 
-    .error-content {
-        display: grid;
-        gap: 14px;
-
-        p {
-            margin: 0;
-        }
-
-        .error-recovery {
-            color: var(--appearance-muted-color);
-        }
-
-        .error-diagnostics {
-            border-top: 1px solid var(--appearance-border);
-            padding-top: 12px;
-            font-size: 13px;
-
-            summary {
-                cursor: pointer;
-                color: var(--appearance-muted-color);
-            }
-
-            pre {
-                margin: 10px 0 0;
-                padding: 12px;
-                border-radius: 10px;
-                background: var(--appearance-muted-surface);
-                font-family: ui-monospace, monospace;
-                font-size: 12px;
-                white-space: pre-wrap;
-                overflow-wrap: anywhere;
-            }
-        }
-    }
-
     .body {
         min-height: 0;
         padding: 20px var(--dialog-padding);
         overflow: auto;
-        white-space: pre-wrap;
+        white-space: normal;
         overflow-wrap: anywhere;
         line-height: 1.7;
-        font-size: 14px;
+        font-size: 15px;
+        text-align: start;
         overscroll-behavior: contain;
     }
 

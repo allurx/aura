@@ -25,7 +25,7 @@ export default class ChapterWindow {
     private probe: HTMLElement | undefined;
     private mode: ReadingMode;
 
-    public constructor(
+    private constructor(
         public readonly view: ChapterView,
         mode: ReadingMode,
         location: ContentLocation
@@ -38,7 +38,35 @@ export default class ChapterWindow {
             this.range.carry === 0 &&
             this.range.inlineCarry === 0 &&
             !this.range.seams?.length;
-        this.mount();
+    }
+
+    /**
+     * 初次定位只等待目标窗口的图片尺寸；章中打开不先加载章首图片。
+     */
+    public static async create(
+        view: ChapterView,
+        mode: ReadingMode,
+        location: ContentLocation,
+        signal: AbortSignal
+    ): Promise<ChapterWindow> {
+        const window = new ChapterWindow(view, mode, location);
+        const release = await view.prepareRange(window.range.start, window.range.end, signal);
+        if (release) {
+            try {
+                window.mount();
+            } finally {
+                release();
+            }
+        }
+        return window;
+    }
+
+    /**
+     * 未完成索引的定位先准备局部窗口；已测批次使用的尺寸也已留在章节会话中。
+     */
+    public async prepareLocation(location: ContentLocation, signal: AbortSignal): Promise<(() => void) | undefined> {
+        const range = this.previewRange(location);
+        return this.view.prepareRange(range.start, range.end, signal);
     }
 
     /**
@@ -50,7 +78,7 @@ export default class ChapterWindow {
         this.mode = mode;
         this.layout = this.createLayout();
         if (!preserveRange || !sameMode) {
-            const range = this.previewRange(location);
+            const range = this.previewRange(location, this.range);
             const selection = document.getSelection();
             const keepSelection =
                 mode !== "scroll" &&
@@ -109,6 +137,7 @@ export default class ChapterWindow {
                 );
                 if (!lifetime.aborted) onProgress();
             } finally {
+                this.view.releaseMeasurement(probe);
                 probe.remove();
                 if (this.probe === probe) this.probe = undefined;
             }
@@ -179,99 +208,107 @@ export default class ChapterWindow {
         while (this.view.rangeEnd(start) < index && start < index) start++;
         const end = Math.min(this.view.pieceCount, Math.max(requiredEnd, this.view.rangeEnd(start)) + 1);
         if (start === this.range.start && end === this.range.end) return false;
-
-        const shared = direction > 0 ? this.view.pieceLocation(start) : visible;
-        const oldRect = alignmentRect(this.view.element, shared);
-        if (!oldRect) return false;
-        const oldOrigin = this.view.element.getBoundingClientRect();
-        const oldPage = Math.max(0, Math.floor((oldRect.left - oldOrigin.left + 0.01) / stride));
-        const wantedX = oldRect.left - oldOrigin.left - oldPage * stride;
-        const wantedY = oldRect.top - oldOrigin.top;
-        const probe = document.createElement("div");
-        probe.className = viewport.className;
-        probe.classList.add("reading-measure-viewport");
-        probe.inert = true;
-        probe.setAttribute("aria-hidden", "true");
-        Object.assign(probe.style, { width: `${bounds.width}px`, height: `${bounds.height}px` });
-        parent.append(probe);
-        let carry = 0;
-        let inlineCarry = 0;
-        const seams = this.view.seamsInRange(start, end, this.range.seams ?? []);
+        const release = await this.view.prepareRange(start, end, lifetime);
+        if (!release) return false;
         try {
-            for (let attempt = 0; attempt < 4; attempt++) {
-                const section = this.view.renderRange(start, end, carry, inlineCarry, seams);
-                probe.replaceChildren(section);
-                await waitForChapterLayout(section, lifetime);
+            if (this.layout !== layout) return false;
+
+            const shared = direction > 0 ? this.view.pieceLocation(start) : visible;
+            const oldRect = alignmentRect(this.view.element, shared);
+            if (!oldRect) return false;
+            const oldOrigin = this.view.element.getBoundingClientRect();
+            const oldPage = Math.max(0, Math.floor((oldRect.left - oldOrigin.left + 0.01) / stride));
+            const wantedX = oldRect.left - oldOrigin.left - oldPage * stride;
+            const wantedY = oldRect.top - oldOrigin.top;
+            const probe = document.createElement("div");
+            probe.className = viewport.className;
+            probe.classList.add("reading-measure-viewport");
+            probe.inert = true;
+            probe.setAttribute("aria-hidden", "true");
+            Object.assign(probe.style, { width: `${bounds.width}px`, height: `${bounds.height}px` });
+            parent.append(probe);
+            let carry = 0;
+            let inlineCarry = 0;
+            const seams = this.view.seamsInRange(start, end, this.range.seams ?? []);
+            try {
+                for (let attempt = 0; attempt < 4; attempt++) {
+                    const section = this.view.renderRange(start, end, carry, inlineCarry, seams);
+                    this.view.mountMeasurement(probe, section);
+                    await waitForChapterLayout(section, lifetime);
+                    if (lifetime.aborted || this.layout !== layout) return false;
+                    const origin = section.getBoundingClientRect();
+                    const rect = alignmentRect(section, shared);
+                    if (!rect) return false;
+                    const page = Math.max(0, Math.floor((rect.left - origin.left + 0.01) / stride));
+                    const x = rect.left - origin.left - page * stride;
+                    const y = rect.top - origin.top;
+                    const xError = wantedX - x;
+                    const yError = wantedY - y;
+                    if (Math.abs(xError) < 0.1 && Math.abs(yError) < 0.1) {
+                        return this.replace(
+                            {
+                                start,
+                                end,
+                                carry,
+                                inlineCarry,
+                                pageBase: 0,
+                                top: 0,
+                                height: 0,
+                                ...(seams.length > 0 ? { seams } : {}),
+                            },
+                            start === 0 && carry === 0 && inlineCarry === 0 && seams.length === 0
+                        );
+                    }
+                    if (this.view.continuesText(start) && Math.abs(xError) >= 0.1) {
+                        const range = locateContentRange(section, this.view.pieceLocation(start));
+                        const container = range?.startContainer;
+                        const element = container instanceof Element ? container : container?.parentElement;
+                        const rtl = element ? getComputedStyle(element).direction === "rtl" : false;
+                        inlineCarry = modulo(inlineCarry + xError * (rtl ? -1 : 1), Math.max(1, origin.width));
+                    }
+                    carry = direction > 0 ? carry + yError : modulo(carry + yError, Math.max(1, bounds.height));
+                }
+                // 原生分栏可能丢弃段首 margin，使旧临时页的相位无法从更早的源起点重建。
+                // 在已显示页首保留明确页界；前补内容完整结束于该源位置，不等待全章前缀或跳过文字。
+                const boundary = this.view.safeBoundary(visible);
+                const oldBoundary = alignmentRect(this.view.element, boundary);
+                const firstLocation = this.view.pieceLocation(start);
+                const pageStart =
+                    boundary.blockNumber !== firstLocation.blockNumber ||
+                    boundary.contentOffset !== firstLocation.contentOffset;
+                const suffix = this.view.renderFrom(boundary, end, pageStart);
+                this.view.mountMeasurement(probe, suffix);
+                await waitForChapterLayout(suffix, lifetime);
                 if (lifetime.aborted || this.layout !== layout) return false;
-                const origin = section.getBoundingClientRect();
-                const rect = alignmentRect(section, shared);
-                if (!rect) return false;
-                const page = Math.max(0, Math.floor((rect.left - origin.left + 0.01) / stride));
-                const x = rect.left - origin.left - page * stride;
-                const y = rect.top - origin.top;
-                const xError = wantedX - x;
-                const yError = wantedY - y;
-                if (Math.abs(xError) < 0.1 && Math.abs(yError) < 0.1) {
-                    return this.replace(
-                        {
-                            start,
-                            end,
-                            carry,
-                            inlineCarry,
-                            pageBase: 0,
-                            top: 0,
-                            height: 0,
-                            ...(seams.length > 0 ? { seams } : {}),
-                        },
-                        start === 0 && carry === 0 && inlineCarry === 0 && seams.length === 0
-                    );
-                }
-                if (this.view.continuesText(start) && Math.abs(xError) >= 0.1) {
-                    const range = locateContentRange(section, this.view.pieceLocation(start));
-                    const container = range?.startContainer;
-                    const element = container instanceof Element ? container : container?.parentElement;
-                    const rtl = element ? getComputedStyle(element).direction === "rtl" : false;
-                    inlineCarry = modulo(inlineCarry + xError * (rtl ? -1 : 1), Math.max(1, origin.width));
-                }
-                carry = direction > 0 ? carry + yError : modulo(carry + yError, Math.max(1, bounds.height));
+                const suffixOrigin = suffix.getBoundingClientRect();
+                const suffixRect = alignmentRect(suffix, boundary);
+                if (!oldBoundary || !suffixRect) return false;
+                const boundaryPage = Math.max(0, Math.floor((oldBoundary.left - oldOrigin.left + 0.01) / stride));
+                const boundaryX = oldBoundary.left - oldOrigin.left - boundaryPage * stride;
+                const range = locateContentRange(suffix, boundary);
+                const container = range?.startContainer;
+                const element = container instanceof Element ? container : container?.parentElement;
+                const rtl = element ? getComputedStyle(element).direction === "rtl" : false;
+                const seam = {
+                    location: boundary,
+                    carry: oldBoundary.top - oldOrigin.top - (suffixRect.top - suffixOrigin.top),
+                    inlineCarry: (boundaryX - (suffixRect.left - suffixOrigin.left)) * (rtl ? -1 : 1),
+                };
+                const localSeams = seams.filter(
+                    ({ location: point }) =>
+                        point.blockNumber !== boundary.blockNumber || point.contentOffset !== boundary.contentOffset
+                );
+                localSeams.push(seam);
+                return this.replace(
+                    { start, end, carry: 0, inlineCarry: 0, pageBase: 0, top: 0, height: 0, seams: localSeams },
+                    false
+                );
+            } finally {
+                this.view.releaseMeasurement(probe);
+                probe.remove();
             }
-            // 原生分栏可能丢弃段首 margin，使旧临时页的相位无法从更早的源起点重建。
-            // 在已显示页首保留明确页界；前补内容完整结束于该源位置，不等待全章前缀或跳过文字。
-            const boundary = this.view.safeBoundary(visible);
-            const oldBoundary = alignmentRect(this.view.element, boundary);
-            const firstLocation = this.view.pieceLocation(start);
-            const pageStart =
-                boundary.blockNumber !== firstLocation.blockNumber ||
-                boundary.contentOffset !== firstLocation.contentOffset;
-            const suffix = this.view.renderFrom(boundary, end, pageStart);
-            probe.replaceChildren(suffix);
-            await waitForChapterLayout(suffix, lifetime);
-            if (lifetime.aborted || this.layout !== layout) return false;
-            const suffixOrigin = suffix.getBoundingClientRect();
-            const suffixRect = alignmentRect(suffix, boundary);
-            if (!oldBoundary || !suffixRect) return false;
-            const boundaryPage = Math.max(0, Math.floor((oldBoundary.left - oldOrigin.left + 0.01) / stride));
-            const boundaryX = oldBoundary.left - oldOrigin.left - boundaryPage * stride;
-            const range = locateContentRange(suffix, boundary);
-            const container = range?.startContainer;
-            const element = container instanceof Element ? container : container?.parentElement;
-            const rtl = element ? getComputedStyle(element).direction === "rtl" : false;
-            const seam = {
-                location: boundary,
-                carry: oldBoundary.top - oldOrigin.top - (suffixRect.top - suffixOrigin.top),
-                inlineCarry: (boundaryX - (suffixRect.left - suffixOrigin.left)) * (rtl ? -1 : 1),
-            };
-            const localSeams = seams.filter(
-                ({ location: point }) =>
-                    point.blockNumber !== boundary.blockNumber || point.contentOffset !== boundary.contentOffset
-            );
-            localSeams.push(seam);
-            return this.replace(
-                { start, end, carry: 0, inlineCarry: 0, pageBase: 0, top: 0, height: 0, seams: localSeams },
-                false
-            );
         } finally {
-            probe.remove();
+            release();
         }
     }
 
@@ -309,7 +346,10 @@ export default class ChapterWindow {
     public cancel(): void {
         this.controller?.abort();
         this.controller = undefined;
-        this.probe?.remove();
+        if (this.probe) {
+            this.view.releaseMeasurement(this.probe);
+            this.probe.remove();
+        }
         this.probe = undefined;
     }
 
@@ -322,7 +362,7 @@ export default class ChapterWindow {
         return covered > 0 && this.layout.knownHeight > 0 ? this.layout.knownHeight / covered : 80;
     }
 
-    private previewRange(location: ContentLocation): ChapterLayoutWindow {
+    private previewRange(location: ContentLocation, prepared?: ChapterLayoutWindow): ChapterLayoutWindow {
         const index = this.view.pieceIndex(location);
         let start = Math.max(0, index - 2);
         let end = this.view.rangeEnd(start);
@@ -330,9 +370,15 @@ export default class ChapterWindow {
             start++;
             end = this.view.rangeEnd(start);
         }
+        end = Math.min(this.view.pieceCount, end + 1);
+        // 尺寸变化先同步重排已知范围，扩窗由后续异步导航准备，避免晚到图片改变当前页。
+        if (prepared && !this.view.isRangeReady(start, end)) {
+            start = prepared.start;
+            end = prepared.end;
+        }
         const range: ChapterLayoutWindow = {
             start,
-            end: Math.min(this.view.pieceCount, end + 1),
+            end,
             carry: 0,
             inlineCarry: 0,
             pageBase: 0,

@@ -98,9 +98,9 @@ class Main {
                     this.router.navigateToReader(bookId);
                 });
             case PageName.READER:
-                return new Reader(route.bookId, (missingBook) => {
-                    if (missingBook) this.router.discardReader();
-                    else this.router.navigateToBookshelf();
+                return new Reader(route.bookId, (reason) => {
+                    if (reason === "missing") this.router.discardReader();
+                    else this.router.navigateToBookshelf(reason === "unavailable");
                 });
         }
     }

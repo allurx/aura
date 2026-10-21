@@ -51,14 +51,7 @@ export default class SwitchSettingControl extends SettingControl {
             this.element.append(note);
         }
 
-        bind(
-            this.input,
-            "change",
-            () => {
-                listener.commit(setting, this.input.checked ? onValue : offValue);
-            },
-            { signal }
-        );
+        bind(this.input, "change", () => listener.commit(setting, this.input.checked ? onValue : offValue), { signal });
     }
 
     public override render(value: string | undefined): void {

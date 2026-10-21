@@ -11,50 +11,77 @@ import OperationError from "@/errors/operation-error";
 export function createErrorContent(error: unknown): { title: string; content: HTMLElement } {
     const operation = error instanceof OperationError ? error : undefined;
     const causes = collectCauses(operation ? operation.cause : error);
-    const storageError = causes.find(
+    const knownCause = causes.find(
         (cause): cause is DOMException =>
             cause instanceof DOMException &&
-            ["QuotaExceededError", "SecurityError", "NotReadableError"].includes(cause.name)
+            ["QuotaExceededError", "SecurityError", "NotReadableError", "NotSupportedError"].includes(cause.name)
     );
-    let title = "刚才的操作未完成";
+    let title = "操作遇到问题";
     let reason: string | undefined;
     let recovery: string | undefined;
-    switch (storageError?.name) {
+    switch (knownCause?.name) {
         case "QuotaExceededError":
             title = "存储空间不足";
             reason = "浏览器可用于 Aura 的存储空间不足。";
-            recovery = "请保留原始书籍文件，检查并释放设备或浏览器的可用存储空间。";
+            recovery = "请保留原文件，检查设备空间和浏览器存储限制。";
             break;
         case "SecurityError":
             title = "访问被浏览器阻止";
-            reason = "浏览器阻止了这次访问请求。";
-            recovery = "请检查浏览器的站点权限和隐私设置。";
+            reason = "浏览器阻止了这次访问。";
+            recovery = "请检查站点权限和浏览器隐私设置。";
             break;
         case "NotReadableError":
             title = "所选文件无法读取";
             reason = "浏览器无法读取所选文件。";
-            recovery = "请确认文件仍在原位置且可以打开，再重新选择文件。";
+            recovery = "请确认文件可以打开，再重新选择。";
+            break;
+        case "NotSupportedError":
+            title = "当前环境不支持这项操作";
+            reason = "当前浏览器或打开方式不支持这项操作。";
+            recovery = "请更换支持的浏览器，或按使用指南调整打开方式。";
             break;
     }
 
     const content = document.createElement("div");
     content.className = "error-content";
+    const result = document.createElement("div");
+    result.className = "error-result";
     const description = document.createElement("p");
     description.className = "error-description";
-    description.textContent = operation?.details ?? reason ?? "Aura 遇到了意外问题，刚才的操作未能完成。";
-    content.append(description);
+    description.textContent = operation?.details ?? reason ?? "发生意外错误，操作结果尚未确认。";
+    result.append(description);
 
     if (operation && reason) {
-        const explanation = document.createElement("p");
-        explanation.textContent = reason;
-        content.append(explanation);
+        // 批量结果保留逐文件换行，原因不接到最后一个文件名后；普通结果与原因自然连读。
+        if (operation.details.includes("\n")) {
+            const explanation = document.createElement("p");
+            explanation.textContent = reason;
+            result.append(explanation);
+        } else {
+            description.append(reason);
+        }
     }
+    content.append(result);
 
-    const nextStep = document.createElement("p");
+    // 步骤来自明确的恢复契约，不根据标点猜测句子的操作顺序。
+    const steps: string[] = [];
+    if (recovery) steps.push(recovery);
+    if (typeof operation?.recovery === "string") steps.push(operation.recovery);
+    else if (operation?.recovery) steps.push(...operation.recovery);
+    if (steps.length === 0) steps.push("请先确认操作是否生效，再决定是否重试。问题持续时可向项目 GitHub 反馈。");
+
+    const nextStep = document.createElement(steps.length > 1 ? "ol" : "p");
     nextStep.className = "error-recovery";
-    nextStep.textContent =
-        [recovery, operation?.recovery].filter(Boolean).join("\n") ||
-        "请关闭提示后重试。若仍无法完成，可展开详细信息，通过项目 GitHub 反馈问题。";
+    if (steps.length > 1) {
+        nextStep.classList.add("recovery-steps");
+        for (const step of steps) {
+            const item = document.createElement("li");
+            item.textContent = step;
+            nextStep.append(item);
+        }
+    } else {
+        nextStep.textContent = steps[0] ?? "";
+    }
     content.append(nextStep);
 
     // 技术原因保留供用户核对；不展开堆栈，也不将异常内容解释为 HTML。

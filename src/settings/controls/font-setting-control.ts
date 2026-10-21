@@ -49,8 +49,8 @@ export default class FontSettingControl extends StyleSettingControl {
         bind(
             this.selectElement,
             "input",
-            (_, select) => {
-                if (select.selectedOptions[0] !== this.readOption) listener.commit(fontSetting, select.value);
+            async (_, select) => {
+                if (select.selectedOptions[0] !== this.readOption) await listener.commit(fontSetting, select.value);
             },
             { signal }
         );
@@ -63,7 +63,7 @@ export default class FontSettingControl extends StyleSettingControl {
                     await this.readFonts();
                     return;
                 }
-                listener.commit(fontSetting, select.value);
+                await listener.commit(fontSetting, select.value);
             },
             { signal }
         );

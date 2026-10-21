@@ -8,7 +8,7 @@ import { PageName } from "@/constants/page-name";
 import type SettingConfiguration from "../models/setting-configuration";
 import Ui from "@/components/ui";
 import enableLightDismiss from "@/components/dialog/light-dismiss";
-import enablePanelFrame, { type PanelFrameUi } from "@/components/dialog/panel-frame";
+import enablePanelFrame from "@/components/dialog/panel-frame";
 import { assertExists } from "@/utils/assert-util";
 import { createElementFromHtml } from "@/utils/dom-util";
 import { bind, run } from "@/utils/event-util";
@@ -35,7 +35,6 @@ export default class SettingUi extends Ui {
     private generalSettings: readonly Setting[] = [];
     private readonly pendingDefaults = new Set<Setting>();
     private defaultObserver: ResizeObserver | undefined;
-    private panelFrame: PanelFrameUi | undefined;
 
     /**
      * @param container - 设置对话框的挂载容器。
@@ -73,13 +72,11 @@ export default class SettingUi extends Ui {
             this.themeElement,
             configuration,
             {
-                commit: (setting, value) => {
+                commit: async (setting, value) => {
                     // input 已实时保存；关闭后的迟到事件不能继续改变当前页面外观。
-                    if (this.root.open) listener.commit(setting, value);
+                    if (this.root.open) await listener.commit(setting, value);
                 },
-                resetSetting: (setting) => {
-                    listener.resetSetting(setting);
-                },
+                resetSetting: (setting) => listener.resetSetting(setting),
             },
             signal
         );
@@ -96,7 +93,7 @@ export default class SettingUi extends Ui {
         this.defaultObserver.observe(this.container);
 
         enableLightDismiss(this.root, signal);
-        this.panelFrame = enablePanelFrame(
+        enablePanelFrame(
             this.root,
             assertExists(this.root.querySelector<HTMLElement>(":scope > header")),
             () => !this.container.hasAttribute("data-mobile-controls"),
@@ -150,20 +147,13 @@ export default class SettingUi extends Ui {
         }
 
         // 面板只发出重置操作，保存与刷新由监听器协调。
-        bind(
-            this.resetElement,
-            "click",
-            () => {
-                listener.reset();
-            },
-            { signal }
-        );
+        bind(this.resetElement, "click", () => listener.reset(), { signal });
         bind(
             this.resetGeneralElement,
             "click",
-            () => {
+            async () => {
                 if (this.resetGeneralElement.getAttribute("aria-disabled") === "true") return;
-                listener.resetGeneral();
+                await listener.resetGeneral();
             },
             { signal }
         );
@@ -181,7 +171,8 @@ export default class SettingUi extends Ui {
             this.root,
             "keydown",
             (event: KeyboardEvent) => {
-                if (event.key !== "Escape" || event.isComposing) return;
+                if (event.key !== "Escape" || event.isComposing || event.defaultPrevented) return;
+                if (event.target instanceof Element && event.target.closest("select:open")) return;
                 event.preventDefault();
                 event.stopPropagation();
                 // 书架侧栏跨断点重新展示后，显式请求当前模态取消，不依赖关闭观察器的先后次序。
@@ -253,7 +244,6 @@ export default class SettingUi extends Ui {
      * 按会话给出的显示值刷新受影响的控件；未指定范围时读取全部当前默认值。
      */
     public refresh(settings?: readonly Setting[]): void {
-        this.panelFrame?.refresh();
         this.renderSettings(settings, settings !== undefined);
     }
 
@@ -321,7 +311,6 @@ export default class SettingUi extends Ui {
                 </button>
             </header>
             <div class="setting-body panel-scroll">
-                <section class="theme-items" aria-label="页面主题"></section>
                 <section class="general-settings" aria-labelledby="setting-general-title">
                     <header class="section-header">
                         <h3 id="setting-general-title" class="section-title">常规设置</h3>
@@ -329,6 +318,7 @@ export default class SettingUi extends Ui {
                     </header>
                     <div class="setting-groups"></div>
                 </section>
+                <section class="theme-items" aria-label="页面主题"></section>
             </div>
             <footer>
                 <button class="reset" type="button">

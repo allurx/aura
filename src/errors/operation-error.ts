@@ -12,13 +12,13 @@ export default class OperationError extends Error {
      * @param message - 直接说明未完成事项的简短标题
      * @param details - 已完成结果或当前影响，不重复标题
      * @param cause - 原始异常，供通用提示判断及错误追踪
-     * @param recovery - 当前操作特有的下一步；不提供时按已知原因给出建议
+     * @param recovery - 当前操作特有的恢复建议；数组按顺序呈现步骤，不提供时按已知原因给出建议
      */
     public constructor(
         message: string,
         public readonly details: string,
         cause: unknown,
-        public readonly recovery?: string
+        public readonly recovery?: string | readonly string[]
     ) {
         super(message, { cause });
         this.name = "OperationError";

@@ -51,7 +51,10 @@ export default class BookListUi extends Ui {
     /**
      * 尚无摘要时明确展示读取或失败状态；重试只读取本地数据。
      */
-    public renderLoadState(state: "loading" | "error"): void {
+    public renderLoadState(
+        state: "loading" | "error",
+        failure?: { title: string; content: HTMLElement; canReset: boolean }
+    ): void {
         const focusedInside = this.root.contains(document.activeElement);
         this.clearWindow();
         const status = document.createElement("div");
@@ -63,18 +66,25 @@ export default class BookListUi extends Ui {
         }
 
         const title = document.createElement(state === "loading" ? "p" : "h2");
-        title.textContent = state === "loading" ? "正在读取书架…" : "书架未能加载";
+        title.textContent = state === "loading" ? "正在读取书架…" : (failure?.title ?? "书架未能加载");
         status.append(title);
 
         if (state === "error") {
-            const hint = document.createElement("p");
-            hint.className = "shelf-empty-hint";
-            hint.textContent = "请重试读取，或通过管理与帮助处理本地数据。";
-            const retry = document.createElement("button");
-            retry.type = "button";
-            retry.className = "shelf-retry";
-            retry.textContent = "重新读取";
-            status.append(hint, retry);
+            if (failure) {
+                status.classList.add("shelf-data-error");
+                status.append(failure.content);
+            } else {
+                const hint = document.createElement("p");
+                hint.className = "shelf-empty-hint";
+                hint.textContent = "暂时无法读取书库，请按错误提示处理后重试。";
+                status.append(hint);
+            }
+            const action = document.createElement("button");
+            action.type = "button";
+            action.className = failure?.canReset ? "shelf-reset" : "shelf-retry";
+            action.textContent = failure?.canReset ? "重置全部数据" : "重新读取";
+            if (failure?.canReset) action.setAttribute("aria-haspopup", "dialog");
+            status.append(action);
         }
         this.root.replaceChildren(status);
         if (focusedInside) this.root.focus({ preventScroll: true });
@@ -413,6 +423,7 @@ export default class BookListUi extends Ui {
             export: (id: string) => Promise<void>;
             import: () => void;
             retry: () => Promise<void>;
+            reset: () => Promise<void>;
         },
         signal: AbortSignal
     ): void {
@@ -499,6 +510,7 @@ export default class BookListUi extends Ui {
         // 空态和顶部入口请求同一个导入流程，不查找或触发其他区域的按钮。
         delegate(this.root, ".shelf-empty-import", "click", handlers.import, { signal });
         delegate(this.root, ".shelf-retry", "click", handlers.retry, { signal });
+        delegate(this.root, ".shelf-reset", "click", handlers.reset, { signal });
 
         // 原生 popover 负责外部点击、Escape 与焦点顺序，只补充靠近书目的定位。
         bind(

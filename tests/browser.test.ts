@@ -43,9 +43,15 @@ for (const delivery of ["web", "portable"] as const) {
             const savedBounds = await bounds();
 
             // 常规控件提交与浮层布局共用快照，不能互相覆盖。
-            const size = page.locator('#setting input[type="range"]').first();
+            const size = page.getByRole("slider", { name: "封面大小", exact: true });
             await size.press("ArrowRight");
             const savedSize = await size.inputValue();
+            // 原生控件先改变值，跨页面保存随后取得排他锁；只用已提交快照验证响应式夹取。
+            await page.waitForFunction(
+                (expected) =>
+                    localStorage.getItem("aura.bookshelf.appearance")?.includes(`"--book-cover-width":"${expected}px"`),
+                savedSize
+            );
             const savedAppearance = await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance"));
 
             // 跨过浮动几何的 800px 边界及窄屏底部面板，逐次验证约束和关闭重开。
@@ -188,7 +194,7 @@ for (const delivery of ["web", "portable"] as const) {
                     .getByRole("button", { name: "删除", exact: true })
                     .click();
                 await card.waitFor({ state: "detached" });
-                await page.locator(".overlay").waitFor({ state: "hidden" });
+                await page.locator(".overlay:not([hidden])").waitFor({ state: "hidden" });
             }
             assert.equal(await page.locator(".book").count(), 2);
 
