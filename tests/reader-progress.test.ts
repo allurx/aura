@@ -13,6 +13,7 @@ import {
     importBooks,
     openBook,
     setMode,
+    setReaderFontSize,
     settleReader,
     startBrowserTests,
     stopBrowserTests,
@@ -357,7 +358,7 @@ for (const delivery of ["web", "portable"] as const) {
             // 连续有效输入和模式切换保留同一源位置，不要求后台全章排版先完成。
             await page.locator("#toggle-setting-panel").click();
             for (const fontSize of [22, 25, 18, 23]) {
-                await page.locator("#setting-control-font-size").fill(String(fontSize));
+                await setReaderFontSize(page, fontSize);
                 assert.equal(
                     await page.locator("#content").evaluate((content) => getComputedStyle(content).fontSize),
                     `${String(fontSize)}px`
@@ -421,7 +422,7 @@ for (const delivery of ["web", "portable"] as const) {
             // 章末补窗可能被最大滚动值夹取，视窗上缘的留白不得使字号重排丢掉真实源锚点。
             await setMode(page, "scroll");
             await page.locator("#toggle-setting-panel").click();
-            await page.locator("#setting-control-font-size").fill("16");
+            await setReaderFontSize(page, 16);
             await page.locator("#setting .close").click();
             await page.locator("#content > .reading-viewport:not(.reading-measure-viewport)").evaluate((viewport) => {
                 viewport.scrollTop = viewport.scrollHeight;
@@ -435,7 +436,7 @@ for (const delivery of ["web", "portable"] as const) {
             assert(tailText);
             await page.locator("#toggle-setting-panel").click();
             for (const fontSize of [22, 25, 18, 23]) {
-                await page.locator("#setting-control-font-size").fill(String(fontSize));
+                await setReaderFontSize(page, fontSize);
                 await settleReader(page);
                 assert.deepEqual(await readProgress(page), tail);
                 assert((await readVisibleText(page)).includes(tailText));

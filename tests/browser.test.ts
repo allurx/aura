@@ -12,6 +12,7 @@ import {
     openBook,
     selectChapter,
     setMode,
+    setReaderFontSize,
     settleReader,
     startBrowserTests,
     stopBrowserTests,
@@ -286,7 +287,7 @@ for (const delivery of ["web", "portable"] as const) {
                 assert((await visibleParagraphs()).includes(anchor));
             }
             await page.locator("#toggle-setting-panel").click();
-            await page.locator("#setting-control-font-size").fill("25");
+            await setReaderFontSize(page, 25);
             await page.locator("#setting .close").click();
             await waitForChapterLayout(page);
             assert((await visibleParagraphs()).includes(anchor));
