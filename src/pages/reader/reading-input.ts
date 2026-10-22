@@ -21,7 +21,27 @@ interface ReadingPointer {
     maxY: number;
     startedAt: number;
     mode: ReadingMode;
-    cancelled: boolean;
+    width: number;
+    systemEdge: boolean;
+    phase: "pending" | "swipe" | "drag";
+    offset: number;
+    samples: { x: number; at: number }[];
+}
+
+/**
+ * 阅读输入产生导航意图；正文负责准备、呈现和提交拖动中的页面。
+ * 拖动起点返回 false 表示本次操作未被接受，不在松手后重试为普通翻页。
+ */
+export interface ReadingNavigationHandlers {
+    onTurn: (direction: ReadingDirection) => Promise<void>;
+    onChapter: (direction: ReadingDirection) => Promise<void>;
+    onCenterTap: () => void;
+    getMode: () => ReadingMode;
+    onDragStart: () => boolean;
+    // 相对按下位置的水平 CSS 像素：负值前进，正值后退，可连续反拉或改向。
+    onDragMove: (offset: number) => void;
+    onDragEnd: (commit: boolean) => Promise<void>;
+    onDragCancel: () => void;
 }
 
 /**
@@ -31,13 +51,7 @@ interface ReadingPointer {
  */
 export default function bindReadingInput(
     content: HTMLElement,
-    handlers: {
-        isEnabled: () => boolean;
-        onTurn: (direction: ReadingDirection) => Promise<void>;
-        onChapter: (direction: ReadingDirection) => Promise<void>;
-        onCenterTap: () => void;
-        getMode: () => ReadingMode;
-    },
+    handlers: ReadingNavigationHandlers & { isEnabled: () => boolean },
     signal: AbortSignal
 ): () => void {
     let pointer: ReadingPointer | undefined;
@@ -51,8 +65,12 @@ export default function bindReadingInput(
      * 放弃当前候选，不把仍按下的其他指针误认为已经释放。
      */
     const cancel = (): void => {
+        const current = pointer;
         pointer = undefined;
         wheelConsumed = true;
+        if (!current) return;
+        if (content.hasPointerCapture(current.id)) content.releasePointerCapture(current.id);
+        if (current.phase === "drag") handlers.onDragCancel();
     };
 
     // 键盘与指针共用正文资格判断；各按键仍保留自己的方向、修饰键及重复语义。
@@ -60,6 +78,10 @@ export default function bindReadingInput(
         document,
         "keydown",
         async (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                cancel();
+                return;
+            }
             if (
                 event.defaultPrevented ||
                 event.altKey ||
@@ -75,6 +97,7 @@ export default function bindReadingInput(
             if (event.ctrlKey) {
                 if (event.shiftKey || (event.key !== "PageUp" && event.key !== "PageDown")) return;
                 event.preventDefault();
+                cancel();
                 await handlers.onChapter(event.key === "PageUp" ? ReadingDirection.PREV : ReadingDirection.NEXT);
                 return;
             }
@@ -89,42 +112,29 @@ export default function bindReadingInput(
             const axis = event.key === "ArrowLeft" || event.key === "ArrowRight" ? "x" : "y";
             if (hasNestedScroll(target, content, axis)) return;
             event.preventDefault();
+            cancel();
             await handlers.onTurn(direction);
         },
         { signal }
     );
 
     /**
-     * 轻点要求 450ms 内且两轴全程位移小于 8px；触摸或触笔轻扫至少横移 48px，偏角不超过 30°。
-     * 选区、多指、取消及正文滚动均忽略，鼠标拖选不作为轻扫。
+     * 轻点要求 450ms 内且两轴全程位移小于 8px；窄边缘翻页，其余区域唤出工具。
+     * 鼠标保留选字，只有触摸和触笔使用两侧的翻页区域。
      */
-    const readGesture = (current: ReadingPointer, event: PointerEvent): ReadingDirection => {
-        // 先排除选区、多指、取消与滚动后的操作，再判断轻点或轻扫。
-        if (
-            current.cancelled ||
-            !event.isPrimary ||
-            event.button !== 0 ||
-            activePointers.size > 0 ||
-            hasSelection() ||
-            handlers.getMode() !== current.mode
-        )
+    const readTap = (current: ReadingPointer, event: PointerEvent): ReadingDirection => {
+        if (current.maxX >= 8 || current.maxY >= 8 || event.timeStamp - current.startedAt > 450)
             return ReadingDirection.INVALID;
-
-        // 用全程位移判定轻点，再按正文的实际边界划分左右与中央区域。
-        const deltaX = event.clientX - current.startX;
-        const deltaY = event.clientY - current.startY;
-        const maxX = Math.max(current.maxX, Math.abs(deltaX));
-        const maxY = Math.max(current.maxY, Math.abs(deltaY));
-        const tap = maxX < 8 && maxY < 8;
         const bounds = content.getBoundingClientRect();
         const inContent =
-            isReadingTarget(current.target, content) &&
-            isReadingTarget(event.target, content) &&
+            isReadingGestureTarget(current.target, content) &&
+            isReadingGestureTarget(event.target, content) &&
             event.clientX >= bounds.left &&
             event.clientX <= bounds.right &&
             event.clientY >= bounds.top &&
             event.clientY <= bounds.bottom;
-        const horizontalPosition = (event.clientX - bounds.left) / bounds.width;
+        const horizontalPosition = event.clientX - bounds.left;
+        const edge = Math.max(44, bounds.width * 0.14);
         const paginated = current.mode !== "scroll" && (current.type === "touch" || current.type === "pen");
 
         // 独立滚动内容的轻点也归其自身处理，不能因没有实际滚动而翻页或切换阅读工具。
@@ -134,18 +144,40 @@ export default function bindReadingInput(
             hasNestedScroll(current.target, content, "y")
         )
             return ReadingDirection.INVALID;
-        if (tap && event.timeStamp - current.startedAt <= 450) {
-            if (horizontalPosition < 1 / 3) {
-                return paginated ? ReadingDirection.PREV : ReadingDirection.INVALID;
-            }
-            if (horizontalPosition > 2 / 3) {
-                return paginated ? ReadingDirection.NEXT : ReadingDirection.INVALID;
-            }
-            handlers.onCenterTap();
-        } else if (paginated && Math.abs(deltaX) >= 48 && maxY / Math.abs(deltaX) <= Math.tan(Math.PI / 6)) {
-            return deltaX > 0 ? ReadingDirection.PREV : ReadingDirection.NEXT;
+        if (horizontalPosition < edge) {
+            return paginated ? ReadingDirection.PREV : ReadingDirection.INVALID;
         }
+        if (horizontalPosition > bounds.width - edge) {
+            return paginated ? ReadingDirection.NEXT : ReadingDirection.INVALID;
+        }
+        handlers.onCenterTap();
         return ReadingDirection.INVALID;
+    };
+
+    /**
+     * 位移保留整段手势的范围，速度只取最近 100ms；停住再松手不能沿用此前的快甩速度。
+     */
+    const recordMovement = (current: ReadingPointer, event: PointerEvent): void => {
+        current.offset = event.clientX - current.startX;
+        current.maxX = Math.max(current.maxX, Math.abs(current.offset));
+        current.maxY = Math.max(current.maxY, Math.abs(event.clientY - current.startY));
+        current.samples.push({ x: event.clientX, at: event.timeStamp });
+        current.samples = current.samples.filter((sample) => event.timeStamp - sample.at <= 100);
+    };
+
+    /**
+     * 松手位置与近期速度共同决定去留；反拉后的投影不能越过相反方向直接翻页。
+     */
+    const shouldCommit = (current: ReadingPointer, event: PointerEvent): boolean => {
+        const first = current.samples[0];
+        const velocity =
+            first && event.timeStamp > first.at ? (event.clientX - first.x) / (event.timeStamp - first.at) : 0;
+        const projected = current.offset + velocity * 150;
+        return (
+            Math.abs(current.offset) >= 12 &&
+            Math.sign(projected) === Math.sign(current.offset) &&
+            Math.abs(projected) >= current.width * 0.26
+        );
     };
 
     // 正文之外的指针也参与多指判断；输入识别不依赖窗口宽度或主指针媒体查询。
@@ -155,10 +187,20 @@ export default function bindReadingInput(
         (event: PointerEvent) => {
             activePointers.add(event.pointerId);
             if (!event.isPrimary || activePointers.size !== 1 || event.button !== 0) {
-                if (pointer) pointer.cancelled = true;
+                cancel();
                 return;
             }
-            if (!handlers.isEnabled() || !isReadingTarget(event.target, content)) return;
+            if (
+                !handlers.isEnabled() ||
+                !isReadingGestureTarget(event.target, content) ||
+                hasSelection() ||
+                hasNestedScroll(event.target, content, "x") ||
+                hasNestedScroll(event.target, content, "y")
+            )
+                return;
+            const viewport = window.visualViewport;
+            const viewportLeft = viewport?.offsetLeft ?? 0;
+            const viewportRight = viewportLeft + (viewport?.width ?? window.innerWidth);
             pointer = {
                 id: event.pointerId,
                 type: event.pointerType,
@@ -169,32 +211,81 @@ export default function bindReadingInput(
                 maxY: 0,
                 startedAt: event.timeStamp,
                 mode: handlers.getMode(),
-                cancelled: hasSelection(),
+                width: content.getBoundingClientRect().width,
+                // 屏幕最边缘的滑动让给浏览器返回/前进；轻点仍使用正文自己的窄翻页区域。
+                systemEdge: event.clientX < viewportLeft + 32 || event.clientX > viewportRight - 32,
+                phase: "pending",
+                offset: 0,
+                samples: [{ x: event.clientX, at: event.timeStamp }],
             };
         },
         { signal }
     );
 
-    // 记录全程移动范围，拖动后返回起点也不能重新成为轻点。
+    // 水平意图成立后才准备页面并捕获真实正文节点；鼠标移动始终保留原生选字。
     bind(
         document,
         "pointermove",
         (event: PointerEvent) => {
-            if (pointer?.id !== event.pointerId) return;
-            pointer.maxX = Math.max(pointer.maxX, Math.abs(event.clientX - pointer.startX));
-            pointer.maxY = Math.max(pointer.maxY, Math.abs(event.clientY - pointer.startY));
+            const current = pointer;
+            if (current?.id !== event.pointerId) return;
+            recordMovement(current, event);
+            if (!handlers.isEnabled() || handlers.getMode() !== current.mode || hasSelection()) {
+                cancel();
+                return;
+            }
+            if (current.type === "mouse" || current.mode === "scroll") return;
+            // 先确定输入轴；拖回起点时仍沿用全程水平范围，不能重新变成轻点。
+            if (current.maxY >= 8 && current.maxY > current.maxX * Math.tan(Math.PI / 6)) {
+                cancel();
+                return;
+            }
+            if (current.phase === "pending") {
+                if (current.maxX < 8) return;
+                if (current.systemEdge) {
+                    cancel();
+                    return;
+                }
+                if (current.mode === "none") current.phase = "swipe";
+                else if (handlers.onDragStart()) {
+                    current.phase = "drag";
+                    content.setPointerCapture(current.id);
+                } else {
+                    // 忙碌等原因拒绝的拖动不在随后松手时作用于另一页。
+                    cancel();
+                    return;
+                }
+            }
+            event.preventDefault();
+            if (current.phase === "drag") handlers.onDragMove(current.offset);
         },
-        { passive: true, signal }
+        { passive: false, signal }
     );
 
-    // 浏览器滚动和系统取消均终止候选，保留原生滚动与选择行为。
+    // 预览准备可以程序滚动正文视窗；原生纵向接管会派发 pointercancel，不能误杀预览自身。
     bind(
         content,
         "scroll",
-        () => {
-            if (pointer) pointer.cancelled = true;
+        (event: Event) => {
+            if (!pointer) return;
+            const target = event.target;
+            if (
+                pointer.phase === "drag" &&
+                (target === content || (target instanceof HTMLElement && target.classList.contains("reading-viewport")))
+            )
+                return;
+            cancel();
         },
         { passive: true, capture: true, signal }
+    );
+    bind(
+        content,
+        "lostpointercapture",
+        (event: PointerEvent) => {
+            // 触摸从原始段落的隐式捕获转交到 content 时，也会有一次冒泡的 lost 事件。
+            if (event.target === content && pointer?.id === event.pointerId && pointer.phase === "drag") cancel();
+        },
+        { signal }
     );
     bind(
         document,
@@ -214,9 +305,38 @@ export default function bindReadingInput(
             activePointers.delete(event.pointerId);
             const current = pointer;
             if (current?.id !== event.pointerId) return;
+            recordMovement(current, event);
+            if (
+                !event.isPrimary ||
+                event.button !== 0 ||
+                activePointers.size > 0 ||
+                !handlers.isEnabled() ||
+                handlers.getMode() !== current.mode ||
+                hasSelection()
+            ) {
+                cancel();
+                return;
+            }
             pointer = undefined;
-            if (!handlers.isEnabled()) return;
-            const direction = readGesture(current, event);
+            if (content.hasPointerCapture(current.id)) content.releasePointerCapture(current.id);
+            if (current.phase === "drag") {
+                handlers.onDragMove(current.offset);
+                await handlers.onDragEnd(shouldCommit(current, event));
+                return;
+            }
+            let direction = ReadingDirection.INVALID;
+            if (current.phase === "swipe") {
+                const bounds = content.getBoundingClientRect();
+                if (
+                    shouldCommit(current, event) &&
+                    isReadingGestureTarget(event.target, content) &&
+                    event.clientX >= bounds.left &&
+                    event.clientX <= bounds.right &&
+                    event.clientY >= bounds.top &&
+                    event.clientY <= bounds.bottom
+                )
+                    direction = current.offset > 0 ? ReadingDirection.PREV : ReadingDirection.NEXT;
+            } else direction = readTap(current, event);
             if (direction !== ReadingDirection.INVALID) await handlers.onTurn(direction);
         },
         { signal }
@@ -227,6 +347,7 @@ export default function bindReadingInput(
         content,
         "wheel",
         async (event: WheelEvent) => {
+            if (pointer) cancel();
             if (
                 event.defaultPrevented ||
                 event.ctrlKey ||
@@ -280,9 +401,26 @@ export default function bindReadingInput(
         "blur",
         () => {
             run(() => {
-                cancel();
                 activePointers.clear();
+                cancel();
             });
+        },
+        { signal }
+    );
+    window.addEventListener(
+        "resize",
+        () => {
+            run(cancel);
+        },
+        { signal }
+    );
+    bind(
+        document,
+        "visibilitychange",
+        () => {
+            if (document.visibilityState !== "hidden") return;
+            activePointers.clear();
+            cancel();
         },
         { signal }
     );
@@ -290,8 +428,10 @@ export default function bindReadingInput(
     signal.addEventListener(
         "abort",
         () => {
-            cancel();
-            activePointers.clear();
+            run(() => {
+                activePointers.clear();
+                cancel();
+            });
         },
         { once: true }
     );
@@ -328,6 +468,13 @@ function isReadingTarget(target: EventTarget | null, content: HTMLElement): bool
         (target === content || content.contains(target)) &&
         !target.closest("button, a, input, textarea, select, summary, [contenteditable], [role=dialog]")
     );
+}
+
+/**
+ * 表格与代码块保留自身的选择和触摸，即使当前没有溢出也不成为翻页触区。
+ */
+function isReadingGestureTarget(target: EventTarget | null, content: HTMLElement): boolean {
+    return isReadingTarget(target, content) && target instanceof HTMLElement && !target.closest("table, pre");
 }
 
 /**

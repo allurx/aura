@@ -103,7 +103,7 @@ export default class ChapterLayout {
                 let carry = 0;
                 let inlineCarry = 0;
                 let section = this.view.renderRange(start, lookahead, 0, 0, this.seams);
-                this.view.mountMeasurement(probeViewport, section);
+                this.view.mountProjection(probeViewport, section);
                 await waitForChapterLayout(section, signal);
                 if (!isActive(signal)) return;
 
@@ -127,7 +127,7 @@ export default class ChapterLayout {
                     carry = wantedTop - (first.top - origin.top);
                 if (carry !== 0 || inlineCarry !== 0) {
                     section = this.view.renderRange(start, lookahead, carry, inlineCarry, this.seams);
-                    this.view.mountMeasurement(probeViewport, section);
+                    this.view.mountProjection(probeViewport, section);
                     await waitForChapterLayout(section, signal);
                     if (!isActive(signal)) return;
                     origin = section.getBoundingClientRect();
@@ -145,7 +145,7 @@ export default class ChapterLayout {
                             const pageStart =
                                 compareLocation(currentSeed.location, this.view.pieceLocation(start)) !== 0;
                             const suffix = this.view.renderFrom(currentSeed.location, lookahead, pageStart);
-                            this.view.mountMeasurement(probeViewport, suffix);
+                            this.view.mountProjection(probeViewport, suffix);
                             await waitForChapterLayout(suffix, signal);
                             if (!isActive(signal)) return;
                             const suffixOrigin = suffix.getBoundingClientRect();
@@ -170,7 +170,7 @@ export default class ChapterLayout {
                                     );
                             }
                             section = this.view.renderRange(start, lookahead, carry, inlineCarry, this.seams);
-                            this.view.mountMeasurement(probeViewport, section);
+                            this.view.mountProjection(probeViewport, section);
                             await waitForChapterLayout(section, signal);
                             if (!isActive(signal)) return;
                             origin = section.getBoundingClientRect();
@@ -204,7 +204,7 @@ export default class ChapterLayout {
                 if (this.mode === "scroll") {
                     // 源段落可在两批中共享一行；分别测量真实范围，不累加重叠行或四舍五入间距。
                     section = this.view.renderRange(start, end, 0, inlineCarry);
-                    this.view.mountMeasurement(probeViewport, section);
+                    this.view.mountProjection(probeViewport, section);
                     await waitForChapterLayout(section, signal);
                     if (!isActive(signal)) return;
                     batchHeight = section.getBoundingClientRect().height;
@@ -241,7 +241,7 @@ export default class ChapterLayout {
         }
         if (!signal.aborted && this.view.pieceCount === 0) {
             const section = this.view.renderRange(0, 0);
-            this.view.mountMeasurement(probeViewport, section);
+            this.view.mountProjection(probeViewport, section);
             await waitForChapterLayout(section, signal);
             if (!isActive(signal)) return;
             const gap = Number.parseFloat(getComputedStyle(section).columnGap) || 0;

@@ -4,8 +4,6 @@
  */
 
 #reader > #content {
-    /* 阅读纸面连同留白参与过渡，避免只在文字框边缘切出一条移动的阴影。 */
-    view-transition-name: reading-page;
     --reader-paragraph-spacing: 1.15em;
     --reader-letter-spacing: 0em;
     --reader-page-margin: 1;
@@ -160,7 +158,7 @@
 }
 
 /* 分页与滚动共用同一正文与源锚点，只改变视窗和章节的排版。 */
-#content > .reading-viewport {
+#content .reading-viewport {
     flex: 1;
     min-width: 0;
     min-height: 0;
@@ -180,7 +178,6 @@
     flex: none;
     visibility: hidden;
     pointer-events: none;
-    view-transition-name: none;
 }
 
 .reading-chapter {
@@ -204,9 +201,10 @@
 }
 
 #content:not([data-reading-mode="scroll"]) {
-    > .reading-viewport {
+    .reading-viewport {
         /* flex 已确定视窗尺寸，分页与媒体直接使用同一容器，不经脚本同步像素。 */
         container-type: size;
+        touch-action: pan-y pinch-zoom;
     }
 
     .reading-chapter {
@@ -257,128 +255,33 @@
     touch-action: pan-y pinch-zoom;
 }
 
-/* 翻页快照限制在阅读纸面内，网页背景、工具和页码保持静止。 */
-html[data-page-turn] {
-    --reading-turn-duration: 260ms;
-    view-transition-name: none;
+/* 预览只复制当前有限窗口；真实正文与工具持续参与原生命中和焦点处理。 */
+.reading-papers {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+    user-select: none;
+    background-color: inherit;
+}
 
-    /* 文档回退不截取背景，也不让过渡根层额外拦截范围外的输入。 */
-    &::view-transition {
-        pointer-events: none;
-    }
+.reading-paper {
+    position: absolute;
+    inset: 0;
+    visibility: hidden;
+    background-color: inherit;
+    color: inherit;
+    transform: translateX(0);
+    will-change: transform;
 
-    &::view-transition-group(reading-page),
-    & #content::view-transition-group(reading-page) {
-        overflow: clip;
-        border-radius: var(--reading-page-radius);
-        animation: none;
-    }
-
-    &::view-transition-old(reading-page),
-    &::view-transition-new(reading-page),
-    & #content::view-transition-old(reading-page),
-    & #content::view-transition-new(reading-page) {
-        mix-blend-mode: normal;
-        animation-duration: var(--reading-turn-duration);
-        animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
-        animation-fill-mode: both;
-    }
-
-    &[data-page-direction="next"]::view-transition-new(reading-page),
-    &[data-page-direction="next"] #content::view-transition-new(reading-page) {
-        animation-name: reading-enter-next;
-    }
-
-    &[data-page-direction="previous"]::view-transition-old(reading-page),
-    &[data-page-direction="previous"] #content::view-transition-old(reading-page) {
-        animation-name: reading-leave-previous;
-        z-index: 1;
-    }
-
-    &[data-page-turn="cover"][data-page-direction="next"]::view-transition-old(reading-page),
-    &[data-page-turn="cover"][data-page-direction="previous"]::view-transition-new(reading-page),
-    &[data-page-turn="cover"][data-page-direction="next"] #content::view-transition-old(reading-page),
-    &[data-page-turn="cover"][data-page-direction="previous"] #content::view-transition-new(reading-page) {
-        animation-name: none;
-    }
-
-    &[data-page-turn="cover"][data-page-direction="next"]::view-transition-new(reading-page),
-    &[data-page-turn="cover"][data-page-direction="previous"]::view-transition-old(reading-page),
-    &[data-page-turn="cover"][data-page-direction="next"] #content::view-transition-new(reading-page),
-    &[data-page-turn="cover"][data-page-direction="previous"] #content::view-transition-old(reading-page) {
+    &.moving-edge {
         box-shadow: -2px 0 8px color-mix(in srgb, var(--appearance-shadow-color) 8%, transparent);
     }
-
-    &[data-page-turn="slide"][data-page-direction="next"]::view-transition-old(reading-page),
-    &[data-page-turn="slide"][data-page-direction="next"] #content::view-transition-old(reading-page) {
-        animation-name: reading-leave-next;
-    }
-
-    &[data-page-turn="slide"][data-page-direction="previous"]::view-transition-new(reading-page),
-    &[data-page-turn="slide"][data-page-direction="previous"] #content::view-transition-new(reading-page) {
-        animation-name: reading-enter-previous;
-    }
-
-    @media (max-width: 600px) {
-        --reading-turn-duration: 230ms;
-    }
 }
 
-/* 文档快照回退需要单独保留工具层级，避免拖到纸面上方的工具被覆盖。 */
-html[data-page-turn-scope="document"] {
-    &::view-transition-group(reading-tools-header),
-    &::view-transition-group(reading-tools-footer),
-    &::view-transition-group(reading-tools-desktop) {
-        z-index: 1;
-        animation: none;
-    }
-
-    &::view-transition-old(reading-tools-header),
-    &::view-transition-old(reading-tools-footer),
-    &::view-transition-old(reading-tools-desktop) {
-        display: none;
-    }
-
-    &::view-transition-new(reading-tools-header),
-    &::view-transition-new(reading-tools-footer),
-    &::view-transition-new(reading-tools-desktop) {
-        animation: none;
-        mix-blend-mode: normal;
-    }
-}
-
-@keyframes reading-enter-next {
-    from {
-        transform: translateX(100%);
-    }
-    to {
-        transform: translateX(0);
-    }
-}
-
-@keyframes reading-leave-next {
-    from {
-        transform: translateX(0);
-    }
-    to {
-        transform: translateX(-100%);
-    }
-}
-
-@keyframes reading-enter-previous {
-    from {
-        transform: translateX(-100%);
-    }
-    to {
-        transform: translateX(0);
-    }
-}
-
-@keyframes reading-leave-previous {
-    from {
-        transform: translateX(0);
-    }
-    to {
-        transform: translateX(100%);
-    }
+#content .reading-paper-viewport {
+    position: absolute;
+    flex: none;
 }

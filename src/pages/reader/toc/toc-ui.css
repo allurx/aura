@@ -5,43 +5,44 @@
 
 #reader > #toc {
     --toc-edge: 1rem;
-    --toc-top: max(var(--toc-edge), env(safe-area-inset-top));
+    --toc-top: max(var(--reader-panel-block-inset), env(safe-area-inset-top));
+    --toc-bottom: max(var(--reader-panel-block-inset), env(safe-area-inset-bottom));
     --toc-right: max(var(--toc-edge), env(safe-area-inset-right));
-    --toc-bottom: max(var(--toc-edge), env(safe-area-inset-bottom));
     --toc-left: max(var(--toc-edge), env(safe-area-inset-left));
-    --toc-padding-left: 16px;
-    --toc-padding-right: 16px;
-    --toc-enter-transform: translateX(calc(100% + var(--toc-right)));
+    --toc-padding-left: 20px;
+    --toc-padding-right: 20px;
+    --toc-enter-transform: translateX(12px);
     position: fixed;
     inset: calc(var(--viewport-top) + var(--toc-top)) var(--toc-right) calc(var(--viewport-bottom) + var(--toc-bottom))
         auto;
-    margin: 0;
+    margin: auto 0;
     display: none;
     /* 关闭后离散过渡仍会绘制面板，纵向布局必须保持到退出结束。 */
     flex-direction: column;
-    width: min(26rem, calc(100% - var(--toc-left) - var(--toc-right)));
-    height: calc(var(--viewport-height) - var(--toc-top) - var(--toc-bottom));
+    width: var(--panel-default-width);
+    height: var(--reader-panel-max-height);
     container: toc / size;
-    max-width: none;
+    max-width: calc(100% - var(--toc-left) - var(--toc-right));
     max-height: none;
     padding: 0;
-    border: 1px solid var(--appearance-border);
+    border: 1px solid var(--reader-panel-edge);
     border-radius: 20px;
     color: var(--appearance-color);
     background-color: var(--appearance-panel);
-    font-size: 1rem;
+    font-family: var(--ui-font-family);
+    font-size: 15px;
     line-height: 1.5;
     overflow: hidden;
     scrollbar-gutter: auto;
-    box-shadow: var(--appearance-shadow-floating);
+    box-shadow: var(--reader-panel-shadow);
     opacity: 0;
     transform: var(--toc-enter-transform);
     pointer-events: none;
     transition:
         opacity var(--motion-duration-normal) var(--motion-ease),
-        transform var(--motion-duration-slow) var(--motion-ease-out),
-        display var(--motion-duration-slow) allow-discrete,
-        overlay var(--motion-duration-slow) allow-discrete;
+        transform var(--motion-duration-normal) var(--motion-ease-out),
+        display var(--motion-duration-normal) allow-discrete,
+        overlay var(--motion-duration-normal) allow-discrete;
 
     &[open] {
         display: flex;
@@ -63,6 +64,7 @@
         height: var(--panel-height);
         max-width: var(--panel-maximum-width);
         max-height: var(--panel-maximum-height);
+        margin: 0;
     }
 
     &[data-panel-interacting] {
@@ -71,8 +73,7 @@
     }
 
     &::backdrop {
-        background: var(--appearance-backdrop);
-        backdrop-filter: blur(3px);
+        background: var(--reader-panel-backdrop);
         opacity: 0;
         transition:
             opacity var(--motion-duration-normal) var(--motion-ease),
@@ -111,7 +112,8 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    padding-block: 12px 8px;
+    padding-block: 14px;
+    border-bottom: 1px solid var(--reader-panel-edge);
     background-color: inherit;
     overflow-y: auto;
 
@@ -125,7 +127,7 @@
         overflow-wrap: anywhere;
     }
     h2 {
-        font-size: 20px;
+        font-size: 19px;
         line-height: 1.4;
         font-weight: 600;
     }
@@ -158,7 +160,7 @@
 #reader > #toc .toc-tools {
     flex: none;
     display: grid;
-    padding-block: 0 12px;
+    padding-block: 14px;
     overflow-y: auto;
 }
 
@@ -260,7 +262,16 @@
         &.active {
             font-weight: 600;
             color: var(--appearance-accent);
-            background: transparent;
+            background: color-mix(in srgb, var(--appearance-accent) 8%, transparent);
+
+            &::before {
+                content: "";
+                position: absolute;
+                inset: 12px auto 12px 0;
+                width: 3px;
+                border-radius: 2px;
+                background: currentColor;
+            }
 
             @media (forced-colors: active) {
                 text-decoration: underline;
@@ -316,18 +327,35 @@
 }
 
 #reader[data-mobile-controls] > #toc {
-    --toc-enter-transform: translateY(calc(100% + var(--toc-bottom)));
-    --toc-padding-left: max(12px, env(safe-area-inset-left));
-    --toc-padding-right: max(12px, env(safe-area-inset-right));
+    --toc-enter-transform: translateY(100%);
+    --toc-padding-left: max(16px, env(safe-area-inset-left));
+    --toc-padding-right: max(16px, env(safe-area-inset-right));
     inset: auto 0 var(--viewport-bottom);
     width: 100%;
-    height: calc(var(--viewport-height) * 0.9);
-    max-height: calc(var(--viewport-height) - env(safe-area-inset-top));
+    max-width: none;
+    margin: 0;
+    height: var(--reader-panel-max-height);
+    max-height: var(--reader-panel-available-height);
     border-radius: 20px 20px 0 0;
     border-bottom: 0;
 
     > .main {
         padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+        transition:
+            transform var(--motion-duration-slow) cubic-bezier(0.2, 0, 0.2, 1),
+            opacity var(--motion-duration-normal) var(--motion-ease),
+            display var(--motion-duration-slow) allow-discrete,
+            overlay var(--motion-duration-slow) allow-discrete;
+
+        &::backdrop {
+            transition:
+                opacity var(--motion-duration-slow) var(--motion-ease),
+                display var(--motion-duration-slow) allow-discrete,
+                overlay var(--motion-duration-slow) allow-discrete;
+        }
     }
 }
 
@@ -336,8 +364,8 @@ html:where([data-material]:not([data-material="standard"])) #reader > #toc {
     background-image: var(--material-image);
     background-size: var(--material-size);
     backdrop-filter: var(--material-filter);
-    border-color: var(--material-border);
-    box-shadow: var(--material-floating-shadow);
+    border-color: var(--reader-panel-edge);
+    box-shadow: var(--reader-panel-shadow);
 }
 
 html[data-material="glass"] #reader > #toc {

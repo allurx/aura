@@ -265,6 +265,16 @@ export default class ReaderController {
         this.readerUi.bindReadingNavigation(
             {
                 onTurn: (direction) => this.turn(direction),
+                onDragStart: () => this.canNavigate() && this.contentUi.beginPageDrag(),
+                onDragMove: (offset) => {
+                    this.contentUi.updatePageDrag(offset);
+                },
+                onDragEnd: async (commit) => {
+                    if (await this.contentUi.endPageDrag(commit)) this.readerUi.hideReadingTools();
+                },
+                onDragCancel: () => {
+                    this.contentUi.cancelPageDrag();
+                },
                 onChapter: async (direction) => {
                     const selected = await this.selectChapter(
                         (this.contentUi.readProgress()?.chapterNumber ?? this.state.progress.chapterNumber) +
