@@ -142,7 +142,7 @@ export default class BookshelfUi extends Ui {
         if (this.signal?.aborted) return;
         const status = assertExists(this.root.querySelector<HTMLElement>("#shelf-feedback"));
         window.clearTimeout(this.feedbackTimer);
-        status.textContent = message;
+        assertExists(status.querySelector<HTMLElement>(".feedback-message")).textContent = message;
         status.hidden = false;
         this.feedbackTimer = window.setTimeout(() => {
             status.hidden = true;

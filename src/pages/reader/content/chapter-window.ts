@@ -13,6 +13,7 @@ import type { ContentLocation } from "./content-location";
 import { locateContentRange, locateContentRect, readContentLocation } from "./content-location";
 import type { ReadingMode } from "../reading-mode";
 import { run } from "@/utils/event-util";
+import { yieldTask } from "@/utils/task-util";
 
 /**
  * 一个章节的有限正文窗口与可取消的排版索引；不保存阅读进度，也不改变源内容身份。
@@ -28,7 +29,8 @@ export default class ChapterWindow {
     private constructor(
         public readonly view: ChapterView,
         mode: ReadingMode,
-        location: ContentLocation
+        location: ContentLocation,
+        public readonly element: HTMLElement = view.element
     ) {
         this.mode = mode;
         this.layout = this.createLayout();
@@ -70,6 +72,37 @@ export default class ChapterWindow {
     }
 
     /**
+     * 同一源内容的独立排版投影。局部续排只修改副本，当前窗口与已保存位置保持不变。
+     */
+    public createPreview(viewport: HTMLElement): ChapterWindow {
+        const element = this.view.renderRange(
+            this.range.start,
+            this.range.end,
+            this.range.carry,
+            this.range.inlineCarry,
+            this.range.seams
+        );
+        const preview = new ChapterWindow(this.view, this.mode, this.view.pieceLocation(this.range.start), element);
+        preview.range = this.range;
+        preview.layout = this.layout;
+        preview.exact = this.exact;
+        this.view.mountProjection(viewport, element);
+        return preview;
+    }
+
+    /**
+     * 提交已经展示过的投影，不在释放手势后重新选择另一组页界。
+     */
+    public acceptPreview(preview: ChapterWindow): void {
+        const changed = this.hasRangeChanged(preview.range);
+        if (this.layout !== preview.layout) this.cancel();
+        this.layout = preview.layout;
+        this.range = preview.range;
+        this.exact = preview.exact;
+        if (changed) this.mount();
+    }
+
+    /**
      * 字体或视窗改变时先更新可见内容，旧索引随即失效，不沿用旧页数。
      */
     public reset(mode: ReadingMode, location: ContentLocation, preserveRange = false): void {
@@ -86,13 +119,15 @@ export default class ChapterWindow {
                 !selection.isCollapsed &&
                 selection.anchorNode &&
                 selection.focusNode &&
-                this.view.element.contains(selection.anchorNode) &&
-                this.view.element.contains(selection.focusNode);
+                this.element.contains(selection.anchorNode) &&
+                this.element.contains(selection.focusNode);
             // 新页界不丢弃仍在选择的源内容；只保留两个重叠的有界窗口，不扩展到全文。
-            this.range = keepSelection
+            const nextRange = keepSelection
                 ? { ...range, start: Math.min(range.start, this.range.start), end: Math.max(range.end, this.range.end) }
                 : range;
-            this.mount();
+            const changed = !sameMode || this.hasRangeChanged(nextRange);
+            this.range = nextRange;
+            if (changed) this.mount();
         }
         this.exact =
             this.range.start === 0 &&
@@ -103,6 +138,7 @@ export default class ChapterWindow {
 
     /**
      * 测量窗口共享正文的实际宽高与继承样式，每一轮只持有一个小片段。
+     * 首批让出当前重排任务，新的布局或页面退出可在创建测量视窗前取消启动。
      */
     public build(parent: HTMLElement, viewport: HTMLElement, signal: AbortSignal, onProgress: () => void): void {
         this.cancel();
@@ -111,22 +147,24 @@ export default class ChapterWindow {
         const controller = new AbortController();
         this.controller = controller;
         const lifetime = AbortSignal.any([signal, controller.signal]);
-        const bounds = viewport.getBoundingClientRect();
-        const probe = document.createElement("div");
-        probe.className = viewport.className;
-        probe.classList.add("reading-measure-viewport");
-        probe.inert = true;
-        probe.setAttribute("aria-hidden", "true");
-        Object.assign(probe.style, {
-            width: `${bounds.width}px`,
-            height: `${bounds.height}px`,
-        });
-        parent.append(probe);
-        this.probe = probe;
         const layout = this.layout;
-        const seed = this.mode === "scroll" ? undefined : this.readLayoutSeed(bounds);
         const ready = (async () => {
+            await yieldTask();
+            if (signal.aborted || controller.signal.aborted) return;
+            const bounds = viewport.getBoundingClientRect();
+            const probe = document.createElement("div");
+            probe.className = viewport.className;
+            probe.classList.add("reading-measure-viewport");
+            probe.inert = true;
+            probe.setAttribute("aria-hidden", "true");
+            Object.assign(probe.style, {
+                width: `${bounds.width}px`,
+                height: `${bounds.height}px`,
+            });
+            parent.append(probe);
+            this.probe = probe;
             try {
+                const seed = this.mode === "scroll" ? undefined : this.readLayoutSeed(bounds);
                 await layout.build(
                     probe,
                     lifetime,
@@ -137,7 +175,7 @@ export default class ChapterWindow {
                 );
                 if (!lifetime.aborted) onProgress();
             } finally {
-                this.view.releaseMeasurement(probe);
+                this.view.releaseProjection(probe);
                 probe.remove();
                 if (this.probe === probe) this.probe = undefined;
             }
@@ -189,16 +227,16 @@ export default class ChapterWindow {
         const layout = this.layout;
         const lifetime = this.controller ? AbortSignal.any([signal, this.controller.signal]) : signal;
         const bounds = viewport.getBoundingClientRect();
-        const visible = readContentLocation(this.view.element, bounds) ?? location;
+        const visible = readContentLocation(this.element, bounds) ?? location;
         const index = this.view.pieceIndex(visible);
-        const origin = this.view.element.getBoundingClientRect();
-        const gap = Number.parseFloat(getComputedStyle(this.view.element).columnGap) || 0;
+        const origin = this.element.getBoundingClientRect();
+        const gap = Number.parseFloat(getComputedStyle(this.element).columnGap) || 0;
         const stride = Math.max(1, bounds.width + gap);
         const visiblePage = Math.max(0, Math.round(viewport.scrollLeft / stride));
         let requiredEnd = Math.max(index, this.view.pieceIndex(location)) + 1;
         // 稳定源锚点可在当前页内部；扩窗同时保留整页正文，不能只保留页首字符。
         for (let candidate = index; candidate < this.range.end; candidate++) {
-            const first = alignmentRect(this.view.element, this.view.pieceLocation(candidate));
+            const first = alignmentRect(this.element, this.view.pieceLocation(candidate));
             if (!first) continue;
             const firstPage = Math.max(0, Math.floor((first.left - origin.left + 0.01) / stride));
             if (firstPage > visiblePage) break;
@@ -214,9 +252,9 @@ export default class ChapterWindow {
             if (this.layout !== layout) return false;
 
             const shared = direction > 0 ? this.view.pieceLocation(start) : visible;
-            const oldRect = alignmentRect(this.view.element, shared);
+            const oldRect = alignmentRect(this.element, shared);
             if (!oldRect) return false;
-            const oldOrigin = this.view.element.getBoundingClientRect();
+            const oldOrigin = this.element.getBoundingClientRect();
             const oldPage = Math.max(0, Math.floor((oldRect.left - oldOrigin.left + 0.01) / stride));
             const wantedX = oldRect.left - oldOrigin.left - oldPage * stride;
             const wantedY = oldRect.top - oldOrigin.top;
@@ -233,7 +271,7 @@ export default class ChapterWindow {
             try {
                 for (let attempt = 0; attempt < 4; attempt++) {
                     const section = this.view.renderRange(start, end, carry, inlineCarry, seams);
-                    this.view.mountMeasurement(probe, section);
+                    this.view.mountProjection(probe, section);
                     await waitForChapterLayout(section, lifetime);
                     if (lifetime.aborted || this.layout !== layout) return false;
                     const origin = section.getBoundingClientRect();
@@ -271,13 +309,13 @@ export default class ChapterWindow {
                 // 原生分栏可能丢弃段首 margin，使旧临时页的相位无法从更早的源起点重建。
                 // 在已显示页首保留明确页界；前补内容完整结束于该源位置，不等待全章前缀或跳过文字。
                 const boundary = this.view.safeBoundary(visible);
-                const oldBoundary = alignmentRect(this.view.element, boundary);
+                const oldBoundary = alignmentRect(this.element, boundary);
                 const firstLocation = this.view.pieceLocation(start);
                 const pageStart =
                     boundary.blockNumber !== firstLocation.blockNumber ||
                     boundary.contentOffset !== firstLocation.contentOffset;
                 const suffix = this.view.renderFrom(boundary, end, pageStart);
-                this.view.mountMeasurement(probe, suffix);
+                this.view.mountProjection(probe, suffix);
                 await waitForChapterLayout(suffix, lifetime);
                 if (lifetime.aborted || this.layout !== layout) return false;
                 const suffixOrigin = suffix.getBoundingClientRect();
@@ -304,7 +342,7 @@ export default class ChapterWindow {
                     false
                 );
             } finally {
-                this.view.releaseMeasurement(probe);
+                this.view.releaseProjection(probe);
                 probe.remove();
             }
         } finally {
@@ -329,7 +367,7 @@ export default class ChapterWindow {
      */
     public updateScrollSpace(): void {
         if (this.mode !== "scroll") return;
-        const element = this.view.element;
+        const element = this.element;
         const currentBottom = Number.parseFloat(element.style.paddingBottom) || 0;
         const currentTop = Number.parseFloat(element.style.paddingTop) || 0;
         const contentHeight = Math.max(0, element.getBoundingClientRect().height - currentTop - currentBottom);
@@ -347,7 +385,7 @@ export default class ChapterWindow {
         this.controller?.abort();
         this.controller = undefined;
         if (this.probe) {
-            this.view.releaseMeasurement(this.probe);
+            this.view.releaseProjection(this.probe);
             this.probe.remove();
         }
         this.probe = undefined;
@@ -401,14 +439,14 @@ export default class ChapterWindow {
     private readLayoutSeed(bounds: DOMRectReadOnly): ChapterLayoutSeed | undefined {
         const visible =
             readContentLocation(
-                this.view.element,
+                this.element,
                 new DOMRect(bounds.left + 1, bounds.top, Math.max(0, bounds.width - 2), bounds.height)
             ) ?? this.view.pieceLocation(this.range.start);
         const location = this.view.safeBoundary(visible);
-        const rect = alignmentRect(this.view.element, location);
+        const rect = alignmentRect(this.element, location);
         if (!rect) return undefined;
-        const origin = this.view.element.getBoundingClientRect();
-        const gap = Number.parseFloat(getComputedStyle(this.view.element).columnGap) || 0;
+        const origin = this.element.getBoundingClientRect();
+        const gap = Number.parseFloat(getComputedStyle(this.element).columnGap) || 0;
         const stride = Math.max(1, bounds.width + gap);
         const page = Math.max(0, Math.floor((rect.left - origin.left + 0.01) / stride));
         return {
@@ -420,15 +458,23 @@ export default class ChapterWindow {
         };
     }
 
-    private replace(range: ChapterLayoutWindow, exact: boolean): boolean {
+    /**
+     * 只比较影响正文投影的范围；页码基数和精确状态变化不需要重新挂载。
+     */
+    private hasRangeChanged(range: ChapterLayoutWindow): boolean {
         const previous = this.range;
-        const changed =
+        return (
             previous.start !== range.start ||
             previous.end !== range.end ||
             previous.carry !== range.carry ||
             previous.inlineCarry !== range.inlineCarry ||
             previous.seams !== range.seams ||
-            previous.top !== range.top;
+            previous.top !== range.top
+        );
+    }
+
+    private replace(range: ChapterLayoutWindow, exact: boolean): boolean {
+        const changed = this.hasRangeChanged(range);
         this.range = range;
         this.exact = exact;
         if (changed) {
@@ -442,15 +488,21 @@ export default class ChapterWindow {
     }
 
     private mount(): void {
-        this.view.mountRange(
-            this.range.start,
-            this.range.end,
-            this.mode === "scroll" ? 0 : this.range.carry,
-            this.range.inlineCarry,
-            this.range.seams
-        );
-        this.view.element.style.paddingTop = this.mode === "scroll" ? `${this.range.top}px` : "";
-        this.view.element.style.paddingBottom =
+        const carry = this.mode === "scroll" ? 0 : this.range.carry;
+        if (this.element === this.view.element) {
+            this.view.mountRange(this.range.start, this.range.end, carry, this.range.inlineCarry, this.range.seams);
+        } else {
+            const projection = this.view.renderRange(
+                this.range.start,
+                this.range.end,
+                carry,
+                this.range.inlineCarry,
+                this.range.seams
+            );
+            this.element.replaceChildren(...projection.childNodes);
+        }
+        this.element.style.paddingTop = this.mode === "scroll" ? `${this.range.top}px` : "";
+        this.element.style.paddingBottom =
             this.mode === "scroll"
                 ? `${Math.max(0, (this.view.pieceCount - this.range.end) * this.averageHeight())}px`
                 : "";

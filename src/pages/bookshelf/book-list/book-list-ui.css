@@ -324,7 +324,7 @@
             letter-spacing: -0.025em;
             color: var(--appearance-color);
         }
-        p {
+        > p {
             max-width: 28rem;
             margin-inline: auto;
             line-height: 1.7;
@@ -353,22 +353,78 @@
         font-size: 20px;
     }
 
-    .shelf-data-error .error-content {
-        width: min(100%, 32rem);
-        margin-top: 16px;
+    /* 阻塞书库的异常形成完整状态块，恢复说明与操作沿同一阅读起点排列。 */
+    .shelf-load-error {
+        align-items: stretch;
+        justify-self: center;
+        width: min(100%, 38rem);
+        padding: clamp(20px, 3vw, 28px);
+        border: 1px solid var(--appearance-border);
+        border-radius: 20px;
+        background: var(--appearance-panel);
+        box-shadow: var(--appearance-shadow-soft);
         text-align: start;
         overflow-wrap: anywhere;
 
-        p {
-            max-width: none;
-            margin: 0;
-            color: inherit;
-            font-size: inherit;
+        .shelf-status-heading {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 16px;
         }
 
-        pre {
-            max-height: 12rem;
-            overflow: auto;
+        .shelf-status-symbol {
+            display: grid;
+            place-items: center;
+            flex: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: color-mix(in srgb, var(--appearance-danger) 8%, var(--appearance-panel));
+            color: var(--appearance-danger);
+
+            > .icon {
+                --icon-size: 22px;
+            }
+        }
+
+        h2 {
+            font-size: 20px;
+            line-height: 1.45;
+            text-wrap: balance;
+        }
+
+        .error-content {
+            width: 100%;
+        }
+
+        > .shelf-empty-hint {
+            max-width: none;
+            margin: 0;
+        }
+
+        > button {
+            align-self: flex-start;
+            margin-top: 20px;
+        }
+    }
+
+    /* 已明确不兼容时，恢复建议优先；重新读取只作为状态复查入口。 */
+    .shelf-data-error .shelf-retry {
+        border-color: var(--appearance-border);
+        background: transparent;
+        color: var(--appearance-color);
+        box-shadow: none;
+
+        @media (hover: hover) and (pointer: fine) {
+            &:hover {
+                background: var(--appearance-selection);
+            }
+        }
+
+        &:active {
+            background: var(--appearance-selection);
+            box-shadow: none;
         }
     }
 

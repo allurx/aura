@@ -6,15 +6,16 @@
 /* 错误可出现在对话框或书架原位状态，两处共用结果、恢复步骤和技术详情的排版。 */
 .error-content {
     display: grid;
-    gap: 20px;
+    min-width: 0;
+    gap: 16px;
     font-size: 15px;
     line-height: 1.7;
     text-align: start;
     white-space: normal;
+    overflow-wrap: anywhere;
 
     p {
         margin: 0;
-        text-wrap: balance;
     }
 
     .error-result {
@@ -26,18 +27,69 @@
         white-space: pre-line;
     }
 
+    .error-guidance {
+        display: grid;
+        gap: 6px;
+        padding-inline-start: 12px;
+        border-inline-start: 2px solid var(--appearance-border);
+        color: var(--appearance-muted-color);
+        font-size: 14px;
+        line-height: 1.65;
+    }
+
+    .error-guidance-title {
+        color: var(--appearance-color);
+        font-size: 13px;
+        font-weight: 600;
+    }
+
     .error-diagnostics {
-        margin-top: -8px;
+        min-width: 0;
         font-size: 13px;
 
         summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            min-height: 44px;
+            padding: 8px 12px;
+            border: 1px solid var(--appearance-border);
+            border-radius: 10px;
+            list-style: none;
             cursor: pointer;
             color: var(--appearance-muted-color);
+
+            &::-webkit-details-marker {
+                display: none;
+            }
+
+            &::after {
+                content: "";
+                flex: none;
+                width: 7px;
+                height: 7px;
+                border: solid currentColor;
+                border-width: 0 1.5px 1.5px 0;
+                transform: rotate(-45deg);
+            }
+
+            @media (hover: hover) and (pointer: fine) {
+                &:hover {
+                    background: color-mix(in srgb, var(--appearance-color) 4%, transparent);
+                }
+            }
+        }
+
+        &[open] > summary::after {
+            transform: rotate(45deg);
         }
 
         pre {
-            margin: 10px 0 0;
+            max-height: 12rem;
+            margin: 8px 0 0;
             padding: 12px;
+            overflow: auto;
             border-radius: 10px;
             background: var(--appearance-muted-surface);
             font-family: ui-monospace, monospace;
@@ -56,7 +108,6 @@
 
     li {
         padding-inline-start: 0.15em;
-        text-wrap: balance;
     }
 
     li + li {
@@ -141,6 +192,7 @@
             min-width: 0;
             flex: 1;
             letter-spacing: -0.02em;
+            line-height: 1.4;
             overflow-wrap: anywhere;
         }
 
@@ -161,6 +213,10 @@
 
     &[data-error] .dialog-error-icon {
         display: inline-block;
+    }
+
+    &[data-error] .header {
+        background: color-mix(in srgb, var(--appearance-danger) 4%, transparent);
     }
 
     .body {

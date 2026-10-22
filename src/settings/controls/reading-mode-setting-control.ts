@@ -23,7 +23,7 @@ export default class ReadingModeSettingControl extends RadioSettingControl {
         // 图示和整卡标签共用一个原生单选输入，方向键遵循浏览器的单选组行为。
         this.element.classList.add("reading-mode-setting");
         this.optionsElement.className = "reading-mode-options";
-        this.description.className = "reading-mode-description";
+        this.description.className = "reading-mode-description setting-help";
         this.description.id = "reading-mode-description";
         this.fieldset.setAttribute("aria-describedby", this.description.id);
         this.fieldset.append(this.description);

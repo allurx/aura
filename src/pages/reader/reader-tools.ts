@@ -255,6 +255,8 @@ export default class ReaderTools {
         this.root.setAttribute("data-tools-animating", "");
         this.body.inert = true;
         this.heading.inert = true;
+        // 过渡期间同一入口仍可接续触摸拖动，手势资格在 pointerdown 前由浏览器确定。
+        this.toggle.style.touchAction = "none";
         const frame = (box: DOMRect): Keyframe => ({
             left: `${box.left}px`,
             top: `${box.top}px`,
@@ -319,6 +321,7 @@ export default class ReaderTools {
         this.root.removeAttribute("data-tools-animating");
         this.root.style.removeProperty("--tools-content-height");
         this.root.style.removeProperty("--tools-content-width");
+        this.toggle.style.removeProperty("touch-action");
         this.body.inert = false;
         this.heading.inert = false;
     }
@@ -353,14 +356,10 @@ export default class ReaderTools {
             this.cancelDrag();
             return;
         }
-        if (
-            !this.desktop ||
-            this.transition ||
-            event.button !== 0 ||
-            (target === this.toggle && !this.appearance.collapsed)
-        )
-            return;
+        if (!this.desktop || event.button !== 0) return;
+        // 新的按下属于下一次操作；上次触摸拖动可能没有产生需要抑制的兼容 click。
         this.suppressClick = false;
+        if (target === this.toggle && !this.appearance.collapsed && !this.transition) return;
         const bounds = this.root.getBoundingClientRect();
         this.drag = {
             pointerId: event.pointerId,
@@ -381,7 +380,18 @@ export default class ReaderTools {
         if (drag?.pointerId !== event.pointerId) return;
         const dx = event.clientX - drag.startX;
         const dy = event.clientY - drag.startY;
-        if (!drag.position && Math.hypot(dx, dy) < 4) return;
+        if (!drag.position) {
+            if (Math.hypot(dx, dy) < 4) return;
+
+            // 只有形成拖动后才结束尾段；普通连点仍从当前画面反向播放。
+            // 先保留可见入口中心，再恢复目标形态，不能用动画中的外壳左上角作为最终起点。
+            const anchor = drag.target.getBoundingClientRect();
+            if (this.transition) this.render();
+            const bounds = this.root.getBoundingClientRect();
+            const currentAnchor = drag.target.getBoundingClientRect();
+            drag.left = bounds.left + anchor.left + anchor.width / 2 - currentAnchor.left - currentAnchor.width / 2;
+            drag.top = bounds.top + anchor.top + anchor.height / 2 - currentAnchor.top - currentAnchor.height / 2;
+        }
         event.preventDefault();
         drag.position = { left: drag.left + dx, top: drag.top + dy };
         this.root.toggleAttribute("data-dragging", true);

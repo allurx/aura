@@ -179,7 +179,7 @@ export default class ReaderController {
     }
 
     /**
-     * 页内移动优先，越过边界才接续相邻章；动画中的重复输入不排成长队。
+     * 页内移动优先，越过边界才接续相邻章；内容提交后可接续翻页，不排队播放动画。
      */
     private async turn(direction: ReadingDirection): Promise<void> {
         if (!this.canNavigate()) return;
@@ -265,6 +265,16 @@ export default class ReaderController {
         this.readerUi.bindReadingNavigation(
             {
                 onTurn: (direction) => this.turn(direction),
+                onDragStart: () => this.canNavigate() && this.contentUi.beginPageDrag(),
+                onDragMove: (offset) => {
+                    this.contentUi.updatePageDrag(offset);
+                },
+                onDragEnd: async (commit) => {
+                    if (await this.contentUi.endPageDrag(commit)) this.readerUi.hideReadingTools();
+                },
+                onDragCancel: () => {
+                    this.contentUi.cancelPageDrag();
+                },
                 onChapter: async (direction) => {
                     const selected = await this.selectChapter(
                         (this.contentUi.readProgress()?.chapterNumber ?? this.state.progress.chapterNumber) +

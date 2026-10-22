@@ -19,7 +19,7 @@ export default class BackgroundTextureSetting extends Setting {
         return new SwitchSettingControl(this, listener, signal, {
             offValue: "none",
             onValue: "material",
-            description: "让网页背景使用当前界面材质，阅读正文保持纯色。",
+            description: "将材质延伸到网页背景，正文保持纯色。",
         });
     }
 

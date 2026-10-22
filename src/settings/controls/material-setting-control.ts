@@ -11,20 +11,12 @@ import type SettingControlListener from "./setting-control-listener";
  * 材质样片使用真实表面变量；原生单选组同时提供整卡点击和方向键切换。
  */
 export default class MaterialSettingControl extends RadioSettingControl {
-    private readonly description = document.createElement("p");
-
-    public constructor(
-        private readonly materialSetting: MaterialSetting,
-        listener: SettingControlListener,
-        signal: AbortSignal
-    ) {
+    public constructor(materialSetting: MaterialSetting, listener: SettingControlListener, signal: AbortSignal) {
         super(materialSetting, listener, signal, "appearance-material");
 
         // 材质沿用常规设置的标题和单项重置，不增加独立设置层级。
         this.element.classList.add("material-setting");
         this.optionsElement.className = "material-options";
-        this.description.className = "material-current-description";
-        this.fieldset.append(this.description);
 
         for (const [material, { title, description }] of materialSetting.options) {
             const { label, input } = this.createOption(material);
@@ -43,6 +35,7 @@ export default class MaterialSettingControl extends RadioSettingControl {
             caption.className = "material-caption";
             caption.id = `material-title-${material}`;
             caption.textContent = title;
+            // 样片承担视觉说明；读屏仍能获得每种材质的文字描述。
             const explanation = document.createElement("span");
             explanation.className = "material-description";
             explanation.id = `material-description-${material}`;
@@ -51,11 +44,5 @@ export default class MaterialSettingControl extends RadioSettingControl {
             input.setAttribute("aria-describedby", explanation.id);
             label.append(preview, caption, explanation);
         }
-    }
-
-    public override render(value: string | undefined): void {
-        super.render(value);
-        const material = this.materialSetting.resolveValue(value);
-        this.description.textContent = this.materialSetting.options.get(material)?.description ?? "";
     }
 }

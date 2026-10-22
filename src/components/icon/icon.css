@@ -51,6 +51,10 @@
     --icon-image: url("../../assets/images/warning.svg");
 }
 
+.icon-check {
+    --icon-image: url("../../assets/images/check.svg");
+}
+
 .icon-add {
     --icon-image: url("../../assets/images/add.svg");
 }

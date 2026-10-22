@@ -3,7 +3,27 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* 固定纸面边框承接正文与工具，窄屏和矮窗口同步取消圆角。 */
+html[data-page="reader"] {
+    --reading-page-radius: 20px;
+
+    @media (max-width: 800px), (max-height: 500px) {
+        --reading-page-radius: 0px;
+    }
+}
+
 #reader {
+    --reader-panel-edge: color-mix(in srgb, var(--appearance-color) 12%, transparent);
+    --reader-panel-backdrop: color-mix(in srgb, var(--appearance-backdrop) 75%, transparent);
+    --reader-panel-shadow:
+        0 4px 12px color-mix(in srgb, var(--appearance-shadow-color) 6%, transparent),
+        0 18px 48px color-mix(in srgb, var(--appearance-shadow-color) 12%, transparent);
+    --reader-panel-block-inset: clamp(12px, calc(var(--viewport-height) * 0.04), 32px);
+    --reader-panel-available-height: calc(
+        var(--viewport-height) - max(var(--reader-panel-block-inset), env(safe-area-inset-top)) -
+            max(var(--reader-panel-block-inset), env(safe-area-inset-bottom))
+    );
+    --reader-panel-max-height: min(680px, var(--reader-panel-available-height));
     width: 800px;
     min-width: 640px;
     max-width: min(960px, calc(100vw - 160px));
@@ -17,13 +37,19 @@
     overflow: hidden;
     resize: horizontal;
     border: 1px solid var(--appearance-border);
-    border-radius: 20px;
+    border-radius: var(--reading-page-radius);
     background-color: var(--reader-surface);
     color: var(--reader-color);
     box-shadow: var(--appearance-shadow-soft);
     line-height: 1.6;
 
     &[data-mobile-controls] {
+        /* 普通竖屏保留正文上下文；软键盘和矮屏优先保留面板内部的可用空间。 */
+        --reader-panel-available-height: calc(var(--viewport-height) - env(safe-area-inset-top));
+        --reader-panel-max-height: min(
+            var(--reader-panel-available-height),
+            max(calc(var(--viewport-height) * 0.78), min(448px, var(--reader-panel-available-height)))
+        );
         max-width: min(960px, 100%);
     }
 
@@ -34,7 +60,6 @@
         margin: 0;
         resize: none;
         border: 0;
-        border-radius: 0;
         box-shadow: none;
 
         > #setting .width-setting {
@@ -46,22 +71,47 @@
         height: 100%;
         margin-block: 0;
         border-block: 0;
-        border-radius: 0;
     }
+}
+
+/* 键盘焦点留在固定阅读边框上，不随翻页移动或重复出现在页缝。 */
+:where(html[data-keyboard-navigation]) #reader:has(> #content:focus-visible) {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: -2px;
 }
 
 /* 工具移到底部时，设置也贴靠入口所在边；面板内部呈现仍由设置组件负责。 */
 #reader[data-mobile-controls] > #setting {
     --setting-inset: auto 0 var(--viewport-bottom);
     --setting-width: 100%;
-    --setting-max-height: min(
-        calc(var(--viewport-height) * 0.9),
-        calc(var(--viewport-height) - env(safe-area-inset-top))
-    );
     --setting-border-radius: 1.25rem 1.25rem 0 0;
     --setting-border-bottom: 0;
     --setting-padding-left: max(16px, env(safe-area-inset-left));
     --setting-padding-right: max(16px, env(safe-area-inset-right));
+
+    @media (prefers-reduced-motion: no-preference) {
+        transform: translateY(100%);
+        transition:
+            transform var(--motion-duration-slow) cubic-bezier(0.2, 0, 0.2, 1),
+            opacity var(--motion-duration-normal) var(--motion-ease),
+            display var(--motion-duration-slow) allow-discrete,
+            overlay var(--motion-duration-slow) allow-discrete;
+
+        &[open] {
+            transform: none;
+
+            @starting-style {
+                transform: translateY(100%);
+            }
+        }
+
+        &::backdrop {
+            transition:
+                opacity var(--motion-duration-slow) var(--motion-ease),
+                display var(--motion-duration-slow) allow-discrete,
+                overlay var(--motion-duration-slow) allow-discrete;
+        }
+    }
 }
 
 /* 触摸布局由正文中部唤出工具；辅助入口仍在键盘和阅读顺序中。 */
@@ -99,14 +149,14 @@
 /* 工具覆盖正文而不参与布局，显隐时保持滚动容器尺寸和阅读位置。 */
 #reader > :is(#header, #footer) {
     position: absolute;
-    left: max(12px, env(safe-area-inset-left));
-    right: max(12px, env(safe-area-inset-right));
+    left: 0;
+    right: 0;
     z-index: 3;
-    max-width: 520px;
-    margin-inline: auto;
-    border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
-    border-radius: 16px;
-    box-shadow: var(--appearance-shadow-raised);
+    margin: 0;
+    border: 0 solid color-mix(in srgb, currentColor 10%, transparent);
+    border-radius: 0;
+    background-color: inherit;
+    color: inherit;
     opacity: 1;
     transform: none;
     transition:
@@ -116,20 +166,13 @@
 }
 
 #reader > #header {
-    --tools-offset: -12px;
+    --tools-offset: -8px;
+    border-bottom-width: 1px;
 }
 
 #reader > #footer {
-    --tools-offset: 12px;
-}
-
-/* 展开的工具单独参与翻页快照，不被正文的具名快照盖住。 */
-#reader[data-reading-tools-visible] > #header {
-    view-transition-name: reading-tools-header;
-}
-
-#reader[data-reading-tools-visible] > #footer {
-    view-transition-name: reading-tools-footer;
+    --tools-offset: 8px;
+    border-top-width: 1px;
 }
 
 #reader:not([data-reading-tools-visible]) > :is(#header, #footer) {

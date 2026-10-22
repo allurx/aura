@@ -67,9 +67,20 @@ export default class BookListUi extends Ui {
 
         const title = document.createElement(state === "loading" ? "p" : "h2");
         title.textContent = state === "loading" ? "正在读取书架…" : (failure?.title ?? "书架未能加载");
-        status.append(title);
 
         if (state === "error") {
+            status.classList.add("shelf-load-error");
+            const heading = document.createElement("div");
+            heading.className = "shelf-status-heading";
+            const symbol = document.createElement("span");
+            symbol.className = "shelf-status-symbol";
+            symbol.setAttribute("aria-hidden", "true");
+            const icon = document.createElement("span");
+            icon.className = "icon icon-warning";
+            symbol.append(icon);
+            heading.append(symbol, title);
+            status.append(heading);
+
             if (failure) {
                 status.classList.add("shelf-data-error");
                 status.append(failure.content);
@@ -85,7 +96,7 @@ export default class BookListUi extends Ui {
             action.textContent = failure?.canReset ? "重置全部数据" : "重新读取";
             if (failure?.canReset) action.setAttribute("aria-haspopup", "dialog");
             status.append(action);
-        }
+        } else status.append(title);
         this.root.replaceChildren(status);
         if (focusedInside) this.root.focus({ preventScroll: true });
     }

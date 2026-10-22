@@ -34,7 +34,6 @@ html[data-page="reader"] #app {
     --tools-safe-left: env(safe-area-inset-left, 0px);
     position: fixed;
     z-index: 4;
-    view-transition-name: reading-tools-desktop;
     display: flex;
     flex-direction: column;
     width: var(--tools-expanded-width);
@@ -68,16 +67,16 @@ html[data-page="reader"] #app {
         display: flex;
         flex: none;
         justify-content: center;
-        min-height: 24px;
+        min-height: 44px;
         border-bottom: 1px solid var(--appearance-border);
         color: var(--appearance-muted-color);
 
         > .icon-button {
-            --icon-button-size: 24px;
+            --icon-button-size: 44px;
             --icon-size: 18px;
             flex-basis: auto;
             width: 100%;
-            grid-template: 20px / 48px;
+            grid-template: 24px / 44px;
             border-radius: 6px;
         }
     }
@@ -93,7 +92,7 @@ html[data-page="reader"] #app {
     }
 
     .reader-tools-toggle {
-        --icon-button-size: 40px;
+        --icon-button-size: 44px;
         --icon-size: 22px;
         --icon-image: url("../../../assets/images/collapse-vertical.svg");
         grid-template: 28px / 44px;
@@ -136,11 +135,11 @@ html[data-page="reader"] #app {
         }
 
         .reader-tools-heading {
-            bottom: calc(46px + var(--tools-content-height));
+            bottom: calc(50px + var(--tools-content-height));
         }
 
         .reader-tools-body {
-            bottom: 46px;
+            bottom: 50px;
             height: var(--tools-content-height);
         }
 
@@ -181,7 +180,7 @@ html[data-page="reader"] #app {
         flex-direction: row;
         gap: 8px;
         width: 100%;
-        min-height: 40px;
+        min-height: 44px;
         padding: 6px 4px;
         white-space: normal;
         overflow-wrap: anywhere;

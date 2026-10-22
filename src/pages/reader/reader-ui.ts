@@ -7,8 +7,7 @@ import Ui from "@/components/ui";
 import { getBookTitle } from "@/domain/file/book-format";
 import { assertExists } from "@/utils/assert-util";
 import { bind } from "@/utils/event-util";
-import type { ReadingDirection } from "./reading-direction";
-import bindReadingInput from "./reading-input";
+import bindReadingInput, { type ReadingNavigationHandlers } from "./reading-input";
 import type { ReadingMode } from "./reading-mode";
 import ReaderTools, { type ReaderToolsBinding } from "./reader-tools";
 
@@ -228,15 +227,7 @@ export default class ReaderUi extends Ui {
     /**
      * 正文键盘与有效手势统一为阅读意图，浮层打开时不接受背景导航。
      */
-    public bindReadingNavigation(
-        handlers: {
-            onTurn: (direction: ReadingDirection) => Promise<void>;
-            onChapter: (direction: ReadingDirection) => Promise<void>;
-            onCenterTap: () => void;
-            getMode: () => ReadingMode;
-        },
-        signal: AbortSignal
-    ): this {
+    public bindReadingNavigation(handlers: ReadingNavigationHandlers, signal: AbortSignal): this {
         // 输入能力独立于工具布局：触摸大屏也可翻页，鼠标正文始终保留选择行为。
         this.cancelReadingGesture = bindReadingInput(
             this.content,
@@ -246,6 +237,10 @@ export default class ReaderUi extends Ui {
                 onChapter: handlers.onChapter,
                 onCenterTap: handlers.onCenterTap,
                 getMode: handlers.getMode,
+                onDragStart: handlers.onDragStart,
+                onDragMove: handlers.onDragMove,
+                onDragEnd: handlers.onDragEnd,
+                onDragCancel: handlers.onDragCancel,
             },
             signal
         );

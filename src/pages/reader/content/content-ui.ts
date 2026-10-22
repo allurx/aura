@@ -13,6 +13,8 @@ import ChapterView from "./chapter-view";
 import { endContentLocation, locateContentRange, locateContentRect, readContentLocation } from "./content-location";
 import type { ContentLocation } from "./content-location";
 import ChapterWindow from "./chapter-window";
+import PageTurnUi, { type PaperPage } from "./page-turn-ui";
+import { waitForChapterLayout } from "./chapter-layout";
 import { assertExists } from "@/utils/assert-util";
 
 /**
@@ -57,6 +59,40 @@ interface PreparedChapters {
 }
 
 /**
+ * 已经展示的目标窗口；正式提交沿用同一范围和列位置，不再计算另一页。
+ */
+interface PreparedPageTurn {
+    readonly direction: ReadingDirection;
+    readonly view: ChapterView;
+    readonly window: ChapterWindow | undefined;
+    readonly preview: ChapterWindow | undefined;
+    readonly page: PaperPage;
+    readonly pageIndex: number;
+    readonly release: () => void;
+}
+
+/**
+ * 一次有限预览。准备任务与视觉资源共享取消边界，原位置直到提交才会改变。
+ */
+interface PageDrag {
+    readonly controller: AbortController;
+    readonly signal: AbortSignal;
+    readonly source: ChapterView;
+    readonly window: ChapterWindow | undefined;
+    readonly position: ReadingPosition;
+    readonly pageIndex: number;
+    readonly layout: string;
+    readonly paper: PageTurnUi;
+    readonly candidates: Map<ReadingDirection, Promise<PreparedPageTurn | undefined>>;
+    readonly prepared: Set<PreparedPageTurn>;
+    readonly resolved: Set<ReadingDirection>;
+    offset: number;
+    disposed: boolean;
+    accepted: boolean;
+    committed: boolean;
+}
+
+/**
  * 正文排版、内容锚点与翻页呈现。滚动保留相邻章节，分页由浏览器自然断行。
  */
 export default class ContentUi extends Ui {
@@ -85,12 +121,13 @@ export default class ContentUi extends Ui {
     // 正文和内嵌区域共用恢复边界，延迟的程序滚动不能覆盖原源锚点。
     private readonly restoredScrollPositions = new WeakMap<HTMLElement, { top: number; left: number }>();
     private layout = "";
-    private turning = false;
     private updating = false;
     private refreshPending = false;
     private windowPending = false;
     private onLocationChange: ((snapshot: ReadingSnapshot) => Promise<void>) | undefined;
-    private transition: ViewTransition | undefined;
+    private pageDrag: PageDrag | undefined;
+    private pageMotion: PageDrag | undefined;
+    private readonly retainedViews = new Set<ChapterView>();
 
     /**
      * main 持有正文外观，内部视窗承担分页裁切或原生滚动。
@@ -166,9 +203,28 @@ export default class ContentUi extends Ui {
             },
             { signal }
         );
-        window
-            .matchMedia("(prefers-reduced-motion: reduce)")
-            .addEventListener("change", () => this.transition?.skipTransition(), { signal });
+        window.matchMedia("(prefers-reduced-motion: reduce)").addEventListener(
+            "change",
+            () => {
+                this.cancelPageDrag();
+            },
+            { signal }
+        );
+        // 浮层与新的正文操作结束视觉预览，真实正文始终保留原生命中和焦点。
+        document.addEventListener(
+            "beforetoggle",
+            (event) => {
+                if (event.target instanceof HTMLDialogElement && event.newState === "open") this.cancelPageDrag();
+            },
+            { capture: true, signal }
+        );
+        this.root.addEventListener(
+            "pointerdown",
+            () => {
+                this.finishPageMotion();
+            },
+            { capture: true, signal }
+        );
         signal.addEventListener(
             "abort",
             () => {
@@ -180,7 +236,7 @@ export default class ContentUi extends Ui {
                 if (this.indexFrame !== undefined) cancelAnimationFrame(this.indexFrame);
                 for (const window of this.windows.values()) window.cancel();
                 this.windows.clear();
-                this.transition?.skipTransition();
+                this.invalidatePageTurn();
                 for (const view of this.views.values()) view.dispose();
                 this.views.clear();
                 this.epubResources = undefined;
@@ -214,7 +270,7 @@ export default class ContentUi extends Ui {
         if (mode === this.mode) return;
         const layoutChanged = (mode === "scroll") !== (this.mode === "scroll");
         const position = this.readPosition();
-        this.transition?.skipTransition();
+        this.invalidatePageTurn();
         this.mode = mode;
         this.root.dataset["readingMode"] = mode;
         if (!layoutChanged || this.views.size === 0) return;
@@ -236,7 +292,7 @@ export default class ContentUi extends Ui {
      * 导航和窗口提交互斥；持久化不会另建一份正文忙状态。
      */
     public isBusy(): boolean {
-        return this.updating || this.layoutPending;
+        return this.updating || this.layoutPending || this.pageDrag !== undefined;
     }
 
     /**
@@ -250,7 +306,12 @@ export default class ContentUi extends Ui {
      * 按目标位置两侧的实际高度准备窗口，短章继续补充真实内容。
      * 新章节在不可交互的测量视窗中排版，加载失败不替换仍可阅读的正文。
      */
-    private async prepareWindow(chapterNumber: number, target: ChapterTarget, top = 0): Promise<PreparedChapters> {
+    private async prepareWindow(
+        chapterNumber: number,
+        target: ChapterTarget,
+        top = 0,
+        signal = this.signal
+    ): Promise<PreparedChapters> {
         const prepared: ChapterView[] = [];
         const resourceReleases: (() => void)[] = [];
         const result = {
@@ -285,17 +346,15 @@ export default class ContentUi extends Ui {
         const getView = async (number: number): Promise<ChapterView> => {
             const view =
                 this.views.get(number) ??
-                (await ChapterView.create(await this.loadChapter(number), this.epubResources, this.signal));
+                (await ChapterView.create(await this.loadChapter(number), this.epubResources, signal));
             prepared.push(view);
             if (!this.isActive()) return view;
             if (view.pieceCount > 0 && !this.windows.has(view)) {
                 const destination = number === chapterNumber ? target : number < chapterNumber ? "end" : "start";
                 const location = targetLocation(view, destination);
-                this.windows.set(view, await ChapterWindow.create(view, this.mode, location, this.signal));
+                this.windows.set(view, await ChapterWindow.create(view, this.mode, location, signal));
             } else if (number === chapterNumber) {
-                const release = await this.windows
-                    .get(view)
-                    ?.prepareLocation(targetLocation(view, target), this.signal);
+                const release = await this.windows.get(view)?.prepareLocation(targetLocation(view, target), signal);
                 if (release) resourceReleases.push(release);
             }
             return view;
@@ -333,7 +392,7 @@ export default class ContentUi extends Ui {
 
         try {
             const current = await getView(chapterNumber);
-            if (this.signal.aborted || this.mode !== "scroll") return result;
+            if (signal.aborted || this.mode !== "scroll") return result;
             const viewportHeight = this.viewport.clientHeight;
             const metrics = measureView(current, target);
             let after = metrics.height - metrics.offset;
@@ -366,7 +425,7 @@ export default class ContentUi extends Ui {
      */
     private releasePrepared(views: readonly ChapterView[]): void {
         for (const view of views) {
-            if (this.views.get(view.chapter.chapterNumber) !== view) {
+            if (this.views.get(view.chapter.chapterNumber) !== view && !this.retainedViews.has(view)) {
                 this.windows.get(view)?.cancel();
                 this.windows.delete(view);
                 view.dispose();
@@ -381,8 +440,10 @@ export default class ContentUi extends Ui {
         for (const previous of this.views.values()) {
             if (!views.includes(previous)) {
                 this.windows.get(previous)?.cancel();
-                this.windows.delete(previous);
-                previous.dispose();
+                if (!this.retainedViews.has(previous)) {
+                    this.windows.delete(previous);
+                    previous.dispose();
+                }
             }
         }
         this.views.clear();
@@ -409,50 +470,37 @@ export default class ContentUi extends Ui {
     }
 
     /**
-     * 显式导航到内容位置或章首、章末，跨章和章内翻页使用相同过渡。
+     * 目录、书内链接与进度恢复直接定位到源内容；日常翻页使用准备后的相邻纸面。
      */
-    public async showChapter(
-        chapterNumber: number,
-        target: ChapterTarget,
-        direction = ReadingDirection.INVALID
-    ): Promise<boolean> {
+    public async showChapter(chapterNumber: number, target: ChapterTarget): Promise<boolean> {
         if (chapterNumber < 1 || chapterNumber > this.chapterCount) return false;
-        return this.update(() => this.navigateToChapter(chapterNumber, target, direction), { preservePosition: true });
+        this.cancelPageDrag();
+        return this.update(() => this.navigateToChapter(chapterNumber, target), { preservePosition: true });
     }
 
     /**
      * 数据、排版和目标定位一起提交，控制器不再按布尔结果推断跨章行为。
      */
-    private async navigateToChapter(
-        chapterNumber: number,
-        target: ChapterTarget,
-        direction: ReadingDirection
-    ): Promise<void> {
+    private async navigateToChapter(chapterNumber: number, target: ChapterTarget): Promise<void> {
         const mode = this.mode;
         const prepared = await this.prepareWindow(chapterNumber, target);
         const views = prepared.views;
         try {
             if (this.signal.aborted || this.mode !== mode) return;
-            await this.changePage(async (animated) => {
-                this.chapterNumber = chapterNumber;
-                this.position = undefined;
-                this.install(views);
-                const view = assertExists(this.views.get(chapterNumber), "Missing prepared reading chapter");
-                const window = this.windows.get(view);
-                this.pendingChapterEnd = target === "end" && window && !window.layout.complete ? window : undefined;
-                const location = targetLocation(view, target);
-                window?.showLocation(location);
-                const position = (): void => {
-                    if (!this.isActive()) return;
-                    this.measure();
-                    if (target === "end") this.moveToEnd();
-                    else this.restorePosition({ ...location, chapterNumber });
-                };
-                // 快照更新暂停渲染，必须同步完成一次最终排版，不能等待 ResizeObserver。
-                // 无快照的导航仍交给自然布局，避免在挂载正文后立即强制重排。
-                if (animated) position();
-                else await this.afterLayout(position);
-            }, direction);
+            this.chapterNumber = chapterNumber;
+            this.position = undefined;
+            this.install(views);
+            const view = assertExists(this.views.get(chapterNumber), "Missing prepared reading chapter");
+            const window = this.windows.get(view);
+            this.pendingChapterEnd = target === "end" && window && !window.layout.complete ? window : undefined;
+            const location = targetLocation(view, target);
+            window?.showLocation(location);
+            await this.afterLayout(() => {
+                if (!this.isActive()) return;
+                this.measure();
+                if (target === "end") this.moveToEnd();
+                else this.restorePosition({ ...location, chapterNumber });
+            });
             this.startActiveLayout();
         } finally {
             prepared.releaseResources();
@@ -632,106 +680,307 @@ export default class ContentUi extends Ui {
      */
     public async turn(direction: ReadingDirection): Promise<boolean> {
         if (direction === ReadingDirection.INVALID) return false;
-        return this.update(async () => {
-            this.pendingChapterEnd = undefined;
-            const step = direction === ReadingDirection.NEXT ? 1 : -1;
-            if (this.mode === "scroll") {
+        if (this.mode === "scroll") {
+            return this.update(async () => {
                 await this.maintainWindow();
                 if (this.signal.aborted) return;
                 const lineHeight = Number.parseFloat(getComputedStyle(this.root).lineHeight);
+                const step = direction === ReadingDirection.NEXT ? 1 : -1;
                 this.viewport.scrollTop += step * Math.max(lineHeight, this.viewport.clientHeight - lineHeight);
                 this.capturePosition();
-                return;
-            }
-            const window = this.currentWindow();
-            if (window) {
-                const position = this.readPosition();
-                const nearUnrendered =
-                    step > 0
-                        ? this.pageIndex >= this.pageCount - 2 && window.range.end < window.view.pieceCount
-                        : this.pageIndex <= 1 && window.range.start > 0;
-                if (nearUnrendered && position) {
-                    const layout = window.layout;
-                    const target =
-                        step > 0
-                            ? Math.min(window.view.pieceCount - 1, window.range.end)
-                            : Math.max(0, window.range.start - 1);
-                    const changed = layout.findLocation(window.view.pieceLocation(target))
-                        ? window.showLocation(position.location)
-                        : await window.shiftLocal(position.location, step, this.root, this.viewport, this.signal);
-                    if (!this.isActive() || (!changed && layout !== window.layout)) return;
-                    const currentLayout = window.layout;
-                    await this.afterLayout(() => {
-                        if (!this.isActive() || currentLayout !== window.layout) return;
-                        this.measure();
-                        this.restorePosition(position);
-                    });
-                    if (!this.isActive() || currentLayout !== window.layout) return;
-                    if (layout !== currentLayout) this.startActiveLayout(true);
-                }
-                const globalNext = window.range.pageBase + this.pageIndex + step;
-                const indexed = window.exact ? window.layout.windowForPage(globalNext) : undefined;
-                if (indexed) {
-                    await this.changePage(async (animated) => {
-                        const changed = window.showPage(globalNext);
-                        const move = (): void => {
-                            this.measure();
-                            this.pageIndex = globalNext - window.range.pageBase;
-                            this.viewport.scrollLeft = this.pageIndex * this.pageStride;
-                        };
-                        if (changed && !animated) await this.afterLayout(move);
-                        else move();
-                    }, direction);
-                    return;
-                }
-            }
-            const next = this.pageIndex + step;
-            if (next >= 0 && next < this.pageCount) {
-                await this.changePage(() => {
-                    this.pageIndex = next;
-                    this.viewport.scrollLeft = next * this.pageStride;
-                }, direction);
-            } else {
-                const chapterNumber = this.chapterNumber + step;
-                if (chapterNumber >= 1 && chapterNumber <= this.chapterCount)
-                    await this.navigateToChapter(chapterNumber, step < 0 ? "end" : "start", direction);
+            });
+        }
+        if (!this.beginPageDrag()) return false;
+        this.updatePageDrag(direction === ReadingDirection.NEXT ? -0.01 : 0.01);
+        return this.endPageDrag(true);
+    }
+
+    /**
+     * 接受水平手势，同步固定原画面；相邻目标在独立投影中准备，不提前修改进度。
+     */
+    public beginPageDrag(): boolean {
+        if (this.isBusy() || this.signal.aborted || this.mode === "scroll") return false;
+        const source = this.views.get(this.chapterNumber);
+        const position = this.readPosition();
+        if (!source || !position) return false;
+        this.finishPageMotion();
+        const controller = new AbortController();
+        const paper = new PageTurnUi(this.root, this.viewport, this.mode);
+        paper.capture();
+        this.retainedViews.add(source);
+        source.retainProjection(paper.current.viewport);
+        const session: PageDrag = {
+            controller,
+            signal: AbortSignal.any([this.signal, controller.signal]),
+            source,
+            window: this.currentWindow(),
+            position,
+            pageIndex: this.pageIndex,
+            layout: this.layout,
+            paper,
+            candidates: new Map(),
+            prepared: new Set(),
+            resolved: new Set(),
+            offset: 0,
+            disposed: false,
+            accepted: false,
+            committed: false,
+        };
+        this.pageDrag = session;
+        this.cancelPendingScroll();
+        void this.requestPageTurn(session, ReadingDirection.PREV);
+        void this.requestPageTurn(session, ReadingDirection.NEXT);
+        return true;
+    }
+
+    /**
+     * 位移只改变纸面。方向可反转，尚未就绪的投影完成后接续最新位移。
+     */
+    public updatePageDrag(offset: number): void {
+        const session = this.pageDrag;
+        if (!session) return;
+        session.offset = Math.max(-session.paper.width, Math.min(session.paper.width, offset));
+        this.renderPageDrag(session);
+    }
+
+    /**
+     * 松手提交已经预备的同一窗口。true 只表示完成真实导航，取消不发布位置。
+     */
+    public async endPageDrag(commit: boolean): Promise<boolean> {
+        const session = this.pageDrag;
+        if (!session) return false;
+        this.pageDrag = undefined;
+        this.pageMotion = session;
+        const direction = session.offset > 0 ? ReadingDirection.PREV : ReadingDirection.NEXT;
+        const step = direction === ReadingDirection.NEXT ? 1 : -1;
+        if (!commit) {
+            this.settlePageTurn(session, this.findPreparedPage(session, direction), step, false);
+            return false;
+        }
+        session.accepted = true;
+        try {
+            const updated = await this.update(
+                async () => {
+                    const prepared = await this.requestPageTurn(session, direction);
+                    if (!prepared || session.signal.aborted || session.layout !== this.layout) return false;
+                    const previousLayout = prepared.window?.layout;
+                    if (prepared.preview) prepared.window?.acceptPreview(prepared.preview);
+                    this.pendingChapterEnd = undefined;
+                    this.chapterNumber = prepared.view.chapter.chapterNumber;
+                    this.position = undefined;
+                    this.install([prepared.view]);
+                    this.measure();
+                    this.pageIndex = prepared.pageIndex;
+                    this.viewport.scrollLeft = this.pageIndex * this.pageStride;
+                    this.viewport.scrollTop = 0;
+                    this.capturePosition();
+                    this.startActiveLayout(previousLayout !== prepared.window?.layout);
+                    session.committed = true;
+                    this.settlePageTurn(session, prepared, step, true);
+                    return true;
+                },
+                { preservePosition: true }
+            );
+            return updated && session.committed;
+        } finally {
+            if (!session.committed) this.disposePageTurn(session);
+        }
+    }
+
+    /**
+     * 面板、重排和退出取消尚未提交的预览；已提交正文不会因视觉尾段结束而回退。
+     */
+    public cancelPageDrag(): void {
+        if (this.pageDrag) this.disposePageTurn(this.pageDrag);
+        this.finishPageMotion();
+    }
+
+    /**
+     * 排版或生命周期已失效时，旧尺寸目标不能再提交；立即归还真实正文并解除准备等待。
+     */
+    private invalidatePageTurn(): void {
+        if (this.pageDrag) this.disposePageTurn(this.pageDrag);
+        if (this.pageMotion) this.disposePageTurn(this.pageMotion);
+    }
+
+    private finishPageMotion(): void {
+        const session = this.pageMotion;
+        if (session && (!session.accepted || session.committed)) this.disposePageTurn(session);
+    }
+
+    private disposePageTurn(session: PageDrag): void {
+        if (session.disposed) return;
+        session.disposed = true;
+        session.controller.abort();
+        session.paper.dispose();
+        for (const target of session.prepared) target.release();
+        session.prepared.clear();
+        session.source.releaseProjection(session.paper.current.viewport);
+        this.retainedViews.delete(session.source);
+        this.releasePrepared([session.source]);
+        if (this.pageDrag === session) this.pageDrag = undefined;
+        if (this.pageMotion === session) this.pageMotion = undefined;
+    }
+
+    private settlePageTurn(
+        session: PageDrag,
+        target: PreparedPageTurn | undefined,
+        direction: -1 | 1,
+        commit: boolean
+    ): void {
+        run(async () => {
+            try {
+                await session.paper.settle(target?.page, direction, commit);
+            } finally {
+                this.disposePageTurn(session);
             }
         });
     }
 
-    /**
-     * 浏览器快照只移动正文视窗；减少动效或能力不可用时直接完成相同导航。
-     */
-    private async changePage(
-        change: (animated: boolean) => void | Promise<void>,
-        direction: ReadingDirection
-    ): Promise<void> {
-        this.turning = true;
-        const animated =
-            direction !== ReadingDirection.INVALID &&
-            (this.mode === "cover" || this.mode === "slide") &&
-            typeof document.startViewTransition === "function" &&
-            !matchMedia("(prefers-reduced-motion: reduce)").matches;
-        try {
-            if (!animated) {
-                await change(false);
-                return;
-            }
-            document.documentElement.dataset["pageTurn"] = this.mode;
-            document.documentElement.dataset["pageDirection"] =
-                direction === ReadingDirection.NEXT ? "next" : "previous";
-            const transition = document.startViewTransition(() => {
-                if (!this.signal.aborted) return change(true);
+    private renderPageDrag(session: PageDrag): void {
+        const direction = session.offset > 0 ? ReadingDirection.PREV : ReadingDirection.NEXT;
+        session.paper.move(
+            session.offset,
+            this.findPreparedPage(session, direction)?.page,
+            direction === ReadingDirection.NEXT ? 1 : -1,
+            session.resolved.has(direction)
+        );
+    }
+
+    private findPreparedPage(session: PageDrag, direction: ReadingDirection): PreparedPageTurn | undefined {
+        return [...session.prepared].find((candidate) => candidate.direction === direction);
+    }
+
+    private isPageTurnActive(session: PageDrag): boolean {
+        return !session.signal.aborted && session.layout === this.layout;
+    }
+
+    private requestPageTurn(session: PageDrag, direction: ReadingDirection): Promise<PreparedPageTurn | undefined> {
+        const existing = session.candidates.get(direction);
+        if (existing) return existing;
+        const preparation = this.preparePageTurn(session, direction)
+            .then((target) => {
+                if (session.signal.aborted) {
+                    target?.release();
+                    return undefined;
+                }
+                session.resolved.add(direction);
+                if (target) session.prepared.add(target);
+                if (this.pageDrag === session) this.renderPageDrag(session);
+                return target;
+            })
+            .catch((error: unknown) => {
+                if (!session.signal.aborted)
+                    run(() => {
+                        throw error;
+                    });
+                return undefined;
             });
-            this.transition = transition;
-            // 后台或并行视图切换可能跳过快照，导航结果仍通过 finished 确认。
-            void transition.ready.catch(() => undefined);
-            await transition.finished;
+        // 章节读取本身没有取消接口；等待者先响应失效，迟到结果仍由 preparation 释放。
+        const pending = new Promise<PreparedPageTurn | undefined>((resolve) => {
+            const abort = (): void => {
+                resolve(undefined);
+            };
+            session.signal.addEventListener("abort", abort, { once: true });
+            void preparation.then((target) => {
+                session.signal.removeEventListener("abort", abort);
+                resolve(target);
+            });
+            if (session.signal.aborted) abort();
+        });
+        session.candidates.set(direction, pending);
+        return pending;
+    }
+
+    /**
+     * 相邻页在同尺寸、不可交互的投影内续排；当前窗口在确认前保留原 DOM 与源锚点。
+     */
+    private async preparePageTurn(
+        session: PageDrag,
+        direction: ReadingDirection
+    ): Promise<PreparedPageTurn | undefined> {
+        const step = direction === ReadingDirection.NEXT ? 1 : -1;
+        const page = session.paper.createPage();
+        let view = session.source;
+        let window = session.window;
+        let preparedChapters: PreparedChapters | undefined;
+        let preview: ChapterWindow | undefined;
+        let accepted = false;
+        const release = (): void => {
+            preview?.cancel();
+            view.releaseProjection(page.viewport);
+            page.element.remove();
+            preparedChapters?.releaseResources();
+            if (preparedChapters) this.releasePrepared(preparedChapters.views);
+        };
+        try {
+            let pageIndex = session.pageIndex;
+            if (window) {
+                preview = window.createPreview(page.viewport);
+                await waitForChapterLayout(preview.element, session.signal);
+                if (!this.isPageTurnActive(session)) return;
+                page.viewport.scrollLeft = pageIndex * pageStride(page.viewport, preview.element);
+                const nearEdge =
+                    step > 0
+                        ? pageIndex >= pageCount(page.viewport, preview.element) - 2 &&
+                          preview.range.end < view.pieceCount
+                        : pageIndex <= 1 && preview.range.start > 0;
+                if (nearEdge) {
+                    const target =
+                        step > 0
+                            ? Math.min(view.pieceCount - 1, preview.range.end)
+                            : Math.max(0, preview.range.start - 1);
+                    if (preview.layout.findLocation(view.pieceLocation(target)))
+                        preview.showLocation(session.position.location);
+                    else
+                        await preview.shiftLocal(
+                            session.position.location,
+                            step,
+                            this.root,
+                            page.viewport,
+                            session.signal
+                        );
+                    await waitForChapterLayout(preview.element, session.signal);
+                    if (!this.isPageTurnActive(session)) return;
+                    pageIndex = pageForLocation(page.viewport, preview.element, session.position.location);
+                }
+                const globalNext = preview.range.pageBase + pageIndex + step;
+                if (preview.exact && preview.layout.windowForPage(globalNext)) {
+                    preview.showPage(globalNext);
+                    pageIndex = globalNext - preview.range.pageBase;
+                } else pageIndex += step;
+                await waitForChapterLayout(preview.element, session.signal);
+                if (!this.isPageTurnActive(session)) return;
+                if (pageIndex >= 0 && pageIndex < pageCount(page.viewport, preview.element)) {
+                    page.viewport.scrollLeft = pageIndex * pageStride(page.viewport, preview.element);
+                    view.restoreProjectionScroll(preview.element);
+                    accepted = true;
+                    return { direction, view, window, preview, page, pageIndex, release };
+                }
+                view.releaseProjection(page.viewport);
+                preview.cancel();
+            }
+            const chapterNumber = session.source.chapter.chapterNumber + step;
+            if (chapterNumber < 1 || chapterNumber > this.chapterCount) return;
+            preparedChapters = await this.prepareWindow(chapterNumber, step < 0 ? "end" : "start", 0, session.signal);
+            if (!this.isPageTurnActive(session)) return;
+            view = assertExists(
+                preparedChapters.views.find((candidate) => candidate.chapter.chapterNumber === chapterNumber)
+            );
+            window = this.windows.get(view);
+            preview = window?.createPreview(page.viewport);
+            if (!preview) view.mountProjection(page.viewport, view.renderRange(0, 0));
+            const section =
+                preview?.element ?? assertExists(page.viewport.querySelector<HTMLElement>(".reading-chapter"));
+            await waitForChapterLayout(section, session.signal);
+            if (!this.isPageTurnActive(session)) return;
+            pageIndex = step < 0 ? pageCount(page.viewport, section) - 1 : 0;
+            page.viewport.scrollLeft = pageIndex * pageStride(page.viewport, section);
+            view.restoreProjectionScroll(section);
+            accepted = true;
+            return { direction, view, window, preview, page, pageIndex, release };
         } finally {
-            this.transition = undefined;
-            delete document.documentElement.dataset["pageTurn"];
-            delete document.documentElement.dataset["pageDirection"];
-            this.turning = false;
+            if (!accepted) release();
         }
     }
 
@@ -740,7 +989,7 @@ export default class ContentUi extends Ui {
      * 后续持久化独立排队，不占用排版互斥；异步失败仍进入统一错误入口。
      */
     private async update(
-        action: () => Promise<void>,
+        action: () => Promise<void> | Promise<boolean>,
         {
             preservePosition = false,
             persist = true,
@@ -750,7 +999,8 @@ export default class ContentUi extends Ui {
         this.updating = true;
         if (persist) this.cancelPendingScroll();
         try {
-            await action();
+            // 未提交的导航保持原锚点，也不生成一次看似成功的保存。
+            if ((await action()) === false) return false;
             if (!this.isActive()) return false;
             await this.maintainWindow();
             if (!this.isActive()) return false;
@@ -873,7 +1123,7 @@ export default class ContentUi extends Ui {
         if (this.signal.aborted || this.views.size === 0) return;
         this.layoutPending = false;
         if (this.layoutSignature() === this.layout) return;
-        this.transition?.skipTransition();
+        this.invalidatePageTurn();
         const position = this.position;
         // 相邻章节共享字号和视窗条件，也要废弃旧索引；只为当前章重新启动测量。
         for (const [view, window] of this.windows) {
@@ -925,7 +1175,7 @@ export default class ContentUi extends Ui {
         this.indexFrame = requestAnimationFrame(() => {
             this.indexFrame = undefined;
             if (!this.isActive() || window !== this.activeWindow) return;
-            if (this.updating || this.layoutPending || this.turning) {
+            if (this.updating || this.layoutPending || this.pageDrag || this.pageMotion) {
                 this.scheduleIndexCommit(window);
                 return;
             }
@@ -1262,7 +1512,8 @@ export default class ContentUi extends Ui {
             "scroll",
             (event: Event) => {
                 if (
-                    this.turning ||
+                    this.pageDrag ||
+                    this.pageMotion ||
                     this.updating ||
                     this.layoutPending ||
                     this.isContentObscured() ||
@@ -1348,4 +1599,31 @@ function targetLocation(view: ChapterView, target: ChapterTarget): ContentLocati
     if ("fragment" in target)
         return assertExists(view.anchorLocation(target.fragment), "Missing EPUB source anchor: " + target.fragment);
     return target;
+}
+
+/**
+ * 预览与正文使用同一原生分栏步长；页边留白属于纸面，不进入列间距。
+ */
+function pageStride(viewport: HTMLElement, section: HTMLElement): number {
+    return Math.max(1, viewport.getBoundingClientRect().width) + Number.parseFloat(getComputedStyle(section).columnGap);
+}
+
+/**
+ * 只读取有限投影的真实列数，不把它作为全章页数或持久化位置。
+ */
+function pageCount(viewport: HTMLElement, section: HTMLElement): number {
+    const gap = Number.parseFloat(getComputedStyle(section).columnGap);
+    return Math.max(1, Math.round((section.scrollWidth + gap) / pageStride(viewport, section)));
+}
+
+/**
+ * 局部续排后仍从原源锚点选择所在列，不把投影内部页号误用为正式进度。
+ */
+function pageForLocation(viewport: HTMLElement, section: HTMLElement, location: ContentLocation): number {
+    const rect = locateContentRect(section, location);
+    if (!rect) return 0;
+    return Math.max(
+        0,
+        Math.floor((rect.left - section.getBoundingClientRect().left + 0.01) / pageStride(viewport, section))
+    );
 }

@@ -5,6 +5,7 @@
 
 import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
+import { mkdir, mkdtemp, rmdir } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import { chromium, type Browser, type Page } from "playwright-core";
@@ -21,6 +22,7 @@ const repository = fileURLToPath(new URL("../", import.meta.url));
 let browser: Browser | undefined;
 let server: PreviewServer | undefined;
 let webUrl: string;
+let downloadsPath: string | undefined;
 
 /**
  * 使用已经构建的两种交付；新建无用户资料的 Chrome，不下载浏览器或连接现有会话。
@@ -35,7 +37,11 @@ export async function startBrowserTests(): Promise<void> {
     const address = server.httpServer.address();
     assert(address && typeof address !== "string");
     webUrl = `http://127.0.0.1:${String(address.port)}/`;
-    browser = await chromium.launch({ channel: "chrome", headless: true });
+
+    // 受限环境的系统临时目录可能允许 Node 写入，却拒绝 Chrome 下载；使用本次测试专属的工作区目录。
+    await mkdir(resolve(repository, "work"), { recursive: true });
+    downloadsPath = await mkdtemp(resolve(repository, "work/browser-downloads-"));
+    browser = await chromium.launch({ channel: "chrome", headless: true, downloadsPath });
 }
 
 /**
@@ -52,6 +58,9 @@ export async function stopBrowserTests(): Promise<void> {
             });
         });
     }
+
+    // Playwright 随上下文关闭删除下载文件，这里只移除属于本次运行的空目录。
+    if (downloadsPath) await rmdir(downloadsPath);
 }
 
 /**

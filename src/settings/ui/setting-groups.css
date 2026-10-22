@@ -8,12 +8,13 @@
         min-width: 0;
 
         + .setting-group {
-            margin-top: 8px;
-            border-top: 1px solid var(--appearance-border);
+            margin-top: 16px;
         }
 
         > .items {
-            padding-top: 6px;
+            display: grid;
+            gap: 12px;
+            padding-top: 8px;
         }
     }
 
@@ -21,11 +22,11 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        min-height: 44px;
+        min-height: 48px;
         margin: 0;
-        padding: 8px 0;
+        padding: 8px 12px;
         color: var(--appearance-color);
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 600;
         line-height: 1.5;
     }
@@ -38,9 +39,9 @@
     details.setting-group > summary {
         list-style: none;
         cursor: pointer;
-        border-radius: 8px;
-        padding-inline: 8px;
-        margin-inline: -8px;
+        border: 1px solid var(--appearance-border);
+        border-radius: 10px;
+        background: color-mix(in srgb, var(--appearance-color) 3%, transparent);
 
         &::-webkit-details-marker {
             display: none;
@@ -66,15 +67,5 @@
 
     details.setting-group[open] > summary::after {
         transform: rotate(45deg);
-    }
-
-    .setting-group > .items > .item + .item {
-        margin-top: 4px;
-        padding-top: 12px;
-        border-top: 1px solid var(--appearance-border);
-
-        > .reset-setting {
-            top: 12px;
-        }
     }
 }

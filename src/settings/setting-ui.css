@@ -25,7 +25,10 @@
     flex-direction: column;
     width: var(
         --setting-width,
-        min(28rem, calc(100% - max(1rem, env(safe-area-inset-left)) - max(1rem, env(safe-area-inset-right))))
+        min(
+            var(--panel-default-width),
+            calc(100% - max(1rem, env(safe-area-inset-left)) - max(1rem, env(safe-area-inset-right)))
+        )
     );
     max-width: none;
     /* 覆盖原生 dialog 的 fit-content，内容参与面板自然高度计算。 */
@@ -47,7 +50,7 @@
     font-family: var(--ui-font-family);
     line-height: 1.5;
     opacity: 0;
-    /* 原生 select 随祖先位移会触发逐帧布局，淡入淡出保留稳定的控件位置。 */
+    /* 位移动画可能增加原生下拉框的布局开销；通用面板保持淡入淡出，阅读器移动抽屉独立覆盖。 */
     transition:
         opacity var(--motion-duration-normal) var(--motion-ease),
         display var(--motion-duration-normal) allow-discrete,
@@ -214,11 +217,11 @@
     /* 主题和常规设置共用同一级标题；具体选项位于各自分区内。 */
     .section-title {
         min-width: 0;
-        min-height: 44px;
+        min-height: 36px;
         margin: 0;
         padding: 0;
         align-content: center;
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 600;
         line-height: 1.5;
         color: inherit;
@@ -226,8 +229,8 @@
     }
 
     .setting-body > section + section {
-        margin-top: 20px;
-        padding-top: 16px;
+        margin-top: 16px;
+        padding-top: 12px;
         border-top: 1px solid var(--appearance-border);
     }
 
@@ -242,6 +245,8 @@
     }
 
     :is(.reset-setting, .reset-general) {
+        display: grid;
+        place-items: center;
         flex: none;
         min-width: 44px;
         min-height: 32px;
@@ -253,6 +258,10 @@
         font: inherit;
         font-size: 12px;
         cursor: pointer;
+
+        > .icon {
+            --icon-size: 16px;
+        }
 
         @media (hover: hover) and (pointer: fine) {
             &:hover:not([aria-disabled="true"]) {
@@ -267,18 +276,21 @@
         }
     }
 
-    /* 默认项不显示还原动作，但保留占位，避免控件与数值随状态跳动。 */
-    .reset-setting[aria-disabled="true"] {
-        visibility: hidden;
-        pointer-events: none;
+    /* 辅助说明紧贴所属控件，仅保留影响选择或处理当前状态的信息。 */
+    .setting-help {
+        color: var(--appearance-muted-color);
+        font-size: 13px;
+        line-height: 1.6;
+        overflow-wrap: anywhere;
     }
 
+    /* 还原固定在末列，数值位数或单位变化不会推移操作入口。 */
     .items > .item {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, auto) auto;
         align-items: center;
-        gap: 2px 8px;
-        padding: 0 0 12px;
+        gap: 0 8px;
+        padding: 0;
 
         > .title {
             grid-row: 1;
@@ -292,12 +304,12 @@
 
         > .reset-setting {
             grid-row: 1;
-            grid-column: 2;
+            grid-column: 3;
         }
 
         > .display {
             grid-row: 1;
-            grid-column: 3;
+            grid-column: 2;
             min-width: 0;
             color: var(--appearance-muted-color);
             font-size: 12px;
@@ -429,8 +441,7 @@
     }
 
     .items > .item:has(input[type="color"]) {
-        grid-template-columns: minmax(0, 1fr) auto minmax(0, auto) 44px;
-        padding: 0.5rem 0;
+        grid-template-columns: minmax(0, 1fr) minmax(0, auto) 44px auto;
 
         > .display {
             font-size: 12px;
@@ -438,7 +449,7 @@
 
         > .control-container {
             grid-row: 1;
-            grid-column: 4;
+            grid-column: 3;
 
             > input[type="color"] {
                 height: 44px;
@@ -450,13 +461,12 @@
 
         > .reset-setting {
             grid-row: 1;
-            grid-column: 2;
+            grid-column: 4;
         }
     }
 
     .items > .item.font-setting {
-        row-gap: 2px;
-        padding-bottom: 12px;
+        row-gap: 4px;
 
         > .control-container {
             display: flex;
@@ -481,10 +491,6 @@
             grid-row: 3;
             grid-column: 1 / -1;
             margin: 0;
-            color: var(--appearance-muted-color);
-            font-size: 12px;
-            line-height: 1.5;
-            overflow-wrap: anywhere;
 
             /* 常规成功反馈供读屏播报，不挤占阅读设置的垂直空间。 */
             &[data-quiet] {
@@ -583,4 +589,97 @@ html[data-material="glass"] #setting {
 html[data-material="leather"] #setting {
     outline: var(--material-edge-outline);
     outline-offset: -6px;
+}
+
+/* 阅读面板与目录使用同一边缘和遮罩，保留共享设置的内容、滚动与保存流程。 */
+#reader > #setting {
+    --setting-max-height: var(--reader-panel-max-height);
+    border-color: var(--reader-panel-edge);
+    box-shadow: var(--reader-panel-shadow);
+
+    &::backdrop {
+        background: var(--reader-panel-backdrop);
+    }
+
+    > header,
+    > footer {
+        border-color: var(--reader-panel-edge);
+    }
+
+    .general-settings .section-title,
+    .items > .item.radio-setting legend {
+        min-height: 44px;
+    }
+
+    .setting-body > section + section {
+        margin-top: 12px;
+        padding-top: 10px;
+    }
+
+    .setting-group > .items {
+        gap: 8px;
+    }
+
+    details.setting-group > summary {
+        padding-inline: 0;
+        border-width: 1px 0 0;
+        border-radius: 0;
+        background: transparent;
+    }
+
+    .general-settings :is(.reset-setting, .reset-general) {
+        min-height: 44px;
+    }
+}
+
+/* 桌面默认浮层靠右并在可用高度内居中；手动几何与移动抽屉保持独立。 */
+@media (min-width: 561px) {
+    :is(#bookshelf, #reader:not([data-mobile-controls])) > #setting:not([data-panel-positioned]) {
+        --setting-default-block-inset: clamp(12px, calc(var(--viewport-height) * 0.04), 32px);
+        --setting-max-height: min(
+            680px,
+            calc(
+                var(--viewport-height) - max(var(--setting-default-block-inset), env(safe-area-inset-top)) -
+                    max(var(--setting-default-block-inset), env(safe-area-inset-bottom))
+            )
+        );
+        inset: calc(var(--viewport-top) + max(var(--setting-default-block-inset), env(safe-area-inset-top)))
+            max(1rem, env(safe-area-inset-right))
+            calc(var(--viewport-bottom) + max(var(--setting-default-block-inset), env(safe-area-inset-bottom))) auto;
+        width: var(--panel-default-width);
+        max-width: calc(100% - max(1rem, env(safe-area-inset-left)) - max(1rem, env(safe-area-inset-right)));
+        height: var(--setting-max-height);
+        margin: auto 0;
+    }
+}
+
+/* 桌面滑块按一行呈现标签、输入、数值与还原，保留原生控件的完整点击高度。 */
+@media (min-width: 801px) {
+    :is(#bookshelf, #reader:not([data-mobile-controls])) > #setting {
+        .items > .item:has(> .control-container > input[type="range"]) {
+            grid-template-columns: 4.5em minmax(80px, 1fr) 3.4em 44px;
+            gap: 0 8px;
+
+            > .title {
+                grid-column: 1;
+                grid-row: 1;
+            }
+
+            > .control-container {
+                grid-column: 2;
+                grid-row: 1;
+            }
+
+            > .display {
+                grid-column: 3;
+                grid-row: 1;
+            }
+
+            > .reset-setting {
+                grid-column: 4;
+                grid-row: 1;
+                min-height: 44px;
+            }
+        }
+    }
 }

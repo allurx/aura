@@ -75,7 +75,7 @@ export default class ChapterView {
     private readonly imageSizes = new Map<string, { width: number; height: number }>();
     private readonly images: { location: ContentLocation; path: string }[] = [];
     private readonly lifetime = new AbortController();
-    private readonly measurements = new Set<HTMLElement>();
+    private readonly projections = new Set<HTMLElement>();
     private readonly sourceAnchors = new Map<string, ContentLocation>();
     private readonly pieces: ChapterPiece[] = [];
 
@@ -277,7 +277,7 @@ export default class ChapterView {
     }
 
     /**
-     * 创建独立的正文片段供不可交互的测量视窗使用。
+     * 创建独立的受控片段供测量或翻页预览使用，不替换正在阅读的正文。
      * carry 只表示上一批末页已用的排版高度，不进入源内容或阅读进度。
      */
     public renderRange(
@@ -305,19 +305,44 @@ export default class ChapterView {
     }
 
     /**
-     * 测量视窗只持有当前片段的图片，替换后立即回收不再被正文或其他测量引用的 URL。
+     * 临时投影持有当前片段的图片，替换后回收不再被正文或其他投影引用的 URL。
      */
-    public mountMeasurement(viewport: HTMLElement, section: HTMLElement): void {
-        this.measurements.add(viewport);
+    public mountProjection(viewport: HTMLElement, section: HTMLElement): void {
+        this.projections.add(viewport);
         viewport.replaceChildren(section);
         this.releaseUnusedResources();
     }
 
     /**
-     * 测量完成或取消时释放其图片引用；当前可见正文使用的 URL 继续保留。
+     * 已复制的当前纸面保留其图片引用，不重新挂载并打断副本内部的滚动位置。
      */
-    public releaseMeasurement(viewport: HTMLElement): void {
-        this.measurements.delete(viewport);
+    public retainProjection(viewport: HTMLElement): void {
+        this.projections.add(viewport);
+    }
+
+    /**
+     * 预览沿用仍在当前窗口中的表格与代码滚动位置，与正式挂载复用同一源节点的结果一致。
+     */
+    public restoreProjectionScroll(section: HTMLElement): void {
+        const regions = new Map<string, HTMLElement>();
+        for (const region of this.element.querySelectorAll<HTMLElement>("table, pre")) {
+            const key = renderedKey(region);
+            if (key) regions.set(key, region);
+        }
+        for (const region of section.querySelectorAll<HTMLElement>("table, pre")) {
+            const key = renderedKey(region);
+            const original = key ? regions.get(key) : undefined;
+            if (!original) continue;
+            region.scrollTop = original.scrollTop;
+            region.scrollLeft = original.scrollLeft;
+        }
+    }
+
+    /**
+     * 测量或预览结束后释放图片引用；当前可见正文使用的 URL 继续保留。
+     */
+    public releaseProjection(viewport: HTMLElement): void {
+        this.projections.delete(viewport);
         viewport.replaceChildren();
         this.releaseUnusedResources();
     }
@@ -419,7 +444,7 @@ export default class ChapterView {
         this.urls.clear();
         this.preparingImages.clear();
         this.imageSizes.clear();
-        this.measurements.clear();
+        this.projections.clear();
         this.sourceAnchors.clear();
     }
 
@@ -428,7 +453,7 @@ export default class ChapterView {
      */
     private releaseUnusedResources(): void {
         const retained = new Set<string>();
-        for (const root of [this.element, ...this.measurements]) {
+        for (const root of [this.element, ...this.projections]) {
             for (const image of root.querySelectorAll<HTMLImageElement>("img")) retained.add(image.src);
         }
         for (const [path, url] of this.urls) {

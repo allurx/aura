@@ -66,7 +66,7 @@ export default class FontSettingControl extends StyleSettingControl {
             { signal }
         );
 
-        this.statusElement.className = "font-status";
+        this.statusElement.className = "font-status setting-help";
         this.statusElement.id = "setting-font-status";
         this.statusElement.setAttribute("role", "status");
         this.element.append(this.statusElement);

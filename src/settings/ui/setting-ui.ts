@@ -265,8 +265,13 @@ export default class SettingUi extends Ui {
         const customized =
             this.generalSettings.some((item) => listener.getValue(item) !== undefined) || listener.hasCustomLayout();
         const disabled = String(!customized);
+        const returnFocus = !customized && document.activeElement === this.resetGeneralElement;
         if (this.resetGeneralElement.getAttribute("aria-disabled") !== disabled)
             this.resetGeneralElement.setAttribute("aria-disabled", disabled);
+        const tabIndex = customized ? 0 : -1;
+        if (this.resetGeneralElement.tabIndex !== tabIndex) this.resetGeneralElement.tabIndex = tabIndex;
+        // 还原完成后入口退出 Tab 顺序，焦点回到面板内的固定操作。
+        if (returnFocus) this.closeElement.focus({ preventScroll: true });
     }
 
     /**
@@ -320,14 +325,16 @@ export default class SettingUi extends Ui {
                 </button>
             </header>
             <div class="setting-body panel-scroll">
+                <section class="theme-items" aria-label="页面主题"></section>
                 <section class="general-settings" aria-labelledby="setting-general-title">
                     <header class="section-header">
                         <h3 id="setting-general-title" class="section-title">常规设置</h3>
-                        <button class="reset-general" type="button" aria-label="重置常规设置" title="恢复常规设置默认值，保留主题">恢复默认</button>
+                        <button class="reset-general" type="button" aria-label="重置常规设置" title="重置常规设置，保留主题">
+                            <span class="icon icon-reset" aria-hidden="true"></span>
+                        </button>
                     </header>
                     <div class="setting-groups"></div>
                 </section>
-                <section class="theme-items" aria-label="页面主题"></section>
             </div>
             <footer>
                 <button class="reset" type="button">

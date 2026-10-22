@@ -113,6 +113,138 @@ async function readProgress(page: Page): Promise<Progress[]> {
 }
 
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: interrupted page turns retain the latest chapter and saved source position`, async () => {
+        for (const mode of ["cover", "slide"] as const) {
+            await withPage(delivery, async (page) => {
+                await page.emulateMedia({ reducedMotion: "no-preference" });
+                await importBooks(page, [textBook("animated-progress.txt", 3, 1)]);
+                await openBook(page, "animated-progress.txt");
+                await setMode(page, mode);
+
+                // 暂停真实纸面动画，确保下一次输入发生在内容已提交但动画尚未结束时。
+                // 每章只有一页，连续前进和立即反向都会跨章，不依赖动画时长或内部导航 API。
+                for (const [key, chapter] of [
+                    ["ArrowRight", 2],
+                    ["ArrowRight", 3],
+                    ["ArrowLeft", 2],
+                ] as const) {
+                    await page.locator("#content").press(key);
+                    await page.waitForFunction(() => {
+                        const animations = document.getAnimations().filter((animation) => {
+                            const effect = animation.effect;
+                            return (
+                                effect instanceof KeyframeEffect &&
+                                effect.target instanceof HTMLElement &&
+                                effect.target.classList.contains("reading-paper") &&
+                                animation.playState === "running"
+                            );
+                        });
+                        if (animations.length === 0) return false;
+                        for (const animation of animations) animation.pause();
+                        return true;
+                    });
+                    assert((await readVisibleText(page)).includes(`这是章节${String(chapter)}的第1段`));
+                }
+
+                const progress = await readProgress(page);
+                assert.equal(progress[0]?.chapterNumber, 2);
+                const visibleText = await readVisibleText(page);
+
+                // 在最后一次动画尚未结束时离开，再打开必须恢复最终源位置，不能退回中间章节。
+                await page.goBack();
+                await page.locator("#bookshelf").waitFor();
+                await openBook(page, "animated-progress.txt");
+                assert.deepEqual(await readProgress(page), progress);
+                assert.equal(await readVisibleText(page), visibleText);
+            });
+        }
+    });
+
+    void test(`${delivery}: default panels preserve the reading page in wide and compact windows`, async () => {
+        await withPage(delivery, async (page) => {
+            await page.setViewportSize({ width: 1600, height: 900 });
+            await importBooks(page, [textBook("panel-reading-position.txt", 3, 120)]);
+            await openBook(page, "panel-reading-position.txt");
+            await page.locator("#content").press("ArrowRight");
+            await waitForChapterLayout(page);
+            const original = await readVisiblePage(page);
+            const progress = await readProgress(page);
+            const viewport = page.locator("#content > .reading-viewport:not(.reading-measure-viewport)");
+            const originalBounds = await viewport.boundingBox();
+            assert(originalBounds);
+
+            for (const width of [1600, 1100, 1600]) {
+                await page.setViewportSize({ width, height: 900 });
+                await settleReader(page);
+                const restingBounds = await viewport.boundingBox();
+                assert(restingBounds);
+                for (const panel of ["setting", "toc"]) {
+                    await page.locator(`#toggle-${panel}-panel`).click();
+                    await settleReader(page);
+                    const bounds = await viewport.boundingBox();
+                    assert(bounds);
+                    assert.equal(bounds.width, originalBounds.width);
+                    assert.equal(bounds.height, originalBounds.height);
+                    assert.equal(bounds.x, restingBounds.x);
+                    assert.equal(bounds.y, restingBounds.y);
+                    assert.deepEqual(await readVisiblePage(page), original);
+                    assert.deepEqual(await readProgress(page), progress);
+                    await page.locator(`#${panel} .close`).click();
+                    await settleReader(page);
+                    assert.deepEqual(await viewport.boundingBox(), restingBounds);
+                    assert.deepEqual(await readVisiblePage(page), original);
+                    assert.deepEqual(await readProgress(page), progress);
+                }
+            }
+        });
+    });
+
+    void test(`${delivery}: touch preview cancels without changing source progress and commits on release`, async () => {
+        await withPage(delivery, async (page) => {
+            await page.emulateMedia({ reducedMotion: "no-preference" });
+            await importBooks(page, [textBook("touch-progress.txt", 3, 1)]);
+            await openBook(page, "touch-progress.txt");
+            await page.setViewportSize({ width: 390, height: 844 });
+            await settleReader(page);
+            const original = await readProgress(page);
+            const originalText = await readVisibleText(page);
+            const bounds = await page.locator("#content").boundingBox();
+            assert(bounds);
+            const touch = await page.context().newCDPSession(page);
+            await touch.send("Emulation.setTouchEmulationEnabled", { enabled: true });
+            const y = bounds.y + bounds.height / 2;
+            const start = bounds.x + bounds.width * 0.8;
+            const end = bounds.x + bounds.width * 0.2;
+            const begin = async (): Promise<void> => {
+                await touch.send("Input.dispatchTouchEvent", {
+                    type: "touchStart",
+                    touchPoints: [{ x: start, y, id: 1 }],
+                });
+                await touch.send("Input.dispatchTouchEvent", {
+                    type: "touchMove",
+                    touchPoints: [{ x: end, y, id: 1 }],
+                });
+                await page.locator(".reading-papers").waitFor();
+            };
+
+            await begin();
+            assert.deepEqual(await readProgress(page), original);
+            assert.equal(await readVisibleText(page), originalText);
+            await touch.send("Input.dispatchTouchEvent", { type: "touchCancel", touchPoints: [] });
+            await page.locator(".reading-papers").waitFor({ state: "detached" });
+            assert.deepEqual(await readProgress(page), original);
+            assert.equal(await readVisibleText(page), originalText);
+
+            await begin();
+            assert.deepEqual(await readProgress(page), original);
+            await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+            await page.waitForFunction(() => document.querySelector("#chapter-title")?.textContent.includes("第2章"));
+            assert.equal((await readProgress(page))[0]?.chapterNumber, 2);
+            assert((await readVisibleText(page)).includes("这是章节2的第1段"));
+            await touch.detach();
+        });
+    });
+
     void test(`${delivery}: EPUB links to empty tail anchors retain their source location after reopening`, async () => {
         for (const mode of ["none", "scroll"] as const) {
             await withPage(delivery, async (page) => {
