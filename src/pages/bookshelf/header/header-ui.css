@@ -53,6 +53,10 @@
         background: color-mix(in srgb, var(--appearance-selection) 70%, transparent);
         font-size: 12px;
         white-space: nowrap;
+
+        &:empty {
+            display: none;
+        }
     }
     .shelf-tools {
         display: flex;

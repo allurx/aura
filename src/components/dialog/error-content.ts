@@ -6,7 +6,7 @@
 import OperationError from "@/errors/operation-error";
 
 /**
- * 将操作结果与可识别的原因按纯文本呈现，原始异常只在展开详细信息后显示。
+ * 将操作结果与恢复建议按纯文本分组呈现，原始异常只在展开技术详情后显示。
  */
 export function createErrorContent(error: unknown): { title: string; content: HTMLElement } {
     const operation = error instanceof OperationError ? error : undefined;
@@ -65,6 +65,11 @@ export function createErrorContent(error: unknown): { title: string; content: HT
     else if (operation?.recovery) steps.push(...operation.recovery);
     if (steps.length === 0) steps.push("请先确认操作是否生效，再决定是否重试。问题持续时可向项目 GitHub 反馈。");
 
+    const guidance = document.createElement("div");
+    guidance.className = "error-guidance";
+    const guidanceTitle = document.createElement("p");
+    guidanceTitle.className = "error-guidance-title";
+    guidanceTitle.textContent = "建议操作";
     const nextStep = document.createElement(steps.length > 1 ? "ol" : "p");
     nextStep.className = "error-recovery";
     if (steps.length > 1) {
@@ -77,7 +82,8 @@ export function createErrorContent(error: unknown): { title: string; content: HT
     } else {
         nextStep.textContent = steps[0] ?? "";
     }
-    content.append(nextStep);
+    guidance.append(guidanceTitle, nextStep);
+    content.append(guidance);
 
     // 技术原因保留供用户核对；不展开堆栈，也不将异常内容解释为 HTML。
     const messages = causes.map((cause) =>
@@ -87,8 +93,9 @@ export function createErrorContent(error: unknown): { title: string; content: HT
         const details = document.createElement("details");
         details.className = "error-diagnostics";
         const summary = document.createElement("summary");
-        summary.textContent = "查看详细信息";
+        summary.textContent = "技术详情";
         const diagnostic = document.createElement("pre");
+        diagnostic.tabIndex = 0;
         diagnostic.textContent = messages.join("\n\n");
         details.append(summary, diagnostic);
         content.append(details);
