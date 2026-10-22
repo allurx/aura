@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
 import { after, before, test } from "node:test";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
+import type { Request } from "playwright-core";
 import { createEpubFixture } from "./fixtures/epub-fixtures.ts";
 import {
     importBooks,
@@ -21,6 +22,121 @@ import {
 
 before(startBrowserTests);
 after(stopBrowserTests);
+
+interface ImageRequestFailure {
+    url: string;
+    type: string;
+    error: string;
+    canceled: boolean;
+    // 与浏览器 performance.timeOrigin + performance.now() 对齐的毫秒时间。
+    time: number;
+}
+
+/**
+ * 仅认可已退出会话实际清理的尺寸探针；网络失败必须发生在清理之后。
+ */
+function expectedImageCancellations(
+    failures: readonly ImageRequestFailure[],
+    releasedProbes: Map<string, number>
+): string[] {
+    return failures
+        .filter((failure) => {
+            const releasedAt = releasedProbes.get(failure.url);
+            return (
+                failure.type === "Image" &&
+                failure.error === "net::ERR_ABORTED" &&
+                failure.canceled &&
+                releasedAt !== undefined &&
+                failure.time >= releasedAt
+            );
+        })
+        .map((failure) => `Request failed: ${failure.url} (${failure.error})`);
+}
+
+/**
+ * 在浏览器内观察真实资源与退出清理，不读取阅读器私有字段或改变原生解码结果。
+ */
+function observeImageResources() {
+    const state = { active: new Set<string>(), peak: 0, releasedProbes: new Map<string, number>() };
+    const retired = new Set<string>();
+    const probes = new WeakMap<HTMLImageElement, Element>();
+    const exiting = new WeakSet<Element>();
+    const create = URL.createObjectURL.bind(URL);
+    const revoke = URL.revokeObjectURL.bind(URL);
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- 保存原生方法，包装与恢复时保留接收者。
+    const decode = HTMLImageElement.prototype.decode;
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- 保存原生方法，包装与恢复时保留接收者。
+    const removeAttribute = Element.prototype.removeAttribute;
+
+    // 只记录本观察器创建且撤销时没有正文或投影引用的 URL。
+    URL.createObjectURL = (object) => {
+        const url = create(object);
+        state.active.add(url);
+        state.peak = Math.max(state.peak, state.active.size);
+        return url;
+    };
+    URL.revokeObjectURL = (url) => {
+        if (state.active.delete(url) && ![...document.querySelectorAll("img")].some((image) => image.src === url))
+            retired.add(url);
+        revoke(url);
+    };
+    HTMLImageElement.prototype.decode = function () {
+        const reader = document.querySelector("#reader");
+        if (reader && !this.isConnected) probes.set(this, reader);
+        return decode.call(this);
+    };
+    const onReturn = (event: MouseEvent): void => {
+        const reader = document.querySelector("#reader");
+        if (reader && event.target instanceof Element && event.target.closest("#return-bookshelf")) exiting.add(reader);
+    };
+    document.addEventListener("click", onReturn, true);
+
+    // 点击返回尚不代表退出成功；必须等所属 Reader 已移除，且未完成的独立探针确实清空 src。
+    Element.prototype.removeAttribute = function (name) {
+        if (name === "src" && this instanceof HTMLImageElement) {
+            const reader = probes.get(this);
+            if (
+                reader &&
+                exiting.has(reader) &&
+                !reader.isConnected &&
+                !this.isConnected &&
+                !this.complete &&
+                this.naturalWidth === 0 &&
+                retired.has(this.src)
+            )
+                state.releasedProbes.set(this.src, performance.timeOrigin + performance.now());
+        }
+        removeAttribute.call(this, name);
+    };
+    return Object.assign(state, {
+        restore: () => {
+            URL.createObjectURL = create;
+            URL.revokeObjectURL = revoke;
+            HTMLImageElement.prototype.decode = decode;
+            Element.prototype.removeAttribute = removeAttribute;
+            document.removeEventListener("click", onReturn, true);
+        },
+    });
+}
+
+void test("image cancellation diagnostics reject failures without matching exit cleanup", () => {
+    const url = "blob:null/retired-image";
+    const failure: ImageRequestFailure = { url, type: "Image", error: "net::ERR_ABORTED", canceled: true, time: 120 };
+    const releasedProbes = new Map([[url, 100]]);
+    assert.deepEqual(expectedImageCancellations([failure], releasedProbes), [
+        `Request failed: ${url} (net::ERR_ABORTED)`,
+    ]);
+    for (const unexpected of [
+        { ...failure, time: 99 },
+        { ...failure, url: "blob:null/active-image" },
+        { ...failure, url: "https://example.invalid/image.png" },
+        { ...failure, type: "Fetch" },
+        { ...failure, error: "net::ERR_FAILED" },
+        { ...failure, canceled: false },
+    ])
+        assert.deepEqual(expectedImageCancellations([unexpected], releasedProbes), [], JSON.stringify(unexpected));
+    assert.deepEqual(expectedImageCancellations([failure], new Map()), []);
+});
 
 /**
  * 使用不同归档路径表示图文书中的独立资源，字节仍使用已验证的最小 PNG。
@@ -174,93 +290,180 @@ for (const delivery of ["web", "portable"] as const) {
     });
 
     void test(`${delivery}: image resources remain bounded during chapter layout and are released on exit`, async () => {
-        await withPage(delivery, async (page) => {
-            const imageCount = 400;
-            await importBooks(page, [
-                { name: "illustrated.epub", mimeType: "application/epub+zip", buffer: illustratedBook(imageCount) },
-            ]);
-            // 观察真实 Blob URL 的生命周期，不读取阅读器私有字段或要求某个精确的窗口大小。
-            const resources = await page.evaluateHandle(() => {
-                const state = { active: new Set<string>(), peak: 0 };
-                const create = URL.createObjectURL.bind(URL);
-                const revoke = URL.revokeObjectURL.bind(URL);
-                URL.createObjectURL = (object) => {
-                    const url = create(object);
-                    state.active.add(url);
-                    state.peak = Math.max(state.peak, state.active.size);
-                    return url;
+        const expectedErrors: string[] = [];
+        await withPage(
+            delivery,
+            async (page) => {
+                const imageCount = 400;
+                await importBooks(page, [
+                    { name: "illustrated.epub", mimeType: "application/epub+zip", buffer: illustratedBook(imageCount) },
+                ]);
+                const resources = await page.evaluateHandle(observeImageResources);
+                const network = await page.context().newCDPSession(page);
+                const requests = new Map<
+                    string,
+                    { url: string; type: string; clockOffset: number; finished: PromiseWithResolvers<undefined> }
+                >();
+                const browserRequests = new Map<Request, PromiseWithResolvers<undefined>>();
+                const failures: ImageRequestFailure[] = [];
+                const onRequest = (request: Request): void => {
+                    browserRequests.set(request, Promise.withResolvers<undefined>());
                 };
-                URL.revokeObjectURL = (url) => {
-                    state.active.delete(url);
-                    revoke(url);
+                const onRequestEnd = (request: Request): void => {
+                    browserRequests.get(request)?.resolve(undefined);
+                    browserRequests.delete(request);
                 };
-                return state;
-            });
-            try {
-                // 章末图片尚未就绪时，前面的纯文字窗口仍须打开；不以 decode 调用数代替首屏可用。
-                const decoding = await page.evaluateHandle(() => {
-                    const gate = Promise.withResolvers<undefined>();
-                    // eslint-disable-next-line @typescript-eslint/unbound-method -- 门控保持原生方法，并以实际图片作为接收者。
-                    const decode = HTMLImageElement.prototype.decode;
-                    HTMLImageElement.prototype.decode = function () {
-                        return gate.promise.then(() => decode.call(this));
-                    };
-                    return {
-                        release: () => {
-                            HTMLImageElement.prototype.decode = decode;
-                            gate.resolve(undefined);
-                        },
-                    };
+                page.on("request", onRequest);
+                page.on("requestfinished", onRequestEnd);
+                page.on("requestfailed", onRequestEnd);
+
+                // 使用浏览器实际发生时间，避免延迟送达的退出前失败被归入退出清理。
+                network.on("Network.requestWillBeSent", (event) => {
+                    requests.set(event.requestId, {
+                        url: event.request.url,
+                        type: event.type ?? "Other",
+                        clockOffset: (event.wallTime - event.timestamp) * 1000,
+                        finished: Promise.withResolvers<undefined>(),
+                    });
+                });
+                network.on("Network.loadingFinished", (event) => {
+                    requests.get(event.requestId)?.finished.resolve(undefined);
+                    requests.delete(event.requestId);
+                });
+                network.on("Network.loadingFailed", (event) => {
+                    const request = requests.get(event.requestId);
+                    if (request)
+                        failures.push({
+                            url: request.url,
+                            type: request.type,
+                            error: event.errorText,
+                            canceled: event.canceled === true,
+                            time: request.clockOffset + event.timestamp * 1000,
+                        });
+                    request?.finished.resolve(undefined);
+                    requests.delete(event.requestId);
                 });
                 try {
-                    await openBook(page, "illustrated.epub");
-                    assert.match(
-                        (await page
-                            .locator("#content > .reading-viewport:not(.reading-measure-viewport)")
-                            .textContent()) ?? "",
-                        /首屏正文保持可读/u
-                    );
-                } finally {
-                    await decoding.evaluate((gate) => {
-                        gate.release();
+                    await network.send("Network.enable");
+                    // 章末图片尚未就绪时，前面的纯文字窗口仍须打开；不以 decode 调用数代替首屏可用。
+                    const decoding = await page.evaluateHandle(() => {
+                        const gate = Promise.withResolvers<undefined>();
+                        // eslint-disable-next-line @typescript-eslint/unbound-method -- 门控保持原生方法，并以实际图片作为接收者。
+                        const decode = HTMLImageElement.prototype.decode;
+                        HTMLImageElement.prototype.decode = function () {
+                            return gate.promise.then(() => decode.call(this));
+                        };
+                        return {
+                            release: () => {
+                                HTMLImageElement.prototype.decode = decode;
+                                gate.resolve(undefined);
+                            },
+                        };
                     });
-                    await decoding.dispose();
-                }
-                const first = await resources.evaluate((state) => ({ active: state.active.size, peak: state.peak }));
-                assert(first.peak < imageCount / 2, "Opening text must not prepare every image in the chapter");
-                await waitForChapterLayout(page);
-                const completed = await resources.evaluate((state) => ({
-                    active: state.active.size,
-                    peak: state.peak,
-                }));
-                assert(completed.peak < imageCount / 2, "Completed layout must not retain all chapter images");
-
-                // 已经释放的远处资源可再次进入真实正文，图片仍能加载且保留原图尺寸。
-                await page.locator('#content a[data-book-fragment="last-image"]').click();
-                await settleReader(page);
-                await page.waitForFunction(
-                    (alt) => {
-                        const viewport = document.querySelector(
-                            "#content > .reading-viewport:not(.reading-measure-viewport)"
+                    try {
+                        await openBook(page, "illustrated.epub");
+                        assert.match(
+                            (await page
+                                .locator("#content > .reading-viewport:not(.reading-measure-viewport)")
+                                .textContent()) ?? "",
+                            /首屏正文保持可读/u
                         );
-                        const image = [...(viewport?.querySelectorAll("img") ?? [])].find((item) => item.alt === alt);
-                        return image?.complete && image.naturalWidth === 1 && image.width === 1 && image.height === 1;
-                    },
-                    `插图${String(imageCount - 1)}`
-                );
-                await page.locator("#return-bookshelf").click();
-                await page.locator("#bookshelf").waitFor();
-                assert.equal(await resources.evaluate((state) => state.active.size), 0);
+                    } finally {
+                        await decoding.evaluate((gate) => {
+                            gate.release();
+                        });
+                        await decoding.dispose();
+                    }
+                    const first = await resources.evaluate((state) => ({
+                        active: state.active.size,
+                        peak: state.peak,
+                    }));
+                    assert(first.peak < imageCount / 2, "Opening text must not prepare every image in the chapter");
+                    await waitForChapterLayout(page);
+                    const completed = await resources.evaluate((state) => ({
+                        active: state.active.size,
+                        peak: state.peak,
+                    }));
+                    assert(completed.peak < imageCount / 2, "Completed layout must not retain all chapter images");
 
-                // 在新会话的后台索引仍运行时退出，测量片段不能延长 URL 的生命周期。
-                await openBook(page, "illustrated.epub");
-                await page.locator('#page-position[aria-busy="true"]').waitFor();
-                await page.locator("#return-bookshelf").click();
-                await page.locator("#bookshelf").waitFor();
-                assert.equal(await resources.evaluate((state) => state.active.size), 0);
-            } finally {
-                await resources.dispose();
-            }
-        });
+                    // 已经释放的远处资源可再次进入真实正文，图片仍能加载且保留原图尺寸。
+                    await page.locator('#content a[data-book-fragment="last-image"]').click();
+                    await settleReader(page);
+                    await page.waitForFunction(
+                        (alt) => {
+                            const viewport = document.querySelector(
+                                "#content > .reading-viewport:not(.reading-measure-viewport)"
+                            );
+                            const image = [...(viewport?.querySelectorAll("img") ?? [])].find(
+                                (item) => item.alt === alt
+                            );
+                            return (
+                                image?.complete && image.naturalWidth === 1 && image.width === 1 && image.height === 1
+                            );
+                        },
+                        `插图${String(imageCount - 1)}`
+                    );
+                    await page.locator("#return-bookshelf").click();
+                    await page.locator("#bookshelf").waitFor();
+                    assert.equal(await resources.evaluate((state) => state.active.size), 0);
+
+                    // 在新会话的后台索引仍运行时退出，测量片段不能延长 URL 的生命周期。
+                    await openBook(page, "illustrated.epub");
+                    await page.locator('#page-position[aria-busy="true"]').waitFor();
+                    await page.locator("#return-bookshelf").click();
+                    await page.locator("#bookshelf").waitFor();
+                    assert.equal(await resources.evaluate((state) => state.active.size), 0);
+
+                    // 退出取消不损坏资源；新会话仍能恢复末尾插图。
+                    await openBook(page, "illustrated.epub");
+                    await page.waitForFunction(
+                        (alt) => {
+                            const viewport = document.querySelector(
+                                "#content > .reading-viewport:not(.reading-measure-viewport)"
+                            );
+                            return [...(viewport?.querySelectorAll("img") ?? [])].some(
+                                (image) => image.alt === alt && image.complete && image.naturalWidth === 1
+                            );
+                        },
+                        `插图${String(imageCount - 1)}`
+                    );
+                    await page.locator("#return-bookshelf").click();
+                    await page.locator("#bookshelf").waitFor();
+                    assert.equal(await resources.evaluate((state) => state.active.size), 0);
+
+                    // 等待两条观察通道的实际请求终态，不能复用 SPA 早先的 networkidle 状态。
+                    let timeout: ReturnType<typeof setTimeout> | undefined;
+                    try {
+                        await Promise.race([
+                            Promise.all([
+                                ...[...requests.values()].map((request) => request.finished.promise),
+                                ...[...browserRequests.values()].map((request) => request.promise),
+                            ]),
+                            new Promise<never>((_, reject) => {
+                                timeout = setTimeout(() => {
+                                    reject(new Error("Image requests did not finish after reader exit"));
+                                }, 10_000);
+                            }),
+                        ]);
+                        assert.equal(requests.size, 0);
+                        assert.equal(browserRequests.size, 0);
+                    } finally {
+                        clearTimeout(timeout);
+                    }
+                    const releasedProbes = new Map(await resources.evaluate((state) => [...state.releasedProbes]));
+                    expectedErrors.push(...expectedImageCancellations(failures, releasedProbes));
+                } finally {
+                    await resources.evaluate((state) => {
+                        state.restore();
+                    });
+                    await resources.dispose();
+                    await network.detach();
+                    page.off("request", onRequest);
+                    page.off("requestfinished", onRequestEnd);
+                    page.off("requestfailed", onRequestEnd);
+                }
+            },
+            expectedErrors
+        );
     });
 }
