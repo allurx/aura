@@ -4,6 +4,8 @@
  */
 
 #reader > #content {
+    /* 阅读纸面连同留白参与过渡，避免只在文字框边缘切出一条移动的阴影。 */
+    view-transition-name: reading-page;
     --reader-paragraph-spacing: 1.15em;
     --reader-letter-spacing: 0em;
     --reader-page-margin: 1;
@@ -19,7 +21,7 @@
     overflow: hidden;
     overflow-wrap: anywhere;
     padding: 44px var(--reading-inset-right) 32px var(--reading-inset-left);
-    outline-offset: -2px;
+    outline: none;
     overscroll-behavior-y: contain;
     font-family: sans-serif;
     font-size: 19px;
@@ -159,8 +161,6 @@
 
 /* 分页与滚动共用同一正文与源锚点，只改变视窗和章节的排版。 */
 #content > .reading-viewport {
-    /* 快照标识随正文生命周期保留，避免每次翻页反复改变分栏的绘制上下文。 */
-    view-transition-name: reading-page;
     flex: 1;
     min-width: 0;
     min-height: 0;
@@ -257,15 +257,75 @@
     touch-action: pan-y pinch-zoom;
 }
 
-/* 翻页快照固定在正文视窗内，背景、工具和页码保持静止。 */
+/* 翻页快照限制在阅读纸面内，网页背景、工具和页码保持静止。 */
 html[data-page-turn] {
-    &::view-transition-old(root),
-    &::view-transition-new(root) {
-        animation: none;
-        mix-blend-mode: normal;
+    --reading-turn-duration: 260ms;
+    view-transition-name: none;
+
+    /* 文档回退不截取背景，也不让过渡根层额外拦截范围外的输入。 */
+    &::view-transition {
+        pointer-events: none;
     }
 
-    /* 工具保持在正文上方，只显示实时新视图，避免透明材质被两份快照叠加。 */
+    &::view-transition-group(reading-page),
+    & #content::view-transition-group(reading-page) {
+        overflow: clip;
+        border-radius: var(--reading-page-radius);
+        animation: none;
+    }
+
+    &::view-transition-old(reading-page),
+    &::view-transition-new(reading-page),
+    & #content::view-transition-old(reading-page),
+    & #content::view-transition-new(reading-page) {
+        mix-blend-mode: normal;
+        animation-duration: var(--reading-turn-duration);
+        animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+        animation-fill-mode: both;
+    }
+
+    &[data-page-direction="next"]::view-transition-new(reading-page),
+    &[data-page-direction="next"] #content::view-transition-new(reading-page) {
+        animation-name: reading-enter-next;
+    }
+
+    &[data-page-direction="previous"]::view-transition-old(reading-page),
+    &[data-page-direction="previous"] #content::view-transition-old(reading-page) {
+        animation-name: reading-leave-previous;
+        z-index: 1;
+    }
+
+    &[data-page-turn="cover"][data-page-direction="next"]::view-transition-old(reading-page),
+    &[data-page-turn="cover"][data-page-direction="previous"]::view-transition-new(reading-page),
+    &[data-page-turn="cover"][data-page-direction="next"] #content::view-transition-old(reading-page),
+    &[data-page-turn="cover"][data-page-direction="previous"] #content::view-transition-new(reading-page) {
+        animation-name: none;
+    }
+
+    &[data-page-turn="cover"][data-page-direction="next"]::view-transition-new(reading-page),
+    &[data-page-turn="cover"][data-page-direction="previous"]::view-transition-old(reading-page),
+    &[data-page-turn="cover"][data-page-direction="next"] #content::view-transition-new(reading-page),
+    &[data-page-turn="cover"][data-page-direction="previous"] #content::view-transition-old(reading-page) {
+        box-shadow: -2px 0 8px color-mix(in srgb, var(--appearance-shadow-color) 8%, transparent);
+    }
+
+    &[data-page-turn="slide"][data-page-direction="next"]::view-transition-old(reading-page),
+    &[data-page-turn="slide"][data-page-direction="next"] #content::view-transition-old(reading-page) {
+        animation-name: reading-leave-next;
+    }
+
+    &[data-page-turn="slide"][data-page-direction="previous"]::view-transition-new(reading-page),
+    &[data-page-turn="slide"][data-page-direction="previous"] #content::view-transition-new(reading-page) {
+        animation-name: reading-enter-previous;
+    }
+
+    @media (max-width: 600px) {
+        --reading-turn-duration: 230ms;
+    }
+}
+
+/* 文档快照回退需要单独保留工具层级，避免拖到纸面上方的工具被覆盖。 */
+html[data-page-turn-scope="document"] {
     &::view-transition-group(reading-tools-header),
     &::view-transition-group(reading-tools-footer),
     &::view-transition-group(reading-tools-desktop) {
@@ -284,46 +344,6 @@ html[data-page-turn] {
     &::view-transition-new(reading-tools-desktop) {
         animation: none;
         mix-blend-mode: normal;
-    }
-
-    &::view-transition-group(reading-page) {
-        overflow: clip;
-        animation-duration: 220ms;
-    }
-
-    &::view-transition-old(reading-page),
-    &::view-transition-new(reading-page) {
-        mix-blend-mode: normal;
-        animation-duration: 220ms;
-        animation-timing-function: cubic-bezier(0.2, 0.65, 0.3, 1);
-        animation-fill-mode: both;
-    }
-
-    &[data-page-direction="next"]::view-transition-new(reading-page) {
-        animation-name: reading-enter-next;
-    }
-
-    &[data-page-direction="previous"]::view-transition-old(reading-page) {
-        animation-name: reading-leave-previous;
-        z-index: 1;
-    }
-
-    &[data-page-turn="cover"][data-page-direction="next"]::view-transition-old(reading-page),
-    &[data-page-turn="cover"][data-page-direction="previous"]::view-transition-new(reading-page) {
-        animation-name: none;
-    }
-
-    &[data-page-turn="cover"][data-page-direction="next"]::view-transition-new(reading-page),
-    &[data-page-turn="cover"][data-page-direction="previous"]::view-transition-old(reading-page) {
-        box-shadow: -6px 0 18px color-mix(in srgb, var(--appearance-shadow-color) 18%, transparent);
-    }
-
-    &[data-page-turn="slide"][data-page-direction="next"]::view-transition-old(reading-page) {
-        animation-name: reading-leave-next;
-    }
-
-    &[data-page-turn="slide"][data-page-direction="previous"]::view-transition-new(reading-page) {
-        animation-name: reading-enter-previous;
     }
 }
 

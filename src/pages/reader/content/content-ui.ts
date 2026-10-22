@@ -85,7 +85,6 @@ export default class ContentUi extends Ui {
     // 正文和内嵌区域共用恢复边界，延迟的程序滚动不能覆盖原源锚点。
     private readonly restoredScrollPositions = new WeakMap<HTMLElement, { top: number; left: number }>();
     private layout = "";
-    private turning = false;
     private updating = false;
     private refreshPending = false;
     private windowPending = false;
@@ -169,6 +168,15 @@ export default class ContentUi extends Ui {
         window
             .matchMedia("(prefers-reduced-motion: reduce)")
             .addEventListener("change", () => this.transition?.skipTransition(), { signal });
+        // 文档过渡层位于模态窗口之上；打开窗口前归还实时画面及其交互层级。
+        document.addEventListener(
+            "beforetoggle",
+            (event) => {
+                if (event.target instanceof HTMLDialogElement && event.newState === "open")
+                    this.transition?.skipTransition();
+            },
+            { capture: true, signal }
+        );
         signal.addEventListener(
             "abort",
             () => {
@@ -700,39 +708,51 @@ export default class ContentUi extends Ui {
     }
 
     /**
-     * 浏览器快照只移动正文视窗；减少动效或能力不可用时直接完成相同导航。
+     * 正文与页边留白共同过渡，导航在内容提交后完成，不等待视觉过渡结束。
+     * 下一次导航接替当前动画；减少动效或能力不可用时直接显示相同结果。
      */
     private async changePage(
         change: (animated: boolean) => void | Promise<void>,
         direction: ReadingDirection
     ): Promise<void> {
-        this.turning = true;
+        this.transition?.skipTransition();
+        // 局部过渡保留外框、工具和浮层的原生层级；旧浏览器继续使用文档快照。
+        const scope: HTMLElement & { startViewTransition?: Document["startViewTransition"] } = this.root;
+        const startTransition =
+            scope.startViewTransition?.bind(scope) ??
+            (typeof document.startViewTransition === "function"
+                ? document.startViewTransition.bind(document)
+                : undefined);
         const animated =
             direction !== ReadingDirection.INVALID &&
             (this.mode === "cover" || this.mode === "slide") &&
-            typeof document.startViewTransition === "function" &&
+            startTransition !== undefined &&
             !matchMedia("(prefers-reduced-motion: reduce)").matches;
-        try {
-            if (!animated) {
-                await change(false);
-                return;
-            }
-            document.documentElement.dataset["pageTurn"] = this.mode;
-            document.documentElement.dataset["pageDirection"] =
-                direction === ReadingDirection.NEXT ? "next" : "previous";
-            const transition = document.startViewTransition(() => {
-                if (!this.signal.aborted) return change(true);
-            });
-            this.transition = transition;
-            // 后台或并行视图切换可能跳过快照，导航结果仍通过 finished 确认。
-            void transition.ready.catch(() => undefined);
-            await transition.finished;
-        } finally {
-            this.transition = undefined;
-            delete document.documentElement.dataset["pageTurn"];
-            delete document.documentElement.dataset["pageDirection"];
-            this.turning = false;
+        if (!animated) {
+            await change(false);
+            return;
         }
+
+        document.documentElement.dataset["pageTurn"] = this.mode;
+        document.documentElement.dataset["pageTurnScope"] = scope.startViewTransition ? "content" : "document";
+        document.documentElement.dataset["pageDirection"] = direction === ReadingDirection.NEXT ? "next" : "previous";
+        const transition = startTransition(() => {
+            if (!this.signal.aborted) return change(true);
+        });
+        this.transition = transition;
+        // 跳过快照不会取消导航；DOM 更新失败统一由 updateCallbackDone 上抛。
+        void transition.ready.catch(() => undefined);
+        void transition.finished
+            .catch(() => undefined)
+            .then(() => {
+                // 旧动画完成不能清理后来接续的翻页状态。
+                if (this.transition !== transition) return;
+                this.transition = undefined;
+                delete document.documentElement.dataset["pageTurn"];
+                delete document.documentElement.dataset["pageTurnScope"];
+                delete document.documentElement.dataset["pageDirection"];
+            });
+        await transition.updateCallbackDone;
     }
 
     /**
@@ -925,7 +945,7 @@ export default class ContentUi extends Ui {
         this.indexFrame = requestAnimationFrame(() => {
             this.indexFrame = undefined;
             if (!this.isActive() || window !== this.activeWindow) return;
-            if (this.updating || this.layoutPending || this.turning) {
+            if (this.updating || this.layoutPending || this.transition) {
                 this.scheduleIndexCommit(window);
                 return;
             }
@@ -1262,7 +1282,7 @@ export default class ContentUi extends Ui {
             "scroll",
             (event: Event) => {
                 if (
-                    this.turning ||
+                    this.transition ||
                     this.updating ||
                     this.layoutPending ||
                     this.isContentObscured() ||

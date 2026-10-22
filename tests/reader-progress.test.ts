@@ -113,6 +113,52 @@ async function readProgress(page: Page): Promise<Progress[]> {
 }
 
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: interrupted page turns retain the latest chapter and saved source position`, async () => {
+        for (const mode of ["cover", "slide"] as const) {
+            await withPage(delivery, async (page) => {
+                await page.emulateMedia({ reducedMotion: "no-preference" });
+                await importBooks(page, [textBook("animated-progress.txt", 3, 1)]);
+                await openBook(page, "animated-progress.txt");
+                await setMode(page, mode);
+
+                // 暂停真实浏览器过渡，确保下一次输入发生在内容已提交但动画尚未结束时。
+                // 每章只有一页，连续前进和立即反向都会跨章，不依赖动画时长或内部导航 API。
+                for (const [key, chapter] of [
+                    ["ArrowRight", 2],
+                    ["ArrowRight", 3],
+                    ["ArrowLeft", 2],
+                ] as const) {
+                    await page.locator("#content").press(key);
+                    await page.waitForFunction(() => {
+                        const animations = document.getAnimations().filter((animation) => {
+                            const effect = animation.effect;
+                            return (
+                                effect instanceof KeyframeEffect &&
+                                effect.pseudoElement?.startsWith("::view-transition") &&
+                                animation.playState === "running"
+                            );
+                        });
+                        if (animations.length === 0) return false;
+                        for (const animation of animations) animation.pause();
+                        return true;
+                    });
+                    assert((await readVisibleText(page)).includes(`这是章节${String(chapter)}的第1段`));
+                }
+
+                const progress = await readProgress(page);
+                assert.equal(progress[0]?.chapterNumber, 2);
+                const visibleText = await readVisibleText(page);
+
+                // 在最后一次动画尚未结束时离开，再打开必须恢复最终源位置，不能退回中间章节。
+                await page.goBack();
+                await page.locator("#bookshelf").waitFor();
+                await openBook(page, "animated-progress.txt");
+                assert.deepEqual(await readProgress(page), progress);
+                assert.equal(await readVisibleText(page), visibleText);
+            });
+        }
+    });
+
     void test(`${delivery}: EPUB links to empty tail anchors retain their source location after reopening`, async () => {
         for (const mode of ["none", "scroll"] as const) {
             await withPage(delivery, async (page) => {
