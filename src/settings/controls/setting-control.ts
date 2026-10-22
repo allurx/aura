@@ -22,12 +22,15 @@ export default abstract class SettingControl {
     ) {
         this.element.className = "item";
 
-        // 还原与选项选择分开呈现，默认项不重复提供还原动作。
+        // 固定的还原图标表达当前项是否可重置，不随连续输入出现或消失。
         this.resetElement.type = "button";
         this.resetElement.className = "reset-setting";
         this.resetElement.title = `重置${setting.title}`;
         this.resetElement.setAttribute("aria-label", this.resetElement.title);
-        this.resetElement.textContent = "还原";
+        const icon = document.createElement("span");
+        icon.className = "icon icon-reset";
+        icon.setAttribute("aria-hidden", "true");
+        this.resetElement.append(icon);
         this.element.append(this.resetElement);
         bind(
             this.resetElement,
@@ -58,7 +61,7 @@ export default abstract class SettingControl {
             this.resetElement.setAttribute("aria-disabled", disabled);
         const tabIndex = customized ? 0 : -1;
         if (this.resetElement.tabIndex !== tabIndex) this.resetElement.tabIndex = tabIndex;
-        // 还原后把焦点交回设置本身，让按钮立即隐藏且不丢失键盘操作位置。
+        // 还原后把焦点交回设置本身，按钮退出 Tab 顺序但保留固定位置。
         if (returnFocus) {
             this.element
                 .querySelector<HTMLInputElement | HTMLSelectElement>('input:checked, input:not([type="radio"]), select')

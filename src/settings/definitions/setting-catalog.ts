@@ -47,20 +47,21 @@ export function createBookshelfSettings(bookshelf: HTMLElement, bookList: HTMLEl
                         0.1,
                         "px"
                     ),
-                    new FontFamilySetting(bookshelf),
                     new RangeStyleSetting(bookList, StyleProperty.BOOK_COVER_WIDTH, "封面大小", [96, 200], 1, "px"),
+                    new FontFamilySetting(bookshelf),
                 ],
             },
             {
-                id: "bookshelf-surfaces",
-                title: "材质与封面",
+                id: "bookshelf-material",
+                title: "材质与纹理",
                 collapsible: true,
-                settings: [
-                    new MaterialSetting("wood"),
-                    new BackgroundTextureSetting(),
-                    new BookCoverStyleSetting(bookList),
-                    new BookCoverColorSetting(bookList),
-                ],
+                settings: [new MaterialSetting("wood"), new BackgroundTextureSetting()],
+            },
+            {
+                id: "bookshelf-covers",
+                title: "书籍封面",
+                collapsible: true,
+                settings: [new BookCoverStyleSetting(bookList), new BookCoverColorSetting(bookList)],
             },
         ],
     };
@@ -84,9 +85,9 @@ export function createReaderSettings(
                 collapsible: false,
                 settings: [
                     new RangeStyleSetting(content, StyleProperty.FONT_SIZE, "字号", [16, 28], 0.1, "px"),
-                    new FontFamilySetting(content),
                     new LineHeightSetting(content),
                     new PageMarginSetting(content),
+                    new FontFamilySetting(content),
                     new ReadingModeSetting(onReadingModeChange),
                 ],
             },
@@ -101,12 +102,16 @@ export function createReaderSettings(
                 ],
             },
             {
-                id: "reading-surfaces",
-                title: "材质与配色",
+                id: "reading-material",
+                title: "材质与纹理",
+                collapsible: true,
+                settings: [new MaterialSetting("standard"), new BackgroundTextureSetting()],
+            },
+            {
+                id: "reading-colors",
+                title: "阅读配色",
                 collapsible: true,
                 settings: [
-                    new MaterialSetting("standard"),
-                    new BackgroundTextureSetting(),
                     new ColorStyleSetting(content, StyleProperty.COLOR, "文字颜色"),
                     new ColorStyleSetting(reader, StyleProperty.BACKGROUND_COLOR, "阅读背景"),
                 ],

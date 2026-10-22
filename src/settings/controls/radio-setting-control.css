@@ -10,7 +10,7 @@
 
         > .reset-setting {
             position: absolute;
-            top: 4px;
+            top: 0;
             right: 0;
         }
 
@@ -27,7 +27,7 @@
 
         legend {
             max-width: calc(100% - 52px);
-            min-height: 36px;
+            min-height: 32px;
             padding: 0;
             align-content: center;
             font-size: 14px;

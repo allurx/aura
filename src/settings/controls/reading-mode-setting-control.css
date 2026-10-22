@@ -4,10 +4,6 @@
  */
 
 #setting {
-    .items > .item.reading-mode-setting {
-        padding: 4px 0 12px;
-    }
-
     .reading-mode-options {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -75,11 +71,8 @@
     }
 
     .reading-mode-description {
-        min-height: 1.5em;
+        min-height: 1.6em;
         margin: 7px 0 0;
-        color: var(--appearance-muted-color);
-        font-size: 12px;
-        line-height: 1.5;
     }
 
     @media (forced-colors: active) {

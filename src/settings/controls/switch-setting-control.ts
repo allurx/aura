@@ -44,7 +44,7 @@ export default class SwitchSettingControl extends SettingControl {
 
         if (description) {
             const note = document.createElement("p");
-            note.className = "switch-setting-description";
+            note.className = "switch-setting-description setting-help";
             note.id = `setting-description-${setting.key}`;
             note.textContent = description;
             this.input.setAttribute("aria-describedby", note.id);
