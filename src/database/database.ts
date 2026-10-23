@@ -63,11 +63,13 @@ export function openDatabase(): Promise<IDBDatabase> {
                 return;
             }
 
-            // 缺少必需 store 时无法执行当前操作；无关的额外 store 不影响访问，也不清理。
-            const stores = Object.keys(DATABASE_SCHEMA.stores);
-            if (stores.some((name) => !database.objectStoreNames.contains(name))) {
+            try {
+                if (!hasRequiredSchema(database)) throw new DatabaseFormatError(false);
+            } catch (error) {
                 database.close();
-                reject(new DatabaseFormatError(false));
+                reject(
+                    error instanceof Error ? error : new Error("Database schema inspection failed", { cause: error })
+                );
                 return;
             }
 
@@ -105,6 +107,31 @@ export function openDatabase(): Promise<IDBDatabase> {
     });
 
     return connectionPromise;
+}
+
+/**
+ * 核对实际访问依赖的主键与索引；允许额外 store 和索引，不读取或改写用户记录。
+ */
+function hasRequiredSchema(database: IDBDatabase): boolean {
+    const stores = Object.keys(DATABASE_SCHEMA.stores);
+    if (stores.some((name) => !database.objectStoreNames.contains(name))) return false;
+
+    const transaction = database.transaction(stores, "readonly");
+    for (const [name, definition] of Object.entries(DATABASE_SCHEMA.stores)) {
+        const store = transaction.objectStore(name);
+        if (JSON.stringify(store.keyPath) !== JSON.stringify(definition.keyPath)) return false;
+        const indexes: Readonly<Record<string, IndexDefinition>> = definition.indexes;
+        for (const [indexName, definition] of Object.entries(indexes)) {
+            if (!store.indexNames.contains(indexName)) return false;
+            const index = store.index(indexName);
+            if (
+                JSON.stringify(index.keyPath) !== JSON.stringify(definition.keyPath) ||
+                index.unique !== definition.unique
+            )
+                return false;
+        }
+    }
+    return true;
 }
 
 /**
