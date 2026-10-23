@@ -27,12 +27,20 @@ interface StorageSnapshot {
 }
 
 /**
- * 在隔离上下文中创建固定记录，分别覆盖额外 store、缺少必需 store 和更高版本。
+ * 在隔离上下文中创建固定记录，覆盖额外元信息、必需结构不符和更高版本。
  */
 async function seedLibrary(
     page: Page,
     version: number,
-    variant: "current" | "extra-store" | "missing-store" = "current"
+    variant:
+        | "current"
+        | "extra-store"
+        | "extra-index"
+        | "missing-store"
+        | "legacy-indexes"
+        | "wrong-index"
+        | "wrong-unique"
+        | "wrong-key" = "current"
 ): Promise<void> {
     await page.evaluate(
         async ({ version, variant }) => {
@@ -54,15 +62,23 @@ async function seedLibrary(
                 const request = indexedDB.open("aura", version);
                 request.onupgradeneeded = () => {
                     const database = request.result;
+                    const file = database.createObjectStore("file", {
+                        keyPath: variant === "wrong-key" ? "hash" : "id",
+                    });
+                    file.createIndex(
+                        variant === "legacy-indexes" ? "formatHash" : "byFormatAndHash",
+                        variant === "wrong-index" ? ["hash", "format"] : ["format", "hash"],
+                        { unique: variant !== "wrong-unique" }
+                    );
+                    if (variant === "extra-index") file.createIndex("unused-index", "hash");
                     database
-                        .createObjectStore("file", { keyPath: "id" })
-                        .createIndex("byFormatAndHash", ["format", "hash"], { unique: true });
-                    database.createObjectStore("book", { keyPath: "id" }).createIndex("byFileId", "fileId");
+                        .createObjectStore("book", { keyPath: "id" })
+                        .createIndex(variant === "legacy-indexes" ? "fileId" : "byFileId", "fileId");
                     database.createObjectStore("toc", { keyPath: "fileId" });
                     if (variant !== "missing-store")
                         database
                             .createObjectStore("chapter", { keyPath: ["fileId", "chapterNumber"] })
-                            .createIndex("byFileId", "fileId");
+                            .createIndex(variant === "legacy-indexes" ? "fileId" : "byFileId", "fileId");
                     database.createObjectStore("progress", { keyPath: "bookId" });
                     if (variant === "extra-store") database.createObjectStore("unused-store", { keyPath: "id" });
                 };
@@ -193,7 +209,7 @@ function assertEmptyCurrent(snapshot: StorageSnapshot): void {
 }
 
 for (const delivery of ["web", "portable"] as const) {
-    for (const variant of ["current", "extra-store"] as const) {
+    for (const variant of ["current", "extra-store", "extra-index"] as const) {
         void test(`${delivery}: v1 records remain readable without rewriting the library (${variant})`, async () => {
             await withPage(delivery, async (page) => {
                 assertEmptyCurrent(await readSnapshot(page));
@@ -216,6 +232,10 @@ for (const delivery of ["web", "portable"] as const) {
     void test(`${delivery}: unsupported data stays intact until reset is explicitly confirmed`, async () => {
         for (const { version, variant } of [
             { version: 1, variant: "missing-store" },
+            { version: 1, variant: "legacy-indexes" },
+            { version: 1, variant: "wrong-index" },
+            { version: 1, variant: "wrong-unique" },
+            { version: 1, variant: "wrong-key" },
             { version: 2, variant: "current" },
         ] as const) {
             await withPage(delivery, async (page) => {
