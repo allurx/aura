@@ -113,6 +113,202 @@ async function readProgress(page: Page): Promise<Progress[]> {
 }
 
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: delayed page preparation and release preserve paper geometry`, async () => {
+        for (const mode of ["cover", "slide"] as const) {
+            for (const releaseWhilePending of [false, true]) {
+                await withPage(delivery, async (page) => {
+                    await page.emulateMedia({ reducedMotion: "no-preference" });
+                    await importBooks(page, [textBook("paper-geometry.txt", 3, 1)]);
+                    await openBook(page, "paper-geometry.txt");
+                    await setMode(page, mode);
+                    await page.setViewportSize({ width: 390, height: 844 });
+                    await settleReader(page);
+                    const originalProgress = await readProgress(page);
+                    const originalText = await readVisibleText(page);
+                    const bounds = await page.locator("#content").boundingBox();
+                    assert(bounds);
+                    const start = { x: bounds.x + bounds.width * 0.6, y: bounds.y + bounds.height / 2, id: 1 };
+                    const touch = await page.context().newCDPSession(page);
+                    await touch.send("Emulation.setTouchEmulationEnabled", { enabled: true });
+                    const begin = async (offset: number): Promise<void> => {
+                        await touch.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [start] });
+                        await touch.send("Input.dispatchTouchEvent", {
+                            type: "touchMove",
+                            touchPoints: [{ ...start, x: start.x + offset }],
+                        });
+                        await page.locator(".reading-papers").waitFor();
+                    };
+
+                    // 真正书头仍应有阻力；不能以禁止所有位移来满足准备期间的稳定性。
+                    await begin(45);
+                    await page.waitForFunction(() => {
+                        const paper = document.querySelector(".reading-paper");
+                        return paper && new DOMMatrixReadOnly(getComputedStyle(paper).transform).m41 > 0;
+                    });
+                    const boundary = await page
+                        .locator(".reading-paper")
+                        .first()
+                        .evaluate((paper) => new DOMMatrixReadOnly(getComputedStyle(paper).transform).m41);
+                    assert(boundary > 0 && boundary < 45);
+                    await touch.send("Input.dispatchTouchEvent", { type: "touchCancel", touchPoints: [] });
+                    await page.locator(".reading-papers").waitFor({ state: "detached" });
+                    assert.deepEqual(await readProgress(page), originalProgress);
+
+                    // 真实事务占用章节 store，确定性地延迟跨章读取；不替换产品方法或写入书籍。
+                    await page.evaluate(async () => {
+                        const database = await new Promise<IDBDatabase>((resolve, reject) => {
+                            const request = indexedDB.open("aura");
+                            request.onsuccess = () => {
+                                resolve(request.result);
+                            };
+                            request.onerror = () => {
+                                reject(request.error ?? new Error("Unable to hold chapters"));
+                            };
+                        });
+                        const transaction = database.transaction("chapter", "readwrite");
+                        const store = transaction.objectStore("chapter");
+                        let holding = true;
+                        document.addEventListener(
+                            "release-geometry-chapters",
+                            () => {
+                                holding = false;
+                            },
+                            { once: true }
+                        );
+                        transaction.oncomplete = () => {
+                            database.close();
+                        };
+                        const retain = (): void => {
+                            if (holding) store.get(["geometry-lock", 0]).onsuccess = retain;
+                        };
+                        retain();
+                    });
+                    await begin(-bounds.width * 0.4);
+                    const pending = await page.locator(".reading-papers").evaluate(async (papers) => {
+                        const samples: number[] = [];
+                        for (let index = 0; index < 4; index++) {
+                            await new Promise<void>((resolve) =>
+                                requestAnimationFrame(() => {
+                                    resolve();
+                                })
+                            );
+                            const current = papers.firstElementChild;
+                            if (!current) throw new Error("Missing current paper");
+                            samples.push(new DOMMatrixReadOnly(getComputedStyle(current).transform).m41);
+                        }
+                        return {
+                            samples,
+                            currentLeft: papers.firstElementChild?.getBoundingClientRect().left,
+                            frameRight: papers.getBoundingClientRect().right,
+                            visible: [...papers.children].filter(
+                                (paper) => getComputedStyle(paper).visibility === "visible"
+                            ).length,
+                        };
+                    });
+                    assert.equal(pending.visible, 1, "next chapter must still be held");
+                    assert(
+                        pending.samples.every((x) => Math.abs(x) <= 1),
+                        `${mode}: pending paper moved: ${JSON.stringify(pending.samples)}`
+                    );
+
+                    let beforeRelease: number[];
+                    if (releaseWhilePending) {
+                        assert(pending.currentLeft !== undefined);
+                        beforeRelease = [pending.currentLeft];
+                        await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+                        await page.evaluate(() => document.dispatchEvent(new Event("release-geometry-chapters")));
+                    } else {
+                        await page.evaluate(() => document.dispatchEvent(new Event("release-geometry-chapters")));
+                        await page.waitForFunction(
+                            () =>
+                                [...document.querySelectorAll(".reading-paper")].filter(
+                                    (paper) => getComputedStyle(paper).visibility === "visible"
+                                ).length === 2
+                        );
+                        // 反拉接近起点再松手，检查实际取消动画从最后呈现位置续接。
+                        const moved = await page.evaluateHandle(() => ({
+                            painted: new Promise<void>((resolve) => {
+                                document.addEventListener(
+                                    "pointermove",
+                                    () => {
+                                        requestAnimationFrame(() => {
+                                            resolve();
+                                        });
+                                    },
+                                    { once: true }
+                                );
+                            }),
+                        }));
+                        await touch.send("Input.dispatchTouchEvent", {
+                            type: "touchMove",
+                            touchPoints: [{ ...start, x: start.x - 4 }],
+                        });
+                        await page.evaluate(({ painted }) => painted, moved);
+                        await moved.dispose();
+                        beforeRelease = await page
+                            .locator(".reading-paper")
+                            .evaluateAll((papers) =>
+                                papers
+                                    .filter((paper) => getComputedStyle(paper).visibility === "visible")
+                                    .map((paper) => paper.getBoundingClientRect().left)
+                            );
+                        await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+                    }
+
+                    // 暂停真实 Web Animation 并回到起始帧，避免墙钟调度把接续跳变掩盖掉。
+                    await page.waitForFunction(() => {
+                        const animations = document
+                            .getAnimations()
+                            .filter(
+                                (animation) =>
+                                    animation.effect instanceof KeyframeEffect &&
+                                    animation.effect.target instanceof HTMLElement &&
+                                    animation.effect.target.classList.contains("reading-paper")
+                            );
+                        if (animations.length === 0) return false;
+                        for (const animation of animations) {
+                            animation.pause();
+                            animation.currentTime = 0;
+                        }
+                        return true;
+                    });
+                    const firstFrame = await page
+                        .locator(".reading-paper")
+                        .evaluateAll((papers) =>
+                            papers
+                                .filter((paper) => getComputedStyle(paper).visibility === "visible")
+                                .map((paper) => paper.getBoundingClientRect().left)
+                        );
+                    for (const [index, left] of beforeRelease.entries())
+                        assert(
+                            Math.abs((firstFrame[index] ?? Infinity) - left) <= 1,
+                            `${mode}: release jumped: ${JSON.stringify({ beforeRelease, firstFrame })}`
+                        );
+                    if (releaseWhilePending)
+                        assert(
+                            (firstFrame[1] ?? -Infinity) >= pending.frameRight - 1,
+                            "late target must enter from outside the reading frame"
+                        );
+                    await page.evaluate(() => {
+                        document.getAnimations().forEach((animation) => {
+                            animation.finish();
+                        });
+                    });
+                    await page.locator(".reading-papers").waitFor({ state: "detached" });
+                    await settleReader(page);
+                    if (releaseWhilePending) {
+                        assert((await readVisibleText(page)).includes("这是章节2的第1段"));
+                        assert.equal((await readProgress(page))[0]?.chapterNumber, 2);
+                    } else {
+                        assert.equal(await readVisibleText(page), originalText);
+                        assert.deepEqual(await readProgress(page), originalProgress);
+                    }
+                    await touch.detach();
+                });
+            }
+        }
+    });
+
     void test(`${delivery}: interrupted page turns retain the latest chapter and saved source position`, async () => {
         for (const mode of ["cover", "slide"] as const) {
             await withPage(delivery, async (page) => {
