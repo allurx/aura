@@ -8,6 +8,7 @@ import { bind, delegate } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
 import Ui from "@/components/ui";
 import enableLightDismiss from "@/components/dialog/light-dismiss";
+import OperationError from "@/errors/operation-error";
 
 /**
  * 桌面分类侧栏与移动端原生模态抽屉。
@@ -189,6 +190,33 @@ export default class NavUi extends Ui {
         // 关于窗口集中展示项目链接与内嵌许可，离线查看声明不读取书籍或外部资源。
         const about = assertExists(document.querySelector<HTMLDialogElement>("#about-dialog"));
         const aboutButton = assertExists(this.root.querySelector<HTMLButtonElement>("#open-about"));
+        const copyGroup = assertExists(about.querySelector<HTMLButtonElement>("#copy-qq-group"));
+        const copyIcon = assertExists(copyGroup.querySelector<HTMLElement>(".icon"));
+        const groupNumber = assertExists(copyGroup.dataset["qqGroup"]);
+        copyGroup.title = `复制群号 ${groupNumber}`;
+
+        // 只有剪贴板确认写入后才显示对勾；下次打开关于窗口时恢复复制图标。
+        bind(
+            copyGroup,
+            "click",
+            async () => {
+                try {
+                    await navigator.clipboard.writeText(groupNumber);
+                } catch (cause) {
+                    throw new OperationError(
+                        "群号复制失败",
+                        "未能将群号写入剪贴板。",
+                        cause,
+                        `请手动复制群号：${groupNumber}`
+                    );
+                }
+                if (signal.aborted || !about.open) return;
+                copyIcon.className = "icon icon-check";
+                copyGroup.setAttribute("aria-label", "QQ 交流群，群号已复制");
+            },
+            { signal }
+        );
+
         enableLightDismiss(about, signal);
         bind(
             aboutButton,
@@ -196,6 +224,8 @@ export default class NavUi extends Ui {
             () => {
                 this.closeMoreActions();
                 this.closeDrawer();
+                copyIcon.className = "icon icon-copy";
+                copyGroup.removeAttribute("aria-label");
                 about.inert = false;
                 about.showModal();
             },

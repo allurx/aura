@@ -11,6 +11,7 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 import { webAppPlugin } from "./build/web-app.ts";
 import { licensePlugin } from "./build/licenses.ts";
 import { portableEntryPlugin } from "./build/portable.ts";
+import packageJson from "./package.json" with { type: "json" };
 
 const PROJECT_ROOT = import.meta.dirname;
 const SOURCE_ROOT = resolve(PROJECT_ROOT, "src");
@@ -81,6 +82,15 @@ export default defineConfig(({ command, mode, isPreview }) => {
 
         // 按交付方式组合 HTML 声明与 portable 内联。
         plugins: [
+            {
+                name: "aura:version",
+                /**
+                 * 将当前程序版本写入页面，Web 与 portable 均可离线读取。
+                 */
+                transformIndexHtml(html) {
+                    return html.replace("__AURA_VERSION__", packageJson.version);
+                },
+            },
             // 安装与公开站点元信息只用于 Web，portable 不引用这些外部资源。
             !portable && webAppPlugin(),
             portable && viteSingleFile(),

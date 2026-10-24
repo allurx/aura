@@ -1,6 +1,7 @@
 {
     "extends": "@allurx/js-config/tsconfig/node",
     "compilerOptions": {
+        "resolveJsonModule": true,
         "tsBuildInfoFile": "./node_modules/.cache/typescript/tsconfig.node.tsbuildinfo"
     },
     "include": ["*.ts", "build/**/*.ts"]

@@ -4,34 +4,44 @@
  */
 
 .license-dialog {
-    width: min(40rem, calc(100% - var(--dialog-left) - var(--dialog-right)));
+    width: min(36rem, calc(100% - var(--dialog-left) - var(--dialog-right)));
 
     .title {
         font: inherit;
     }
+
     .body {
         padding: 20px var(--dialog-padding);
         white-space: normal;
     }
 
     .license-project {
-        padding: 0 0 12px;
+        padding-bottom: 20px;
         border-bottom: 1px solid var(--appearance-border);
     }
 
     .license-project-heading {
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 12px;
+        padding-block: 4px;
+
+        > div {
+            min-width: 0;
+        }
+
         h3 {
-            font-size: 24px;
+            font-size: 28px;
+            line-height: 1.2;
             letter-spacing: -0.03em;
         }
-        p {
-            margin-top: 0.15rem;
-            color: var(--appearance-muted-color);
-            font-size: 13px;
-        }
+    }
+
+    .license-project-title {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 4px 12px;
     }
 
     .license-brand {
@@ -41,9 +51,11 @@
         background: url("../../assets/images/brand.svg?inline") center / contain no-repeat;
     }
 
-    a {
+    a,
+    #copy-qq-group {
         text-decoration: none;
         color: var(--appearance-accent);
+
         @media (hover: hover) and (pointer: fine) {
             &:hover {
                 text-decoration: underline;
@@ -52,49 +64,45 @@
         }
     }
 
-    .icon-external-link {
-        --icon-size: 18px;
+    .icon-external-link,
+    #copy-qq-group .icon {
+        --icon-size: 16px;
         flex: none;
-        opacity: 0.7;
     }
 
     .license-project-links {
         display: flex;
         flex-wrap: wrap;
-        gap: 4px 20px;
+        align-items: center;
+        gap: 0 20px;
         margin-top: 12px;
-        a {
+
+        a,
+        button {
             display: inline-flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 6px;
             min-height: 44px;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 500;
-        }
-        .icon-source-code {
-            --icon-size: 18px;
         }
     }
 
-    .license-contact {
-        margin-block: 8px;
-        font-size: 13px;
-        span {
-            -webkit-user-select: all;
-            user-select: all;
-        }
+    #copy-qq-group {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+    }
+
+    .license-section {
+        padding-top: 20px;
     }
 
     .license-section-heading {
-        margin: 20px 0 8px;
-        h3 {
-            font-size: 14px;
-        }
-        p {
-            color: var(--appearance-muted-color);
-            font-size: 12px;
-            margin-top: 0.15rem;
-        }
+        margin-bottom: 8px;
+        font-size: 14px;
+        font-weight: 600;
     }
 
     .license-list {
@@ -103,31 +111,47 @@
         padding: 0;
     }
 
+    /* 展开入口与来源链接各有独立点击区域；全文仍随正文区域统一滚动。 */
     .license-item {
-        padding: 8px 0;
-        & + .license-item {
-            border-top: 1px solid var(--appearance-border);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 44px;
+        align-items: start;
+        border-bottom: 1px solid var(--appearance-border);
+
+        .license-disclosure {
+            grid-area: 1 / 1 / 2 / -1;
+            min-width: 0;
         }
     }
 
     .license-item-heading {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: center;
-        gap: 4px 12px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0 8px;
+        min-width: 0;
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
     }
 
     .license-source {
+        grid-area: 1 / 2;
+        z-index: 1;
         display: inline-flex;
-        flex-wrap: wrap;
+        justify-content: center;
         align-items: center;
-        gap: 0.3rem 0.5rem;
-        min-width: 0;
         min-height: 44px;
-        color: var(--appearance-color);
-        font-size: 14px;
-        font-weight: 500;
-        overflow-wrap: anywhere;
+        margin-top: 6px;
+        border-radius: var(--control-radius);
+        color: var(--appearance-muted-color);
+
+        @media (hover: hover) and (pointer: fine) {
+            &:hover {
+                color: var(--appearance-accent);
+            }
+        }
     }
 
     .license-version {
@@ -135,82 +159,123 @@
         font-size: 12px;
         font-weight: 400;
         font-variant-numeric: tabular-nums;
+        letter-spacing: normal;
     }
 
     .license-badge {
-        display: inline-flex;
-        align-items: center;
-        min-height: 44px;
-        padding: 0 8px;
-        border-radius: 8px;
-        background: transparent;
         color: var(--appearance-muted-color);
-        font-size: 11px;
-        font-weight: 500;
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 1.5;
         white-space: nowrap;
     }
 
     .license-disclosure {
+        &::details-content {
+            display: grid;
+            grid-template-rows: 0fr;
+            opacity: 0;
+            transition:
+                grid-template-rows var(--motion-duration-normal) var(--motion-ease),
+                opacity var(--motion-duration-normal) var(--motion-ease),
+                content-visibility var(--motion-duration-normal) allow-discrete;
+        }
+
+        &[open]::details-content {
+            grid-template-rows: 1fr;
+            opacity: 1;
+        }
+
         summary {
-            display: flex;
+            display: grid;
+            grid-template-columns: 18px minmax(0, 1fr) auto;
             align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
-            min-height: 44px;
-            padding-block: 0.5rem;
+            gap: 10px;
+            min-height: 56px;
+            margin-inline-end: 44px;
+            padding: 8px 12px 8px 0;
+            border-radius: var(--control-radius);
             list-style: none;
             cursor: pointer;
-            color: var(--appearance-muted-color);
-            font-size: 12px;
+            color: var(--appearance-color);
+
             &::-webkit-details-marker {
                 display: none;
             }
+
             @media (hover: hover) and (pointer: fine) {
                 &:hover {
                     color: var(--appearance-accent);
                 }
             }
         }
+
         .icon-chevron {
             --icon-size: 18px;
-            transform: rotate(90deg);
+            color: var(--appearance-muted-color);
+            transform: rotate(0deg);
             transition: transform var(--motion-duration-fast) var(--motion-ease);
         }
-        &[open] > summary {
-            color: var(--appearance-accent);
-            .icon-chevron {
-                transform: rotate(-90deg);
-            }
+
+        &[open] > summary .icon-chevron {
+            transform: rotate(90deg);
         }
     }
 
+    .license-document {
+        min-height: 0;
+        overflow: hidden;
+    }
+
     pre {
-        margin: 4px 0 12px;
-        padding: 12px;
+        margin: 4px 0 16px;
+        padding: 16px;
+        border: 1px solid var(--appearance-border);
         border-radius: 10px;
         background: var(--appearance-muted-surface);
         color: var(--appearance-color);
         font:
-            0.75rem/1.7 ui-monospace,
+            0.75rem/1.75 ui-monospace,
             monospace;
-        white-space: pre-line;
+        white-space: pre-wrap;
         overflow-wrap: anywhere;
     }
 
-    .license-footnote {
-        margin-top: 16px;
-        color: var(--appearance-muted-color);
-        text-align: center;
-        font-size: 0.75rem;
+    @media (max-width: 400px) {
+        .license-disclosure summary {
+            gap: 6px;
+            padding-inline-end: 8px;
+        }
+    }
+
+    @media (max-width: 360px) {
+        .license-disclosure summary {
+            grid-template-columns: 18px minmax(0, 1fr);
+            gap: 2px 8px;
+        }
+
+        .license-disclosure .icon-chevron {
+            grid-row: 1 / 3;
+        }
+
+        .license-item-heading {
+            align-self: end;
+        }
+
+        .license-badge {
+            grid-column: 2;
+            align-self: start;
+        }
     }
 
     @media (max-height: 24rem) {
         .body {
-            padding-block: 8px;
+            padding-block: 12px;
         }
     }
 
     @media (prefers-reduced-motion: reduce) {
+        .license-disclosure::details-content,
         .license-disclosure .icon-chevron {
             transition: none;
         }

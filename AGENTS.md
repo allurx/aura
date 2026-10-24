@@ -92,7 +92,7 @@ Aura 是一个轻量、离线优先的 Web 阅读器。变更应持续保护以�
 - Web 构建附带完整项目许可证与第三方声明文件；portable 将两者完整嵌入唯一 HTML。“关于 Aura”统一提供项目源码链接与许可信息，先展示名称、许可类型和来源链接，全文默认收起、按需展开，本地声明无需联网查看。构建和压缩不得丢失交付所需声明；实际分发的依赖或第三方资源变化时，同步核对声明维护源和两种产物。
 - `npm test` 构建 Web 和 portable 后，从实际导入、操作及下载入口执行行为回归；用例使用独立浏览器上下文和自建数据，不连接用户日常浏览器资料。`npm run verify` 执行一次静态检查并运行该回归入口；GitHub Actions 使用 `verify` 验证 PR 和共享分支，只有在仓库规则中将该检查设为 required check 后才构成合并门禁。调整 Node.js 版本范围、验证脚本、构建入口或输出目录时应同步维护 CI 和发布流程。
 - 在线版使用 Cloudflare Workers Static Assets，GitHub Actions 是唯一自动部署入口；仅 `main` 的推送部署同一次验证生成的 Web 产物，`dev` 和 PR 只执行验证。只维护一个正式 Worker，Worker、资源目录和自定义域名由 Wrangler 配置统一管理；`npm run deploy` 只部署已有产物，不重新构建。站点部署与 portable 下载交付保持独立，部署配置不得破坏单文件产物。
-- 正式发布使用稳定 SemVer 形式的 annotated `vX.Y.Z` tag，tag 必须指向已集成且验证过的 `main` commit。推送匹配 tag 会自动重跑 `npm run verify`，并公开发布 Web ZIP、portable HTML，以及覆盖两项产物的 SHA-256 校验清单；因此执行 tag push 前必须同时获得对该 GitHub Release 的明确授权。调整产物文件名时应同步更新发布流程和[使用指南中的下载说明](docs/usage.md#选择下载文件)。
+- 正式发布使用稳定 SemVer 形式的 annotated `vX.Y.Z` tag，tag 必须指向已集成且验证过的 `main` commit，并与 `package.json` 的应用版本一致。应用版本在构建时写入 Web 与 portable，在开发分支按[发布指南](docs/releasing.md)更新后再集成到 `main`。推送匹配 tag 会自动重跑 `npm run verify`，并公开发布 Web ZIP、portable HTML，以及覆盖两项产物的 SHA-256 校验清单；因此执行 tag push 前必须同时获得对该 GitHub Release 的明确授权。调整产物文件名时应同步更新发布流程和[使用指南中的下载说明](docs/usage.md#选择下载文件)。
 - 构建成功只证明静态构建通过。导航、页面生命周期、移动端交互、持久化和 `file://` portable 行为等浏览器问题，必须在对应运行环境中验证后才能宣称已解决。
 - 默认本地预览使用 Wrangler 读取正式部署的静态资源和响应头配置；修改后重新构建并重启预览，使浏览器验证对应最新产物。
 - 导入、解析、去重、事务或批量写入逻辑变更，除功能正确性外，还应使用有代表性的大文件和数据场景检查性能与内存。
