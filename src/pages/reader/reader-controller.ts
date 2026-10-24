@@ -106,7 +106,7 @@ export default class ReaderController {
                 );
             }
             this.state = state;
-            this.readerUi.renderBookTitle(state.book.fileName);
+            this.readerUi.setBookLabel(state.book.fileName);
             this.tocUi.renderEntries(state.toc.entries);
             this.contentUi.init(
                 state.file,

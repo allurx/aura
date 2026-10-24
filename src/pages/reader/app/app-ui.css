@@ -212,7 +212,8 @@ html[data-page="reader"] #app {
         line-height: 1.4;
     }
 
-    .page-label {
+    .page-label,
+    .progress-label {
         display: none;
     }
 
