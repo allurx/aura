@@ -523,7 +523,11 @@ for (const delivery of ["web", "portable"] as const) {
                     const scrolledText = content.slice(scrolled[0].contentOffset, scrolled[0].contentOffset + 64);
                     assert.equal(scrolledText.length, 64);
                     assert.equal(content.indexOf(scrolledText), scrolled[0].contentOffset);
-                    assert((await readVisibleText(page)).includes(scrolledText));
+                    const visibleAfterScroll = await readVisibleText(page);
+                    assert(
+                        visibleAfterScroll.includes(scrolledText),
+                        JSON.stringify({ scrolled, scrolledText, visibleAfterScroll })
+                    );
 
                     await page.reload();
                     await page.locator("#toggle-setting-panel:not([disabled])").waitFor();
