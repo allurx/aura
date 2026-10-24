@@ -359,7 +359,7 @@ export default class BookshelfController {
     }
 
     /**
-     * 持久化成功后才更新页面摘要；只在保存失败时让选择器恢复原值。
+     * 持久化成功后才更新页面摘要与分类勾选，保存失败时保留原归属。
      * @returns 是否接受目标分类；提交成功后即使页面已退出也返回 true
      */
     private async moveBook(bookId: string, categoryId: string): Promise<boolean> {
@@ -387,7 +387,7 @@ export default class BookshelfController {
             this.books = assertExists(this.books).map((item) =>
                 item.book.id === bookId ? { ...item, book: { ...item.book, categoryId: category.id } } : item
             );
-            // 告知选择器已保存；后续呈现失败单独报告，不能将控件退回未保存的旧分类。
+            // 告知操作入口已保存；后续呈现失败单独报告，不能将已提交结果视为保存失败。
             run(() =>
                 this.refreshAfterChange(`《${summary.title}》已移至“${category.name}”。`, () => {
                     this.renderBooks();

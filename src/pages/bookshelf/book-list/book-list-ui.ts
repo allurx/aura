@@ -133,17 +133,14 @@ export default class BookListUi extends Ui {
     public renderBooks(books: BookSummary[], emptyState: BookListEmptyState, position?: BookListPosition | null): void {
         const anchor = position === undefined ? this.capturePosition() : position;
         const anchorIndex = anchor ? this.bookIndexes.get(anchor.bookId) : undefined;
-        const active = document.activeElement;
-        const focused = active instanceof HTMLOptionElement ? active.closest("select") : active;
+        const focused = document.activeElement;
         const focusedInside = focused instanceof HTMLElement && this.root.contains(focused);
         const focusId = focusedInside ? focused.closest<HTMLElement>(".book")?.dataset["id"] : undefined;
         const previousIndex = focusId ? this.bookIndexes.get(focusId) : undefined;
         const focusClass =
-            focused instanceof HTMLSelectElement
-                ? ".book-category"
-                : focused instanceof HTMLElement && focused.classList.contains("book-more")
-                  ? ".book-more"
-                  : ".book-open";
+            focused instanceof HTMLElement && focused.matches(".book-more, .book-actions *")
+                ? ".book-more"
+                : ".book-open";
 
         this.books = books;
         this.bookIndexes.clear();
@@ -292,11 +289,10 @@ export default class BookListUi extends Ui {
         for (let row = first; row < last; row++) wantedRows.add(row);
         if (extraIndex !== undefined) wantedRows.add(Math.floor(extraIndex / columns));
 
-        const active = document.activeElement;
-        const focused = active instanceof HTMLOptionElement ? active.closest("select") : active;
+        const focused = document.activeElement;
         const focusedInside = focused instanceof HTMLElement && this.root.contains(focused);
         const pinnedIds = new Set(this.operatingBooks);
-        for (const element of [focused, ...this.root.querySelectorAll(".book-file-actions:popover-open")]) {
+        for (const element of [focused, ...this.root.querySelectorAll(".book-actions:popover-open")]) {
             if (element instanceof Element && this.root.contains(element)) {
                 const id = element.closest<HTMLElement>(".book")?.dataset["id"];
                 if (id) pinnedIds.add(id);
@@ -423,8 +419,8 @@ export default class BookListUi extends Ui {
     }
 
     /**
-     * 阅读与分类直接可达，文件操作就地展开；分类选择完成即保存，失败时恢复原值。
-     * @param handlers - move 返回 false 或抛错时恢复分类选择器原值
+     * 书封直接进入阅读，更多操作就地展开；分类选择成功后关闭，失败时保留已保存的归属。
+     * @param handlers - move 返回 true 表示目标分类已提交，false 表示本次请求未被接受
      */
     public bindEvents(
         handlers: {
@@ -487,13 +483,35 @@ export default class BookListUi extends Ui {
             this.root,
             "keydown",
             (event: KeyboardEvent) => {
+                if (!(event.target instanceof HTMLElement)) return;
+                const actions = event.target.closest<HTMLElement>(".book-actions:popover-open");
+                if (actions && event.key === "Escape" && actions.dataset["view"] === "categories") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.showActionView(actions, "actions");
+                    return;
+                }
                 if (
-                    event.key !== "Tab" ||
-                    event.altKey ||
-                    event.ctrlKey ||
-                    event.metaKey ||
-                    !(event.target instanceof HTMLElement)
-                )
+                    actions &&
+                    event.target.matches(".book-category-option") &&
+                    !event.altKey &&
+                    !event.ctrlKey &&
+                    !event.metaKey &&
+                    ["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)
+                ) {
+                    event.preventDefault();
+                    const options = [...actions.querySelectorAll<HTMLButtonElement>(".book-category-option")];
+                    const index = options.findIndex((option) => option === event.target);
+                    const next =
+                        event.key === "Home"
+                            ? 0
+                            : event.key === "End"
+                              ? options.length - 1
+                              : Math.max(0, Math.min(options.length - 1, index + (event.key === "ArrowDown" ? 1 : -1)));
+                    this.focusCategory(assertExists(options[next]));
+                    return;
+                }
+                if (event.key !== "Tab" || event.altKey || event.ctrlKey || event.metaKey || event.defaultPrevented)
                     return;
                 const id = event.target.closest<HTMLElement>(".book")?.dataset["id"];
                 const index = id ? this.bookIndexes.get(id) : undefined;
@@ -531,9 +549,11 @@ export default class BookListUi extends Ui {
                 if (
                     event.newState === "open" &&
                     event.target instanceof HTMLElement &&
-                    event.target.classList.contains("book-file-actions")
-                )
-                    this.positionFileActions(event.target);
+                    event.target.classList.contains("book-actions")
+                ) {
+                    this.showActionView(event.target, "actions", false);
+                    this.positionActions(event.target);
+                }
             },
             { signal, capture: true }
         );
@@ -544,28 +564,47 @@ export default class BookListUi extends Ui {
                 if (
                     event.newState === "open" &&
                     event.target instanceof HTMLElement &&
-                    event.target.classList.contains("book-file-actions")
+                    event.target.classList.contains("book-actions")
                 )
-                    event.target.scrollTop = 0;
+                    assertExists(event.target.querySelector<HTMLElement>(".book-action-list")).scrollTop = 0;
             },
             { signal, capture: true }
         );
-        const closeFileActions = () => {
-            for (const actions of this.root.querySelectorAll<HTMLElement>(".book-file-actions:popover-open"))
+        const closeActions = () => {
+            for (const actions of this.root.querySelectorAll<HTMLElement>(".book-actions:popover-open"))
                 actions.hidePopover();
         };
-        this.root.addEventListener("scroll", closeFileActions, { signal });
-        window.addEventListener("resize", closeFileActions, { signal });
-        window.visualViewport?.addEventListener("resize", closeFileActions, { signal });
-        window.visualViewport?.addEventListener("scroll", closeFileActions, { signal });
-        signal.addEventListener("abort", closeFileActions, { once: true });
+        this.root.addEventListener("scroll", closeActions, { signal });
+        window.addEventListener("resize", closeActions, { signal });
+        window.visualViewport?.addEventListener("resize", closeActions, { signal });
+        window.visualViewport?.addEventListener("scroll", closeActions, { signal });
+        signal.addEventListener("abort", closeActions, { once: true });
+
+        delegate(
+            this.root,
+            ".book-move",
+            "click",
+            (_, button) => {
+                this.showActionView(assertExists(button.closest<HTMLElement>(".book-actions")), "categories");
+            },
+            { signal }
+        );
+        delegate(
+            this.root,
+            ".book-actions-back",
+            "click",
+            (_, button) => {
+                this.showActionView(assertExists(button.closest<HTMLElement>(".book-actions")), "actions");
+            },
+            { signal }
+        );
 
         delegate(
             this.root,
             ".book-export",
             "click",
             async (_, button) => {
-                const owner = this.closeFileActions(button);
+                const owner = this.closeActions(button);
                 const id = assertExists(owner.dataset["id"]);
                 this.operatingBooks.add(id);
                 try {
@@ -595,7 +634,7 @@ export default class BookListUi extends Ui {
             ".book-delete",
             "click",
             async (_, button) => {
-                const owner = this.closeFileActions(button);
+                const owner = this.closeActions(button);
                 const id = assertExists(owner.dataset["id"]);
                 const index = this.bookIndexes.get(id) ?? 0;
                 this.operatingBooks.add(id);
@@ -613,40 +652,44 @@ export default class BookListUi extends Ui {
             { signal }
         );
 
-        // 分类选择即时提交；保存期间禁用该选择器，失败则回滚显示值。
+        // 分类勾选不作预览；提交期间拒绝重复选择，返回与关闭仍然可用。
         delegate(
             this.root,
-            ".book-category",
-            "change",
-            async (_, element) => {
-                if (!(element instanceof HTMLSelectElement) || element.disabled) return;
-                const previous = assertExists(element.dataset["categoryId"]);
-                const next = element.value;
-                if (previous === next) return;
-
-                // 选择器禁用后可能失焦，接续由本次分类操作负责，不交给列表渲染猜测来源。
-                const id = assertExists(element.closest<HTMLElement>(".book")?.dataset["id"]);
+            ".book-category-option",
+            "click",
+            async (_, button) => {
+                const owner = assertExists(button.closest<HTMLElement>(".book"));
+                const id = assertExists(owner.dataset["id"]);
+                if (this.operatingBooks.has(id)) return;
+                if (button.getAttribute("aria-pressed") === "true") {
+                    this.closeActions(button);
+                    return;
+                }
+                const actions = assertExists(button.closest<HTMLElement>(".book-actions"));
+                const list = assertExists(button.closest<HTMLElement>(".book-category-list"));
+                const options = list.querySelectorAll<HTMLButtonElement>(".book-category-option");
+                const next = assertExists(button.dataset["categoryId"]);
                 const index = this.bookIndexes.get(id) ?? 0;
-                const hadFocus = element.contains(document.activeElement);
+                const hadFocus = actions.contains(document.activeElement);
                 this.operatingBooks.add(id);
-                element.disabled = true;
-                element.setAttribute("aria-busy", "true");
+                list.setAttribute("aria-busy", "true");
+                for (const option of options) option.setAttribute("aria-disabled", "true");
 
                 try {
-                    if (await handlers.move(id, next)) element.dataset["categoryId"] = next;
-                    else element.value = previous;
+                    const moved = await handlers.move(id, next);
+                    if (moved && owner.isConnected && actions.matches(":popover-open")) this.closeActions(button);
                 } catch (error) {
-                    element.value = previous;
+                    // 错误模态会原生收起 popover，先留下可见的焦点返回点。
+                    if (!signal.aborted && owner.isConnected && actions.contains(document.activeElement))
+                        owner.querySelector<HTMLButtonElement>(".book-more")?.focus({ preventScroll: true });
                     throw error;
                 } finally {
-                    // 仅在控件仍存在且用户未移走焦点时恢复焦点。
+                    // 摘要刷新可能已移除原卡；不从其他浮层或错误窗口抢回焦点。
                     this.operatingBooks.delete(id);
-                    element.disabled = false;
-                    element.removeAttribute("aria-busy");
-                    if (!signal.aborted && hadFocus && document.activeElement === document.body) {
-                        if (element.isConnected) element.focus({ preventScroll: true });
-                        else this.focusBook(Math.min(index, this.books.length - 1), ".book-open", false);
-                    }
+                    list.removeAttribute("aria-busy");
+                    for (const option of options) option.removeAttribute("aria-disabled");
+                    if (!signal.aborted && hadFocus && !owner.isConnected && document.activeElement === document.body)
+                        this.focusBook(Math.min(index, this.books.length - 1), ".book-open", false);
                     if (!signal.aborted) this.scheduleWindow();
                 }
             },
@@ -710,9 +753,44 @@ export default class BookListUi extends Ui {
     }
 
     /**
-     * 文件菜单贴近入口展开，靠近窗口边缘时调整方向并保留内部滚动空间。
+     * 同一浮层内切换动作与分类；进入时定位当前分类，返回时接续原入口。
      */
-    private positionFileActions(actions: HTMLElement): void {
+    private showActionView(actions: HTMLElement, view: "actions" | "categories", focus = true): void {
+        const actionList = assertExists(actions.querySelector<HTMLElement>(".book-action-list"));
+        const categories = assertExists(actions.querySelector<HTMLElement>(".book-categories"));
+        const categoryList = assertExists(actions.querySelector<HTMLElement>(".book-category-list"));
+        actions.dataset["view"] = view;
+        actionList.hidden = view !== "actions";
+        categories.hidden = view !== "categories";
+        actionList.scrollTop = 0;
+        categoryList.scrollTop = 0;
+        if (!actions.matches(":popover-open")) return;
+        this.positionActions(actions);
+        if (!focus) return;
+        if (view === "categories") {
+            const selected = assertExists(
+                categoryList.querySelector<HTMLButtonElement>('.book-category-option[aria-pressed="true"]')
+            );
+            this.focusCategory(selected);
+        } else assertExists(actions.querySelector<HTMLButtonElement>(".book-move")).focus({ preventScroll: true });
+    }
+
+    /**
+     * 只滚动分类内容，不让焦点移动带走固定返回栏或书架位置。
+     */
+    private focusCategory(button: HTMLButtonElement): void {
+        const list = assertExists(button.closest<HTMLElement>(".book-category-list"));
+        button.focus({ preventScroll: true });
+        const bounds = button.getBoundingClientRect();
+        const viewport = list.getBoundingClientRect();
+        if (bounds.top < viewport.top) list.scrollTop += bounds.top - viewport.top;
+        else if (bounds.bottom > viewport.bottom) list.scrollTop += bounds.bottom - viewport.bottom;
+    }
+
+    /**
+     * 根据当前视图的实际高度选择展开方向，窄矮窗口只压缩内部滚动区。
+     */
+    private positionActions(actions: HTMLElement): void {
         const owner = assertExists(actions.closest<HTMLElement>(".book"));
         const ownerLeft = owner.getBoundingClientRect().left;
         const button = assertExists(owner.querySelector<HTMLElement>(".book-more")).getBoundingClientRect();
@@ -723,10 +801,17 @@ export default class BookListUi extends Ui {
         const height = viewport?.height ?? window.innerHeight;
         const below = top + height - button.bottom - 8;
         const above = button.top - top - 8;
-        const opensAbove = below < 112 && above > below;
+        const menuWidth = Math.min(208, width - 16);
+        actions.style.width = `${menuWidth}px`;
+        // beforetoggle 时浮层尚未显示；同步测量后还原，不跨帧呈现临时位置。
+        const display = actions.style.display;
+        actions.style.display = "flex";
+        actions.style.maxHeight = "none";
+        const naturalHeight = actions.getBoundingClientRect().height;
+        actions.style.display = display;
+        const opensAbove = below < naturalHeight && above > below;
 
-        actions.style.width = `${Math.min(184, width - 16)}px`;
-        actions.style.left = `${Math.max(left + 8, Math.min(ownerLeft, left + width - 192))}px`;
+        actions.style.left = `${Math.max(left + 8, Math.min(ownerLeft, left + width - menuWidth - 8))}px`;
         actions.style.top = opensAbove ? "auto" : `${button.bottom + 4}px`;
         actions.style.bottom = opensAbove ? `${window.innerHeight - button.top + 4}px` : "auto";
         actions.style.maxHeight = `${Math.max(0, opensAbove ? above : below)}px`;
@@ -735,9 +820,9 @@ export default class BookListUi extends Ui {
     /**
      * 打开确认或导出前归还到可见入口，避免操作结束后焦点停留在隐藏的菜单项。
      */
-    private closeFileActions(button: HTMLElement): HTMLElement {
+    private closeActions(button: HTMLElement): HTMLElement {
         const owner = assertExists(button.closest<HTMLElement>(".book"));
-        const actions = assertExists(owner.querySelector<HTMLElement>(".book-file-actions"));
+        const actions = assertExists(owner.querySelector<HTMLElement>(".book-actions"));
         const focusedInside = actions.contains(document.activeElement);
         actions.hidePopover();
         // 部分浏览器关闭 popover 后仍暂留菜单焦点，只为这个原生缺口接续可见入口。

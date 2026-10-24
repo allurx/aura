@@ -163,6 +163,81 @@ for (const delivery of ["web", "portable"] as const) {
         });
     });
 
+    void test(`${delivery}: category moves persist, preserve the previous value on failure and remain discoverable`, async () => {
+        await withPage(
+            delivery,
+            async (page) => {
+                await importBooks(page, [textBook("category-target.txt"), textBook("category-neighbor.txt")]);
+                const card = page
+                    .locator(".book")
+                    .filter({ has: page.getByTitle("category-target.txt", { exact: true }) });
+                const openCategories = async (): Promise<void> => {
+                    await card.locator(".book-more").click();
+                    await card.locator(".book-move").click();
+                };
+                const fiction = card.locator('.book-category-option[data-category-id="fiction"]');
+                const collection = card.locator('.book-category-option[data-category-id="collection"]');
+
+                // 成功后关闭浮层；重新加载仍由已保存分类决定当前选项。
+                await openCategories();
+                assert.equal(await collection.getAttribute("aria-pressed"), "true");
+                await fiction.click();
+                await card.locator(".book-actions").waitFor({ state: "hidden" });
+                await page.reload();
+                await waitForBookCount(page, 2);
+                await openCategories();
+                assert.equal(await fiction.getAttribute("aria-pressed"), "true");
+
+                // 仅使下一次书籍写入失败，验证界面不会把未提交的目标显示成当前归属。
+                await page.evaluate(() => {
+                    // eslint-disable-next-line @typescript-eslint/unbound-method -- 保留原方法用于还原，调用时用 call 显式传入实际 store。
+                    const original = IDBObjectStore.prototype.put;
+                    IDBObjectStore.prototype.put = function (value: unknown, key?: IDBValidKey) {
+                        if (this.name === "book") {
+                            IDBObjectStore.prototype.put = original;
+                            throw new DOMException("Injected category write failure", "QuotaExceededError");
+                        }
+                        return original.call(this, value, key);
+                    };
+                });
+                await collection.click();
+                const failure = page.getByRole("dialog", { name: "分类未能更改", exact: true });
+                await failure.waitFor();
+                assert.equal(await fiction.getAttribute("aria-pressed"), "true");
+                assert.equal(await collection.getAttribute("aria-pressed"), "false");
+                await failure.getByRole("button", { name: "知道了", exact: true }).click();
+                await card.locator(".book-more:focus").waitFor();
+                await openCategories();
+                assert.equal(await fiction.getAttribute("aria-pressed"), "true");
+                assert.equal(await collection.getAttribute("aria-pressed"), "false");
+
+                // 刷新核对失败未改写存储，再经相同入口重试。
+                await page.reload();
+                await waitForBookCount(page, 2);
+                await openCategories();
+                assert.equal(await fiction.getAttribute("aria-pressed"), "true");
+                await collection.click();
+                await card.locator(".book-actions").waitFor({ state: "hidden" });
+                await page.reload();
+                await waitForBookCount(page, 2);
+
+                // 移出当前分类只改变筛选结果，书籍仍能从目标分类找到并打开。
+                await page.locator('#category-navigation button[data-id="collection"]').click();
+                await waitForBookCount(page, 2);
+                await openCategories();
+                assert.equal(await collection.getAttribute("aria-pressed"), "true");
+                await fiction.click();
+                await waitForBookCount(page, 1);
+                await card.waitFor({ state: "detached" });
+                await page.locator('#category-navigation button[data-id="fiction"]').click();
+                await waitForBookCount(page, 1);
+                await openBook(page, "category-target.txt");
+                assert.match((await page.locator("#content").textContent()) ?? "", /这是章节1的第1段/);
+            },
+            ["分类未能更改"]
+        );
+    });
+
     void test(`${delivery}: shared TXT and EPUB sources survive deletion and export byte for byte`, async () => {
         await withPage(delivery, async (page) => {
             const sources = [
