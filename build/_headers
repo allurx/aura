@@ -5,8 +5,9 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
 
+# 默认不缓存资源响应；构建只为本次生成的 JS、CSS 追加精确长缓存规则。
 /assets/*
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: no-store
 
 /manifest.webmanifest
   Cache-Control: no-cache

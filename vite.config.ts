@@ -9,6 +9,7 @@ import { defineConfig, mergeConfig, type UserConfig } from "vite";
 import baseConfig from "@allurx/js-config/vite";
 import { viteSingleFile } from "vite-plugin-singlefile";
 import { webAppPlugin } from "./build/web-app.ts";
+import { assetHeadersPlugin } from "./build/asset-headers.ts";
 import { licensePlugin } from "./build/licenses.ts";
 import { portableEntryPlugin } from "./build/portable.ts";
 import packageJson from "./package.json" with { type: "json" };
@@ -93,6 +94,7 @@ export default defineConfig(({ command, mode, isPreview }) => {
             },
             // 安装与公开站点元信息只用于 Web，portable 不引用这些外部资源。
             !portable && webAppPlugin(),
+            !portable && assetHeadersPlugin(),
             portable && viteSingleFile(),
             portable && portableEntryPlugin(),
             licensePlugin(PROJECT_ROOT, portable),

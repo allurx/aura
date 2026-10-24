@@ -90,6 +90,7 @@ Aura 是一个轻量、离线优先的 Web 阅读器。变更应持续保护以�
 - TypeScript 变更通常至少运行 `npm run check`；影响运行时行为时还应运行对应生产构建，普通 Web 为 `npm run build`。构建命令只生成产物，完整门禁使用 `npm run verify`，最终验证无需紧邻重复执行其中已包含的检查。
 - 路由、入口、模板、资源路径、Vite 配置或 portable 相关变更，应同时运行 `npm run build` 和 `npm run build:portable`。
 - 只维护 Web 和 portable 两种交付，不提供混淆版本。两种产物集中在统一构建输出根目录下，各自使用独立子目录；单次构建只清理自身子目录，保持另一种产物不变。
+- Web 的长期缓存仅匹配本次构建实际生成的哈希 JS、CSS，规则自动生成；缺失资源的 404 不缓存，不以资源目录通配规则赋予长期缓存。缓存规则与资源必须来自同一次构建，portable 不携带站点响应头文件。
 - Web 构建附带完整项目许可证与第三方声明文件；portable 将两者完整嵌入唯一 HTML。“关于 Aura”统一提供项目源码链接与许可信息，先展示名称、许可类型和来源链接，全文默认收起、按需展开，本地声明无需联网查看。构建和压缩不得丢失交付所需声明；实际分发的依赖或第三方资源变化时，同步核对声明维护源和两种产物。
 - `npm test` 构建 Web 和 portable 后，从实际导入、操作及下载入口执行行为回归；用例使用独立浏览器上下文和自建数据，不连接用户日常浏览器资料。`npm run verify` 执行一次静态检查并运行该回归入口；GitHub Actions 使用 `verify` 验证 PR 和共享分支，只有在仓库规则中将该检查设为 required check 后才构成合并门禁。调整 Node.js 版本范围、验证脚本、构建入口或输出目录时应同步维护 CI 和发布流程。
 - 在线版使用 Cloudflare Workers Static Assets，GitHub Actions 是唯一自动部署入口；仅 `main` 的推送部署同一次验证生成的 Web 产物，`dev` 和 PR 只执行验证。只维护一个正式 Worker，Worker、资源目录和自定义域名由 Wrangler 配置统一管理；`npm run deploy` 只部署已有产物，不重新构建。站点部署与 portable 下载交付保持独立，部署配置不得破坏单文件产物。
