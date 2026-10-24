@@ -10,6 +10,8 @@ on:
             - ".github/workflows/reader-diagnostic.yml"
             - "tests/reader-progress.test.ts"
             - "tests/reader-diagnostics.ts"
+            - "tests/reader-event-trace.ts"
+            - "tests/browser-test-support.ts"
             - "src/pages/reader/content/**"
 
 permissions:
@@ -26,7 +28,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                scenario: [preceded, full]
+                scenario: [4, 8]
         steps:
             - name: Check out repository
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -44,7 +46,7 @@ jobs:
             - name: Capture environment and reproduce original assertion
               shell: bash
               env:
-                  SCENARIO: ${{ matrix.scenario }}
+                  AURA_READER_CPU_RATE: ${{ matrix.scenario }}
               run: |
                   set -euo pipefail
                   mkdir -p work/reader-ci-diagnostics
@@ -54,13 +56,7 @@ jobs:
                       fc-list
                   } > work/reader-ci-diagnostics/environment.txt
                   run_tests() {
-                      if [[ "$SCENARIO" == "full" ]]; then
-                          node --test --test-concurrency=2 tests/*.test.ts
-                      else
-                          node --test --test-concurrency=2 \
-                              --test-name-pattern='delayed page preparation|interrupted page turns|default panels|touch preview|EPUB links to empty tail anchors|v1 records|unsupported data|reset waits|temporary read failure' \
-                              tests/reader-progress.test.ts tests/storage-recovery.test.ts
-                      fi
+                      node --test --test-name-pattern='EPUB links to empty tail anchors' tests/reader-progress.test.ts
                   }
                   for attempt in $(seq 1 4); do
                       if run_tests 2>&1 | tee "work/reader-ci-diagnostics/attempt-$attempt.log"; then

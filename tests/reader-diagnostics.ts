@@ -147,9 +147,11 @@ export async function captureReaderDiagnostics(page: Page, sourceText: string, s
                     };
                 });
                 const targetFirstCharacter = targetCharacters.find((item) => item.sourceOffset === targetStart);
+                const eventTrace: unknown = Reflect.get(window, Symbol.for("aura.reader.diagnosticTrace"));
                 return {
                     startedAt,
                     completedAt: performance.timeOrigin + performance.now(),
+                    eventTrace,
                     progress,
                     bounds,
                     scrollTopBefore,
