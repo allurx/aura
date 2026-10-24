@@ -29,6 +29,8 @@ import {
 before(startBrowserTests);
 after(stopBrowserTests);
 
+const visibleReadSnapshots = new WeakMap<Page, { text: string; receivedAt: number }>();
+
 /**
  * 读取实际显示的正文，不能只用保存记录或页码证明画面恢复。
  * 前缀长度按 UTF-16 代码单元计算，只扫描断言需要的可见文字。
@@ -85,41 +87,40 @@ async function readVisiblePage(
  * 仅验证源正文时共用同一可见字符采样，不重复维护段落可见性的另一套定义。
  */
 async function readVisibleText(page: Page): Promise<string> {
-    return (await readVisiblePage(page)).text;
+    const text = (await readVisiblePage(page)).text;
+    visibleReadSnapshots.set(page, { text, receivedAt: Date.now() });
+    return text;
 }
 
 /**
- * 保留完整源片段的可见性断言；只在失败后采集现场，不通过诊断改变判断或增加等待。
+ * 只在原断言失败后采集现场，成功路径保留原来的读取及断言调用顺序。
  */
-async function assertSourceTextVisible(
+async function reportSourceTextFailure(
     page: Page,
     sourceText: string,
     sourceContent: string,
-    stage: string
-): Promise<void> {
-    const visibleText = await readVisibleText(page);
+    stage: string,
+    error: unknown
+): Promise<never> {
+    const assertionRead = visibleReadSnapshots.get(page);
+    let diagnostics: unknown;
+    const failures = [error];
     try {
-        assert(visibleText.includes(sourceText), JSON.stringify({ stage, sourceText, visibleText }));
-    } catch (error) {
-        let diagnostics: unknown;
-        const failures = [error];
-        try {
-            diagnostics = await captureReaderDiagnostics(page, sourceText, sourceContent);
-            const directory = resolve("work/reader-ci-diagnostics");
-            await mkdir(directory, { recursive: true });
-            const name = `${stage}-${randomUUID()}`;
-            await writeFile(
-                resolve(directory, `${name}.json`),
-                JSON.stringify({ stage, sourceText, visibleText, diagnostics }, null, 2)
-            );
-            await page.screenshot({ path: resolve(directory, `${name}.png`), fullPage: true });
-        } catch (diagnosticError) {
-            failures.push(diagnosticError);
-        }
-        if (failures.length > 1)
-            throw new AggregateError(failures, "Reader assertion and diagnostics failed", { cause: error });
-        throw new Error(JSON.stringify({ stage, sourceText, visibleText, diagnostics }), { cause: error });
+        diagnostics = await captureReaderDiagnostics(page, sourceText, sourceContent);
+        const directory = resolve("work/reader-ci-diagnostics");
+        await mkdir(directory, { recursive: true });
+        const name = `${stage}-${randomUUID()}`;
+        await writeFile(
+            resolve(directory, `${name}.json`),
+            JSON.stringify({ stage, sourceText, assertionRead, diagnostics }, null, 2)
+        );
+        await page.screenshot({ path: resolve(directory, `${name}.png`), fullPage: true });
+    } catch (diagnosticError) {
+        failures.push(diagnosticError);
     }
+    if (failures.length > 1)
+        throw new AggregateError(failures, "Reader assertion and diagnostics failed", { cause: error });
+    throw new Error(JSON.stringify({ stage, sourceText, assertionRead, diagnostics }), { cause: error });
 }
 
 /**
@@ -561,19 +562,31 @@ for (const delivery of ["web", "portable"] as const) {
                     const scrolledText = content.slice(scrolled[0].contentOffset, scrolled[0].contentOffset + 64);
                     assert.equal(scrolledText.length, 64);
                     assert.equal(content.indexOf(scrolledText), scrolled[0].contentOffset);
-                    await assertSourceTextVisible(page, scrolledText, content, "after-scroll");
+                    try {
+                        assert((await readVisibleText(page)).includes(scrolledText));
+                    } catch (error) {
+                        await reportSourceTextFailure(page, scrolledText, content, "after-scroll", error);
+                    }
 
                     await page.reload();
                     await page.locator("#toggle-setting-panel:not([disabled])").waitFor();
                     await settleReader(page);
                     assert.deepEqual(await readProgress(page), scrolled);
                     // 刷新按源位置重新对齐，不要求保留滚轮留下的临时像素偏移。
-                    await assertSourceTextVisible(page, scrolledText, content, "after-reload");
+                    try {
+                        assert((await readVisibleText(page)).includes(scrolledText));
+                    } catch (error) {
+                        await reportSourceTextFailure(page, scrolledText, content, "after-reload", error);
+                    }
 
                     // 先验收初始画面，再确认后台索引补全后同一源锚点仍然可见。
                     await waitForChapterLayout(page);
                     assert.deepEqual(await readProgress(page), scrolled);
-                    await assertSourceTextVisible(page, scrolledText, content, "after-index");
+                    try {
+                        assert((await readVisibleText(page)).includes(scrolledText));
+                    } catch (error) {
+                        await reportSourceTextFailure(page, scrolledText, content, "after-index", error);
+                    }
                 }
             });
         }
