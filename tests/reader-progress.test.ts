@@ -85,6 +85,53 @@ async function readVisibleText(page: Page): Promise<string> {
 }
 
 /**
+ * 用唯一正文片段识别源位置，检查起始字符本身可见，不要求后续字符都未被裁剪。
+ */
+async function assertSourceAnchorVisible(page: Page, sourceText: string): Promise<void> {
+    assert(sourceText.length > 0);
+    const anchor = await page
+        .locator("#content > .reading-viewport:not(.reading-measure-viewport) p")
+        .evaluateAll((paragraphs, text) => {
+            const viewport = document
+                .querySelector("#content > .reading-viewport:not(.reading-measure-viewport)")
+                ?.getBoundingClientRect();
+            if (!viewport) throw new Error("Missing reading viewport");
+            const bounds = { top: viewport.top, bottom: viewport.bottom, left: viewport.left, right: viewport.right };
+
+            for (const paragraph of paragraphs) {
+                const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
+                for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+                    const offset = node.textContent?.indexOf(text) ?? -1;
+                    if (offset < 0) continue;
+                    const range = document.createRange();
+                    range.setStart(node, offset);
+                    range.setEnd(node, offset + ((text.codePointAt(0) ?? 0) > 0xffff ? 2 : 1));
+                    const rectangles = [...range.getClientRects()].map((rect) => ({
+                        top: rect.top,
+                        bottom: rect.bottom,
+                        left: rect.left,
+                        right: rect.right,
+                        width: rect.width,
+                        height: rect.height,
+                    }));
+                    const visible = rectangles.some(
+                        (rect) =>
+                            rect.width > 0 &&
+                            rect.height > 0 &&
+                            rect.bottom > viewport.top + 0.01 &&
+                            rect.top < viewport.bottom - 0.01 &&
+                            rect.right > viewport.left + 0.01 &&
+                            rect.left < viewport.right - 0.01
+                    );
+                    return { found: true, visible, bounds, rectangles };
+                }
+            }
+            return { found: false, visible: false, bounds, rectangles: [] };
+        }, sourceText);
+    assert(anchor.visible, JSON.stringify({ sourceText, ...anchor }));
+}
+
+/**
  * 只读取测试上下文通过真实阅读保存的领域记录，不以 DOM 页码代替持久化位置。
  */
 async function readProgress(page: Page): Promise<Progress[]> {
@@ -523,19 +570,19 @@ for (const delivery of ["web", "portable"] as const) {
                     const scrolledText = content.slice(scrolled[0].contentOffset, scrolled[0].contentOffset + 64);
                     assert.equal(scrolledText.length, 64);
                     assert.equal(content.indexOf(scrolledText), scrolled[0].contentOffset);
-                    assert((await readVisibleText(page)).includes(scrolledText));
+                    await assertSourceAnchorVisible(page, scrolledText);
 
                     await page.reload();
                     await page.locator("#toggle-setting-panel:not([disabled])").waitFor();
                     await settleReader(page);
                     assert.deepEqual(await readProgress(page), scrolled);
                     // 刷新按源位置重新对齐，不要求保留滚轮留下的临时像素偏移。
-                    assert((await readVisibleText(page)).includes(scrolledText));
+                    await assertSourceAnchorVisible(page, scrolledText);
 
                     // 先验收初始画面，再确认后台索引补全后同一源锚点仍然可见。
                     await waitForChapterLayout(page);
                     assert.deepEqual(await readProgress(page), scrolled);
-                    assert((await readVisibleText(page)).includes(scrolledText));
+                    await assertSourceAnchorVisible(page, scrolledText);
                 }
             });
         }
