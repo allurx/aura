@@ -30,6 +30,9 @@ export const themeSetting = new ThemeSetting();
  * 将书架字体绑定到页面，封面大小与书名字号绑定到书目列表。
  */
 export function createBookshelfSettings(bookshelf: HTMLElement, bookList: HTMLElement): PageSettings {
+    // 默认材质按进入页面时的空间选择，旋转和拖动窗口不突然改变本次页面的视觉环境。
+    // 已有外观快照始终优先于这里的默认值。
+    const compact = window.matchMedia("(max-width: 768px)").matches;
     return {
         theme: themeSetting,
         defaultTheme: Theme.SUNNY,
@@ -55,7 +58,7 @@ export function createBookshelfSettings(bookshelf: HTMLElement, bookList: HTMLEl
                 id: "bookshelf-material",
                 title: "材质与纹理",
                 collapsible: true,
-                settings: [new MaterialSetting("wood"), new BackgroundTextureSetting()],
+                settings: [new MaterialSetting(compact ? "standard" : "wood"), new BackgroundTextureSetting()],
             },
             {
                 id: "bookshelf-covers",

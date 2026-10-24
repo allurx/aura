@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 <html lang="zh-CN">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
         <meta name="color-scheme" content="light dark" />
         <meta name="robots" content="noindex" />
         <title>页面未找到 · Aura</title>
@@ -14,10 +14,20 @@ SPDX-License-Identifier: Apache-2.0
         <style>
             :root {
                 color-scheme: light dark;
-                --background: #f7f8fa;
-                --text: #202936;
-                --muted: #5c6777;
-                --accent: #6951bd;
+                --background: #f4f5fb;
+                --paper: #fffefa;
+                --paper-back: #e5e3f3;
+                --text: #2e3249;
+                --muted: #656a80;
+                --accent: #6552ad;
+                --accent-hover: #534193;
+                --on-accent: #ffffff;
+                --border: #dcdde9;
+                --rule: #e4e3ee;
+                --shadow: #48406b18;
+                --glow-lilac: #e5def8;
+                --glow-peach: #fbe8dc;
+                --glow-mint: #e0eeea;
                 font-family:
                     system-ui,
                     -apple-system,
@@ -35,78 +45,231 @@ SPDX-License-Identifier: Apache-2.0
                 min-height: 100svh;
                 display: grid;
                 place-items: center;
-                padding: clamp(24px, 6vw, 64px);
+                padding: max(32px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+                    max(32px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
                 color: var(--text);
-                background: var(--background);
+                background:
+                    radial-gradient(ellipse at 18% 28%, var(--glow-lilac), transparent 48%),
+                    radial-gradient(ellipse at 86% 76%, var(--glow-peach), transparent 45%),
+                    radial-gradient(ellipse at 72% 12%, var(--glow-mint), transparent 42%), var(--background);
             }
 
             main {
-                width: min(100%, 480px);
+                isolation: isolate;
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+                align-items: center;
+                gap: clamp(40px, 7vw, 88px);
+                width: min(100%, 880px);
             }
-            .brand {
-                margin: 0 0 40px;
-                color: var(--muted);
-                font-size: 15px;
-                font-weight: 600;
+
+            /* 错页以一叠静止书页呈现，不依赖应用脚本或外部插画。 */
+            .page-art {
+                position: relative;
+                padding: 68px 24px 48px;
+                border: 1px solid var(--border);
+                border-radius: 12px 24px 24px 12px;
+                background: var(--paper);
+                box-shadow: 0 24px 64px var(--shadow);
+                text-align: center;
+
+                &::before {
+                    position: absolute;
+                    z-index: -1;
+                    inset: 0;
+                    border: 1px solid var(--border);
+                    border-radius: inherit;
+                    background: var(--paper-back);
+                    transform: rotate(-7deg);
+                    content: "";
+                }
+
+                &::after {
+                    position: absolute;
+                    top: -1px;
+                    right: 32px;
+                    width: 28px;
+                    height: 52px;
+                    background: var(--accent);
+                    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%);
+                    content: "";
+                }
             }
+
             .status {
                 margin: 0;
                 color: var(--accent);
-                font-size: clamp(72px, 20vw, 112px);
-                font-weight: 750;
-                line-height: 1;
+                font-size: clamp(88px, 11vw, 128px);
+                font-weight: 650;
+                line-height: 1.2;
                 letter-spacing: -0.06em;
             }
-            h1 {
-                margin: 24px 0 12px;
-                font-size: clamp(26px, 6vw, 34px);
-                line-height: 1.3;
+
+            .page-lines {
+                display: block;
+                width: 64%;
+                height: 30px;
+                margin: 20px auto 0;
+                border-block: 2px solid var(--rule);
+
+                &::after {
+                    display: block;
+                    width: 72%;
+                    margin: 12px auto 0;
+                    border-top: 2px solid var(--rule);
+                    content: "";
+                }
             }
+
+            .brand {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin: 0 0 28px;
+                color: var(--muted);
+                font-size: 20px;
+                font-weight: 600;
+                letter-spacing: 0.02em;
+
+                img {
+                    width: 32px;
+                    height: 32px;
+                }
+            }
+
+            h1 {
+                margin: 0 0 16px;
+                font-size: clamp(26px, 3.4vw, 36px);
+                font-weight: 650;
+                line-height: 1.4;
+                text-wrap: balance;
+            }
+
             .description {
                 margin: 0;
                 color: var(--muted);
                 font-size: 16px;
-                line-height: 1.8;
+                line-height: 1.9;
             }
 
-            a {
-                display: inline-block;
+            .return-link {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                min-height: 48px;
                 margin-top: 32px;
                 padding: 12px 22px;
-                border: 1px solid currentColor;
+                border: 1px solid transparent;
                 border-radius: 12px;
-                color: var(--accent);
+                background: var(--accent);
+                color: var(--on-accent);
+                box-shadow: 0 6px 18px var(--shadow);
                 font-weight: 600;
                 line-height: 1.5;
                 text-decoration: none;
+
+                svg {
+                    width: 20px;
+                    height: 20px;
+                    flex: none;
+                }
+
+                &:focus-visible {
+                    outline: 3px solid var(--accent);
+                    outline-offset: 5px;
+                }
+
+                &:active {
+                    background: var(--accent-hover);
+                }
             }
 
-            a:hover {
-                text-decoration: underline;
-                text-underline-offset: 4px;
+            @media (hover: hover) {
+                .return-link:hover {
+                    background: var(--accent-hover);
+                }
             }
-            a:focus-visible {
-                outline: 3px solid currentColor;
-                outline-offset: 4px;
+
+            @media (max-width: 680px) {
+                main {
+                    grid-template-columns: minmax(0, 1fr);
+                    justify-items: center;
+                    gap: 40px;
+                    max-width: 420px;
+                    text-align: center;
+                }
+
+                .page-art {
+                    width: 220px;
+                    padding: 44px 20px 28px;
+                }
+
+                .status {
+                    font-size: 88px;
+                }
+
+                .page-lines {
+                    margin-top: 12px;
+                }
+
+                .brand {
+                    justify-content: center;
+                    margin-bottom: 18px;
+                }
+
+                .return-link {
+                    margin-top: 24px;
+                }
             }
 
             @media (prefers-color-scheme: dark) {
                 :root {
-                    --background: #151a22;
-                    --text: #edf1f7;
-                    --muted: #abb5c5;
-                    --accent: #bca5ff;
+                    --background: #171923;
+                    --paper: #252736;
+                    --paper-back: #2e2c43;
+                    --text: #eeedf5;
+                    --muted: #b8b8ca;
+                    --accent: #c3b3f4;
+                    --accent-hover: #d3c6ff;
+                    --on-accent: #28203e;
+                    --border: #414054;
+                    --rule: #414052;
+                    --shadow: #00000030;
+                    --glow-lilac: #29233c;
+                    --glow-peach: #30262e;
+                    --glow-mint: #1d3033;
+                }
+            }
+
+            @media (forced-colors: active) {
+                .return-link {
+                    border-color: ButtonText;
+                }
+
+                .return-link:focus-visible {
+                    outline-color: Highlight;
                 }
             }
         </style>
     </head>
     <body>
         <main aria-labelledby="page-title">
-            <p class="brand">Aura</p>
-            <p class="status" aria-hidden="true">404</p>
-            <h1 id="page-title">页面未找到</h1>
-            <p class="description">这个地址可能有误，或页面已经移动。<br />回到首页，继续浏览。</p>
-            <a href="/">返回首页</a>
+            <div class="page-art" aria-hidden="true">
+                <p class="status">404</p>
+                <span class="page-lines"></span>
+            </div>
+            <div class="message">
+                <p class="brand"><img src="/icons/app-192.png" alt="" width="32" height="32" />Aura</p>
+                <h1 id="page-title">页面未找到</h1>
+                <p class="description">链接可能有误或已失效。</p>
+                <a class="return-link" href="/">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <path d="m10 5-7 7 7 7M3 12h18" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    返回书架
+                </a>
+            </div>
         </main>
     </body>
 </html>

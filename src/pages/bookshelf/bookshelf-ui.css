@@ -101,10 +101,6 @@
         white-space: normal;
         text-align: start;
 
-        p {
-            text-wrap: balance;
-        }
-
         .reset-warning-irreversible {
             color: var(--appearance-danger);
             font-size: inherit;
@@ -112,7 +108,7 @@
         }
     }
     @media (max-width: 768px) {
-        --shelf-content-inset: 18px;
+        --shelf-content-inset: 16px;
         --shelf-header-height: 72px;
         gap: 0;
         padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)

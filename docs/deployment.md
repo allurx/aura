@@ -10,6 +10,8 @@
 
 部署完整 Web 目录，包括资源和许可声明。portable 通过独立 HTML 下载交付，不上传到站点。
 
+Web 的响应头由[基础规则](../build/_headers)和[构建插件](../build/asset-headers.ts)共同生成。构建只为本次产物中的哈希 JS、CSS 添加一年长期缓存；其他 `/assets/` 请求使用 `no-store`，避免缺失资源的 404 被缓存。不要手动维护哈希路径或将长期缓存改回整个资源目录的通配规则。HTML 沿用平台默认的重新验证策略，manifest 保持 `no-cache`；详见 [Cloudflare 响应头规则](https://developers.cloudflare.com/workers/static-assets/headers/)。
+
 ## 首次配置
 
 按 [allurx-build 部署说明](https://github.com/allurx/allurx-build/blob/main/docs/cloudflare-static-site.md)准备 GitHub `production` Environment、Account ID 和 API token，并将允许部署的分支限制为 `main`。Account ID 和 API token 均保存在 `production` Environment，分别使用 variable 和 secret。首次部署前核对下文的[域名配置](#域名配置)。

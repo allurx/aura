@@ -18,6 +18,126 @@ before(startBrowserTests);
 after(stopBrowserTests);
 
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: bookshelf defaults suit the opening layout and preserve saved choices`, async () => {
+        await withPage(delivery, async (page) => {
+            const appearance = () =>
+                page.evaluate(() => ({
+                    theme: document.documentElement.dataset["theme"],
+                    material: document.documentElement.dataset["material"],
+                }));
+            assert.deepEqual(await appearance(), { theme: "sunny", material: "wood" });
+
+            // 配色在本次页面会话内稳定，新进入窄屏页面时才选用对应默认。
+            await page.setViewportSize({ width: 390, height: 844 });
+            assert.deepEqual(await appearance(), { theme: "sunny", material: "wood" });
+            await page.reload();
+            await page.locator(".shelf-empty-import").waitFor();
+            assert.deepEqual(await appearance(), { theme: "sunny", material: "standard" });
+            assert.equal(await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance")), null);
+
+            // 显式选择由原有整页快照保存，换布局或刷新不替换为新的默认值。
+            await page.locator("#toggle-setting-panel").click();
+            await page.locator('input[name="appearance-theme"][value="blossom"]').check();
+            await page.getByText("材质与纹理", { exact: true }).click();
+            await page.locator('input[name="appearance-material"][value="wood"]').check();
+            await page.getByRole("slider", { name: "封面大小", exact: true }).fill("160");
+            await page.locator("#setting .close").click();
+            const saved = await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance"));
+
+            await page.setViewportSize({ width: 1440, height: 900 });
+            await page.reload();
+            await page.locator(".shelf-empty-import").waitFor();
+            assert.deepEqual(await appearance(), { theme: "blossom", material: "wood" });
+            assert.equal(await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance")), saved);
+            assert.equal(
+                await page
+                    .locator("#book-list")
+                    .evaluate((element) => element.style.getPropertyValue("--book-cover-width")),
+                "160px"
+            );
+        });
+    });
+
+    void test(`${delivery}: continuous setting input keeps reset controls in place`, async () => {
+        await withPage(delivery, async (page) => {
+            await importBooks(page, [textBook("setting-geometry.txt")]);
+            for (const pageName of ["bookshelf", "reader"] as const) {
+                if (pageName === "reader") await openBook(page, "setting-geometry.txt");
+                await page.locator("#toggle-setting-panel").click();
+                const cases =
+                    pageName === "bookshelf"
+                        ? [{ name: "书名字号", start: "16", steps: 10 }]
+                        : [
+                              { name: "字号", start: "16", steps: 10 },
+                              { name: "行距", start: "1.9", steps: 10 },
+                              { name: "页边留白", start: "0.99", steps: 2 },
+                          ];
+                for (const width of [1440, 390]) {
+                    await page.setViewportSize({ width, height: 900 });
+                    for (const { name, start, steps } of cases) {
+                        const slider = page.getByRole("slider", { name, exact: true });
+                        const reset = page.getByRole("button", { name: `重置${name}`, exact: true });
+                        await slider.fill(start);
+                        await slider.focus();
+                        const samples = [];
+                        for (let index = 0; index <= steps; index++) {
+                            if (index > 0) await slider.press("ArrowRight");
+                            samples.push(
+                                await reset.evaluate(async (button) => {
+                                    await new Promise<void>((resolve) =>
+                                        requestAnimationFrame(() => {
+                                            resolve();
+                                        })
+                                    );
+                                    const row = button.parentElement;
+                                    if (!row) throw new Error("Missing setting row");
+                                    const bounds = button.getBoundingClientRect();
+                                    const parent = row.getBoundingClientRect();
+                                    const style = getComputedStyle(button);
+                                    return {
+                                        x: bounds.left - parent.left,
+                                        y: bounds.top - parent.top,
+                                        width: bounds.width,
+                                        height: bounds.height,
+                                        visible: style.visibility === "visible" && Number(style.opacity) > 0,
+                                        value: row.querySelector(".display")?.textContent,
+                                    };
+                                })
+                            );
+                        }
+                        const first = samples[0];
+                        assert(first);
+                        assert(
+                            new Set(samples.map((sample) => sample.value?.length)).size > 1,
+                            `${name}: exercise changing label widths`
+                        );
+                        for (const sample of samples) {
+                            assert(
+                                sample.visible && sample.width > 0 && sample.height > 0,
+                                `${name}: reset remains visible`
+                            );
+                            assert(
+                                Math.abs(sample.x - first.x) <= 1 && Math.abs(sample.y - first.y) <= 1,
+                                `${pageName}/${width}/${name}: reset moved during input: ${JSON.stringify(samples)}`
+                            );
+                        }
+                        await reset.click();
+                        await page.waitForFunction(
+                            (name) =>
+                                document.querySelector(`[aria-label="重置${name}"]`)?.getAttribute("aria-disabled") ===
+                                "true",
+                            name
+                        );
+                        assert.equal(await reset.getAttribute("aria-disabled"), "true");
+                        assert(await slider.evaluate((element) => element === document.activeElement));
+                    }
+                }
+                await page.locator("#setting .close").click();
+                await page.setViewportSize({ width: 1440, height: 900 });
+            }
+        });
+    });
+
     void test(`${delivery}: failed appearance persistence preserves saved values and permits retry`, async () => {
         await withPage(
             delivery,

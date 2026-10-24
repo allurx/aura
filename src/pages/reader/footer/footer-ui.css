@@ -5,43 +5,39 @@
 
 #reader > #footer {
     bottom: 0;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    display: block;
     max-height: 100%;
-    align-items: center;
-    gap: 6px;
-    padding: 10px max(16px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom))
+    padding: 16px max(16px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom))
         max(16px, env(safe-area-inset-left));
     font-family: var(--ui-font-family);
     font-size: 13px;
     overflow-y: auto;
 
-    .reading-location {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: center;
-        gap: 8px;
-        min-width: 0;
-        min-height: 28px;
-        padding-inline: 4px;
-        line-height: 1.4;
-    }
-
-    #chapter-title {
-        min-width: 0;
-        max-width: 100%;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        font-size: 12px;
-        font-weight: 400;
-    }
-
     .reading-status {
         display: flex;
         align-items: center;
-        gap: 8px;
-        flex: 0 0 auto;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 6px 12px;
+        min-width: 0;
+        padding: 0 4px 10px;
+        color: var(--appearance-muted-color);
+        line-height: 1.5;
+    }
+
+    .reading-progress {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: auto;
+        white-space: nowrap;
+    }
+
+    #page-position,
+    #progress-rate {
+        color: inherit;
+        font-size: inherit;
+        font-weight: 400;
     }
 
     .mobile-actions {
@@ -49,16 +45,15 @@
         /* 按实际可用宽度换行，不能让列宽小于按钮的最小点击尺寸。 */
         grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
         gap: 4px;
-        padding-top: 2px;
 
         > .reader-action {
             --icon-size: 22px;
             flex-direction: column;
             width: 100%;
             min-width: 44px;
-            min-height: 56px;
-            padding: 6px 4px;
-            gap: 4px;
+            min-height: 64px;
+            padding: 8px 4px;
+            gap: 6px;
             border-radius: 12px;
             font-size: 12px;
             font-weight: 500;
@@ -73,16 +68,11 @@
     }
 
     @media (max-height: 500px) {
-        gap: 4px;
-        padding-top: 4px;
+        padding-top: 12px;
         padding-bottom: max(4px, env(safe-area-inset-bottom));
 
-        .reading-location {
-            min-height: 24px;
-        }
-
-        .mobile-actions {
-            padding-top: 0;
+        .reading-status {
+            padding-bottom: 4px;
         }
 
         .mobile-actions > .reader-action {
@@ -94,65 +84,9 @@
     }
 }
 
-/* 页码描述当前排版，全书进度在分页和滚动之间保持相同含义。 */
-:is(#reader, #reader-actions) #page-position {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--appearance-muted-color);
-    font-variant-numeric: tabular-nums;
-    font-size: 11px;
-    white-space: nowrap;
-
-    &[hidden] {
-        display: none;
-    }
-
-    .page-count {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 3px;
-        min-width: 6ch;
-        line-height: 1.4;
-        transition: opacity var(--motion-duration-fast) var(--motion-ease);
-    }
-
-    :is(.current-page, .total-pages) {
-        min-width: 2ch;
-        text-align: center;
-    }
-
-    &[aria-busy="true"] .page-count {
-        opacity: 0.65;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .page-count {
-            transition: none;
-        }
-    }
-}
-
-#reader-actions #page-position {
-    flex-direction: column;
-    gap: 0;
-    font-size: 11px;
-}
-
-/* 桌面侧栏与移动页脚复用同一进度元素和排版规则。 */
-:is(#reader, #reader-actions) #progress-rate {
-    color: var(--appearance-accent);
-    font-variant-numeric: tabular-nums;
-    font-size: 12px;
-    font-weight: 600;
-    white-space: nowrap;
-}
-
 html:where([data-material]:not([data-material="standard"])) #reader > #footer {
     background-image: var(--material-image);
     background-size: var(--material-size);
-    border-color: var(--material-border);
 }
 
 html[data-material="glass"] #reader > #footer {

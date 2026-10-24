@@ -55,6 +55,10 @@
     --icon-image: url("../../assets/images/check.svg");
 }
 
+.icon-copy {
+    --icon-image: url("../../assets/images/copy.svg");
+}
+
 .icon-add {
     --icon-image: url("../../assets/images/add.svg");
 }

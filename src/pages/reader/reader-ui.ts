@@ -25,7 +25,6 @@ export default class ReaderUi extends Ui {
     private readonly fullscreenButton = assertExists(this.root.querySelector<HTMLButtonElement>("#toggle-fullscreen"));
     private readonly header = assertExists(this.root.querySelector<HTMLElement>("#header"));
     private readonly footer = assertExists(this.root.querySelector<HTMLElement>("#footer"));
-    private readonly bookTitle = assertExists(this.root.querySelector<HTMLElement>("#book-title"));
     private readonly chapterTitle = assertExists(this.root.querySelector<HTMLElement>("#chapter-title"));
     private readonly progressRate = assertExists(this.root.querySelector<HTMLElement>("#progress-rate"));
     private readonly readingStatus = assertExists(this.root.querySelector<HTMLElement>(".reading-status"));
@@ -75,7 +74,6 @@ export default class ReaderUi extends Ui {
         // 响应式切换只移动节点，不重建事件与展开状态。
         const mobile = window.matchMedia("(max-width: 800px), (pointer: coarse)");
         const toolbar = assertExists(this.root.querySelector<HTMLElement>(".mobile-actions"));
-        const location = assertExists(this.root.querySelector<HTMLElement>(".reading-location"));
         const navigation = assertExists(this.actions.querySelector<HTMLElement>(".navigation-actions"));
         const pageActions = assertExists(this.actions.querySelector<HTMLElement>(".page-actions"));
         const controls = [
@@ -121,8 +119,9 @@ export default class ReaderUi extends Ui {
             }
 
             // 页码和全书进度一起跟随工具区域，切换布局不重建阅读状态。
-            const progressParent = mobile.matches ? location : this.desktopTools.body;
-            if (this.readingStatus.parentElement !== progressParent) progressParent.append(this.readingStatus);
+            const progressParent = mobile.matches ? this.footer : this.desktopTools.body;
+            if (this.readingStatus.parentElement !== progressParent)
+                progressParent.insertBefore(this.readingStatus, mobile.matches ? toolbar : null);
             this.desktopTools.setDesktop(!mobile.matches);
             this.renderToolsVisibility();
 
@@ -354,11 +353,10 @@ export default class ReaderUi extends Ui {
     }
 
     /**
-     * 显示书名，完整文件名保留为悬停提示。
+     * 书名用于正文的可访问名称；移动工具将视觉空间留给当前章节与位置。
      */
-    public renderBookTitle(title: string): void {
-        this.bookTitle.textContent = getBookTitle(title);
-        this.bookTitle.title = title;
+    public setBookLabel(fileName: string): void {
+        this.content.setAttribute("aria-label", `《${getBookTitle(fileName)}》正文`);
     }
 
     /**

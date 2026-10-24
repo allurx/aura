@@ -4,10 +4,10 @@
 
 ## 准备发布提交
 
-1. 按[分支协作流程](development.md#分支协作)将修改集成到 `main`，确认合并后实际提交的 CI 与本次变更所需的浏览器验收均通过。
+1. 在开发分支确定本次发布版本，用 `npm version <MAJOR.MINOR.PATCH> --no-git-tag-version` 同步更新 `package.json` 与锁文件；该命令不创建提交或 tag。按[分支协作流程](development.md#分支协作)将版本更新和功能修改一起集成到 `main`，确认合并后实际提交的 CI 与本次变更所需的浏览器验收均通过。
 2. 用 `git worktree list` 找到 `main` 所在目录；若未被占用，确认当前工作区干净后切换到 `main`。核对分支、remote 和上游，执行 `git pull --ff-only`。有待保留修改或无法快进时，先解决原因。
 3. 用 `git rev-parse HEAD` 和 `git show --no-patch HEAD` 确认发布 commit；需要本地复验时按[检查与验证](development.md#检查与验证)执行。
-4. 选择未使用的稳定 SemVer tag：`vMAJOR.MINOR.PATCH`，不含预发布后缀、构建元数据或数字前导零。推送会公开发布附件，执行前确认本次操作同时获得 tag 推送和 Release 发布授权。
+4. 核对未使用的稳定 SemVer tag：`vMAJOR.MINOR.PATCH`，版本必须等于 `package.json` 的 `version`，不含预发布后缀、构建元数据或数字前导零。推送会公开发布附件，执行前确认本次操作同时获得 tag 推送和 Release 发布授权。
 
 ## 创建并推送准确 tag
 
@@ -44,7 +44,7 @@ git push $releaseRemote "refs/tags/${releaseTag}:refs/tags/${releaseTag}"
 
 在仓库 [Actions → Release](https://github.com/allurx/aura/actions/workflows/release.yml) 查看对应 tag：
 
-1. **Build release assets** 核对 tag 格式、annotated 类型、检出 commit 及其是否已包含在远端 `main` 中，执行 `npm run verify` 后打包。
+1. **Build release assets** 核对 tag 格式、annotated 类型、检出 commit、其是否已包含在远端 `main` 中及应用版本是否与 tag 一致，执行 `npm run verify` 后打包。
 2. **Publish GitHub Release** 再次核对远端 tag 对象与 SHA-256，通过 [`gh release create --generate-notes`](https://cli.github.com/manual/gh_release_create) 自动生成英文说明并创建公开 Release。
 3. 打开 [Releases](https://github.com/allurx/aura/releases)，核对标题等于版本 tag、英文说明符合实际发布范围，以及[下载文件清单](usage.md#选择下载文件)。两个构建文件与校验清单应齐全，版本号应一致。
 

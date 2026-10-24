@@ -83,19 +83,20 @@ function renderThirdPartyLicenses(parts: string[]): string {
         // 独立图标等资源按固定来源标识，不为适配组件列表虚构软件版本号。
         const label = version ? `${name} ${version}` : name;
         const sourceUrl = new URL(source).href;
-        const licenseUrl = `https://spdx.org/licenses/${encodeURIComponent(license)}.html`;
         return `<li class="license-item">
-            <div class="license-item-heading">
-                <a class="license-source" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" aria-label="查看 ${escapeHtml(label)} 项目（新窗口）">
-                    <span>${escapeHtml(name)}</span>${version ? `<span class="license-version">${escapeHtml(version)}</span>` : ""}
-                    <span class="icon icon-external-link" aria-hidden="true"></span>
-                </a>
-                <a class="license-badge" href="${licenseUrl}" target="_blank" rel="noopener noreferrer" aria-label="查看 ${escapeHtml(license)} 官方许可证（新窗口）">${escapeHtml(license)}</a>
-            </div>
             <details class="license-disclosure">
-                <summary>版权与许可<span class="icon icon-chevron" aria-hidden="true"></span></summary>
-                <pre data-notice-part>${escapeHtml(text)}</pre>
+                <summary aria-label="查看 ${escapeHtml(label)} 的版权与许可（${escapeHtml(license)}）">
+                    <span class="icon icon-chevron" aria-hidden="true"></span>
+                    <span class="license-item-heading"><span>${escapeHtml(name)}</span>${version ? `<span class="license-version">${escapeHtml(version)}</span>` : ""}</span>
+                    <span class="license-badge">${escapeHtml(license)}</span>
+                </summary>
+                <div class="license-document">
+                    <pre data-notice-part>${escapeHtml(text)}</pre>
+                </div>
             </details>
+            <a class="license-source" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" aria-label="查看 ${escapeHtml(label)} 项目来源（新窗口）" title="查看项目来源">
+                <span class="icon icon-external-link" aria-hidden="true"></span>
+            </a>
         </li>`;
     });
 

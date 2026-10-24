@@ -14,10 +14,10 @@ export default class BookCardUi extends Ui {
     private readonly open = document.createElement("button");
     private readonly title = document.createElement("span");
     private readonly progress = document.createElement("p");
-    private readonly categorySelect = document.createElement("select");
-    private readonly categoryLabel = document.createElement("span");
-    private readonly remove = document.createElement("button");
-    private readonly exportButton = document.createElement("button");
+    private readonly move = this.createAction("book-move", "移动分类", "icon-move-category");
+    private readonly remove = this.createAction("book-delete", "删除书籍", "icon-delete");
+    private readonly exportButton = this.createAction("book-export", "导出原文件", "icon-download");
+    private readonly categoryOptions = new Map<string, HTMLButtonElement>();
     private readonly actions = document.createElement("div");
     private readonly more = document.createElement("button");
     private summary: BookSummary | undefined;
@@ -44,50 +44,54 @@ export default class BookCardUi extends Ui {
         details.className = "book-details";
         this.progress.className = "book-progress";
 
-        // 分类选项只创建一次，更新摘要不关闭原生选择器或重建其选项。
-        this.categorySelect.className = "book-category";
-        this.categorySelect.id = `book-category-${summary.book.id}`;
-        for (const category of CATEGORIES) {
-            const option = document.createElement("option");
-            option.value = category.id;
-            option.textContent = category.name;
-            this.categorySelect.append(option);
-        }
-        this.categoryLabel.className = "book-category-label";
-        const categoryIcon = document.createElement("span");
-        categoryIcon.className = "book-category-icon";
-        categoryIcon.setAttribute("aria-hidden", "true");
-        const chevron = document.createElement("span");
-        chevron.className = "icon icon-chevron";
-        categoryIcon.append(chevron);
-
-        // 文件操作保留固定的 popover 和触发按钮，摘要变化不打断打开状态。
-        this.remove.type = "button";
-        this.remove.className = "book-delete book-action";
+        // 第一层只呈现同级动作，分类选择在同一浮层内展开。
+        const actionList = document.createElement("div");
+        actionList.className = "book-action-list panel-scroll";
+        this.move.autofocus = true;
+        const nextIcon = document.createElement("span");
+        nextIcon.className = "icon icon-chevron book-action-next";
+        nextIcon.setAttribute("aria-hidden", "true");
+        this.move.append(nextIcon);
         this.remove.title = "删除书籍";
-        const removeIcon = document.createElement("span");
-        removeIcon.className = "icon icon-delete";
-        removeIcon.setAttribute("aria-hidden", "true");
-        const removeLabel = document.createElement("span");
-        removeLabel.textContent = "删除";
-        this.remove.append(removeIcon, removeLabel);
-
-        this.exportButton.type = "button";
-        this.exportButton.className = "book-export book-action";
         this.exportButton.title = "导出原文件";
-        const exportIcon = document.createElement("span");
-        exportIcon.className = "icon icon-download";
-        exportIcon.setAttribute("aria-hidden", "true");
-        const exportLabel = document.createElement("span");
-        exportLabel.textContent = "导出";
-        this.exportButton.append(exportIcon, exportLabel);
+        const divider = document.createElement("hr");
+        divider.className = "book-action-divider";
+        actionList.append(this.move, this.exportButton, divider, this.remove);
+
+        // 返回栏保持固定，完整分类列表只在内部滚动；勾选由已提交摘要更新。
+        const categories = document.createElement("div");
+        categories.className = "book-categories";
+        categories.hidden = true;
+        const categoryHeader = document.createElement("header");
+        categoryHeader.className = "book-category-header";
+        const back = this.createAction("book-actions-back", "移动分类", "icon-arrow-left");
+        back.setAttribute("aria-label", "返回书籍操作");
+        categoryHeader.append(back);
+        const categoryList = document.createElement("div");
+        categoryList.className = "book-category-list panel-scroll";
+        categoryList.setAttribute("role", "group");
+        categoryList.setAttribute("aria-label", "目标分类");
+        for (const category of CATEGORIES) {
+            const option = document.createElement("button");
+            option.type = "button";
+            option.className = "book-category-option book-action";
+            option.dataset["categoryId"] = category.id;
+            const label = document.createElement("span");
+            label.textContent = category.name;
+            const check = document.createElement("span");
+            check.className = "icon icon-check";
+            check.setAttribute("aria-hidden", "true");
+            option.append(label, check);
+            this.categoryOptions.set(category.id, option);
+            categoryList.append(option);
+        }
+        categories.append(categoryHeader, categoryList);
 
         this.actions.id = `book-actions-${summary.book.id}`;
-        this.actions.className = "book-file-actions panel-scroll";
+        this.actions.className = "book-actions";
         this.actions.popover = "auto";
         this.actions.setAttribute("role", "group");
-        this.exportButton.autofocus = true;
-        this.actions.append(this.exportButton, this.remove);
+        this.actions.append(actionList, categories);
 
         this.more.type = "button";
         this.more.className = "book-more icon-button";
@@ -98,24 +102,24 @@ export default class BookCardUi extends Ui {
         moreIcon.setAttribute("aria-hidden", "true");
         this.more.append(moreIcon);
 
-        details.append(this.progress, this.categoryLabel, this.categorySelect, categoryIcon, this.more, this.actions);
+        details.append(this.progress, this.more, this.actions);
         this.root.append(this.open, details);
         this.update(summary);
     }
 
     /**
-     * 应用同一书籍 ID 的新摘要；保留节点、焦点、选择器忙碌状态和文件菜单。
-     * 分类只随已提交摘要变化，不能用未变化的旧摘要覆盖正在提交的选择。
+     * 应用同一书籍 ID 的新摘要；保留节点、焦点和操作浮层。
+     * 分类勾选只随已提交摘要变化，保存失败不会提前改变归属。
      */
     public update(summary: BookSummary): void {
         const previous = this.summary;
         const titleChanged = previous?.title !== summary.title;
         if (titleChanged) {
             this.title.textContent = summary.title;
-            this.categorySelect.setAttribute("aria-label", `移动《${summary.title}》到分类`);
+            this.move.setAttribute("aria-label", `移动《${summary.title}》到分类`);
             this.remove.setAttribute("aria-label", `删除《${summary.title}》`);
             this.exportButton.setAttribute("aria-label", `导出《${summary.title}》原文件`);
-            this.actions.setAttribute("aria-label", `《${summary.title}》的文件操作`);
+            this.actions.setAttribute("aria-label", `《${summary.title}》的书籍操作`);
             this.more.setAttribute("aria-label", `《${summary.title}》的更多操作`);
         }
         if (previous?.book.fileName !== summary.book.fileName) this.open.title = summary.book.fileName;
@@ -138,14 +142,26 @@ export default class BookCardUi extends Ui {
         }
 
         if (previous?.book.categoryId !== summary.book.categoryId) {
-            this.categorySelect.dataset["categoryId"] = summary.book.categoryId;
-            this.categorySelect.value = summary.book.categoryId;
-            const category = this.categorySelect.selectedOptions[0]?.textContent ?? "";
-            this.categorySelect.title = `当前分类：${category}。选择分类即可移动`;
-            this.categoryLabel.textContent = category;
-            this.categoryLabel.title = category;
+            for (const [id, option] of this.categoryOptions)
+                option.setAttribute("aria-pressed", String(id === summary.book.categoryId));
         }
         this.summary = summary;
+    }
+
+    /**
+     * 书籍动作共用图标和文字结构，避免不同入口形成各自的排版。
+     */
+    private createAction(className: string, label: string, icon: string): HTMLButtonElement {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `book-action ${className}`;
+        const symbol = document.createElement("span");
+        symbol.className = `icon ${icon}`;
+        symbol.setAttribute("aria-hidden", "true");
+        const text = document.createElement("span");
+        text.textContent = label;
+        button.append(symbol, text);
+        return button;
     }
 
     /**
