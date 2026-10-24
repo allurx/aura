@@ -18,6 +18,46 @@ before(startBrowserTests);
 after(stopBrowserTests);
 
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: bookshelf defaults suit the opening layout and preserve saved choices`, async () => {
+        await withPage(delivery, async (page) => {
+            const appearance = () =>
+                page.evaluate(() => ({
+                    theme: document.documentElement.dataset["theme"],
+                    material: document.documentElement.dataset["material"],
+                }));
+            assert.deepEqual(await appearance(), { theme: "sunny", material: "wood" });
+
+            // 配色在本次页面会话内稳定，新进入窄屏页面时才选用对应默认。
+            await page.setViewportSize({ width: 390, height: 844 });
+            assert.deepEqual(await appearance(), { theme: "sunny", material: "wood" });
+            await page.reload();
+            await page.locator(".shelf-empty-import").waitFor();
+            assert.deepEqual(await appearance(), { theme: "sunny", material: "standard" });
+            assert.equal(await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance")), null);
+
+            // 显式选择由原有整页快照保存，换布局或刷新不替换为新的默认值。
+            await page.locator("#toggle-setting-panel").click();
+            await page.locator('input[name="appearance-theme"][value="blossom"]').check();
+            await page.getByText("材质与纹理", { exact: true }).click();
+            await page.locator('input[name="appearance-material"][value="wood"]').check();
+            await page.getByRole("slider", { name: "封面大小", exact: true }).fill("160");
+            await page.locator("#setting .close").click();
+            const saved = await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance"));
+
+            await page.setViewportSize({ width: 1440, height: 900 });
+            await page.reload();
+            await page.locator(".shelf-empty-import").waitFor();
+            assert.deepEqual(await appearance(), { theme: "blossom", material: "wood" });
+            assert.equal(await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance")), saved);
+            assert.equal(
+                await page
+                    .locator("#book-list")
+                    .evaluate((element) => element.style.getPropertyValue("--book-cover-width")),
+                "160px"
+            );
+        });
+    });
+
     void test(`${delivery}: continuous setting input keeps reset controls in place`, async () => {
         await withPage(delivery, async (page) => {
             await importBooks(page, [textBook("setting-geometry.txt")]);
