@@ -40,9 +40,13 @@ async function readVisiblePage(
                 .querySelector("#content > .reading-viewport:not(.reading-measure-viewport)")
                 ?.getBoundingClientRect();
             if (!viewport) throw new Error("Missing reading viewport");
+
+            // 纵向不足 1px 的可见首行仍可成为源锚点；横向保留相邻分页的接缝保护。
             const intersects = (rect: DOMRect): boolean =>
-                rect.bottom > viewport.top + 1 &&
-                rect.top < viewport.bottom - 1 &&
+                rect.width > 0 &&
+                rect.height > 0 &&
+                rect.bottom > viewport.top + 0.01 &&
+                rect.top < viewport.bottom - 0.01 &&
                 rect.right > viewport.left + 1 &&
                 rect.left < viewport.right - 1;
             const visible: string[] = [];
