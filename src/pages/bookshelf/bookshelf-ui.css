@@ -108,7 +108,7 @@
         }
     }
     @media (max-width: 768px) {
-        --shelf-content-inset: 18px;
+        --shelf-content-inset: 16px;
         --shelf-header-height: 72px;
         gap: 0;
         padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)

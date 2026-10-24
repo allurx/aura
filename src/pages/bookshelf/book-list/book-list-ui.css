@@ -159,7 +159,7 @@
         --book-cover-width: initial;
         --book-title-font-size: initial;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 32px;
+        grid-template-columns: minmax(0, 1fr) 44px;
         align-items: center;
         padding-top: 8px;
     }
@@ -271,7 +271,7 @@
         --icon-image: url("../../../assets/images/move-category.svg");
     }
     .book-more {
-        --icon-button-size: 32px;
+        --icon-button-size: 44px;
         --icon-size: 18px;
         grid-row: 1;
         grid-column: 2;
@@ -661,17 +661,18 @@
         --book-cover-width: 100px;
         --book-title-font-size: 16px;
         --book-column-gap: 10px;
-        --book-row-gap: 18px;
+        --book-row-gap: 24px;
         --ui-padding-top: 18px;
         --ui-padding-right: 6px;
         --ui-padding-left: 6px;
-        --ui-padding-bottom: 20px;
+        --ui-padding-bottom: 24px;
         grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--book-cover-width)), var(--book-cover-width)));
         justify-content: space-evenly;
+        /* 列宽保留用户选择；剩余空间同时分给两侧与列间，避免把书卡推到屏幕两端。 */
         margin: 0 var(--shelf-content-inset) 12px;
         border: 1px solid var(--appearance-border);
-        border-radius: 22px;
-        background: color-mix(in srgb, var(--appearance-panel) 66%, var(--appearance-canvas));
+        border-radius: 18px;
+        background: color-mix(in srgb, var(--appearance-panel) 90%, var(--appearance-canvas));
         scrollbar-gutter: stable both-edges;
     }
     @media (prefers-reduced-motion: reduce) {
@@ -783,11 +784,11 @@ html:where([data-material]:not([data-material="standard"])) {
     @media (max-width: 768px) {
         #bookshelf #book-list {
             background-color: var(--material-page-panel);
-            background-image: var(--material-image);
-            background-size: var(--material-size);
+            /* 大面积表面的纹理减淡，书封与浮层继续保留完整材质。 */
+            background-image: var(--material-control-image);
+            background-size: var(--material-control-size);
             backdrop-filter: var(--material-static-filter);
             border-color: var(--material-border);
-            box-shadow: var(--material-inset-shadow);
         }
     }
 }

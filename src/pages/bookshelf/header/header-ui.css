@@ -130,11 +130,11 @@
     }
     #import-books {
         min-width: 80px;
-        background: var(--appearance-accent);
-        color: var(--appearance-on-accent);
+        background: color-mix(in srgb, var(--appearance-selection) 48%, var(--appearance-panel));
+        color: var(--appearance-accent);
+        border-color: var(--appearance-border);
         font-size: var(--shelf-primary-font-size);
-        font-weight: 600;
-        box-shadow: var(--control-shadow);
+        font-weight: 500;
     }
     #open-navigation {
         --icon-size: 18px;
@@ -153,7 +153,7 @@
             background: color-mix(in srgb, var(--appearance-panel) 92%, var(--appearance-color));
         }
         #import-books:where(:not(:disabled)):hover {
-            background: color-mix(in srgb, var(--appearance-accent) 90%, var(--appearance-color));
+            background: var(--appearance-selection);
         }
     }
     .appearance-button:where(:not(:disabled)):active,
@@ -176,9 +176,9 @@
         --shelf-title-font-size: 22px;
         display: grid;
         grid-template-columns: minmax(0, 1fr) 44px auto;
-        gap: 8px;
-        padding-top: 12px;
-        padding-bottom: 12px;
+        gap: 14px 8px;
+        padding-top: 18px;
+        padding-bottom: 16px;
         .shelf-heading {
             grid-column: 1;
             grid-row: 1;
@@ -186,10 +186,14 @@
         .shelf-heading-text {
             gap: 8px;
         }
+        #category-title {
+            max-width: 100%;
+        }
         #book-count {
             padding: 0;
             background: transparent;
             color: var(--appearance-muted-color);
+            line-height: 1.4;
         }
         .shelf-tools {
             display: contents;
@@ -199,6 +203,9 @@
             grid-row: 2;
             width: 100%;
             max-width: none;
+            min-height: 46px;
+            border-radius: 14px;
+            background-color: color-mix(in srgb, var(--appearance-canvas) 52%, var(--appearance-panel));
         }
         #open-navigation {
             display: inline-grid;
@@ -225,7 +232,7 @@
     @container bookshelf-main (max-width: 720px) {
         flex-direction: column;
         align-items: stretch;
-        gap: 8px;
+        row-gap: 14px;
 
         .shelf-tools {
             width: 100%;
@@ -274,16 +281,16 @@
         }
     }
     @media (max-width: 380px) {
-        #book-count {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            overflow: hidden;
-            clip-path: inset(50%);
+        --shelf-title-font-size: 20px;
+        column-gap: 6px;
+
+        .shelf-heading,
+        .shelf-heading-text {
+            gap: 6px;
         }
         #import-books {
-            min-width: 72px;
-            gap: 5px;
+            min-width: 64px;
+            gap: 4px;
             padding-inline: 8px;
         }
     }
@@ -301,9 +308,10 @@
     }
 }
 
-/* 普通入口使用淡表面，导入按钮继续使用强调色。 */
+/* 顶栏入口共用淡表面，导入保留主题色文字；空书架内的导入入口独立强调。 */
 html:where([data-material]:not([data-material="standard"])) {
     #bookshelf #header .appearance-button,
+    #bookshelf #header #import-books,
     #bookshelf #header #open-navigation {
         background-color: var(--material-control-surface);
         background-image: var(--material-control-image);
