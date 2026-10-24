@@ -22,7 +22,11 @@ concurrency:
 jobs:
     reproduce:
         runs-on: ubuntu-24.04
-        timeout-minutes: 15
+        timeout-minutes: 20
+        strategy:
+            fail-fast: false
+            matrix:
+                scenario: [preceded, full]
         steps:
             - name: Check out repository
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -39,6 +43,8 @@ jobs:
                   npm run build:portable
             - name: Capture environment and reproduce original assertion
               shell: bash
+              env:
+                  SCENARIO: ${{ matrix.scenario }}
               run: |
                   set -euo pipefail
                   mkdir -p work/reader-ci-diagnostics
@@ -47,9 +53,17 @@ jobs:
                       google-chrome --version
                       fc-list
                   } > work/reader-ci-diagnostics/environment.txt
-                  for attempt in $(seq 1 20); do
-                      if node --test --test-name-pattern='EPUB links to empty tail anchors' tests/reader-progress.test.ts \
-                          2>&1 | tee "work/reader-ci-diagnostics/attempt-$attempt.log"; then
+                  run_tests() {
+                      if [[ "$SCENARIO" == "full" ]]; then
+                          node --test --test-concurrency=2 tests/*.test.ts
+                      else
+                          node --test --test-concurrency=2 \
+                              --test-name-pattern='delayed page preparation|interrupted page turns|default panels|touch preview|EPUB links to empty tail anchors|v1 records|unsupported data|reset waits|temporary read failure' \
+                              tests/reader-progress.test.ts tests/storage-recovery.test.ts
+                      fi
+                  }
+                  for attempt in $(seq 1 4); do
+                      if run_tests 2>&1 | tee "work/reader-ci-diagnostics/attempt-$attempt.log"; then
                           continue
                       fi
                       exit 1
@@ -58,7 +72,7 @@ jobs:
               if: always()
               uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
               with:
-                  name: reader-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+                  name: reader-diagnostics-${{ matrix.scenario }}-${{ github.run_id }}-${{ github.run_attempt }}
                   path: work/reader-ci-diagnostics/
                   retention-days: 7
                   if-no-files-found: warn
