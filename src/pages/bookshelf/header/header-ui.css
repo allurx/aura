@@ -30,7 +30,7 @@
     }
     .shelf-heading-text {
         display: flex;
-        align-items: baseline;
+        align-items: center;
         min-width: 0;
         gap: 10px;
     }
