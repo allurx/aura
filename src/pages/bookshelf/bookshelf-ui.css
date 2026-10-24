@@ -101,10 +101,6 @@
         white-space: normal;
         text-align: start;
 
-        p {
-            text-wrap: balance;
-        }
-
         .reset-warning-irreversible {
             color: var(--appearance-danger);
             font-size: inherit;

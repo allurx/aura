@@ -79,7 +79,7 @@ export default class BookshelfUi extends Ui {
                     </p>
                     <ol class="recovery-steps">
                         <li>先另存原始书籍文件，未备份请取消。</li>
-                        <li>重置后重新导入，原分类归属、阅读进度和外观设置不会恢复。</li>
+                        <li>重新导入也不会恢复分类归属、阅读进度和外观设置。</li>
                     </ol>
                 </div>
             `),
