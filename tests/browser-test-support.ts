@@ -10,7 +10,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import { chromium, type Browser, type Page } from "playwright-core";
 import { preview, type PreviewServer } from "vite";
-import { installReaderEventTrace } from "./reader-event-trace.ts";
 
 export type Delivery = "web" | "portable";
 export interface BookUpload {
@@ -103,13 +102,6 @@ export async function withPage(
             errors.push(`DevTools ${issue.code}: ${JSON.stringify(issue.details)}`);
         });
         await diagnostics.send("Audits.enable");
-        const diagnosticRate = process.env["AURA_READER_CPU_RATE"];
-        if (diagnosticRate !== undefined) {
-            const rate = Number(diagnosticRate);
-            assert(Number.isFinite(rate) && rate >= 1);
-            await diagnostics.send("Emulation.setCPUThrottlingRate", { rate });
-            await installReaderEventTrace(page);
-        }
         page.setDefaultTimeout(10_000);
         const url = delivery === "web" ? webUrl : pathToFileURL(resolve(repository, "dist/portable/aura.html")).href;
         await page.goto(url);
