@@ -592,7 +592,7 @@
     }
 
     /* 横屏和软键盘压缩插画与留白，导入动作仍留在可滚动内容区内。 */
-    @media (max-height: 560px) {
+    @container bookshelf-main (max-height: 560px) {
         .shelf-empty {
             padding-block: 12px;
         }

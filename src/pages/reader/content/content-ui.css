@@ -148,9 +148,9 @@
 #reader[data-mobile-controls] > #content {
     /* 安全区位于滚动视窗外，正文滚动途中也不会进入刘海和手势区域。 */
     margin-top: env(safe-area-inset-top);
-    margin-bottom: env(safe-area-inset-bottom);
+    margin-bottom: var(--viewport-safe-bottom);
     padding-top: max(0px, calc(28px - env(safe-area-inset-top)));
-    padding-bottom: max(0px, calc(16px - env(safe-area-inset-bottom)));
+    padding-bottom: max(0px, calc(16px - var(--viewport-safe-bottom)));
 
     @media (max-height: 500px) {
         padding-top: max(0px, calc(20px - env(safe-area-inset-top)));

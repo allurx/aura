@@ -6,7 +6,7 @@
 #reader > #toc {
     --toc-edge: 1rem;
     --toc-top: max(var(--reader-panel-block-inset), env(safe-area-inset-top));
-    --toc-bottom: max(var(--reader-panel-block-inset), env(safe-area-inset-bottom));
+    --toc-bottom: max(var(--reader-panel-block-inset), var(--viewport-safe-bottom));
     --toc-right: max(var(--toc-edge), env(safe-area-inset-right));
     --toc-left: max(var(--toc-edge), env(safe-area-inset-left));
     --toc-padding-left: 20px;
@@ -340,7 +340,7 @@
     border-bottom: 0;
 
     > .main {
-        padding-bottom: max(16px, env(safe-area-inset-bottom));
+        padding-bottom: max(16px, var(--viewport-safe-bottom));
     }
 
     @media (prefers-reduced-motion: no-preference) {

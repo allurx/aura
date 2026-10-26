@@ -35,7 +35,7 @@
     height: auto;
     max-height: var(
         --setting-max-height,
-        calc(var(--viewport-height) - max(1rem, env(safe-area-inset-top)) - max(1rem, env(safe-area-inset-bottom)))
+        calc(var(--viewport-height) - max(1rem, env(safe-area-inset-top)) - max(1rem, var(--viewport-safe-bottom)))
     );
     margin: 0;
     padding: 0;
@@ -164,7 +164,7 @@
 
     > footer {
         flex: none;
-        padding-block: 4px max(8px, env(safe-area-inset-bottom));
+        padding-block: 4px max(8px, var(--viewport-safe-bottom));
         border-top: 1px solid var(--appearance-border);
     }
 
@@ -521,7 +521,7 @@
 
         > footer {
             padding-top: 0.25rem;
-            padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+            padding-bottom: max(0.25rem, var(--viewport-safe-bottom));
         }
     }
 
@@ -640,12 +640,12 @@ html[data-material="leather"] #setting {
             680px,
             calc(
                 var(--viewport-height) - max(var(--setting-default-block-inset), env(safe-area-inset-top)) -
-                    max(var(--setting-default-block-inset), env(safe-area-inset-bottom))
+                    max(var(--setting-default-block-inset), var(--viewport-safe-bottom))
             )
         );
         inset: calc(var(--viewport-top) + max(var(--setting-default-block-inset), env(safe-area-inset-top)))
             max(1rem, env(safe-area-inset-right))
-            calc(var(--viewport-bottom) + max(var(--setting-default-block-inset), env(safe-area-inset-bottom))) auto;
+            calc(var(--viewport-bottom) + max(var(--setting-default-block-inset), var(--viewport-safe-bottom))) auto;
         width: var(--panel-default-width);
         max-width: calc(100% - max(1rem, env(safe-area-inset-left)) - max(1rem, env(safe-area-inset-right)));
         height: var(--setting-max-height);

@@ -3,6 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* 安全距也供浮动面板的几何计算读取，注册长度类型使 CSS 运算结果保持为像素值。 */
+@property --viewport-safe-bottom {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+}
+
 :root {
     --font-size: 16px;
     --ui-font-family: system-ui, sans-serif;
@@ -10,6 +17,7 @@
     --viewport-height: 100dvh;
     --viewport-top: 0px;
     --viewport-bottom: 0px;
+    --viewport-safe-bottom: max(0px, calc(env(safe-area-inset-bottom, 0px) - var(--viewport-bottom)));
 
     /* 控件自行呈现按压与选中反馈，避免浏览器在触摸区域额外叠加高亮。 */
     -webkit-tap-highlight-color: transparent;

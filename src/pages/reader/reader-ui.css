@@ -21,7 +21,7 @@ html[data-page="reader"] {
     --reader-panel-block-inset: clamp(12px, calc(var(--viewport-height) * 0.04), 32px);
     --reader-panel-available-height: calc(
         var(--viewport-height) - max(var(--reader-panel-block-inset), env(safe-area-inset-top)) -
-            max(var(--reader-panel-block-inset), env(safe-area-inset-bottom))
+            max(var(--reader-panel-block-inset), var(--viewport-safe-bottom))
     );
     --reader-panel-max-height: min(680px, var(--reader-panel-available-height));
     width: 800px;

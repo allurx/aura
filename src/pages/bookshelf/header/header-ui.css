@@ -235,7 +235,7 @@
         }
     }
     /* 软键盘可能只缩短可视区域，按书架内容区高度为搜索结果保留空间。 */
-    @container bookshelf-main (max-height: 28rem) {
+    @container bookshelf-main (max-height: 32rem) {
         --shelf-title-font-size: 18px;
         min-height: 0;
         gap: 6px;
