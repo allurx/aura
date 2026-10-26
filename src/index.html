@@ -59,7 +59,7 @@
                     </button>
                 </form>
             </header>
-            <section class="body panel-scroll" tabindex="0" aria-label="项目介绍与开源许可">
+            <div class="body">
                 <section class="license-project" aria-labelledby="license-project-name">
                     <div class="license-project-heading">
                         <span class="license-brand" aria-hidden="true"></span>
@@ -88,23 +88,30 @@
                         </button>
                     </div>
                 </section>
-                <section class="license-section" aria-labelledby="license-section-title">
+                <section class="license-section">
                     <h3 id="license-section-title" class="license-section-heading">许可与致谢</h3>
-                    <div class="license-item">
-                        <details class="license-disclosure">
-                            <summary>
-                                <span class="icon icon-chevron" aria-hidden="true"></span>
-                                <span class="license-item-heading">项目许可证</span>
-                                <span class="license-badge">Apache-2.0</span>
-                            </summary>
-                            <div class="license-document">
-                                <pre id="aura-license">__AURA_LICENSE_TEXT__</pre>
-                            </div>
-                        </details>
+                    <div
+                        class="license-scroll panel-scroll"
+                        tabindex="0"
+                        role="region"
+                        aria-labelledby="license-section-title"
+                    >
+                        <div class="license-item">
+                            <details class="license-disclosure">
+                                <summary>
+                                    <span class="icon icon-chevron" aria-hidden="true"></span>
+                                    <span class="license-item-heading">项目许可证</span>
+                                    <span class="license-badge">Apache-2.0</span>
+                                </summary>
+                                <div class="license-document">
+                                    <pre id="aura-license">__AURA_LICENSE_TEXT__</pre>
+                                </div>
+                            </details>
+                        </div>
+                        <div id="third-party-notices">__AURA_THIRD_PARTY_NOTICES__</div>
                     </div>
-                    <div id="third-party-notices">__AURA_THIRD_PARTY_NOTICES__</div>
                 </section>
-            </section>
+            </div>
         </dialog>
     </body>
 </html>
