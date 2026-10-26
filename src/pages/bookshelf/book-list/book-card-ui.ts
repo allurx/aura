@@ -134,9 +134,14 @@ export default class BookCardUi extends Ui {
                 : "暂无阅读位置";
             this.open.setAttribute("aria-label", `阅读《${summary.title}》，${progressLabel}`);
             if (progressChanged) {
-                this.progress.textContent = summary.progress
-                    ? `${String(summary.progress.chapterNumber)}/${String(summary.progress.chapterCount)}`
-                    : "暂无进度";
+                if (summary.progress) {
+                    // 窄书封允许在斜线后换行，保持当前章、总章数与单位完整可见。
+                    const current = document.createElement("span");
+                    current.textContent = `${String(summary.progress.chapterNumber)}/`;
+                    const count = document.createElement("span");
+                    count.textContent = `${String(summary.progress.chapterCount)} 章`;
+                    this.progress.replaceChildren(current, count);
+                } else this.progress.textContent = "暂无进度";
                 this.progress.title = progressLabel;
             }
         }

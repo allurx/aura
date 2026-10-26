@@ -328,7 +328,7 @@ for (const delivery of ["web", "portable"] as const) {
             await page.locator("#return-bookshelf").click();
             await waitForBookCount(page, 1);
             const targetCard = page.locator(".book").filter({ has: page.getByTitle(target.name, { exact: true }) });
-            assert.equal(await targetCard.locator(".book-progress").textContent(), "2/3");
+            assert.equal(await targetCard.locator(".book-progress").textContent(), "2/3 章");
 
             // 删除搜索找到的书籍后，其他共享同一原文件的书籍仍可继续阅读。
             await targetCard.locator(".book-more").click();
