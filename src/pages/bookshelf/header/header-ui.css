@@ -75,10 +75,13 @@
         max-width: 280px;
         min-width: 0;
         min-height: 44px;
-        padding-inline: 12px 6px;
         gap: 8px;
 
-        > .icon {
+        > label {
+            padding-inline: 12px 6px;
+        }
+
+        > label > .icon {
             --icon-size: 18px;
         }
     }

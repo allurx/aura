@@ -12,7 +12,16 @@
     cursor: text;
     transition: border-color var(--motion-duration-fast) var(--motion-ease);
 
-    > .icon {
+    > label {
+        display: flex;
+        align-items: center;
+        align-self: stretch;
+        gap: inherit;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .icon {
         color: var(--appearance-muted-color);
         transition: color var(--motion-duration-fast) var(--motion-ease);
     }
@@ -21,22 +30,22 @@
         border-color: color-mix(in srgb, var(--appearance-accent) 65%, transparent);
     }
 
-    &:focus-within > .icon {
+    &:focus-within .icon {
         color: var(--appearance-accent);
     }
 
-    > input::placeholder {
+    input::placeholder {
         color: var(--appearance-muted-color);
         opacity: 1;
     }
 
     /* 输入保留原生焦点，整框只在原边界上显示一条主题焦点线。 */
-    :where(html[data-keyboard-navigation]) &:has(> input:focus-visible) {
+    :where(html[data-keyboard-navigation]) &:has(input:focus-visible) {
         outline: 2px solid var(--focus-ring-color);
         outline-offset: -1px;
     }
 
-    > input:focus-visible {
+    input:focus-visible {
         outline: none;
     }
 
