@@ -5,6 +5,7 @@
 
 import type Page from "./page";
 import { createElementFromHtml } from "@/utils/dom-util";
+import { bindButtonActivation } from "@/utils/button-activation";
 import { bindVisualViewport } from "./visual-viewport";
 import { bindFocusNavigation } from "./focus-navigation";
 
@@ -25,6 +26,7 @@ export default abstract class BasePage implements Page {
         if (this.pageElement) throw new Error(`${this.constructor.name} is already mounted`);
 
         this.pageElement = appRoot.appendChild(createElementFromHtml(this.template));
+        bindButtonActivation(this.lifecycleController.signal);
         bindFocusNavigation(this.lifecycleController.signal);
         bindVisualViewport(this.lifecycleController.signal);
         await this.init(this.pageElement, appRoot);
