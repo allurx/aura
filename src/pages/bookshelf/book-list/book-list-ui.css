@@ -181,7 +181,8 @@
         inset: auto;
         flex-direction: column;
         margin: 0;
-        padding: 6px;
+        /* 内容留白由内部列表承担，让原生滚动条贴近浮层边缘。 */
+        padding: 6px 0;
         overflow: hidden;
         border: 1px solid var(--appearance-border);
         border-radius: 12px;
@@ -195,6 +196,7 @@
     }
     .book-action-list {
         min-height: 0;
+        padding-inline: 6px;
         overflow-y: auto;
         scrollbar-gutter: auto;
     }
@@ -208,12 +210,14 @@
         /* 与分类列表预留相同的原生滚动条槽，固定返回栏和选项保持同宽。 */
         overflow-y: auto;
         padding-bottom: 4px;
+        margin-inline: 6px;
         margin-bottom: 4px;
         border-bottom: 1px solid var(--appearance-border);
     }
     .book-category-list {
         min-height: 0;
         max-height: 308px;
+        padding-inline: 6px;
         overflow-y: auto;
         overscroll-behavior: contain;
         scroll-padding-block: 4px;
