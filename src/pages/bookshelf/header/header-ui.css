@@ -5,8 +5,9 @@
 
 #bookshelf #header {
     --shelf-title-font-size: 28px;
-    --shelf-primary-font-size: 14px;
-    --shelf-secondary-font-size: 14px;
+    --shelf-control-font-size: 14px;
+    --shelf-control-background: color-mix(in srgb, var(--appearance-panel) 85%, transparent);
+    --shelf-control-feedback: color-mix(in srgb, var(--appearance-panel) 92%, var(--appearance-color));
     --ui-padding-left: var(--shelf-content-inset);
     --ui-padding-right: var(--shelf-content-inset);
     display: flex;
@@ -102,9 +103,13 @@
         gap: 8px;
         min-width: 44px;
         height: 44px;
-        border: 1px solid transparent;
+        border: 1px solid var(--appearance-border);
         border-radius: var(--control-radius);
         padding: 0 14px;
+        background: var(--shelf-control-background);
+        color: var(--appearance-muted-color);
+        font-size: var(--shelf-control-font-size);
+        font-weight: 500;
         white-space: nowrap;
         line-height: 1.4;
         cursor: pointer;
@@ -114,14 +119,8 @@
             box-shadow var(--motion-duration-fast) var(--motion-ease);
     }
     .appearance-button {
-        color: var(--appearance-muted-color);
-        background: color-mix(in srgb, var(--appearance-panel) 85%, transparent);
-        border-color: var(--appearance-border);
-        font-size: var(--shelf-secondary-font-size);
-
         &[aria-expanded="true"] {
-            background: var(--appearance-selection);
-            color: var(--appearance-accent);
+            background-color: var(--shelf-control-feedback);
         }
     }
     .appearance-button .icon,
@@ -130,11 +129,6 @@
     }
     #import-books {
         min-width: 80px;
-        background: color-mix(in srgb, var(--appearance-selection) 48%, var(--appearance-panel));
-        color: var(--appearance-accent);
-        border-color: var(--appearance-border);
-        font-size: var(--shelf-primary-font-size);
-        font-weight: 500;
     }
     #open-navigation {
         --icon-size: 18px;
@@ -149,15 +143,14 @@
         }
     }
     @media (hover: hover) and (pointer: fine) {
-        .appearance-button:where(:not(:disabled):not([aria-expanded="true"])):hover {
-            background: color-mix(in srgb, var(--appearance-panel) 92%, var(--appearance-color));
-        }
+        .appearance-button:where(:not(:disabled):not([aria-expanded="true"])):hover,
         #import-books:where(:not(:disabled)):hover {
-            background: var(--appearance-selection);
+            background-color: var(--shelf-control-feedback);
         }
     }
     .appearance-button:where(:not(:disabled)):active,
     #import-books:where(:not(:disabled)):active {
+        background-color: var(--shelf-control-feedback);
         transform: translateY(1px);
         box-shadow: none;
     }
@@ -169,8 +162,7 @@
     }
     @media (max-width: 1024px) {
         --shelf-title-font-size: 25px;
-        --shelf-primary-font-size: 13px;
-        --shelf-secondary-font-size: 13px;
+        --shelf-control-font-size: 13px;
     }
     @media (max-width: 768px) {
         --shelf-title-font-size: 22px;
@@ -308,10 +300,20 @@
     }
 }
 
-/* 顶栏入口共用淡表面，导入保留主题色文字；空书架内的导入入口独立强调。 */
+/* 顶栏入口共用中性表面；空书架内的导入入口独立强调。 */
 html:where([data-material]:not([data-material="standard"])) {
+    #bookshelf #header {
+        --shelf-control-background: var(--material-control-surface);
+        --shelf-control-feedback: color-mix(in srgb, var(--material-control-surface) 92%, var(--appearance-color));
+    }
+
     #bookshelf #header .appearance-button,
-    #bookshelf #header #import-books,
+    #bookshelf #header #import-books {
+        background-image: var(--material-control-image);
+        background-size: var(--material-control-size);
+        border-color: var(--material-border);
+    }
+
     #bookshelf #header #open-navigation {
         background-color: var(--material-control-surface);
         background-image: var(--material-control-image);
@@ -319,7 +321,7 @@ html:where([data-material]:not([data-material="standard"])) {
         border-color: var(--material-border);
     }
 
-    #bookshelf #header :is(.appearance-button, #open-navigation)[aria-expanded="true"] {
+    #bookshelf #header #open-navigation[aria-expanded="true"] {
         background-color: var(--appearance-selection);
         background-image: none;
 
