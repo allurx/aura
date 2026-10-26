@@ -27,6 +27,192 @@ before(startBrowserTests);
 after(stopBrowserTests);
 
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: result interaction finishes native composition without overriding renewed editing`, async () => {
+        await withPage(delivery, async (page) => {
+            await importBooks(page, [textBook("候选目标.txt"), textBook("另一书籍.txt")]);
+
+            // 重放真机观察到的事件顺序，保护查询和焦点契约；这不代替 iOS 输入法验收。
+            const finishComposition = async (
+                inputSelector: string,
+                resultsSelector: string,
+                query: string,
+                options: { explicitInputPointer?: boolean; nextFocus?: string } = {}
+            ) =>
+                page.evaluate(
+                    async ({ inputSelector, resultsSelector, query, explicitInputPointer, nextFocus }) => {
+                        const input = document.querySelector(inputSelector);
+                        const results = document.querySelector(resultsSelector);
+                        if (!(input instanceof HTMLInputElement) || !(results instanceof HTMLElement))
+                            throw new Error("Search controls unavailable");
+
+                        input.focus();
+                        const previousResults = results.textContent;
+                        input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+                        input.value = "uncommitted";
+                        input.dispatchEvent(new InputEvent("input", { bubbles: true, isComposing: true }));
+                        const retainedCompositionResults = results.textContent === previousResults;
+                        const pointer = new PointerEvent("pointerdown", {
+                            bubbles: true,
+                            cancelable: true,
+                            pointerType: "touch",
+                        });
+                        results.dispatchEvent(pointer);
+                        const initiallyBlurred = document.activeElement !== input;
+
+                        // 平台在原生合成提交时恢复输入焦点，然后才发送 compositionend。
+                        input.focus();
+                        input.value = query;
+                        input.dispatchEvent(new InputEvent("input", { bubbles: true, isComposing: true, data: query }));
+                        if (explicitInputPointer)
+                            input.dispatchEvent(
+                                new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch" })
+                            );
+                        if (nextFocus) {
+                            const target = document.querySelector(nextFocus);
+                            if (!(target instanceof HTMLElement)) throw new Error("Next focus target unavailable");
+                            target.focus();
+                        }
+                        input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: query }));
+                        await Promise.resolve();
+
+                        return {
+                            initiallyBlurred,
+                            retainedCompositionResults,
+                            defaultPrevented: pointer.defaultPrevented,
+                            inputFocused: document.activeElement === input,
+                            focusId: document.activeElement?.id,
+                            value: input.value,
+                        };
+                    },
+                    { inputSelector, resultsSelector, query, ...options }
+                );
+
+            const bookshelf = await finishComposition("#book-search", "#book-list", "候选");
+            assert.equal(bookshelf.initiallyBlurred, true);
+            assert.equal(bookshelf.retainedCompositionResults, true);
+            assert.equal(bookshelf.defaultPrevented, false);
+            assert.equal(bookshelf.inputFocused, false);
+            assert.equal(bookshelf.value, "候选");
+            await waitForBookCount(page, 1);
+            assert.equal(await page.locator(".book-open").getAttribute("title"), "候选目标.txt");
+
+            // 用户显式回到输入框，或已将焦点交给其他控件时，不再执行旧的结束编辑意图。
+            const resumed = await finishComposition("#book-search", "#book-list", "另一", {
+                explicitInputPointer: true,
+            });
+            assert.equal(resumed.inputFocused, true);
+            assert.equal(resumed.value, "另一");
+            await waitForBookCount(page, 1);
+            assert.equal(await page.locator(".book-open").getAttribute("title"), "另一书籍.txt");
+            const otherFocus = await finishComposition("#book-search", "#book-list", "候选", {
+                nextFocus: "#toggle-setting-panel",
+            });
+            assert.equal(otherFocus.focusId, "toggle-setting-panel");
+            assert.equal(otherFocus.value, "候选");
+            await waitForBookCount(page, 1);
+
+            await page.setViewportSize({ width: 390, height: 844 });
+            const touch = await page.context().newCDPSession(page);
+            await touch.send("Emulation.setTouchEmulationEnabled", { enabled: true });
+            const commitOnNativeRelease = async (
+                inputSelector: string,
+                resultsSelector: string,
+                targetSelector: string,
+                query: string
+            ) => {
+                await page.locator(inputSelector).evaluate((element) => {
+                    if (!(element instanceof HTMLInputElement)) throw new Error("Search input unavailable");
+                    element.focus();
+                    element.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+                    element.value = "uncommitted";
+                    element.dispatchEvent(new InputEvent("input", { bubbles: true, isComposing: true }));
+                });
+                const bounds = await page.locator(targetSelector).first().boundingBox();
+                assert(bounds);
+                const point = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+                await touch.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point] });
+                await page.locator(inputSelector).evaluate((element, query) => {
+                    if (!(element instanceof HTMLInputElement)) throw new Error("Search input unavailable");
+                    element.focus();
+                    element.value = query;
+                    element.dispatchEvent(new InputEvent("input", { bubbles: true, isComposing: true, data: query }));
+                    element.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: query }));
+                }, query);
+
+                // 先确认原触点下已经换成新结果，再释放同一次原生触摸，覆盖错误点开新结果的场景。
+                await page.waitForFunction(
+                    ({ x, y, query }) =>
+                        document.elementFromPoint(x, y)?.closest("button")?.textContent.includes(query),
+                    { ...point, query }
+                );
+                await page.locator(resultsSelector).evaluate((results) => {
+                    if (!(results instanceof HTMLElement)) throw new Error("Search results unavailable");
+                    delete results.dataset["nativeRelease"];
+                    results.addEventListener(
+                        "click",
+                        (event) => {
+                            if (!(event instanceof MouseEvent)) throw new Error("Expected a native click");
+                            results.dataset["nativeRelease"] =
+                                event.detail > 0 && event.defaultPrevented ? "blocked" : "allowed";
+                        },
+                        { capture: true, once: true }
+                    );
+                });
+                await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+                await page.waitForFunction(
+                    (selector) => document.querySelector<HTMLElement>(selector)?.dataset["nativeRelease"] !== undefined,
+                    resultsSelector
+                );
+                assert.equal(await page.locator(resultsSelector).getAttribute("data-native-release"), "blocked");
+                return point;
+            };
+
+            await page.locator("#book-search").fill("");
+            await waitForBookCount(page, 2);
+            const firstBook = await page.locator(".book-open").first().getAttribute("title");
+            const nextBookQuery = firstBook === "候选目标.txt" ? "另一" : "候选";
+            const bookPoint = await commitOnNativeRelease("#book-search", "#book-list", ".book-open", nextBookQuery);
+            assert.equal(await page.locator("#bookshelf").isVisible(), true);
+            assert.equal(await page.locator("#book-search").inputValue(), nextBookQuery);
+            await waitForBookCount(page, 1);
+            const nextBookTitle = await page.locator(".book-title").innerText();
+            await touch.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [bookPoint] });
+            await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+            await page.locator("#reader").waitFor();
+            await settleReader(page);
+            assert.equal(await page.locator("#content").getAttribute("aria-label"), `《${nextBookTitle}》正文`);
+
+            if (!(await page.locator("#toggle-toc-panel").isVisible()))
+                await page.getByRole("button", { name: "显示阅读工具", exact: true }).press("Enter");
+            await page.locator("#toggle-toc-panel").click();
+            const toc = await finishComposition("#toc-search", "#toc-chapters", "第2章");
+            assert.equal(toc.initiallyBlurred, true);
+            assert.equal(toc.retainedCompositionResults, true);
+            assert.equal(toc.defaultPrevented, false);
+            assert.equal(toc.inputFocused, false);
+            assert.equal(toc.value, "第2章");
+            const chapter = page.locator("#toc-chapters button[data-chapter-number]");
+            await chapter.waitFor();
+            assert.equal(await chapter.count(), 1);
+            assert.equal(await chapter.innerText(), "第2章 测试章节");
+
+            await page.locator("#toc-search").fill("");
+            const chapterPoint = await commitOnNativeRelease(
+                "#toc-search",
+                "#toc-chapters",
+                '#toc-chapters button[data-chapter-number="1"]',
+                "第2章"
+            );
+            assert.equal(await page.locator("#toc[open]").isVisible(), true);
+            assert.equal(await page.locator("#toc-search").inputValue(), "第2章");
+            await touch.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [chapterPoint] });
+            await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+            await page.locator("#toc[open]").waitFor({ state: "hidden" });
+            await settleReader(page);
+            assert.equal(await page.locator("#chapter-title").textContent(), "第2章 测试章节");
+        });
+    });
+
     void test(`${delivery}: panel geometry shares appearance persistence and survives viewport constraints`, async () => {
         await withPage(delivery, async (page) => {
             const openSettings = async (): Promise<void> => {

@@ -399,6 +399,71 @@ for (const delivery of ["web", "portable"] as const) {
         });
     });
 
+    void test(`${delivery}: TOC keyboard occlusion preserves reading geometry and source position`, async () => {
+        for (const mode of ["none", "scroll"] as const) {
+            await withPage(delivery, async (page) => {
+                await importBooks(page, [textBook("keyboard-reading-position.txt", 3, 120)]);
+                await openBook(page, "keyboard-reading-position.txt");
+                await setMode(page, mode);
+                await page.setViewportSize({ width: 390, height: 844 });
+                await settleReader(page);
+                await page.locator("#content").press("PageDown");
+                await settleReader(page);
+
+                const paper = page.locator("#reader");
+                const content = page.locator("#content");
+                const viewport = page.locator("#content > .reading-viewport:not(.reading-measure-viewport)");
+                const readBounds = () =>
+                    Promise.all([paper.boundingBox(), content.boundingBox(), viewport.boundingBox()]);
+                const originalBounds = await readBounds();
+                assert(originalBounds.every(Boolean));
+                const original = await readVisiblePage(page, 64);
+                assert.equal(original.text.length, 64);
+                const progress = await readProgress(page);
+                const assertReadingUnchanged = async (): Promise<void> => {
+                    assert.deepEqual(await readBounds(), originalBounds);
+                    assert.deepEqual(await readVisiblePage(page, 64), original);
+                    assert.deepEqual(await readProgress(page), progress);
+                };
+
+                if (!(await page.getByRole("button", { name: "打开目录", exact: true }).isVisible()))
+                    await page.getByRole("button", { name: "显示阅读工具", exact: true }).press("Enter");
+                await page.getByRole("button", { name: "打开目录", exact: true }).click();
+                await page.getByRole("searchbox", { name: "查找章节", exact: true }).fill("测试章节");
+
+                // 仅缩小键盘遮挡后的可视高度，保留实际布局视口；窗口 resize 无法覆盖此契约。
+                for (const height of [470, 390]) {
+                    await page.evaluate((visibleHeight) => {
+                        const visualViewport = window.visualViewport;
+                        if (!visualViewport) throw new Error("Visual viewport unavailable");
+                        Object.defineProperty(visualViewport, "height", { configurable: true, value: visibleHeight });
+                        visualViewport.dispatchEvent(new Event("resize"));
+                    }, height);
+                    await page.waitForFunction((visibleHeight) => {
+                        const bounds = document.querySelector("#toc[open]")?.getBoundingClientRect();
+                        return bounds !== undefined && bounds.height > 0 && bounds.bottom <= visibleHeight + 1;
+                    }, height);
+                    await settleReader(page);
+                    await assertReadingUnchanged();
+                }
+
+                // 恢复浏览器原有高度，再经实际关闭入口检查画面和持久进度。
+                await page.evaluate(() => {
+                    const visualViewport = window.visualViewport;
+                    if (!visualViewport) throw new Error("Visual viewport unavailable");
+                    Reflect.deleteProperty(visualViewport, "height");
+                    visualViewport.dispatchEvent(new Event("resize"));
+                });
+                await settleReader(page);
+                await assertReadingUnchanged();
+                await page.getByRole("button", { name: "关闭目录", exact: true }).click();
+                await page.locator("#toc").waitFor({ state: "hidden" });
+                await settleReader(page);
+                await assertReadingUnchanged();
+            });
+        }
+    });
+
     void test(`${delivery}: touch preview cancels without changing source progress and commits on release`, async () => {
         await withPage(delivery, async (page) => {
             await page.emulateMedia({ reducedMotion: "no-preference" });

@@ -21,6 +21,7 @@
     background: transparent;
     color: var(--appearance-color);
     font-size: 1rem;
+    touch-action: pan-x pinch-zoom;
 
     .shelf-heading {
         display: flex;
@@ -237,8 +238,14 @@
             max-width: none;
         }
     }
-    /* 软键盘可能只缩短可视区域，按书架内容区高度为搜索结果保留空间。 */
-    @container bookshelf-main (max-height: 32rem) {
+    /* 剩余空间很小时仅收紧留白，为结果保留空间，不改变字号或操作顺序。 */
+    @container bookshelf-main (max-height: 18rem) {
+        min-height: 0;
+        gap: 6px;
+        padding-block: 6px;
+    }
+    /* 紧凑字号和单行布局只随真实矮窗口变化，普通竖屏不因键盘弹出切换。 */
+    @media (max-height: 32rem) {
         --shelf-title-font-size: 18px;
         min-height: 0;
         gap: 6px;

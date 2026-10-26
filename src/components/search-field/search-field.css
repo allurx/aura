@@ -10,6 +10,8 @@
     background: color-mix(in srgb, var(--appearance-panel) 80%, transparent);
     color: var(--appearance-color);
     cursor: text;
+    /* 整个单行搜索区域保留横向平移和缩放，不向整页传递纵向拖动。 */
+    touch-action: pan-x pinch-zoom;
     transition: border-color var(--motion-duration-fast) var(--motion-ease);
 
     > label {
@@ -58,6 +60,11 @@
     @media (prefers-reduced-motion: reduce) {
         transition: none;
     }
+}
+
+/* 合成期间的结果触摸只结束输入；下一次手势恢复原生列表滚动，缩放始终保留。 */
+[data-search-composing] {
+    touch-action: pinch-zoom;
 }
 
 /* 表面增强不接管搜索框自身的焦点和悬停边界。 */

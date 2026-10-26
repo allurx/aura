@@ -146,11 +146,11 @@
 }
 
 #reader[data-mobile-controls] > #content {
-    /* 安全区位于滚动视窗外，正文滚动途中也不会进入刘海和手势区域。 */
+    /* 正文保留固定系统安全区，浮层搜索的键盘避让不改变纸面排版。 */
     margin-top: env(safe-area-inset-top);
-    margin-bottom: var(--viewport-safe-bottom);
+    margin-bottom: env(safe-area-inset-bottom);
     padding-top: max(0px, calc(28px - env(safe-area-inset-top)));
-    padding-bottom: max(0px, calc(16px - var(--viewport-safe-bottom)));
+    padding-bottom: max(0px, calc(16px - env(safe-area-inset-bottom)));
 
     @media (max-height: 500px) {
         padding-top: max(0px, calc(20px - env(safe-area-inset-top)));

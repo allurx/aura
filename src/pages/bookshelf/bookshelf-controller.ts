@@ -483,6 +483,7 @@ export default class BookshelfController {
 
         // 查询变化从列表顶部开始，导入和外观入口复用各自的处理流程。
         this.headerUi.bindEvents(
+            this.bookListUi.root,
             (query) => {
                 bookshelfSession.search = query;
                 bookshelfSession.position = null;

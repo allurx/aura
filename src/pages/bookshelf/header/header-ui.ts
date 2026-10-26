@@ -6,7 +6,7 @@
 import { bind } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
 import Ui from "@/components/ui";
-import { bindSearchSubmit } from "@/components/search-field/search-submit";
+import { bindSearchInput } from "@/components/search-field/search-input";
 
 /**
  * 分类标题、搜索和导入工具栏。
@@ -43,6 +43,7 @@ export default class HeaderUi extends Ui {
      * 绑定搜索与文件选择器，选择结束后允许再次选择同一文件。
      */
     public bindEvents(
+        results: HTMLElement,
         onSearch: (query: string) => void,
         onImport: (files: File[]) => Promise<void>,
         signal: AbortSignal
@@ -70,7 +71,7 @@ export default class HeaderUi extends Ui {
             },
             { signal }
         );
-        bindSearchSubmit(this.search, () => composing, signal);
+        bindSearchInput(this.search, results, () => composing, signal);
 
         // Escape 清空查询，但输入法取消候选时保留搜索框内容。
         bind(

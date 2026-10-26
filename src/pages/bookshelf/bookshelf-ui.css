@@ -6,14 +6,17 @@
 #bookshelf {
     --shelf-content-inset: 32px;
     --shelf-header-height: 80px;
+    --shelf-block-inset: 16px;
+    --shelf-top-inset: max(var(--shelf-block-inset), env(safe-area-inset-top));
+    --shelf-bottom-inset: max(var(--shelf-block-inset), env(safe-area-inset-bottom));
     position: relative;
     display: grid;
     grid-template-columns: 14rem minmax(0, 1fr);
     gap: 16px;
     height: 100%;
     width: 100%;
-    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
-        max(16px, var(--viewport-safe-bottom)) max(16px, env(safe-area-inset-left));
+    padding: var(--shelf-top-inset) max(16px, env(safe-area-inset-right)) var(--shelf-bottom-inset)
+        max(16px, env(safe-area-inset-left));
     background: var(--bookshelf-background-color);
     background-image: var(--background-texture-image), var(--material-canvas-image);
     background-size: var(--background-texture-size), var(--material-canvas-size);
@@ -120,9 +123,9 @@
     @media (max-width: 768px) {
         --shelf-content-inset: 16px;
         --shelf-header-height: 72px;
+        --shelf-block-inset: 0px;
         gap: 0;
-        padding: env(safe-area-inset-top) env(safe-area-inset-right) var(--viewport-safe-bottom)
-            env(safe-area-inset-left);
+        padding: var(--shelf-top-inset) env(safe-area-inset-right) var(--shelf-bottom-inset) env(safe-area-inset-left);
         grid-template-columns: minmax(0, 1fr);
         #bookshelf-sidebar {
             /* 固定分类保留布局；关闭时移出画布，并由页面同步 inert 排除交互。 */
