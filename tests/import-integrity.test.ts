@@ -6,6 +6,7 @@
 import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
 import { after, before, test } from "node:test";
+import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import type { Page } from "playwright-core";
 import {
     importBooks,
@@ -20,6 +21,39 @@ import { createEpubFixture } from "./fixtures/epub-fixtures.ts";
 
 before(startBrowserTests);
 after(stopBrowserTests);
+
+const inlineSvg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="18"><title>inline SVG</title>' +
+    '<rect width="12" height="18" fill="red"/></svg>';
+
+/**
+ * 合法的带 # 文件名占用连续合成编号，图片的先后顺序不应改变资源身份。
+ */
+function resourceCollisionEpub(svgFirst: boolean): Buffer {
+    const images = [1, 2]
+        .map(
+            (number) =>
+                `<img src="chapter.xhtml%23aura-inline-image-${String(number)}" alt="archive PNG ${String(number)}"/>`
+        )
+        .join("");
+    const entries = unzipSync(createEpubFixture(svgFirst ? inlineSvg + images : images + inlineSvg));
+    const pixel = entries["OEBPS/pixel.png"];
+    const manifest = entries["OEBPS/package.opf"];
+    assert(pixel && manifest);
+    for (const number of [1, 2]) entries[`OEBPS/chapter.xhtml#aura-inline-image-${String(number)}`] = pixel;
+    entries["OEBPS/package.opf"] = strToU8(
+        strFromU8(manifest).replace(
+            "</manifest>",
+            [1, 2]
+                .map(
+                    (number) =>
+                        `<item id="collision-${String(number)}" href="chapter.xhtml%23aura-inline-image-${String(number)}" media-type="image/png"/>`
+                )
+                .join("") + "</manifest>"
+        )
+    );
+    return Buffer.from(zipSync(entries, { level: 0, mtime: new Date(2026, 9, 26) }));
+}
 
 /**
  * 独立连接在事务完成后关闭；跨 store 核对失败导入没有留下孤立内容。
@@ -74,6 +108,13 @@ for (const delivery of ["web", "portable"] as const) {
                 reason: /外部资源/,
             },
             {
+                name: "undeclared-image-matching-inline-resource",
+                buffer: createEpubFixture(
+                    inlineSvg + '<img src="chapter.xhtml%23aura-inline-image-1" alt="undeclared image"/>'
+                ),
+                reason: /图片未声明/,
+            },
+            {
                 name: "deep-content",
                 buffer: createEpubFixture("<div>".repeat(202) + "Nested content" + "</div>".repeat(202)),
                 reason: /嵌套过深/,
@@ -102,6 +143,49 @@ for (const delivery of ["web", "portable"] as const) {
                 await waitForBookCount(page, 0);
                 assert.deepEqual(await readStoreCounts(page), { book: 0, chapter: 0, file: 0, progress: 0, toc: 0 });
                 assert.deepEqual(externalRequests, []);
+            });
+        }
+    });
+
+    void test(`${delivery}: inline SVG and archive images retain distinct resources after import and reload`, async () => {
+        for (const svgFirst of [true, false]) {
+            await withPage(delivery, async (page) => {
+                await importBooks(page, [
+                    {
+                        name: "resource-collision.epub",
+                        mimeType: "application/epub+zip",
+                        buffer: resourceCollisionEpub(svgFirst),
+                    },
+                ]);
+                await openBook(page, "resource-collision.epub");
+                const images = page.locator("#content > .reading-viewport:not(.reading-measure-viewport) img");
+                for (const reload of [false, true]) {
+                    if (reload) await page.reload();
+                    await page.waitForFunction(() => {
+                        const images = document.querySelectorAll<HTMLImageElement>(
+                            "#content > .reading-viewport:not(.reading-measure-viewport) img"
+                        );
+                        return (
+                            images.length === 3 &&
+                            [...images].every((image) => image.complete && image.naturalWidth > 0)
+                        );
+                    });
+                    const sizes = await images.evaluateAll((images) =>
+                        images.map((image) => ({
+                            alt: image.getAttribute("alt"),
+                            width: image instanceof HTMLImageElement ? image.naturalWidth : 0,
+                            height: image instanceof HTMLImageElement ? image.naturalHeight : 0,
+                        }))
+                    );
+                    assert.deepEqual(
+                        sizes.toSorted((left, right) => (left.alt ?? "").localeCompare(right.alt ?? "")),
+                        [
+                            { alt: "archive PNG 1", width: 1, height: 1 },
+                            { alt: "archive PNG 2", width: 1, height: 1 },
+                            { alt: "inline SVG", width: 12, height: 18 },
+                        ]
+                    );
+                }
             });
         }
     });

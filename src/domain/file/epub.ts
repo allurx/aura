@@ -597,7 +597,11 @@ async function parseElement(element: Element, path: string, context: ParseContex
                     : children;
             }
         }
-        const resourcePath = `${path}#aura-inline-image-${String(++context.inlineImageCount)}`;
+        // 合成标识不能覆盖真实归档资源；文件名中的 # 可以由 URI 百分号编码引用。
+        let resourcePath: string;
+        do {
+            resourcePath = `${path}#aura-inline-image-${String(++context.inlineImageCount)}`;
+        } while (context.manifest.has(resourcePath));
         const svg = sanitizeSvg(element, path);
         const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml" });
         await validateImage(blob, path);
@@ -667,10 +671,10 @@ function tableSpan(value: string | null, minimum: number, maximum: number): numb
  * 只有实际被正文引用的图片才解压、验证并保存。
  */
 async function loadImage(path: string, context: ParseContext): Promise<void> {
-    if (context.resources.has(path)) return;
     const item = context.manifest.get(path);
     if (!item || !imageMediaTypes.has(item.mediaType))
         throw new EpubImportError(`EPUB 图片未声明或类型不受支持：${path}`);
+    if (context.resources.has(path)) return;
     let blob: Blob;
     if (item.mediaType === "image/svg+xml") {
         const document = await readXml(context.archive, path);
