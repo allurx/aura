@@ -11,7 +11,8 @@
             margin-top: 16px;
         }
 
-        > .items {
+        > .items,
+        > .disclosure-content > .items {
             display: grid;
             gap: 12px;
             padding-top: 8px;
@@ -42,6 +43,7 @@
         border: 1px solid var(--appearance-border);
         border-radius: 10px;
         background: color-mix(in srgb, var(--appearance-color) 3%, transparent);
+        transition: background-color var(--motion-duration-fast) var(--motion-ease);
 
         &::-webkit-details-marker {
             display: none;
@@ -56,6 +58,7 @@
             border: solid currentColor;
             border-width: 0 1.5px 1.5px 0;
             transform: rotate(-45deg);
+            transition: transform var(--motion-duration-fast) var(--motion-ease);
         }
 
         @media (hover: hover) and (pointer: fine) {

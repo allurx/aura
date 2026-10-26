@@ -171,21 +171,6 @@
     }
 
     .license-disclosure {
-        &::details-content {
-            display: grid;
-            grid-template-rows: 0fr;
-            opacity: 0;
-            transition:
-                grid-template-rows var(--motion-duration-normal) var(--motion-ease),
-                opacity var(--motion-duration-normal) var(--motion-ease),
-                content-visibility var(--motion-duration-normal) allow-discrete;
-        }
-
-        &[open]::details-content {
-            grid-template-rows: 1fr;
-            opacity: 1;
-        }
-
         summary {
             display: grid;
             grid-template-columns: 18px minmax(0, 1fr) auto;
@@ -220,11 +205,6 @@
         &[open] > summary .icon-chevron {
             transform: rotate(90deg);
         }
-    }
-
-    .license-document {
-        min-height: 0;
-        overflow: hidden;
     }
 
     pre {
@@ -275,7 +255,6 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-        .license-disclosure::details-content,
         .license-disclosure .icon-chevron {
             transition: none;
         }

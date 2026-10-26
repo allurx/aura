@@ -616,7 +616,7 @@ html[data-material="leather"] #setting {
         padding-top: 10px;
     }
 
-    .setting-group > .items {
+    .setting-group .items {
         gap: 8px;
     }
 

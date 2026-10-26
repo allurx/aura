@@ -59,6 +59,7 @@
             list-style: none;
             cursor: pointer;
             color: var(--appearance-muted-color);
+            transition: background-color var(--motion-duration-fast) var(--motion-ease);
 
             &::-webkit-details-marker {
                 display: none;
@@ -72,6 +73,7 @@
                 border: solid currentColor;
                 border-width: 0 1.5px 1.5px 0;
                 transform: rotate(-45deg);
+                transition: transform var(--motion-duration-fast) var(--motion-ease);
             }
 
             @media (hover: hover) and (pointer: fine) {
