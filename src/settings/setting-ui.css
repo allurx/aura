@@ -620,7 +620,17 @@ html[data-material="leather"] #setting {
         gap: 8px;
     }
 
+    /* 分隔线之间构成完整点击行，不把卡片间距留在标题下方。 */
+    details.setting-group + details.setting-group {
+        margin-top: 0;
+    }
+
+    details.setting-group > .disclosure-content > .items {
+        padding-bottom: 12px;
+    }
+
     details.setting-group > summary {
+        min-height: 56px;
         padding-inline: 0;
         border-width: 1px 0 0;
         border-radius: 0;
