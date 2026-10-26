@@ -71,7 +71,7 @@ export function createBookshelfSettings(bookshelf: HTMLElement, bookList: HTMLEl
 }
 
 /**
- * 将阅读常规设置绑定到阅读器或正文，避免修改工具栏与浮层的排版。
+ * 将网页配色、阅读纸面和正文设置绑定到各自表面，避免修改工具栏与浮层的排版。
  */
 export function createReaderSettings(
     reader: HTMLElement,
@@ -117,6 +117,7 @@ export function createReaderSettings(
                 settings: [
                     new ColorStyleSetting(content, StyleProperty.COLOR, "文字颜色"),
                     new ColorStyleSetting(reader, StyleProperty.BACKGROUND_COLOR, "阅读背景"),
+                    new ColorStyleSetting(document.documentElement, StyleProperty.READER_BACKDROP, "网页背景颜色"),
                 ],
             },
         ],

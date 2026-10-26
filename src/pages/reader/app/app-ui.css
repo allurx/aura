@@ -244,6 +244,13 @@ html:where([data-material]:not([data-material="standard"])) {
     }
 }
 
+/* 显式网页颜色优先于主题光影；独立开启的材质纹理继续叠加。 */
+html[data-page="reader"][style*="--reader-backdrop:"] #app {
+    background-color: var(--reader-backdrop);
+    background-image: var(--background-texture-image);
+    background-size: var(--background-texture-size);
+}
+
 html[data-material="glass"] #reader-actions {
     --appearance-muted-color: var(--material-muted-color);
     --appearance-accent: var(--material-accent-color);

@@ -188,6 +188,100 @@ for (const delivery of ["web", "portable"] as const) {
         );
     });
 
+    void test(`${delivery}: reader webpage color stays independent of paper, theme, material and bookshelf`, async () => {
+        await withPage(delivery, async (page) => {
+            await importBooks(page, [textBook("webpage-color.txt")]);
+            const bookshelfBackground = await page
+                .locator("#bookshelf")
+                .evaluate((element) => getComputedStyle(element).backgroundColor);
+            const bookshelfAppearance = await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance"));
+            await openBook(page, "webpage-color.txt");
+            await page.locator("#toggle-setting-panel").click();
+            await page.getByText("阅读配色", { exact: true }).click();
+            const webpageColor = page.getByLabel("网页背景颜色", { exact: true });
+            const paperColor = page.getByLabel("阅读背景", { exact: true });
+            await paperColor.fill("#faf4e8");
+            await webpageColor.fill("#123456");
+
+            const readColors = () =>
+                page.evaluate(() => {
+                    const app = document.querySelector("#app");
+                    const reader = document.querySelector("#reader");
+                    if (!app || !reader) throw new Error("Missing reader surfaces");
+                    return {
+                        webpage: getComputedStyle(app).backgroundColor,
+                        image: getComputedStyle(app).backgroundImage,
+                        paper: getComputedStyle(reader).backgroundColor,
+                        root: getComputedStyle(document.documentElement).backgroundColor,
+                    };
+                });
+            const explicitColors = {
+                webpage: "rgb(18, 52, 86)",
+                image: "none",
+                paper: "rgb(250, 244, 232)",
+                root: "rgb(18, 52, 86)",
+            };
+            assert.deepEqual(await readColors(), explicitColors);
+
+            // 主题光影与材质底色不能盖住显式网页颜色，背景纹理仍独立生效。
+            await page.locator('input[name="appearance-theme"][value="starry"]').check();
+            await page.getByText("材质与纹理", { exact: true }).click();
+            await page.locator('input[name="appearance-material"][value="metal"]').check();
+            assert.deepEqual(await readColors(), explicitColors);
+            await page.getByRole("switch", { name: "网页背景纹理", exact: true }).check();
+            const texturedColors = await readColors();
+            assert.notEqual(texturedColors.image, "none");
+            assert.deepEqual({ ...texturedColors, image: "none" }, explicitColors);
+            const saved = await page.evaluate(() => localStorage.getItem("aura.reader.appearance"));
+            assert(saved?.includes('"--reader-backdrop":"#123456"'));
+            await page.locator("#setting .close").click();
+            await page.reload();
+            await page.locator("#toggle-setting-panel:not([disabled])").waitFor();
+            assert.deepEqual(await readColors(), texturedColors);
+            assert.equal(await page.evaluate(() => localStorage.getItem("aura.reader.appearance")), saved);
+
+            // 同一个 SPA 根节点切回书架后不读取 Reader 的网页色，书库和两页偏好互不覆盖。
+            await page.locator("#return-bookshelf").click();
+            await page.locator(".book-open").waitFor();
+            assert.equal(
+                await page.locator("#bookshelf").evaluate((element) => getComputedStyle(element).backgroundColor),
+                bookshelfBackground
+            );
+            assert.equal(
+                await page.evaluate(() => localStorage.getItem("aura.bookshelf.appearance")),
+                bookshelfAppearance
+            );
+            await openBook(page, "webpage-color.txt");
+            assert.deepEqual(await readColors(), texturedColors);
+            await page.locator("#toggle-setting-panel").click();
+            await page.getByText("阅读配色", { exact: true }).click();
+
+            // 单项重置恢复当前主题与材质，保留纸面；页面重置清除网页色并恢复默认主题。
+            await page.getByRole("button", { name: "重置网页背景颜色", exact: true }).click();
+            assert.equal(
+                await page.evaluate(() => document.documentElement.style.getPropertyValue("--reader-backdrop")),
+                ""
+            );
+            assert.equal((await readColors()).paper, explicitColors.paper);
+            assert.notEqual((await readColors()).webpage, explicitColors.webpage);
+            await webpageColor.fill("#234567");
+            await page.locator("#setting .reset-general").click();
+            assert.equal(await page.evaluate(() => document.documentElement.dataset["theme"]), "starry");
+            assert.equal(
+                await page.evaluate(() => document.documentElement.style.getPropertyValue("--reader-backdrop")),
+                ""
+            );
+            await webpageColor.fill("#345678");
+            await page.locator("#setting .reset").click();
+            assert.equal(await page.evaluate(() => document.documentElement.dataset["theme"]), "paper");
+            assert.equal(
+                await page.evaluate(() => document.documentElement.style.getPropertyValue("--reader-backdrop")),
+                ""
+            );
+            assert.equal(await page.evaluate(() => localStorage.getItem("aura.reader.appearance")), null);
+        });
+    });
+
     void test(`${delivery}: page appearance persists through reopening and resets only its intended scope`, async () => {
         await withPage(delivery, async (page) => {
             await importBooks(page, [textBook("appearance.txt")]);
