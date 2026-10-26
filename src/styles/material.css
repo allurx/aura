@@ -87,6 +87,7 @@
 
 :where(html, .material-swatch)[data-material="linen"] {
     --material-panel: color-mix(in srgb, var(--appearance-panel) 78%, var(--appearance-canvas));
+    --material-light: color-mix(in srgb, var(--appearance-highlight) 20%, transparent);
     --material-image:
         repeating-linear-gradient(
             0deg,
