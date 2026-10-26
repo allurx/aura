@@ -258,6 +258,9 @@
         font: inherit;
         font-size: 12px;
         cursor: pointer;
+        transition:
+            background-color var(--motion-duration-fast) var(--motion-ease),
+            color var(--motion-duration-fast) var(--motion-ease);
 
         > .icon {
             --icon-size: 16px;
