@@ -63,7 +63,7 @@ export default class BookCardUi extends Ui {
         categories.className = "book-categories";
         categories.hidden = true;
         const categoryHeader = document.createElement("header");
-        categoryHeader.className = "book-category-header";
+        categoryHeader.className = "book-category-header panel-scroll";
         const back = this.createAction("book-actions-back", "移动分类", "icon-arrow-left");
         back.setAttribute("aria-label", "返回书籍操作");
         categoryHeader.append(back);

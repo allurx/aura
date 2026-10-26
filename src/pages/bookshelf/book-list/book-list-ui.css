@@ -205,6 +205,8 @@
     }
     .book-category-header {
         flex: none;
+        /* 与分类列表预留相同的原生滚动条槽，固定返回栏和选项保持同宽。 */
+        overflow-y: auto;
         padding-bottom: 4px;
         margin-bottom: 4px;
         border-bottom: 1px solid var(--appearance-border);

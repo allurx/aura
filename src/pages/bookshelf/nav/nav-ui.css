@@ -145,6 +145,7 @@
         inset: auto;
         margin: 0;
         overflow-y: auto;
+        scrollbar-gutter: auto;
         padding: 0.4rem;
         border: 1px solid var(--appearance-border);
         border-radius: 1rem;
