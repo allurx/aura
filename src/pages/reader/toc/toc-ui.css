@@ -114,7 +114,6 @@
     gap: 12px;
     padding-block: 14px;
     border-bottom: 1px solid var(--reader-panel-edge);
-    background-color: inherit;
     overflow: hidden;
 
     .toc-heading {

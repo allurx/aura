@@ -262,7 +262,14 @@ html:where([data-material]:not([data-material="standard"])) {
     }
 }
 
-html[data-material="leather"] #bookshelf #nav {
+html[data-material="leather"] #bookshelf #nav #bookshelf-more-actions {
     outline: var(--material-edge-outline);
     outline-offset: -6px;
+}
+
+@media (min-width: 769px) {
+    html[data-material="leather"] #bookshelf #nav {
+        outline: var(--material-edge-outline);
+        outline-offset: -6px;
+    }
 }

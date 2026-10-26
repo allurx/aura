@@ -794,6 +794,20 @@ html:where([data-material]:not([data-material="standard"])) {
             background-size: var(--material-control-size);
             backdrop-filter: var(--material-static-filter);
             border-color: var(--material-border);
+            box-shadow: var(--material-shadow);
         }
+    }
+}
+
+html[data-material="leather"] #bookshelf #book-list .book-actions {
+    outline: var(--material-edge-outline);
+    outline-offset: -6px;
+}
+
+/* 移动列表自身承载表面，键盘聚焦时仍使用独立的焦点环。 */
+@media (max-width: 768px) {
+    html[data-material="leather"] #bookshelf #book-list:not(:focus-visible) {
+        outline: var(--material-edge-outline);
+        outline-offset: -6px;
     }
 }

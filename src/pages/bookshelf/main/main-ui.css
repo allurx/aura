@@ -41,4 +41,9 @@
         box-shadow: var(--material-shadow);
         backdrop-filter: var(--material-static-filter);
     }
+
+    html[data-material="leather"] #bookshelf > main:not(:focus-visible) {
+        outline: var(--material-edge-outline);
+        outline-offset: -6px;
+    }
 }

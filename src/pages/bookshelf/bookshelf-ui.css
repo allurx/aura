@@ -221,3 +221,10 @@ html:where([data-material]:not([data-material="standard"])) {
         }
     }
 }
+
+@media (max-width: 768px) {
+    html[data-material="leather"] #bookshelf #bookshelf-sidebar {
+        outline: var(--material-edge-outline);
+        outline-offset: -6px;
+    }
+}

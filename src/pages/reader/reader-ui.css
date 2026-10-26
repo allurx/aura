@@ -74,6 +74,18 @@ html[data-page="reader"] {
     }
 }
 
+/* 设置与目录共享所选材质的边缘，标准材质继续沿用阅读面板的轻投影。 */
+html:where([data-material]:not([data-material="standard"])) #reader {
+    --reader-panel-edge: var(--material-border);
+    --reader-panel-shadow: var(--material-floating-shadow);
+
+    /* 独立纸面只协调边线与浅层内影，不将面板纹理或缝边带入阅读区域。 */
+    @media (min-width: 801px) and (min-height: 501px) {
+        border-color: var(--material-border);
+        box-shadow: var(--material-inset-shadow), var(--appearance-shadow-soft);
+    }
+}
+
 /* 键盘焦点留在固定阅读边框上，不随翻页移动或重复出现在页缝。 */
 :where(html[data-keyboard-navigation]) #reader:has(> #content:focus-visible) {
     outline: 2px solid var(--focus-ring-color);
