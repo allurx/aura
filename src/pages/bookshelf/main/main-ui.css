@@ -8,7 +8,14 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    /* 尺寸由外层书架网格拉伸确定，标题按真实可用高度响应软键盘。 */
+    margin-top: var(--viewport-top);
+    max-height: max(
+        0px,
+        calc(
+            var(--viewport-height) - var(--shelf-top-inset) - max(var(--shelf-block-inset), var(--viewport-safe-bottom))
+        )
+    );
+    /* 搜索与结果局部避让键盘，外层画布和分类导航保持原有尺寸。 */
     container: bookshelf-main / size;
     overflow: hidden;
     border: 1px solid var(--appearance-border);
@@ -33,5 +40,10 @@
         border-color: var(--material-border);
         box-shadow: var(--material-shadow);
         backdrop-filter: var(--material-static-filter);
+    }
+
+    html[data-material="leather"] #bookshelf > main:not(:focus-visible) {
+        outline: var(--material-edge-outline);
+        outline-offset: -6px;
     }
 }

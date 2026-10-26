@@ -152,6 +152,16 @@ export default class ChapterWindow {
             await yieldTask();
             if (signal.aborted || controller.signal.aborted) return;
             const bounds = viewport.getBoundingClientRect();
+            const seed = this.mode === "scroll" ? undefined : this.readLayoutSeed(bounds);
+            if (
+                this.element === this.view.element &&
+                this.element.parentElement === viewport &&
+                layout.useCompleteWindow(viewport, this.range, seed)
+            ) {
+                onProgress();
+                return;
+            }
+
             const probe = document.createElement("div");
             probe.className = viewport.className;
             probe.classList.add("reading-measure-viewport");
@@ -164,7 +174,6 @@ export default class ChapterWindow {
             parent.append(probe);
             this.probe = probe;
             try {
-                const seed = this.mode === "scroll" ? undefined : this.readLayoutSeed(bounds);
                 await layout.build(
                     probe,
                     lifetime,

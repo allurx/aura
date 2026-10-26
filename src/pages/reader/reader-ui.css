@@ -21,7 +21,7 @@ html[data-page="reader"] {
     --reader-panel-block-inset: clamp(12px, calc(var(--viewport-height) * 0.04), 32px);
     --reader-panel-available-height: calc(
         var(--viewport-height) - max(var(--reader-panel-block-inset), env(safe-area-inset-top)) -
-            max(var(--reader-panel-block-inset), env(safe-area-inset-bottom))
+            max(var(--reader-panel-block-inset), var(--viewport-safe-bottom))
     );
     --reader-panel-max-height: min(680px, var(--reader-panel-available-height));
     width: 800px;
@@ -71,6 +71,18 @@ html[data-page="reader"] {
         height: 100%;
         margin-block: 0;
         border-block: 0;
+    }
+}
+
+/* 设置与目录共享所选材质的边缘，标准材质继续沿用阅读面板的轻投影。 */
+html:where([data-material]:not([data-material="standard"])) #reader {
+    --reader-panel-edge: var(--material-border);
+    --reader-panel-shadow: var(--material-floating-shadow);
+
+    /* 独立纸面只协调边线与浅层内影，不将面板纹理或缝边带入阅读区域。 */
+    @media (min-width: 801px) and (min-height: 501px) {
+        border-color: var(--material-border);
+        box-shadow: var(--material-inset-shadow), var(--appearance-shadow-soft);
     }
 }
 
@@ -233,27 +245,28 @@ html[data-page="reader"] {
     }
 
     @media (hover: hover) and (pointer: fine) {
-        &:hover:not(:disabled) {
+        &:hover:not(:disabled, [aria-expanded="true"]) {
             background: color-mix(in srgb, var(--appearance-color) 5%, transparent);
             color: var(--appearance-accent);
         }
     }
 
-    &:active:not(:disabled) {
+    &:active:not(:disabled, [aria-expanded="true"]) {
         background: color-mix(in srgb, var(--appearance-color) 8%, transparent);
         color: var(--appearance-accent);
     }
 
+    /* 展开状态由图标颜色表达，立即结束按下底色，避免关闭面板时才淡出。 */
     &[aria-expanded="true"] {
-        background: var(--appearance-tint);
+        background: transparent;
         color: var(--appearance-accent);
+        transition: none;
     }
 
     @media (forced-colors: active) {
         &[aria-expanded="true"] {
             border-color: Highlight;
-            background: Highlight;
-            color: HighlightText;
+            color: Highlight;
         }
     }
 

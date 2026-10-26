@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+@import "./disclosure.css";
+
 /* 高频反馈更快，浮层略慢；控件共用相同节奏，正文翻页由阅读器独立呈现。 */
 :root {
     --motion-duration-fast: 120ms;

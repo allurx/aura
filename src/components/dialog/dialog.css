@@ -59,6 +59,7 @@
             list-style: none;
             cursor: pointer;
             color: var(--appearance-muted-color);
+            transition: background-color var(--motion-duration-fast) var(--motion-ease);
 
             &::-webkit-details-marker {
                 display: none;
@@ -72,6 +73,7 @@
                 border: solid currentColor;
                 border-width: 0 1.5px 1.5px 0;
                 transform: rotate(-45deg);
+                transition: transform var(--motion-duration-fast) var(--motion-ease);
             }
 
             @media (hover: hover) and (pointer: fine) {
@@ -120,7 +122,7 @@
     font-family: var(--ui-font-family);
     --dialog-top: max(1rem, env(safe-area-inset-top));
     --dialog-right: max(1rem, env(safe-area-inset-right));
-    --dialog-bottom: max(1rem, env(safe-area-inset-bottom));
+    --dialog-bottom: max(1rem, var(--viewport-safe-bottom));
     --dialog-left: max(1rem, env(safe-area-inset-left));
     background: var(--setting-background-color);
     color: var(--setting-color);
@@ -319,7 +321,7 @@
         border-radius: 16px;
 
         .footer {
-            padding-bottom: max(12px, env(safe-area-inset-bottom));
+            padding-bottom: max(12px, var(--viewport-safe-bottom));
         }
     }
 

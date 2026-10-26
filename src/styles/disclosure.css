@@ -1,0 +1,35 @@
+/*
+ * Copyright 2026 allurx
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* 保留原生开关与焦点语义，只让内容高度和透明度随展开状态过渡。 */
+:where(details.setting-group, details.error-diagnostics, details.license-disclosure) {
+    &::details-content {
+        display: grid;
+        grid-template-rows: 0fr;
+        opacity: 0;
+    }
+
+    &[open]::details-content {
+        grid-template-rows: 1fr;
+        opacity: 1;
+    }
+
+    > :is(.disclosure-content, .license-document) {
+        display: flow-root;
+        min-height: 0;
+        overflow: clip;
+        /* 内容的键盘描边可延伸，裁切层不增加会阻止完全收起的内边距。 */
+        overflow-clip-margin: 4px;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+        &::details-content {
+            transition:
+                grid-template-rows var(--motion-duration-normal) var(--motion-ease),
+                opacity var(--motion-duration-normal) var(--motion-ease),
+                content-visibility var(--motion-duration-normal) allow-discrete;
+        }
+    }
+}

@@ -3,6 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* 安全距也供浮动面板的几何计算读取，注册长度类型使 CSS 运算结果保持为像素值。 */
+@property --viewport-safe-bottom {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+}
+
 :root {
     --font-size: 16px;
     --ui-font-family: system-ui, sans-serif;
@@ -10,8 +17,12 @@
     --viewport-height: 100dvh;
     --viewport-top: 0px;
     --viewport-bottom: 0px;
+    --viewport-safe-bottom: max(0px, calc(env(safe-area-inset-bottom, 0px) - var(--viewport-bottom)));
 
-    /* iOS 主屏幕的动态视口可能扣除状态栏，画布使用完整的大视口。 */
+    /* 控件自行呈现按压与选中反馈，避免浏览器在触摸区域额外叠加高亮。 */
+    -webkit-tap-highlight-color: transparent;
+
+    /* 主屏幕默认使用完整的大视口，搜索时再按键盘上方的可视区域约束浮层。 */
     @media (display-mode: standalone) {
         --viewport-height: 100lvh;
     }
@@ -45,11 +56,20 @@ html {
     }
 }
 
+/* 搜索键盘遮挡时由内部容器承担纵向滚动；常态和缩放后的页面保留原生平移。 */
+html[data-search-keyboard],
+html[data-search-keyboard] body {
+    touch-action: pan-x pinch-zoom;
+}
+
 #app {
     position: relative;
-    top: var(--viewport-top);
     width: 100%;
-    height: var(--viewport-height);
+    height: 100dvh;
+
+    @media (display-mode: standalone) {
+        height: 100%;
+    }
 }
 
 /* 选区跟随页面主题，阅读正文仍使用用户选定的颜色与排版。 */

@@ -19,4 +19,5 @@ export enum StyleProperty {
     WIDTH = "width",
     COLOR = "color",
     BACKGROUND_COLOR = "background-color",
+    READER_BACKDROP = "--reader-backdrop",
 }

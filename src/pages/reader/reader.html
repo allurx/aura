@@ -137,20 +137,22 @@
             </div>
         </header>
         <div class="toc-tools">
-            <label class="search-field toc-search">
-                <span class="icon icon-search" aria-hidden="true"></span>
-                <input
-                    id="toc-search"
-                    type="search"
-                    aria-label="查找章节"
-                    aria-controls="toc-chapters"
-                    aria-describedby="toc-summary"
-                    placeholder="查找章节"
-                    autocomplete="off"
-                    spellcheck="false"
-                    enterkeyhint="search"
-                />
-            </label>
+            <form class="search-field toc-search" role="search" aria-label="搜索章节">
+                <label>
+                    <span class="icon icon-search" aria-hidden="true"></span>
+                    <input
+                        id="toc-search"
+                        type="search"
+                        aria-label="查找章节"
+                        aria-controls="toc-chapters"
+                        aria-describedby="toc-summary"
+                        placeholder="查找章节"
+                        autocomplete="off"
+                        spellcheck="false"
+                        enterkeyhint="search"
+                    />
+                </label>
+            </form>
         </div>
         <nav id="toc-chapters" class="main panel-scroll" aria-label="章节列表">
             <p class="toc-empty" role="status" hidden>没有找到匹配的章节</p>

@@ -6,6 +6,7 @@
 import { bind } from "@/utils/event-util";
 import { assertExists } from "@/utils/assert-util";
 import Ui from "@/components/ui";
+import { bindSearchInput } from "@/components/search-field/search-input";
 
 /**
  * 分类标题、搜索和导入工具栏。
@@ -42,22 +43,42 @@ export default class HeaderUi extends Ui {
      * 绑定搜索与文件选择器，选择结束后允许再次选择同一文件。
      */
     public bindEvents(
+        results: HTMLElement,
         onSearch: (query: string) => void,
         onImport: (files: File[]) => Promise<void>,
         signal: AbortSignal
     ): void {
+        let composing = false;
+
         // 输入法完成后才筛选，避免候选阶段反复重建列表和播报数量。
         const updateSearch = (): void => {
             if (this.search.value !== this.renderedQuery) onSearch(this.search.value);
         };
-        bind(this.search, "compositionend", updateSearch, { signal });
+        bind(
+            this.search,
+            "compositionstart",
+            () => {
+                composing = true;
+            },
+            { signal }
+        );
+        bind(
+            this.search,
+            "compositionend",
+            () => {
+                composing = false;
+                updateSearch();
+            },
+            { signal }
+        );
+        bindSearchInput(this.search, results, () => composing, signal);
 
         // Escape 清空查询，但输入法取消候选时保留搜索框内容。
         bind(
             this.search,
             "keydown",
             (event) => {
-                if (event instanceof KeyboardEvent && event.key === "Escape" && !event.isComposing) {
+                if (event.key === "Escape" && !event.isComposing && !composing) {
                     this.search.value = "";
                     updateSearch();
                 }
@@ -69,7 +90,7 @@ export default class HeaderUi extends Ui {
             this.search,
             "input",
             (event) => {
-                if (!(event instanceof InputEvent) || !event.isComposing) updateSearch();
+                if (!composing && (!(event instanceof InputEvent) || !event.isComposing)) updateSearch();
             },
             { signal }
         );

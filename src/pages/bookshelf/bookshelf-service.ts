@@ -27,7 +27,6 @@ import {
     getAllRecords,
     getRecord,
     getRecordByIndex,
-    mapRecords,
     putRecord,
 } from "@/database/store";
 
@@ -41,12 +40,12 @@ export interface BookImportResult {
 }
 
 /**
- * 书架所需的只读摘要快照，不加载章节正文；领域变化后以新快照替换。
+ * 书架所需的只读摘要快照；领域变化后以新快照替换。
  */
 export interface BookSummary {
     readonly book: Readonly<Book>;
     readonly title: string;
-    readonly progress: Readonly<{ chapterNumber: number; chapterCount: number }> | null;
+    readonly readingRatio: number | undefined;
 }
 
 /**
@@ -159,31 +158,23 @@ export async function clearBookshelf(): Promise<void> {
 }
 
 /**
- * 一次读取书架摘要需要的记录，避免逐书查询和加载章节正文。
+ * 一次读取书架摘要需要的记录，展示进度不加载目录或章节正文。
  */
 export async function getBookSummaries(): Promise<BookSummary[]> {
-    return runTransaction(["book", "progress", "toc"], "readonly", async (transaction) => {
-        const [books, progress, chapterCounts] = await Promise.all([
+    return runTransaction(["book", "progress"], "readonly", async (transaction) => {
+        const [books, progress] = await Promise.all([
             getAllRecords(transaction, "book"),
             getAllRecords(transaction, "progress"),
-            // 目录可能包含数千条；逐本读取并立即投影，不同时反序列化整座书架的目录。
-            mapRecords(transaction, "toc", (toc) => [toc.fileId, toc.entries.length] as const),
         ]);
         const progressByBook = new Map(progress.map((item) => [item.bookId, item]));
-        const chaptersByFile = new Map(chapterCounts);
 
         return books
             .toSorted((a, b) => a.createdTime - b.createdTime)
-            .map((book) => {
-                const position = progressByBook.get(book.id);
-                const chapters = chaptersByFile.get(book.fileId);
-                return {
-                    book,
-                    title: getBookTitle(book.fileName),
-                    progress:
-                        position && chapters ? { chapterNumber: position.chapterNumber, chapterCount: chapters } : null,
-                };
-            });
+            .map((book) => ({
+                book,
+                title: getBookTitle(book.fileName),
+                readingRatio: progressByBook.get(book.id)?.readingRatio,
+            }));
     });
 }
 
@@ -340,6 +331,7 @@ async function addBooks(
             chapterNumber: 1,
             blockNumber: 1,
             contentOffset: 0,
+            readingRatio: 0,
         };
         await Promise.all([addRecord(transaction, "book", book), addRecord(transaction, "progress", progress)]);
         books.push(book);

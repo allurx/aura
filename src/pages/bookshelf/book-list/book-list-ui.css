@@ -172,16 +172,16 @@
         font-variant-numeric: tabular-nums;
         line-height: 1.5;
         color: var(--appearance-muted-color);
+
         white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
     .book-actions {
         position: fixed;
         inset: auto;
         flex-direction: column;
         margin: 0;
-        padding: 6px;
+        /* 内容留白由内部列表承担，让原生滚动条贴近浮层边缘。 */
+        padding: 6px 0;
         overflow: hidden;
         border: 1px solid var(--appearance-border);
         border-radius: 12px;
@@ -195,6 +195,7 @@
     }
     .book-action-list {
         min-height: 0;
+        padding-inline: 6px;
         overflow-y: auto;
         scrollbar-gutter: auto;
     }
@@ -205,13 +206,17 @@
     }
     .book-category-header {
         flex: none;
+        /* 与分类列表预留相同的原生滚动条槽，固定返回栏和选项保持同宽。 */
+        overflow-y: auto;
         padding-bottom: 4px;
+        margin-inline: 6px;
         margin-bottom: 4px;
         border-bottom: 1px solid var(--appearance-border);
     }
     .book-category-list {
         min-height: 0;
         max-height: 308px;
+        padding-inline: 6px;
         overflow-y: auto;
         overscroll-behavior: contain;
         scroll-padding-block: 4px;
@@ -590,7 +595,7 @@
     }
 
     /* 横屏和软键盘压缩插画与留白，导入动作仍留在可滚动内容区内。 */
-    @media (max-height: 560px) {
+    @container bookshelf-main (max-height: 560px) {
         .shelf-empty {
             padding-block: 12px;
         }
@@ -789,6 +794,20 @@ html:where([data-material]:not([data-material="standard"])) {
             background-size: var(--material-control-size);
             backdrop-filter: var(--material-static-filter);
             border-color: var(--material-border);
+            box-shadow: var(--material-shadow);
         }
+    }
+}
+
+html[data-material="leather"] #bookshelf #book-list .book-actions {
+    outline: var(--material-edge-outline);
+    outline-offset: -6px;
+}
+
+/* 移动列表自身承载表面，键盘聚焦时仍使用独立的焦点环。 */
+@media (max-width: 768px) {
+    html[data-material="leather"] #bookshelf #book-list:not(:focus-visible) {
+        outline: var(--material-edge-outline);
+        outline-offset: -6px;
     }
 }

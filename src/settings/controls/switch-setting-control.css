@@ -41,6 +41,9 @@
             border-radius: 99px;
             background: var(--appearance-muted-surface);
             cursor: inherit;
+            transition:
+                background-color var(--motion-duration-fast) var(--motion-ease),
+                border-color var(--motion-duration-fast) var(--motion-ease);
 
             &::before {
                 content: "";
@@ -51,7 +54,9 @@
                 height: 16px;
                 border-radius: 50%;
                 background: var(--appearance-muted-color);
-                transition: transform var(--motion-duration-fast) var(--motion-ease);
+                transition:
+                    transform var(--motion-duration-fast) var(--motion-ease),
+                    background-color var(--motion-duration-fast) var(--motion-ease);
             }
 
             &:checked {
@@ -65,6 +70,8 @@
             }
 
             @media (prefers-reduced-motion: reduce) {
+                transition: none;
+
                 &::before {
                     transition: none;
                 }

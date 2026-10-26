@@ -60,21 +60,23 @@
                 </div>
             </div>
             <div class="shelf-tools">
-                <label class="search-field book-search-field">
-                    <span class="icon icon-search" aria-hidden="true"></span>
-                    <input
-                        id="book-search"
-                        type="search"
-                        placeholder="搜索书名"
-                        aria-label="搜索当前分类中的书名"
-                        aria-controls="book-list"
-                        aria-describedby="book-count"
-                        autocomplete="off"
-                        autocapitalize="off"
-                        spellcheck="false"
-                        enterkeyhint="search"
-                    />
-                </label>
+                <form class="search-field book-search-field" role="search" aria-label="搜索书籍">
+                    <label>
+                        <span class="icon icon-search" aria-hidden="true"></span>
+                        <input
+                            id="book-search"
+                            type="search"
+                            placeholder="搜索书名"
+                            aria-label="搜索当前分类中的书名"
+                            aria-controls="book-list"
+                            aria-describedby="book-count"
+                            autocomplete="off"
+                            autocapitalize="off"
+                            spellcheck="false"
+                            enterkeyhint="search"
+                        />
+                    </label>
+                </form>
                 <button
                     id="toggle-setting-panel"
                     class="appearance-button"

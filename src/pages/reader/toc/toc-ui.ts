@@ -6,6 +6,7 @@
 import Ui from "@/components/ui";
 import enableLightDismiss from "@/components/dialog/light-dismiss";
 import enablePanelFrame, { type PanelFrameBinding } from "@/components/dialog/panel-frame";
+import { bindSearchInput } from "@/components/search-field/search-input";
 import { assertExists } from "@/utils/assert-util";
 import { delegate, bind } from "@/utils/event-util";
 import type TocEntry from "@/domain/toc/toc-entry";
@@ -296,6 +297,7 @@ export default class TocUi extends Ui {
             },
             { signal }
         );
+        bindSearchInput(this.searchInput, this.tocContentElement, () => composing, signal);
 
         // 模态与 Observer 随页面销毁，防止离开后继续读取旧节点几何信息。
         signal.addEventListener(

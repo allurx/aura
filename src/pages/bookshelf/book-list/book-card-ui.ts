@@ -5,6 +5,7 @@
 
 import Ui from "@/components/ui";
 import { CATEGORIES } from "@/domain/category/category";
+import { formatReadingProgress } from "@/domain/progress/progress";
 import type { BookSummary } from "../bookshelf-service";
 
 /**
@@ -63,7 +64,7 @@ export default class BookCardUi extends Ui {
         categories.className = "book-categories";
         categories.hidden = true;
         const categoryHeader = document.createElement("header");
-        categoryHeader.className = "book-category-header";
+        categoryHeader.className = "book-category-header panel-scroll";
         const back = this.createAction("book-actions-back", "移动分类", "icon-arrow-left");
         back.setAttribute("aria-label", "返回书籍操作");
         categoryHeader.append(back);
@@ -124,20 +125,18 @@ export default class BookCardUi extends Ui {
         }
         if (previous?.book.fileName !== summary.book.fileName) this.open.title = summary.book.fileName;
 
-        const progressChanged =
-            !previous ||
-            previous.progress?.chapterNumber !== summary.progress?.chapterNumber ||
-            previous.progress?.chapterCount !== summary.progress?.chapterCount;
+        const progressChanged = !previous || previous.readingRatio !== summary.readingRatio;
         if (titleChanged || progressChanged) {
-            const progressLabel = summary.progress
-                ? `第 ${String(summary.progress.chapterNumber)} / ${String(summary.progress.chapterCount)} 章`
-                : "暂无阅读位置";
-            this.open.setAttribute("aria-label", `阅读《${summary.title}》，${progressLabel}`);
+            const progress = summary.readingRatio === undefined ? "" : formatReadingProgress(summary.readingRatio);
+            const progressLabel = progress ? `阅读进度 ${progress}` : "";
+            this.open.setAttribute(
+                "aria-label",
+                `阅读《${summary.title}》${progressLabel ? `，${progressLabel}` : ""}`
+            );
             if (progressChanged) {
-                this.progress.textContent = summary.progress
-                    ? `${String(summary.progress.chapterNumber)}/${String(summary.progress.chapterCount)}`
-                    : "暂无进度";
-                this.progress.title = progressLabel;
+                this.progress.textContent = progress;
+                if (progressLabel) this.progress.title = progressLabel;
+                else this.progress.removeAttribute("title");
             }
         }
 

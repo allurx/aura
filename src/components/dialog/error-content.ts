@@ -97,7 +97,10 @@ export function createErrorContent(error: unknown): { title: string; content: HT
         const diagnostic = document.createElement("pre");
         diagnostic.tabIndex = 0;
         diagnostic.textContent = messages.join("\n\n");
-        details.append(summary, diagnostic);
+        const body = document.createElement("div");
+        body.className = "disclosure-content";
+        body.append(diagnostic);
+        details.append(summary, body);
         content.append(details);
     }
 

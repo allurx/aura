@@ -51,7 +51,13 @@ export default class SettingControlList {
                 this.controlBySetting.set(setting, control);
                 items.append(control.element);
             }
-            section.append(items);
+            if (group.collapsible) {
+                // 无内边距的外层承担收展裁切，控件网格保留自己的间距与原生交互。
+                const content = document.createElement("div");
+                content.className = "disclosure-content";
+                content.append(items);
+                section.append(content);
+            } else section.append(items);
             container.append(section);
         }
     }
