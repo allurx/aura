@@ -11,6 +11,9 @@
     --viewport-top: 0px;
     --viewport-bottom: 0px;
 
+    /* 控件自行呈现按压与选中反馈，避免浏览器在触摸区域额外叠加高亮。 */
+    -webkit-tap-highlight-color: transparent;
+
     /* iOS 主屏幕的动态视口可能扣除状态栏，画布使用完整的大视口。 */
     @media (display-mode: standalone) {
         --viewport-height: 100lvh;
