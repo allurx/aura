@@ -49,39 +49,6 @@ export async function getAllRecords<S extends StoreName>(transaction: IDBTransac
 }
 
 /**
- * 逐条读取并同步投影较大的记录，避免一次反序列化全部内容；只保留调用方需要的结果。
- * project 不等待异步工作，游标推进及最终提交仍由当前事务管理。
- */
-export function mapRecords<S extends StoreName, T>(
-    transaction: IDBTransaction,
-    store: S,
-    project: (record: StoreRecords[S]) => T
-): Promise<T[]> {
-    return new Promise<T[]>((resolve, reject) => {
-        const results: T[] = [];
-        const request = transaction.objectStore(store).openCursor();
-        request.onsuccess = () => {
-            const cursor = request.result;
-            if (!cursor) {
-                resolve(results);
-                return;
-            }
-
-            try {
-                const record: unknown = cursor.value;
-                results.push(project(record as StoreRecords[S]));
-                cursor.continue();
-            } catch (error) {
-                reject(error instanceof Error ? error : new Error("Failed to project stored record", { cause: error }));
-            }
-        };
-        request.onerror = () => {
-            reject(request.error ?? new Error("Failed to read records"));
-        };
-    });
-}
-
-/**
  * 新增记录，主键或唯一索引冲突时由事务回滚。
  */
 export async function addRecord<S extends StoreName>(transaction: IDBTransaction, store: S, record: StoreRecords[S]) {

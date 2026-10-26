@@ -5,6 +5,7 @@
 
 import Ui from "@/components/ui";
 import { getBookTitle } from "@/domain/file/book-format";
+import { formatReadingProgress } from "@/domain/progress/progress";
 import { assertExists } from "@/utils/assert-util";
 import { bind } from "@/utils/event-util";
 import bindReadingInput, { type ReadingNavigationHandlers } from "./reading-input";
@@ -362,18 +363,10 @@ export default class ReaderUi extends Ui {
     /**
      * 切章后同步章名与全书进度，显示节点可随桌面或移动布局移动。
      */
-    public renderChapterInfo(title: string, bookPosition: number, positionCount: number): void {
+    public renderChapterInfo(title: string, readingRatio: number): void {
         if (this.chapterTitle.textContent !== title) this.chapterTitle.textContent = title;
         this.chapterTitle.title = title;
-        this.renderProgress(bookPosition, positionCount);
-    }
-
-    /**
-     * 按全书稳定位置换算百分比，空书为零。
-     */
-    public renderProgress(bookPosition: number, positionCount: number): void {
-        const ratio = positionCount === 0 ? 0 : Math.min(Math.max(bookPosition / positionCount, 0), 1);
-        const value = `${(ratio * 100).toFixed(2)}%`;
+        const value = formatReadingProgress(readingRatio);
         if (this.progressRate.textContent !== value) this.progressRate.textContent = value;
     }
 }

@@ -11,7 +11,7 @@ import { toBookPosition } from "@/domain/chapter/chapter";
 import { numberOfPositions } from "@/domain/toc/toc";
 import { initReader, updateProgress, getChapter } from "./reader-service";
 import ContentUi from "./content/content-ui";
-import type { ReadingLocation, ReadingSnapshot } from "./content/content-ui";
+import type { ReadingSnapshot } from "./content/content-ui";
 import TocUi from "./toc/toc-ui";
 import type ReaderState from "./reader-state";
 import { createReaderSettings } from "@/settings/definitions/setting-catalog";
@@ -122,7 +122,7 @@ export default class ReaderController {
             this.contentUi.bindLocationChange(async (snapshot) => {
                 if (!this.isActive()) return;
                 this.renderLocation(snapshot);
-                await this.updateProgress(snapshot.location);
+                await this.updateProgress(snapshot);
             });
             this.bindEvent(signal);
             this.readerUi.enableReadingControls();
@@ -146,8 +146,12 @@ export default class ReaderController {
      * 独立快照直接进入数据库事务队列，后续阅读会话等待此前提交完成再读取位置。
      * 不另建页面级 Promise 队列，避免尚未创建的保存事务被新会话读取越过。
      */
-    private async updateProgress(location: ReadingLocation): Promise<void> {
-        const snapshot: Progress = { bookId: this.state.book.id, ...location };
+    private async updateProgress(reading: ReadingSnapshot): Promise<void> {
+        const snapshot: Progress = {
+            bookId: this.state.book.id,
+            ...reading.location,
+            readingRatio: this.readingRatio(reading),
+        };
         let saved: boolean;
         try {
             saved = await updateProgress(snapshot);
@@ -173,8 +177,8 @@ export default class ReaderController {
     private async saveReadingPosition(): Promise<void> {
         if (!this.initialized || this.returningToBookshelf) return;
         this.contentUi.cancelPendingScroll();
-        const location = this.contentUi.readProgress();
-        if (location) await this.updateProgress(location);
+        const snapshot = this.contentUi.readSnapshot();
+        if (snapshot) await this.updateProgress(snapshot);
         if (this.isActive()) this.renderLocation();
     }
 
@@ -203,13 +207,19 @@ export default class ReaderController {
         const { location, chapter } = snapshot;
         this.readerUi.renderReadingMode(snapshot.mode);
         this.readerUi.renderPageInfo(snapshot.pageNumber, snapshot.pageCount);
-        const count = numberOfPositions(this.state.toc);
-        this.readerUi.renderChapterInfo(
-            chapter.title,
-            snapshot.canNext ? toBookPosition(chapter, location.blockNumber, location.contentOffset) : count,
-            count
-        );
+        this.readerUi.renderChapterInfo(chapter.title, this.readingRatio(snapshot));
         this.tocUi.highlightCurrentChapter(location.chapterNumber);
+    }
+
+    /**
+     * 按同一可见快照计算展示比例；非空书的末屏已覆盖书尾，空书保持零。
+     */
+    private readingRatio(snapshot: ReadingSnapshot): number {
+        const count = numberOfPositions(this.state.toc);
+        if (count === 0) return 0;
+        if (!snapshot.canNext) return 1;
+        const { chapter, location } = snapshot;
+        return Math.min(1, Math.max(0, toBookPosition(chapter, location.blockNumber, location.contentOffset) / count));
     }
 
     /**
@@ -236,11 +246,11 @@ export default class ReaderController {
         }
         // 退出保存当前稳定源位置，不等待分页索引或正在准备的下一页。
         if (!this.isActive()) return;
-        const position = this.contentUi.readProgress();
+        const snapshot = this.contentUi.readSnapshot();
         this.returningToBookshelf = true;
         this.contentUi.cancelPendingScroll();
         try {
-            if (position) await this.updateProgress(position);
+            if (snapshot) await this.updateProgress(snapshot);
             if (!this.signal.aborted) this.onReturnToBookshelf();
         } catch (error) {
             this.returningToBookshelf = false;

@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
 import { after, before, test } from "node:test";
 import type { Page } from "playwright-core";
-import type Progress from "../src/domain/progress/progress.ts";
+import { type default as Progress, formatReadingProgress } from "../src/domain/progress/progress.ts";
 import { createEpubFixture } from "./fixtures/epub-fixtures.ts";
 import {
     importBooks,
@@ -24,6 +24,18 @@ import {
 
 before(startBrowserTests);
 after(stopBrowserTests);
+
+void test("reading percentage formatting stays compact without completing a nonfinal snapshot", () => {
+    for (const [ratio, expected] of [
+        [0, "0%"],
+        [0.1, "10%"],
+        [0.1234, "12.3%"],
+        [0.1236, "12.4%"],
+        [0.99999, "99.9%"],
+        [1, "100%"],
+    ] as const)
+        assert.equal(formatReadingProgress(ratio), expected);
+});
 
 /**
  * 读取实际显示的正文，不能只用保存记录或页码证明画面恢复。
@@ -80,8 +92,8 @@ async function readVisiblePage(
 /**
  * 仅验证源正文时共用同一可见字符采样，不重复维护段落可见性的另一套定义。
  */
-async function readVisibleText(page: Page): Promise<string> {
-    return (await readVisiblePage(page)).text;
+async function readVisibleText(page: Page, maxTextLength = Infinity): Promise<string> {
+    return (await readVisiblePage(page, maxTextLength)).text;
 }
 
 /**
@@ -117,6 +129,177 @@ async function readProgress(page: Page): Promise<Progress[]> {
 }
 
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: reading percentages follow the latest source position through completion and rewind`, async () => {
+        await withPage(delivery, async (page) => {
+            // 整本只有一章、一段，比例必须随段内源偏移变化，不能按章节数或块数估算。
+            const source = Array.from(
+                { length: 180 },
+                (_, index) => `段内位置${String(index)}，同一段落中的阅读位置应随翻页前进，也应在回退时降低。`
+            ).join("");
+            const name = "single-paragraph-progress.txt";
+            await importBooks(page, [{ name, mimeType: "text/plain", buffer: Buffer.from(source) }]);
+            assert.equal(await page.locator(".book-progress").textContent(), "0%");
+            assert.equal((await readProgress(page))[0]?.readingRatio, 0);
+            await openBook(page, name);
+            await setMode(page, "none");
+            await waitForChapterLayout(page);
+            const pageCount = Number(await page.locator("#page-position .total-pages").textContent());
+            assert(pageCount > 2);
+
+            await page.locator("#content").press("ArrowRight");
+            await settleReader(page);
+            const position = (await readProgress(page))[0];
+            assert(position);
+            assert.equal(position.chapterNumber, 1);
+            assert.equal(position.blockNumber, 1);
+            assert(position.contentOffset > 0);
+            assert.equal(position.readingRatio, position.contentOffset / source.length);
+            assert(position.readingRatio > 0 && position.readingRatio < 1);
+            const percentage = await page.locator("#progress-rate").textContent();
+            assert.match(percentage ?? "", /^\d+(?:\.\d)?%$/u);
+            const visibleText = await readVisibleText(page, 64);
+
+            // 退出与刷新只呈现同一次保存的比例；恢复正文时不靠书卡百分比重新定位。
+            await page.locator("#return-bookshelf").click();
+            await page.locator(".book-progress").waitFor();
+            assert.equal(await page.locator(".book-progress").textContent(), percentage);
+            assert.deepEqual(await readProgress(page), [position]);
+            await page.reload();
+            await page.locator(".book-progress").waitFor();
+            assert.equal(await page.locator(".book-progress").textContent(), percentage);
+            assert.deepEqual(await readProgress(page), [position]);
+            await openBook(page, name);
+            await waitForChapterLayout(page);
+            assert.equal(await readVisibleText(page, 64), visibleText);
+            assert.equal(await page.locator("#progress-rate").textContent(), percentage);
+
+            // 只有真实末屏显示完成；返回上一屏后保存当前比例，不能保留最高已读百分比。
+            for (let index = 2; index < pageCount; index++) {
+                await page.locator("#content").press("ArrowRight");
+                await settleReader(page);
+            }
+            assert.equal(await page.locator("#progress-rate").textContent(), "100%");
+            assert.equal((await readProgress(page))[0]?.readingRatio, 1);
+            await page.locator("#return-bookshelf").click();
+            await page.locator(".book-progress").waitFor();
+            assert.equal(await page.locator(".book-progress").textContent(), "100%");
+            await openBook(page, name);
+            await page.locator("#content").press("ArrowLeft");
+            await settleReader(page);
+            const rewound = (await readProgress(page))[0];
+            assert(rewound?.readingRatio !== undefined && rewound.readingRatio > 0 && rewound.readingRatio < 1);
+            const rewoundPercentage = await page.locator("#progress-rate").textContent();
+            assert.notEqual(rewoundPercentage, "100%");
+            await page.locator("#return-bookshelf").click();
+            await page.locator(".book-progress").waitFor();
+            assert.equal(await page.locator(".book-progress").textContent(), rewoundPercentage);
+            assert.deepEqual(await readProgress(page), [rewound]);
+        });
+    });
+
+    void test(`${delivery}: missing percentages stay hidden until normal reading saves an atomic snapshot`, async () => {
+        await withPage(
+            delivery,
+            async (page) => {
+                const name = "missing-percentage.txt";
+                await importBooks(page, [textBook(name, 3, 32)]);
+                await openBook(page, name);
+                await setMode(page, "none");
+                await page.locator("#content").press("ArrowRight");
+                await settleReader(page);
+                const sourceText = await readVisibleText(page, 64);
+                await page.locator("#return-bookshelf").click();
+                await page.locator(".book-progress").waitFor();
+                const savedPercentage = await page.locator(".book-progress").textContent();
+                assert.match(savedPercentage ?? "", /^\d+(?:\.\d)?%$/u);
+                const saved = (await readProgress(page))[0];
+                assert(saved);
+                const legacy = { ...saved };
+                delete legacy.readingRatio;
+
+                // 只从真实阅读生成的测试记录移除新增展示字段，保留原有源位置作为旧记录样本。
+                await page.evaluate(async (position) => {
+                    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+                        const request = indexedDB.open("aura");
+                        request.onsuccess = () => {
+                            resolve(request.result);
+                        };
+                        request.onerror = () => {
+                            reject(request.error ?? new Error("Unable to open the test database"));
+                        };
+                    });
+                    try {
+                        await new Promise<void>((resolve, reject) => {
+                            const transaction = database.transaction("progress", "readwrite");
+                            transaction.objectStore("progress").put(position);
+                            transaction.oncomplete = () => {
+                                resolve();
+                            };
+                            transaction.onerror = () => {
+                                reject(
+                                    transaction.error ?? new Error("Unable to prepare the existing progress record")
+                                );
+                            };
+                        });
+                    } finally {
+                        database.close();
+                    }
+                }, legacy);
+                await page.reload();
+                await page.locator(".book-progress").waitFor();
+                assert.equal(await page.locator(".book-progress").textContent(), "");
+                assert.equal(await page.locator(".book-progress").getAttribute("title"), null);
+                assert.equal(await page.locator(".book-open").getAttribute("aria-label"), "阅读《missing-percentage》");
+                assert.deepEqual(await readProgress(page), [legacy]);
+                await openBook(page, name);
+                assert.equal(await readVisibleText(page, 64), sourceText);
+                assert.equal(await page.locator("#progress-rate").textContent(), savedPercentage);
+                const reopened = (await readProgress(page))[0];
+                assert(reopened);
+                assert.deepEqual({ ...reopened, readingRatio: undefined }, { ...legacy, readingRatio: undefined });
+
+                // 无需先翻页：正常打开再退出就保存展示比例，仍保留原来的源位置。
+                await page.locator("#return-bookshelf").click();
+                await page.locator(".book-progress").waitFor();
+                assert.equal(await page.locator(".book-progress").textContent(), savedPercentage);
+                const filled = (await readProgress(page))[0];
+                assert(filled?.readingRatio !== undefined && filled.readingRatio > 0 && filled.readingRatio < 1);
+                assert.deepEqual({ ...filled, readingRatio: undefined }, { ...legacy, readingRatio: undefined });
+                await openBook(page, name);
+
+                // 让下一次完整快照写入失败，源位置与比例必须一同保留，不能只提交其中一个。
+                await page.evaluate(() => {
+                    // eslint-disable-next-line @typescript-eslint/unbound-method -- 保存后还原原方法，调用时使用实际 store。
+                    const original = IDBObjectStore.prototype.put;
+                    IDBObjectStore.prototype.put = function (value: unknown, key?: IDBValidKey) {
+                        if (this.name === "progress") {
+                            IDBObjectStore.prototype.put = original;
+                            throw new DOMException("Injected progress write failure", "QuotaExceededError");
+                        }
+                        return original.call(this, value, key);
+                    };
+                });
+                await page.locator("#content").press("ArrowRight");
+                const failure = page.getByRole("dialog", { name: "阅读位置尚未保存", exact: true });
+                await failure.waitFor();
+                assert.deepEqual(await readProgress(page), [filled]);
+                await failure.getByRole("button", { name: "知道了", exact: true }).click();
+                const recoveredPercentage = await page.locator("#progress-rate").textContent();
+                await page.locator("#return-bookshelf").click();
+                await page.locator(".book-progress").waitFor();
+                assert.equal(await page.locator(".book-progress").textContent(), recoveredPercentage);
+                const recovered = (await readProgress(page))[0];
+                assert(recovered?.readingRatio !== undefined && recovered.readingRatio > filled.readingRatio);
+                assert.notDeepEqual(recovered, filled);
+                await page.reload();
+                await page.locator(".book-progress").waitFor();
+                assert.equal(await page.locator(".book-progress").textContent(), recoveredPercentage);
+                assert.deepEqual(await readProgress(page), [recovered]);
+            },
+            ["阅读位置尚未保存"]
+        );
+    });
+
     void test(`${delivery}: delayed page preparation and release preserve paper geometry`, async () => {
         for (const mode of ["cover", "slide"] as const) {
             for (const releaseWhilePending of [false, true]) {
@@ -831,16 +1014,27 @@ for (const delivery of ["web", "portable"] as const) {
             assert(tail[0] && tail[0].blockNumber > 5900);
             const tailText = (await readVisiblePage(page, 64)).text;
             assert(tailText);
+            // 字号变化可能让同一源锚点不再覆盖书尾；定位保持不变，展示比例跟随当前快照。
+            const assertTailSnapshot = async (): Promise<void> => {
+                const current = await readProgress(page);
+                assert.deepEqual(
+                    current.map((position) => ({ ...position, readingRatio: undefined })),
+                    tail.map((position) => ({ ...position, readingRatio: undefined }))
+                );
+                const ratio = current[0]?.readingRatio;
+                assert(ratio !== undefined);
+                assert.equal(await page.locator("#progress-rate").textContent(), formatReadingProgress(ratio));
+            };
             await page.locator("#toggle-setting-panel").click();
             for (const fontSize of [22, 25, 18, 23]) {
                 await setReaderFontSize(page, fontSize);
                 await settleReader(page);
-                assert.deepEqual(await readProgress(page), tail);
+                await assertTailSnapshot();
                 assert((await readVisibleText(page)).includes(tailText));
             }
             await page.locator("#setting .close").click();
             await settleReader(page);
-            assert.deepEqual(await readProgress(page), tail);
+            await assertTailSnapshot();
             assert((await readVisibleText(page)).includes(tailText));
         });
     });

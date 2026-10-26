@@ -164,9 +164,6 @@
         padding-top: 8px;
     }
     .book-progress {
-        display: flex;
-        flex-wrap: wrap;
-        align-content: center;
         grid-row: 1;
         grid-column: 1;
         min-height: 18px;
@@ -176,9 +173,7 @@
         line-height: 1.5;
         color: var(--appearance-muted-color);
 
-        > span {
-            white-space: nowrap;
-        }
+        white-space: nowrap;
     }
     .book-actions {
         position: fixed;
