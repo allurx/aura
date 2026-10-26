@@ -124,7 +124,8 @@
     }
     .appearance-button {
         &[aria-expanded="true"] {
-            background-color: var(--shelf-control-feedback);
+            color: var(--appearance-accent);
+            transition: none;
         }
     }
     .appearance-button .icon,
@@ -142,7 +143,6 @@
         background: color-mix(in srgb, var(--appearance-panel) 85%, transparent);
         color: var(--appearance-muted-color);
         &[aria-expanded="true"] {
-            background: var(--appearance-selection);
             color: var(--appearance-accent);
         }
     }
@@ -152,7 +152,7 @@
             background-color: var(--shelf-control-feedback);
         }
     }
-    .appearance-button:where(:not(:disabled)):active,
+    .appearance-button:where(:not(:disabled, [aria-expanded="true"])):active,
     #import-books:where(:not(:disabled)):active {
         background-color: var(--shelf-control-feedback);
         transform: translateY(1px);
@@ -330,15 +330,11 @@ html:where([data-material]:not([data-material="standard"])) {
         background-size: var(--material-control-size);
         border-color: var(--material-border);
     }
+}
 
-    #bookshelf #header #open-navigation[aria-expanded="true"] {
-        background-color: var(--appearance-selection);
-        background-image: none;
-
-        @media (forced-colors: active) {
-            background-color: Highlight;
-            color: HighlightText;
-            border-color: Highlight;
-        }
+@media (forced-colors: active) {
+    #bookshelf #header :is(.appearance-button, #open-navigation)[aria-expanded="true"] {
+        color: Highlight;
+        border-color: Highlight;
     }
 }

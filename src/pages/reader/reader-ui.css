@@ -233,27 +233,28 @@ html[data-page="reader"] {
     }
 
     @media (hover: hover) and (pointer: fine) {
-        &:hover:not(:disabled) {
+        &:hover:not(:disabled, [aria-expanded="true"]) {
             background: color-mix(in srgb, var(--appearance-color) 5%, transparent);
             color: var(--appearance-accent);
         }
     }
 
-    &:active:not(:disabled) {
+    &:active:not(:disabled, [aria-expanded="true"]) {
         background: color-mix(in srgb, var(--appearance-color) 8%, transparent);
         color: var(--appearance-accent);
     }
 
+    /* 展开状态由图标颜色表达，立即结束按下底色，避免关闭面板时才淡出。 */
     &[aria-expanded="true"] {
-        background: var(--appearance-tint);
+        background: transparent;
         color: var(--appearance-accent);
+        transition: none;
     }
 
     @media (forced-colors: active) {
         &[aria-expanded="true"] {
             border-color: Highlight;
-            background: Highlight;
-            color: HighlightText;
+            color: Highlight;
         }
     }
 
