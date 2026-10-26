@@ -165,6 +165,59 @@ function illustratedBook(imageCount: number): Buffer {
 }
 
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: complete EPUB chapters reuse their rendered geometry for exact layout`, async () => {
+        await withPage(delivery, async (page) => {
+            const rows = Array.from(
+                { length: 80 },
+                (_, index) => `<tr><td>左列${String(index)}</td><td>右列${String(index)}</td></tr>`
+            ).join("");
+            await importBooks(page, [
+                {
+                    name: "complete-table.epub",
+                    mimeType: "application/epub+zip",
+                    buffer: createEpubFixture(
+                        `<table><tr><td colspan="2"><img src="pixel.png" alt="完整章节插图"/></td></tr>${rows}</table>`
+                    ),
+                },
+            ]);
+            const measurement = await page.evaluateHandle(() => {
+                const state = { probes: 0 };
+                const observer = new MutationObserver((records) => {
+                    for (const record of records) {
+                        for (const node of record.addedNodes) {
+                            if (node instanceof Element && node.matches(".reading-measure-viewport")) state.probes++;
+                        }
+                    }
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
+                return {
+                    state,
+                    stop: () => {
+                        observer.disconnect();
+                    },
+                };
+            });
+            try {
+                await openBook(page, "complete-table.epub");
+                for (const mode of ["cover", "scroll", "none"] as const) {
+                    if (mode !== "cover") await setMode(page, mode);
+                    await waitForChapterLayout(page);
+                    const viewport = page.locator("#content > .reading-viewport:not(.reading-measure-viewport)");
+                    assert.equal(await viewport.locator("tr").count(), 81);
+                    assert.equal(await viewport.getByAltText("完整章节插图").getAttribute("width"), "1");
+                    assert.equal(await page.locator(".current-page").textContent(), "1");
+                    assert.equal(await page.locator(".total-pages").textContent(), "1");
+                    assert.equal(await measurement.evaluate(({ state }) => state.probes), 0);
+                }
+            } finally {
+                await measurement.evaluate(({ stop }) => {
+                    stop();
+                });
+                await measurement.dispose();
+            }
+        });
+    });
+
     void test(`${delivery}: EPUB rendering retains empty table and list structures`, async () => {
         await withPage(delivery, async (page) => {
             const body =

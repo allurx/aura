@@ -69,6 +69,42 @@ export default class ChapterLayout {
     }
 
     /**
+     * 完整自然窗口已经排版时直接建立精确索引，不复制表格等不可拆分内容再次测量。
+     * 续排位移与临时页界仍交给分批排版，不能把局部投影解释为完整章节。
+     */
+    public useCompleteWindow(
+        viewport: HTMLElement,
+        range: ChapterLayoutWindow,
+        seed: ChapterLayoutSeed | undefined
+    ): boolean {
+        if (
+            range.start !== 0 ||
+            range.end !== this.view.pieceCount ||
+            range.carry !== 0 ||
+            range.inlineCarry !== 0 ||
+            range.pageBase !== 0 ||
+            range.top !== 0 ||
+            range.seams?.length
+        )
+            return false;
+
+        const section = this.view.element;
+        const gap = Number.parseFloat(getComputedStyle(section).columnGap) || 0;
+        const stride = Math.max(1, viewport.getBoundingClientRect().width + gap);
+        const pageCount = this.mode === "paged" ? Math.max(1, Math.round((section.scrollWidth + gap) / stride)) : 1;
+        const height = this.mode === "scroll" ? section.getBoundingClientRect().height : 0;
+
+        this.seed = this.mode === "paged" ? seed : undefined;
+        this.seedPageBase = this.seed ? 0 : undefined;
+        this.batches.push({ ...range, height, endPage: pageCount - 1, endCarry: 0 });
+        this.pageCount = pageCount;
+        this.totalHeight = height;
+        this.knownHeight = height;
+        this.complete = true;
+        return true;
+    }
+
+    /**
      * probeViewport 使用实际正文宽高及样式；取消后不提交未完成的批次。
      */
     public async build(
