@@ -95,11 +95,11 @@ export default class BookshelfUi extends Ui {
         message: string,
         handler: (setStatus: (message: string) => void) => Promise<void>
     ): Promise<void> {
-        // 只封锁侧栏与主内容，遮罩自身仍能播报处理状态。
-        const regions = Array.from(this.root.children).filter(
-            (element): element is HTMLElement =>
-                element instanceof HTMLElement && (element.id === "bookshelf-sidebar" || element.tagName === "MAIN")
-        );
+        // 忙碌状态只封锁稳定内容，抽屉自身的 inert 继续由响应式导航管理。
+        const regions = [
+            assertExists(this.root.querySelector<HTMLElement>("#nav")),
+            assertExists(this.root.querySelector<HTMLElement>(":scope > main")),
+        ];
         const previousStates = regions.map((element) => ({
             element,
             inert: element.inert,
