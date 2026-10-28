@@ -131,7 +131,7 @@
 
     &:is(:disabled, [aria-disabled="true"]) {
         --icon-feedback-color: transparent;
-        cursor: not-allowed;
+        cursor: default;
     }
 
     /* 展开入口及显式 inert 区域不保留高亮；模态背景的指针状态由原生 inert 处理。 */

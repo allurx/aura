@@ -13,7 +13,7 @@ import { parseChapters } from "@/domain/chapter/chapter-parser";
 import { detectTextEncoding } from "@/domain/file/text-encoding-detector";
 import { getBookFormat, getBookTitle, type BookFormat } from "@/domain/file/book-format";
 import { parseEpub, EpubImportError } from "@/domain/file/epub";
-import { getEpubSizeRejection } from "@/domain/file/epub-limits";
+import { getBookSizeRejection } from "@/domain/file/book-file-limits";
 import { computeHash } from "@/utils/file-util";
 import { assertExists } from "@/utils/assert-util";
 import { runTransaction } from "@/database/transaction";
@@ -91,11 +91,7 @@ export async function importBooks(
         const importableFiles: File[] = [];
         for (const file of files) {
             const format = getBookFormat(file.name);
-            const rejection = !format
-                ? "格式不支持（支持 TXT、EPUB）"
-                : format === "epub"
-                  ? getEpubSizeRejection(file.size)
-                  : undefined;
+            const rejection = !format ? "格式不支持（支持 TXT、EPUB）" : getBookSizeRejection(file.size, format);
             if (rejection) {
                 result.rejectedFiles.push({ file, reason: rejection });
                 unfinishedFiles.delete(file);
@@ -137,23 +133,61 @@ export async function deleteBook(bookId: string): Promise<void> {
     await runTransaction(["file", "book", "chapter", "toc", "progress"], "readwrite", async (transaction) => {
         const book = assertExists(await getRecord(transaction, "book", bookId), `Book[${bookId}] not found`);
         if ((await countRecordsByIndex(transaction, "book", "byFileId", book.fileId)) === 1) {
-            await Promise.all([
-                deleteRecord(transaction, "file", book.fileId),
-                deleteRecord(transaction, "toc", book.fileId),
-                deleteRecordsByIndex(transaction, "chapter", "byFileId", book.fileId),
-            ]);
+            await deleteFileContent(transaction, book.fileId);
         }
         await Promise.all([deleteRecord(transaction, "book", bookId), deleteRecord(transaction, "progress", bookId)]);
     });
 }
 
 /**
- * 原子清空全部书籍、共享正文和阅读进度。
+ * 确认期间书籍集合发生变化，调用方应刷新范围并让用户重新确认。
  */
-export async function clearBookshelf(): Promise<void> {
+export class BookSelectionChangedError extends Error {
+    /**
+     * 清空尚未写入任何记录，保留当前书库供重新确认。
+     */
+    public constructor() {
+        super("书籍已变化，请重新确认清空范围。");
+        this.name = "BookSelectionChangedError";
+    }
+}
+
+/**
+ * 原子清空指定分类或全部书籍及进度；其他分类仍引用的文件与正文继续保留。
+ * null 表示全部书籍；写事务内核对确认时的完整 ID 集合，不受界面搜索条件影响。
+ */
+export async function clearBookshelf(
+    categoryId: CategoryId | null,
+    expectedBookIds: readonly string[]
+): Promise<number> {
+    if (categoryId !== null) assertExists(getCategory(categoryId), "Category not found");
     const storeNames: StoreName[] = ["file", "book", "chapter", "toc", "progress"];
-    await runTransaction(storeNames, "readwrite", async (transaction) => {
-        await Promise.all(storeNames.map((store) => clearRecords(transaction, store)));
+    return runTransaction(storeNames, "readwrite", async (transaction) => {
+        const books = await getAllRecords(transaction, "book");
+        const selected = categoryId === null ? books : books.filter((book) => book.categoryId === categoryId);
+        const expectedIds = new Set(expectedBookIds);
+        if (selected.length !== expectedIds.size || selected.some((book) => !expectedIds.has(book.id))) {
+            throw new BookSelectionChangedError();
+        }
+        if (categoryId === null) {
+            await Promise.all(storeNames.map((store) => clearRecords(transaction, store)));
+            return books.length;
+        }
+
+        const retainedFiles = new Set(
+            books.filter((book) => book.categoryId !== categoryId).map((book) => book.fileId)
+        );
+        const removedFiles = new Set(selected.map((book) => book.fileId));
+        for (const book of selected) {
+            await Promise.all([
+                deleteRecord(transaction, "book", book.id),
+                deleteRecord(transaction, "progress", book.id),
+            ]);
+        }
+        for (const fileId of removedFiles) {
+            if (!retainedFiles.has(fileId)) await deleteFileContent(transaction, fileId);
+        }
+        return selected.length;
     });
 }
 
@@ -198,6 +232,44 @@ export async function getBookExport(bookId: string): Promise<{ name: string; sou
         const file = assertExists(await getRecord(transaction, "file", book.fileId), "Book source not found");
         return { name: book.fileName, source: file.source };
     });
+}
+
+/**
+ * 在同一只读事务中取得整个范围的原文件快照，保留每本书的文件名与独立导出条目。
+ * 相同内容只读取一次 Blob，不加载章节；事务结束后可独立打包，不受后续删除影响。
+ */
+export async function getBooksExport(categoryId: CategoryId | null): Promise<{ name: string; source: Blob }[]> {
+    if (categoryId !== null) assertExists(getCategory(categoryId), "Category not found");
+    return runTransaction(["book", "file"], "readonly", async (transaction) => {
+        const books = (await getAllRecords(transaction, "book"))
+            .filter((book) => categoryId === null || book.categoryId === categoryId)
+            .toSorted((a, b) => a.createdTime - b.createdTime);
+        const sources = new Map<string, Blob>();
+        const files: { name: string; source: Blob }[] = [];
+        for (const book of books) {
+            let source = sources.get(book.fileId);
+            if (!source) {
+                source = assertExists(
+                    await getRecord(transaction, "file", book.fileId),
+                    "Book source not found"
+                ).source;
+                sources.set(book.fileId, source);
+            }
+            files.push({ name: book.fileName, source });
+        }
+        return files;
+    });
+}
+
+/**
+ * 清理已经没有书籍引用的原文件、目录与章节；调用方在同一事务内保证引用关系。
+ */
+async function deleteFileContent(transaction: IDBTransaction, fileId: string): Promise<void> {
+    await Promise.all([
+        deleteRecord(transaction, "file", fileId),
+        deleteRecord(transaction, "toc", fileId),
+        deleteRecordsByIndex(transaction, "chapter", "byFileId", fileId),
+    ]);
 }
 
 /**
@@ -300,12 +372,10 @@ async function savePreparedFile(prepared: PreparedFile, transaction: IDBTransact
             ...(chapter.kind === "epub" ? { path: chapter.path, anchors: chapter.anchors } : {}),
         })),
     };
-    // 全部请求一次入队，事务统一确认提交；目录显式投影，不能带入正文。
-    await Promise.all([
-        addRecord(transaction, "file", prepared.file),
-        addRecord(transaction, "toc", toc),
-        ...prepared.chapters.map((chapter) => addRecord(transaction, "chapter", chapter)),
-    ]);
+    // 目录显式投影，不能带入正文；全部写入仍由同一事务统一确认提交。
+    await Promise.all([addRecord(transaction, "file", prepared.file), addRecord(transaction, "toc", toc)]);
+    // 只等待当前事务的数据库请求，逐章克隆与写入，避免在同一任务中复制整本内容。
+    for (const chapter of prepared.chapters) await addRecord(transaction, "chapter", chapter);
 }
 
 /**

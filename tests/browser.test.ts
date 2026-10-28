@@ -388,7 +388,7 @@ for (const delivery of ["web", "portable"] as const) {
                     };
                 });
                 await collection.click();
-                const failure = page.getByRole("dialog", { name: "分类未能更改", exact: true });
+                const failure = page.getByRole("dialog", { name: "移动分类失败", exact: true });
                 await failure.waitFor();
                 assert.equal(await fiction.getAttribute("aria-pressed"), "true");
                 assert.equal(await collection.getAttribute("aria-pressed"), "false");
@@ -421,7 +421,7 @@ for (const delivery of ["web", "portable"] as const) {
                 await openBook(page, "category-target.txt");
                 assert.match((await page.locator("#content").textContent()) ?? "", /这是章节1的第1段/);
             },
-            ["分类未能更改"]
+            ["移动分类失败"]
         );
     });
 

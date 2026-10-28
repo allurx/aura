@@ -234,7 +234,7 @@
             visibility: hidden;
         }
         &[aria-disabled="true"] {
-            cursor: wait;
+            cursor: default;
             opacity: 0.6;
         }
     }

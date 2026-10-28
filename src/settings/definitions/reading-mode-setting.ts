@@ -14,10 +14,10 @@ import Setting from "./setting";
 export default class ReadingModeSetting extends Setting {
     public readonly options: ReadonlyMap<ReadingMode, { readonly title: string; readonly description: string }> =
         new Map([
-            ["cover", { title: "覆盖", description: "逐页阅读，新页覆盖当前页。" }],
-            ["slide", { title: "平移", description: "逐页阅读，前后页面同时横向移动。" }],
-            ["scroll", { title: "上下", description: "连续上下滚动，可以停在任意位置。" }],
-            ["none", { title: "无动画", description: "逐页阅读，切换时立即显示目标页。" }],
+            ["cover", { title: "覆盖", description: "新页覆盖当前页。" }],
+            ["slide", { title: "平移", description: "前后页同时横向移动。" }],
+            ["scroll", { title: "上下", description: "上下滚动，可停在任意位置。" }],
+            ["none", { title: "无动画", description: "立即切换到目标页。" }],
         ]);
 
     public constructor(private readonly onChange: (mode: ReadingMode) => void) {

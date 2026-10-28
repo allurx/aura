@@ -162,7 +162,7 @@
     #import-books:disabled {
         opacity: 0.5;
         box-shadow: none;
-        cursor: not-allowed;
+        cursor: default;
     }
     @media (max-width: 1024px) {
         --shelf-title-font-size: 25px;

@@ -69,6 +69,7 @@ export default class NavUi extends Ui {
         handlers: {
             category: (categoryId: string) => void;
             clear: () => Promise<void>;
+            export: () => Promise<void>;
             reset: () => Promise<void>;
         },
         signal: AbortSignal
@@ -168,6 +169,7 @@ export default class NavUi extends Ui {
 
         // 先关闭临时入口，使确认框保存可见的返回目标；关闭后由原生 dialog 归还焦点。
         for (const [selector, handler] of [
+            ["#export-btn", handlers.export],
             ["#clear-btn", handlers.clear],
             ["#reset-data", handlers.reset],
         ] as const) {

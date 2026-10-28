@@ -22,7 +22,7 @@ export function createErrorContent(error: unknown): { title: string; content: HT
     switch (knownCause?.name) {
         case "QuotaExceededError":
             title = "存储空间不足";
-            reason = "浏览器可用于 Aura 的存储空间不足。";
+            reason = "Aura 的浏览器存储空间不足。";
             recovery = "请保留原文件，检查设备空间和浏览器存储限制。";
             break;
         case "SecurityError":
@@ -43,7 +43,7 @@ export function createErrorContent(error: unknown): { title: string; content: HT
     result.className = "error-result";
     const description = document.createElement("p");
     description.className = "error-description";
-    description.textContent = operation?.details ?? reason ?? "发生意外错误，操作结果尚未确认。";
+    description.textContent = operation?.details ?? reason ?? "操作异常，结果尚未确认。";
     result.append(description);
 
     if (operation && reason) {
@@ -63,7 +63,7 @@ export function createErrorContent(error: unknown): { title: string; content: HT
     if (recovery) steps.push(recovery);
     if (typeof operation?.recovery === "string") steps.push(operation.recovery);
     else if (operation?.recovery) steps.push(...operation.recovery);
-    if (steps.length === 0) steps.push("请先确认操作是否生效，再决定是否重试。问题持续时可向项目 GitHub 反馈。");
+    if (steps.length === 0) steps.push("先核对操作结果，再决定是否重试。问题持续可在 GitHub 反馈。");
 
     const guidance = document.createElement("div");
     guidance.className = "error-guidance";

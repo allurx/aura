@@ -272,7 +272,7 @@ html:where([data-material]:not([data-material="standard"])) #reader {
 
     &:disabled {
         opacity: 0.4;
-        cursor: not-allowed;
+        cursor: default;
     }
 
     @media (prefers-reduced-motion: reduce) {

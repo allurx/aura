@@ -362,7 +362,7 @@ for (const delivery of ["web", "portable"] as const) {
                     };
                 });
                 await page.reload();
-                const failure = page.getByRole("dialog", { name: "书架暂时无法读取", exact: true });
+                const failure = page.getByRole("dialog", { name: "读取书架失败", exact: true });
                 await failure.waitFor();
                 assert.doesNotMatch(await failure.innerText(), /重置|不兼容/u);
                 assert.equal(await page.locator(".shelf-reset").count(), 0);
@@ -371,7 +371,7 @@ for (const delivery of ["web", "portable"] as const) {
                 await waitForBookCount(page, 1);
                 assert.deepEqual(await readSnapshot(page), before);
             },
-            ["书架暂时无法读取"]
+            ["读取书架失败"]
         );
     });
 }

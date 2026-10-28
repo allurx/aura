@@ -136,7 +136,7 @@ for (const delivery of ["web", "portable"] as const) {
                     mimeType: "application/epub+zip",
                     buffer: sample.buffer,
                 });
-                const result = page.getByRole("dialog", { name: "所选文件未能导入", exact: true });
+                const result = page.getByRole("dialog", { name: "文件未导入", exact: true });
                 await result.waitFor();
                 assert.match(await result.innerText(), sample.reason);
                 await result.getByRole("button", { name: "知道了", exact: true }).click();

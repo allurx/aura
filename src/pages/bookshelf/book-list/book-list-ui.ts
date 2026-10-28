@@ -66,7 +66,7 @@ export default class BookListUi extends Ui {
         }
 
         const title = document.createElement(state === "loading" ? "p" : "h2");
-        title.textContent = state === "loading" ? "正在读取书架…" : (failure?.title ?? "书架未能加载");
+        title.textContent = state === "loading" ? "正在读取书架…" : (failure?.title ?? "读取书架失败");
 
         if (state === "error") {
             status.classList.add("shelf-load-error");
@@ -87,7 +87,7 @@ export default class BookListUi extends Ui {
             } else {
                 const hint = document.createElement("p");
                 hint.className = "shelf-empty-hint";
-                hint.textContent = "暂时无法读取书库，请按错误提示处理后重试。";
+                hint.textContent = "请按错误提示处理后重试。";
                 status.append(hint);
             }
             const action = document.createElement("button");
@@ -713,10 +713,10 @@ export default class BookListUi extends Ui {
         }
 
         const title = document.createElement("h2");
-        title.textContent = searching ? "没有找到这本书" : state === "category" ? "这个分类还没有书" : "从一本书开始";
+        title.textContent = searching ? "未找到书籍" : state === "category" ? "分类为空" : "书架为空";
         const hint = document.createElement("p");
         hint.className = "shelf-empty-hint";
-        hint.textContent = searching ? "试试其他书名，或清除搜索。" : "导入 TXT 或 EPUB，把喜欢的书留在手边。";
+        hint.textContent = searching ? "试试其他书名，或清除搜索。" : "导入 TXT 或 EPUB 开始阅读。";
         empty.append(illustration, title, hint);
         if (searching) return empty;
 

@@ -87,11 +87,24 @@
             height: auto;
             margin-inline: auto;
             object-fit: contain;
+
+            &.epub-inline-image {
+                display: inline;
+                margin-inline: 0;
+            }
         }
         a {
             color: var(--appearance-accent);
             text-decoration: underline;
             cursor: pointer;
+        }
+        q {
+            &[data-quote-continuation]::before {
+                content: no-open-quote;
+            }
+            &[data-quote-continues]::after {
+                content: no-close-quote;
+            }
         }
         pre {
             overflow-x: auto;
@@ -112,6 +125,10 @@
             min-inline-size: 5.5em;
             padding: 0.35em 0.6em;
             border: 1px solid var(--appearance-muted-color);
+
+            &.epub-compact-cell {
+                min-inline-size: 0;
+            }
         }
         figcaption {
             font-size: 0.85em;

@@ -213,12 +213,7 @@ export default class SettingController implements SettingUiListener {
             if (removeSnapshot) this.repository.reset();
             else if (JSON.stringify(this.appearance) !== JSON.stringify(next)) this.repository.save(next);
         } catch (error) {
-            throw new OperationError(
-                "外观设置未能保存",
-                "本次调整未保存，页面继续使用之前的外观。",
-                error,
-                "请处理失败原因后重新调整。"
-            );
+            throw new OperationError("外观保存失败", "本次调整未保存，外观保持不变。", error);
         }
         const previous = this.appearance;
         this.appearance = next;
@@ -233,10 +228,10 @@ export default class SettingController implements SettingUiListener {
             else this.refreshAfterOperation(settings);
         } catch (error) {
             throw new OperationError(
-                "外观已保存，界面尚未更新",
-                "本次设置已经保存，但当前页面未能完整应用。",
+                "外观更新失败",
+                "设置已保存，但页面未完整更新。",
                 error,
-                "请重新打开当前页面，无需再次保存相同设置。"
+                "请重新打开此页面，无需重复保存。"
             );
         }
     }
