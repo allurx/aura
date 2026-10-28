@@ -133,23 +133,61 @@ export async function deleteBook(bookId: string): Promise<void> {
     await runTransaction(["file", "book", "chapter", "toc", "progress"], "readwrite", async (transaction) => {
         const book = assertExists(await getRecord(transaction, "book", bookId), `Book[${bookId}] not found`);
         if ((await countRecordsByIndex(transaction, "book", "byFileId", book.fileId)) === 1) {
-            await Promise.all([
-                deleteRecord(transaction, "file", book.fileId),
-                deleteRecord(transaction, "toc", book.fileId),
-                deleteRecordsByIndex(transaction, "chapter", "byFileId", book.fileId),
-            ]);
+            await deleteFileContent(transaction, book.fileId);
         }
         await Promise.all([deleteRecord(transaction, "book", bookId), deleteRecord(transaction, "progress", bookId)]);
     });
 }
 
 /**
- * 原子清空全部书籍、共享正文和阅读进度。
+ * 确认期间书籍集合发生变化，调用方应刷新范围并让用户重新确认。
  */
-export async function clearBookshelf(): Promise<void> {
+export class BookSelectionChangedError extends Error {
+    /**
+     * 清空尚未写入任何记录，保留当前书库供重新确认。
+     */
+    public constructor() {
+        super("书籍已变化，请重新确认清空范围。");
+        this.name = "BookSelectionChangedError";
+    }
+}
+
+/**
+ * 原子清空指定分类或全部书籍及进度；其他分类仍引用的文件与正文继续保留。
+ * null 表示全部书籍；写事务内核对确认时的完整 ID 集合，不受界面搜索条件影响。
+ */
+export async function clearBookshelf(
+    categoryId: CategoryId | null,
+    expectedBookIds: readonly string[]
+): Promise<number> {
+    if (categoryId !== null) assertExists(getCategory(categoryId), "Category not found");
     const storeNames: StoreName[] = ["file", "book", "chapter", "toc", "progress"];
-    await runTransaction(storeNames, "readwrite", async (transaction) => {
-        await Promise.all(storeNames.map((store) => clearRecords(transaction, store)));
+    return runTransaction(storeNames, "readwrite", async (transaction) => {
+        const books = await getAllRecords(transaction, "book");
+        const selected = categoryId === null ? books : books.filter((book) => book.categoryId === categoryId);
+        const expectedIds = new Set(expectedBookIds);
+        if (selected.length !== expectedIds.size || selected.some((book) => !expectedIds.has(book.id))) {
+            throw new BookSelectionChangedError();
+        }
+        if (categoryId === null) {
+            await Promise.all(storeNames.map((store) => clearRecords(transaction, store)));
+            return books.length;
+        }
+
+        const retainedFiles = new Set(
+            books.filter((book) => book.categoryId !== categoryId).map((book) => book.fileId)
+        );
+        const removedFiles = new Set(selected.map((book) => book.fileId));
+        for (const book of selected) {
+            await Promise.all([
+                deleteRecord(transaction, "book", book.id),
+                deleteRecord(transaction, "progress", book.id),
+            ]);
+        }
+        for (const fileId of removedFiles) {
+            if (!retainedFiles.has(fileId)) await deleteFileContent(transaction, fileId);
+        }
+        return selected.length;
     });
 }
 
@@ -194,6 +232,17 @@ export async function getBookExport(bookId: string): Promise<{ name: string; sou
         const file = assertExists(await getRecord(transaction, "file", book.fileId), "Book source not found");
         return { name: book.fileName, source: file.source };
     });
+}
+
+/**
+ * 清理已经没有书籍引用的原文件、目录与章节；调用方在同一事务内保证引用关系。
+ */
+async function deleteFileContent(transaction: IDBTransaction, fileId: string): Promise<void> {
+    await Promise.all([
+        deleteRecord(transaction, "file", fileId),
+        deleteRecord(transaction, "toc", fileId),
+        deleteRecordsByIndex(transaction, "chapter", "byFileId", fileId),
+    ]);
 }
 
 /**

@@ -8,6 +8,16 @@ import Dialog from "@/components/dialog/dialog";
 import Overlay from "@/components/overlay/overlay";
 import { assertExists } from "@/utils/assert-util";
 import { createElementFromHtml } from "@/utils/dom-util";
+import type { CategoryId } from "@/domain/category/category";
+
+/**
+ * 批量操作的明确范围；null 表示所有分类，不受书名搜索影响。
+ */
+export interface BookOperationScope {
+    categoryId: CategoryId | null;
+    name: string;
+    count: number;
+}
 
 /**
  * 书架页面的操作状态与共用对话框。
@@ -85,6 +95,61 @@ export default class BookshelfUi extends Ui {
             `),
             { title: "重置数据", confirmBtnText: "清除全部数据", destructive: true }
         );
+    }
+
+    /**
+     * 在同一窗口选择批量范围并确认；每次打开默认当前分类，空范围不能执行。
+     */
+    public async confirmBookOperation(
+        scopes: readonly BookOperationScope[],
+        searchActive: boolean
+    ): Promise<BookOperationScope | null> {
+        const content = createElementFromHtml(`
+            <div class="book-operation">
+                <fieldset><legend>范围</legend></fieldset>
+                <p class="book-operation-search" hidden>包含未匹配搜索的书籍。</p>
+                <p class="book-operation-description" aria-live="polite"></p>
+            </div>
+        `);
+        const options = assertExists(content.querySelector("fieldset"));
+        const description = assertExists(content.querySelector(".book-operation-description"));
+        assertExists(content.querySelector<HTMLElement>(".book-operation-search")).hidden = !searchActive;
+
+        let selected = assertExists(scopes[0]);
+        const update = () => {
+            const target = selected.categoryId === null ? "全部书籍" : selected.name;
+            description.textContent =
+                selected.count === 0
+                    ? "此范围内没有书籍。"
+                    : `将删除 ${String(selected.count)} 本书及其阅读进度，此操作无法撤销。`;
+            this.dialog.setConfirmAction(`清空${target}`, selected.count === 0);
+        };
+
+        // 原生单选按钮提供整行点击与键盘操作；分类名称只作为文本挂载。
+        for (const scope of scopes) {
+            const label = document.createElement("label");
+            const input = document.createElement("input");
+            input.type = "radio";
+            input.name = "book-operation-scope";
+            input.value = scope.categoryId === null ? "all" : "category";
+            input.checked = scope === selected;
+            const name = document.createElement("span");
+            name.textContent = `${scope.categoryId === null ? "全部书籍" : `当前分类：${scope.name}`}（${String(scope.count)} 本）`;
+            input.addEventListener("change", () => {
+                if (!input.checked) return;
+                selected = scope;
+                update();
+            });
+            label.append(input, name);
+            options.append(label);
+        }
+
+        const confirmation = this.dialog.confirm(content, {
+            title: "清空书籍",
+            destructive: true,
+        });
+        update();
+        return (await confirmation) ? selected : null;
     }
 
     /**

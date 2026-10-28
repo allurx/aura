@@ -93,13 +93,21 @@ export default class Dialog {
     }
 
     /**
+     * 正文中的选项变化时，同步当前确认操作的名称与可用状态。
+     */
+    public setConfirmAction(text: string, disabled = false): void {
+        this.confirmBtnElement.textContent = text;
+        this.confirmBtnElement.disabled = disabled;
+    }
+
+    /**
      * 为当前请求配置内容，结果由原生 close 事件统一结算。
      */
     private async show(request: DialogRequest): Promise<boolean> {
         // 更新本次请求的标题、正文和确认文案。
         this.titleElement.textContent = request.title;
         this.setBodyContent(request.content);
-        this.confirmBtnElement.textContent = request.confirmBtnText;
+        this.setConfirmAction(request.confirmBtnText);
 
         // 同步本次请求的危险语义和取消入口，不让普通提示继承上次确认的样式。
         this.dialogElement.toggleAttribute("data-destructive", request.type === "confirm" && request.destructive);

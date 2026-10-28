@@ -6,9 +6,10 @@
 import HeaderUi from "./header/header-ui";
 import NavUi from "./nav/nav-ui";
 import BookListUi, { type BookListEmptyState, type BookListPosition } from "./book-list/book-list-ui";
-import BookshelfUi from "./bookshelf-ui";
+import BookshelfUi, { type BookOperationScope } from "./bookshelf-ui";
 import {
     BookImportError,
+    BookSelectionChangedError,
     clearBookshelf,
     deleteBook,
     getBookSummaries,
@@ -396,39 +397,62 @@ export default class BookshelfController {
     }
 
     /**
-     * 低频清空操作保留明确的范围和不可撤销提示。
+     * 重新读取摘要以显示范围总数，搜索结果不参与批量操作的范围计算。
+     */
+    private async chooseBookOperation(): Promise<{ scope: BookOperationScope; bookIds: readonly string[] } | null> {
+        const books = await this.readBooks();
+        if (!books || !this.isActive()) return null;
+        const category = getCategory(bookshelfSession.categoryId);
+        const scopes: BookOperationScope[] = [];
+        if (category) {
+            scopes.push({
+                categoryId: category.id,
+                name: category.name,
+                count: books.filter(({ book }) => book.categoryId === category.id).length,
+            });
+        }
+        scopes.push({ categoryId: null, name: "全部书籍", count: books.length });
+        const scope = await this.bookshelfUi.confirmBookOperation(scopes, bookshelfSession.search.trim().length > 0);
+        return scope
+            ? {
+                  scope,
+                  bookIds: books
+                      .filter(({ book }) => scope.categoryId === null || book.categoryId === scope.categoryId)
+                      .map(({ book }) => book.id),
+              }
+            : null;
+    }
+
+    /**
+     * 在选定范围内原子清空书籍与进度，保留其他分类和外观设置。
      */
     private async clearBookshelf(): Promise<void> {
         if (this.busy || !this.isActive()) return;
 
-        // 先确认所有分类的数据影响，并在确认返回后重新核对生命周期。
         this.busy = true;
         try {
-            if (
-                !(await this.bookshelfUi.dialog.confirm("确定清空所有分类中的书籍和阅读进度吗？此操作无法撤销。", {
-                    title: "清空书架",
-                    confirmBtnText: "清空",
-                    destructive: true,
-                })) ||
-                !this.isActive()
-            )
-                return;
+            const selection = await this.chooseBookOperation();
+            if (!selection || !this.isActive()) return;
+            const { scope, bookIds } = selection;
 
-            // 空列表渲染后将焦点交给列表，避免停留在已删除的书目上。
-            await this.bookshelfUi.runBusy("正在清空书架…", async () => {
+            await this.bookshelfUi.runBusy("正在清空书籍…", async () => {
+                let count: number;
                 try {
-                    await clearBookshelf();
+                    count = await clearBookshelf(scope.categoryId, bookIds);
                 } catch (error) {
                     throw new OperationError(
-                        "书架未能清空",
-                        "Aura 未能完成清空书籍和阅读进度的操作。",
+                        "清空书籍失败",
+                        error instanceof BookSelectionChangedError
+                            ? "书籍已变化，本次未删除。"
+                            : `未能清空${scope.name}中的书籍和阅读进度。`,
                         error,
-                        "请重新打开书架，确认当前内容后再尝试清空。"
+                        "请重新确认范围后再清空。"
                     );
                 }
-                await this.refreshAfterChange("已清空所有分类中的书籍和阅读进度，外观设置保持不变。");
+                const result = `已清空 ${String(count)} 本书及其阅读进度。`;
+                await this.refreshAfterChange(result);
+                this.bookshelfUi.showFeedback(result);
             });
-            if (this.isActive()) this.bookListUi.root.focus({ preventScroll: true });
         } finally {
             this.busy = false;
         }
@@ -461,7 +485,7 @@ export default class BookshelfController {
      * 所有页面事件受同一生命周期信号管理。
      */
     private bindEvent(signal: AbortSignal): void {
-        // 分类导航更新会话位置，清空入口复用互斥操作流程。
+        // 分类导航更新会话位置，批量管理入口共用互斥操作流程。
         this.navUi.bindEvents(
             {
                 category: (categoryId) => {
