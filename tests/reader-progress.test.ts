@@ -41,17 +41,32 @@ void test("reading percentage formatting stays compact without completing a nonf
  * 读取实际显示的正文，不能只用保存记录或页码证明画面恢复。
  * 前缀长度按 UTF-16 代码单元计算，只扫描断言需要的可见文字。
  */
-async function readVisiblePage(
-    page: Page,
-    maxTextLength = Infinity
-): Promise<{ text: string; firstTop: number | undefined }> {
-    return page
-        .locator("#content > .reading-viewport:not(.reading-measure-viewport) p")
-        .evaluateAll((paragraphs, limit) => {
-            const viewport = document
-                .querySelector("#content > .reading-viewport:not(.reading-measure-viewport)")
-                ?.getBoundingClientRect();
-            if (!viewport) throw new Error("Missing reading viewport");
+async function readVisiblePage(page: Page, maxTextLength = Infinity, captureLayout = false) {
+    return page.locator("#content > .reading-viewport:not(.reading-measure-viewport) p").evaluateAll(
+        (paragraphs, { limit, captureLayout }) => {
+            const element = document.querySelector("#content > .reading-viewport:not(.reading-measure-viewport)");
+            if (!element) throw new Error("Missing reading viewport");
+            const viewport = element.getBoundingClientRect();
+            // 诊断与文字在同一浏览器任务内采样，不额外等待布局或数据库。
+            const layout = captureLayout
+                ? {
+                      sampledAt: performance.now(),
+                      scrollLeft: element.scrollLeft,
+                      scrollTop: element.scrollTop,
+                      scrollWidth: element.scrollWidth,
+                      scrollHeight: element.scrollHeight,
+                      clientWidth: element.clientWidth,
+                      clientHeight: element.clientHeight,
+                      bounds: {
+                          top: viewport.top,
+                          left: viewport.left,
+                          width: viewport.width,
+                          height: viewport.height,
+                      },
+                      pagePosition: document.querySelector("#page-position")?.textContent,
+                      layoutBusy: document.querySelector("#page-position")?.getAttribute("aria-busy"),
+                  }
+                : undefined;
 
             // 纵向不足 1px 的可见首行仍可成为源锚点；横向保留相邻分页的接缝保护。
             const intersects = (rect: DOMRect): boolean =>
@@ -79,14 +94,21 @@ async function readVisiblePage(
                             firstTop ??= rect.top - viewport.top;
                             visible.push(character);
                             visibleLength += character.length;
-                            if (visibleLength >= limit) return { text: visible.join("").slice(0, limit), firstTop };
+                            if (visibleLength >= limit)
+                                return {
+                                    text: visible.join("").slice(0, limit),
+                                    firstTop,
+                                    ...(layout ? { layout } : {}),
+                                };
                         }
                         offset += character.length;
                     }
                 }
             }
-            return { text: visible.join(""), firstTop };
-        }, maxTextLength);
+            return { text: visible.join(""), firstTop, ...(layout ? { layout } : {}) };
+        },
+        { limit: maxTextLength, captureLayout }
+    );
 }
 
 /**
@@ -799,19 +821,34 @@ for (const delivery of ["web", "portable"] as const) {
                     const scrolledText = content.slice(scrolled[0].contentOffset, scrolled[0].contentOffset + 64);
                     assert.equal(scrolledText.length, 64);
                     assert.equal(content.indexOf(scrolledText), scrolled[0].contentOffset);
-                    assert((await readVisibleText(page)).includes(scrolledText));
+                    const assertScrolledVisible = async (phase: string): Promise<void> => {
+                        const visible = await readVisiblePage(page, Infinity, true);
+                        if (!visible.text.includes(scrolledText)) {
+                            assert.fail(
+                                JSON.stringify({
+                                    delivery,
+                                    mode,
+                                    phase,
+                                    progress: scrolled,
+                                    expectedText: scrolledText,
+                                    visible,
+                                })
+                            );
+                        }
+                    };
+                    await assertScrolledVisible("after-scroll");
 
                     await page.reload();
                     await page.locator("#toggle-setting-panel:not([disabled])").waitFor();
                     await settleReader(page);
                     assert.deepEqual(await readProgress(page), scrolled);
                     // 刷新按源位置重新对齐，不要求保留滚轮留下的临时像素偏移。
-                    assert((await readVisibleText(page)).includes(scrolledText));
+                    await assertScrolledVisible("after-reload");
 
                     // 先验收初始画面，再确认后台索引补全后同一源锚点仍然可见。
                     await waitForChapterLayout(page);
                     assert.deepEqual(await readProgress(page), scrolled);
-                    assert((await readVisibleText(page)).includes(scrolledText));
+                    await assertScrolledVisible("after-layout");
                 }
             });
         }
