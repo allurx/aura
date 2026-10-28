@@ -19,6 +19,7 @@ interface SourceNode {
     readonly children: readonly SourceNode[];
     readonly nodeCount: number;
     readonly direction?: "ltr" | "rtl";
+    readonly inlineImage?: boolean;
 }
 
 interface ChapterPiece {
@@ -63,6 +64,7 @@ const blockTags = new Set([
     "section",
     "ul",
 ]);
+const textFlowTags = new Set([...blockTags, "caption", "pre", "table", "td", "th"]);
 
 /**
  * 一章的源内容、可独立排版的片段和图片 URL；实际正文只挂载阅读窗口。
@@ -513,7 +515,7 @@ export default class ChapterView {
                 let offset = 0;
                 let nodes = 0;
                 let checkpointNodes = 0;
-                const visit = (current: EpubNode): SourceNode => {
+                const visit = (current: EpubNode, inlineImage = false): SourceNode => {
                     const start = offset;
                     const startNodes = nodes;
                     if (current.type !== "text" && current.id && !this.sourceAnchors.has(current.id)) {
@@ -532,7 +534,12 @@ export default class ChapterView {
                         offset++;
                     } else if (current.tag === "br" || current.tag === "hr") offset++;
                     else {
-                        for (const child of current.children) children.push(visit(child));
+                        // 图片是否与文字混排取决于完整源文本流，不能随当前分页裁掉相邻文字而变化。
+                        const inlineImages =
+                            current === node || textFlowTags.has(current.tag)
+                                ? hasInlineText(current.children)
+                                : inlineImage;
+                        for (const child of current.children) children.push(visit(child, inlineImages));
                         if (blockTags.has(current.tag) || nodes >= PIECE_NODE_LIMIT) {
                             boundaries.push(offset);
                         }
@@ -546,7 +553,11 @@ export default class ChapterView {
                     }
                     return {
                         id: startNodes,
-                        ...(current.type === "element" && current.dir === "auto" ? sourceDirection(current) : {}),
+                        ...(current.type === "element" &&
+                        (current.dir === "auto" || (current.tag === "bdi" && current.dir === undefined))
+                            ? sourceDirection(current)
+                            : {}),
+                        ...(current.type === "image" && inlineImage ? { inlineImage: true } : {}),
                         node: current,
                         start,
                         end: offset,
@@ -778,6 +789,7 @@ export default class ChapterView {
             image.alt = node.alt;
             image.width = size.width;
             image.height = size.height;
+            if (source.inlineImage) image.className = "epub-inline-image";
             element = image;
         } else {
             element = document.createElement(node.tag);
@@ -804,9 +816,17 @@ export default class ChapterView {
             }
             if (node.colSpan !== undefined) element.setAttribute("colspan", String(node.colSpan));
             if (node.rowSpan !== undefined) element.setAttribute("rowspan", String(node.rowSpan));
+            // 四个以内源位置可按自然宽度排版；长内容保留最小列宽，避免中文表格挤成逐字竖列。
+            if ((node.tag === "td" || node.tag === "th") && source.end - source.start <= 4)
+                element.classList.add("epub-compact-cell");
             if (node.start !== undefined) element.setAttribute("start", String(node.start));
             if (node.value !== undefined) element.setAttribute("value", String(node.value));
             if (node.reversed) element.setAttribute("reversed", "");
+            if (node.tag === "q") {
+                // 引号属于完整引语的首尾，续片只维持原生嵌套层级，不重复生成引号。
+                if (source.start < start) element.dataset["quoteContinuation"] = "";
+                if (source.end > end) element.dataset["quoteContinues"] = "";
+            }
             if (blockTags.has(node.tag) || node.tag === "pre") {
                 // 只处理新页首沿源边界展开的祖先链，不改变后续段落的正常间距。
                 if (source.start < start || (pageStart && source.start === start)) element.style.marginBlockStart = "0";
@@ -814,7 +834,8 @@ export default class ChapterView {
                 if (node.tag === "li" && source.start < start) element.style.listStyleType = "none";
             }
         }
-        if (node.dir) element.dir = source.direction ?? node.dir;
+        const direction = source.direction ?? node.dir;
+        if (direction !== undefined) element.dir = direction;
         if (node.lang !== undefined) element.lang = node.lang;
         element.dataset["sourceKey"] = String(source.id);
         element.dataset["sourceStart"] = String(Math.max(start, source.start));
@@ -941,6 +962,17 @@ function intersectsSourceRange(source: SourceNode, start: number, end: number, i
 }
 
 /**
+ * 只检查当前文本流中的可见文字；嵌套段落、表格和列表项各自决定图片的行内语义。
+ */
+function hasInlineText(nodes: readonly EpubNode[]): boolean {
+    return nodes.some((node) =>
+        node.type === "text"
+            ? node.text.trim().length > 0
+            : node.type === "element" && !textFlowTags.has(node.tag) && hasInlineText(node.children)
+    );
+}
+
+/**
  * 自动方向属于完整源节点，不能随着窗口裁掉开头而改变。
  * 两种强字符哨兵区分首强字符和无强字符，由原生 HTML 算法识别 Unicode。
  */
@@ -955,7 +987,7 @@ function sourceDirection(node: EpubNode): { readonly direction?: "ltr" | "rtl" }
             probe.textContent = child.text + "א";
             return probe.matches(":dir(ltr)") ? "ltr" : undefined;
         }
-        if (child.type === "image" || child.dir) return undefined;
+        if (child.type === "image" || child.dir || child.tag === "bdi") return undefined;
         for (const descendant of child.children) {
             const direction = visit(descendant);
             if (direction) return direction;

@@ -586,6 +586,7 @@ async function parseElement(element: Element, path: string, context: ParseContex
     if (unsupportedTags.has(tag)) throw new EpubImportError(`EPUB 包含尚不支持的正文内容：${tag}`);
     const id = element.getAttribute("id") ?? (tag === "a" ? element.getAttribute("name") : null);
     const semantics = readSemantics(element);
+    let imageFailure: EpubImportError | undefined;
     if (
         tag === "img" ||
         tag === "image" ||
@@ -597,19 +598,33 @@ async function parseElement(element: Element, path: string, context: ParseContex
             element.getAttribute("href") ??
             element.getAttributeNS("http://www.w3.org/1999/xlink", "href") ??
             "";
-        const target = resolveRequired(reference, path, "EPUB 图片依赖外部资源或缺少路径，无法离线导入。");
-        await loadImage(target.path, context);
-        return [
-            {
-                type: "image",
-                path: target.path,
-                alt: element.getAttribute("alt") ?? "",
-                ...(id ? { id } : {}),
-                ...semantics,
-            },
-        ];
+        try {
+            const target = resolveRequired(reference, path, "EPUB 图片依赖外部资源或缺少路径，无法离线导入。");
+            await loadImage(target.path, context);
+            return [
+                {
+                    type: "image",
+                    path: target.path,
+                    alt: element.getAttribute("alt") ?? "",
+                    ...(id ? { id } : {}),
+                    ...semantics,
+                },
+            ];
+        } catch (error) {
+            // 只有 object 声明了替代内容入口；普通 img 和底层读取失败仍按原错误路径处理。
+            if (tag !== "object" || !(error instanceof EpubImportError)) throw error;
+            imageFailure = error;
+        }
     }
-    if (tag === "object") throw new EpubImportError("EPUB 包含尚不支持的嵌入对象。");
+    if (tag === "object") {
+        // object 的子内容是作者提供的等价替代；不请求不支持的嵌入资源。
+        const children = await parseChildren(element, path, context, depth);
+        if (!hasReadableContent(children))
+            throw new EpubImportError("EPUB 的嵌入对象没有可阅读的替代内容。", { cause: imageFailure });
+        return id || semantics.dir !== undefined || semantics.lang !== undefined
+            ? [{ type: "element", tag: "span", ...(id ? { id } : {}), ...semantics, children }]
+            : children;
+    }
     if (tag === "svg" && element.namespaceURI === SVG_NAMESPACE) {
         // 常见封面 SVG 只是单张图片的定位包装，保留其实际图片而不保留固定页面尺寸。
         const images = descendants(element, "image");

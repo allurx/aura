@@ -11,6 +11,7 @@ import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import {
     importBooks,
     openBook,
+    setMode,
     settleReader,
     startBrowserTests,
     stopBrowserTests,
@@ -95,6 +96,37 @@ for (const delivery of ["web", "portable"] as const) {
             const path = await download.path();
             assert(path);
             assert.deepEqual(await readFile(path), book.buffer);
+        });
+    });
+
+    void test(`${delivery}: object alternatives preserve text, table semantics and internal navigation offline`, async () => {
+        await withPage(delivery, async (page) => {
+            const externalRequests: string[] = [];
+            page.on("request", (request) => {
+                if (request.url().startsWith("https://example.invalid/")) externalRequests.push(request.url());
+            });
+            const body =
+                '<p><a href="#equivalent">查看等价表格</a></p>' +
+                '<object data="https://example.invalid/book.xlsx" type="application/vnd.ms-excel" id="equivalent" lang="zh-CN">' +
+                "<table><caption>作者提供的等价内容</caption><tbody><tr><th>年份</th><td>2026</td></tr></tbody></table></object>" +
+                '<p>前文<object type="image/png" data="missing.png" id="inline-alternative">行内替代文字</object>后文</p>';
+            await importBooks(page, [
+                { name: "alternatives.epub", mimeType: "application/epub+zip", buffer: createEpubFixture(body) },
+            ]);
+            await openBook(page, "alternatives.epub");
+            const content = page.locator("#content > .reading-viewport:not(.reading-measure-viewport)");
+            assert.equal(await content.locator("table").count(), 1);
+            assert.equal(await content.locator("th").innerText(), "年份");
+            assert.equal(await content.locator("td").innerText(), "2026");
+            assert.match((await content.textContent()) ?? "", /前文行内替代文字后文/);
+            assert.equal(await content.locator("object, iframe").count(), 0);
+            await content.getByRole("link", { name: "查看等价表格" }).click();
+            await settleReader(page);
+            await setMode(page, "scroll");
+            await page.reload();
+            await content.locator("table").waitFor();
+            assert.match((await content.textContent()) ?? "", /作者提供的等价内容/);
+            assert.deepEqual(externalRequests, []);
         });
     });
 }

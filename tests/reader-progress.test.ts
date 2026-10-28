@@ -826,16 +826,36 @@ for (const delivery of ["web", "portable"] as const) {
                         .evaluate((target) => {
                             const bounds = target.closest(".reading-viewport")?.getBoundingClientRect();
                             if (!bounds) return false;
-                            const rect = target.getBoundingClientRect();
-                            const x = Math.max(bounds.left + 1, Math.min(bounds.right - 1, rect.left + rect.width / 2));
-                            const y = Math.max(bounds.top + 1, Math.min(bounds.bottom - 1, rect.top + rect.height / 2));
-                            return (
-                                rect.right > bounds.left &&
-                                rect.left < bounds.right &&
-                                rect.bottom > bounds.top &&
-                                rect.top < bounds.bottom &&
-                                target.contains(document.elementFromPoint(x, y))
-                            );
+                            const table = target.closest("table")?.getBoundingClientRect();
+                            if (!table) return false;
+                            // 换行 span 的联合矩形可能把中心放在行间空白；逐字核对真实文字片段与裁切。
+                            const range = document.createRange();
+                            const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+                            let checked = 0;
+                            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+                                let offset = 0;
+                                for (const character of node.textContent ?? "") {
+                                    range.setStart(node, offset);
+                                    offset += character.length;
+                                    range.setEnd(node, offset);
+                                    const visible = [...range.getClientRects()].some((rect) => {
+                                        const left = Math.max(bounds.left, table.left, rect.left);
+                                        const right = Math.min(bounds.right, table.right, rect.right);
+                                        const top = Math.max(bounds.top, table.top, rect.top);
+                                        const bottom = Math.min(bounds.bottom, table.bottom, rect.bottom);
+                                        return (
+                                            right > left + 1 &&
+                                            bottom > top + 1 &&
+                                            target.contains(
+                                                document.elementFromPoint((left + right) / 2, (top + bottom) / 2)
+                                            )
+                                        );
+                                    });
+                                    if (!visible) return false;
+                                    checked++;
+                                }
+                            }
+                            return checked > 0;
                         });
                     assert(visible, "The linked table cell must remain visible");
                 };

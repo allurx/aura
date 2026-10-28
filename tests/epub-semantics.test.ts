@@ -48,7 +48,98 @@ async function semanticsOf(page: Page, text: string) {
         }));
 }
 
+/**
+ * 在真实引语片段上读取原生引号和方向，缺失结构应直接使验证失败。
+ */
+function quoteSemantics(element: Element) {
+    const quote = element.closest("q");
+    const isolated = element.closest("bdi");
+    const paragraph = element.closest("p");
+    if (!quote || !isolated || !paragraph) throw new Error("Quoted EPUB content lost its semantic structure");
+    return {
+        before: getComputedStyle(quote, "::before").content,
+        after: getComputedStyle(quote, "::after").content,
+        isolated: getComputedStyle(isolated).direction,
+        surrounding: getComputedStyle(paragraph).direction,
+    };
+}
+
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: EPUB preserves inline semantics and complete-source direction across reading slices`, async () => {
+        await withPage(delivery, async (page) => {
+            const content =
+                '<p>图标前文<span><img src="pixel.png" alt="行内图标"/></span>图标后文</p>' +
+                '<div><a><img src="pixel.png" alt="独立插图"/></a></div>' +
+                "<p><q>引语正文</q><cite>作品名称</cite><dfn>术语定义</dfn><var>变量</var>" +
+                '<kbd>快捷键</kbd><samp>输出示例</samp><bdo dir="rtl">方向覆盖</bdo></p>' +
+                '<p><a href="chapter.xhtml#quoted-ending">跳到引语末尾</a></p>' +
+                '<p dir="auto"><bdi>אבג <q>' +
+                "A passage of quoted text. ".repeat(1200) +
+                '<span id="quoted-ending">Quoted ending</span><img src="pixel.png" alt="长引语行内图"/>' +
+                "</q></bdi> English surrounding paragraph.</p>";
+            await importBooks(page, [
+                { name: "inline-semantics.epub", mimeType: "application/epub+zip", buffer: semanticEpub(content) },
+            ]);
+            await openBook(page, "inline-semantics.epub");
+            const viewport = page.locator("#content > .reading-viewport:not(.reading-measure-viewport)");
+
+            // 原生语义可见且图片与完整段落中的文字同流，独立插图仍使用块布局。
+            for (const [text, tag] of [
+                ["引语正文", "q"],
+                ["作品名称", "cite"],
+                ["术语定义", "dfn"],
+                ["变量", "var"],
+                ["快捷键", "kbd"],
+                ["输出示例", "samp"],
+                ["方向覆盖", "bdo"],
+            ]) {
+                assert(text && tag);
+                assert.equal((await semanticsOf(page, text)).tag, tag);
+            }
+            assert.equal((await semanticsOf(page, "方向覆盖")).dir, "rtl");
+            assert.equal(
+                await viewport.getByAltText("行内图标").evaluate((image) => getComputedStyle(image).display),
+                "inline"
+            );
+            assert.equal(
+                await viewport.getByAltText("独立插图").evaluate((image) => getComputedStyle(image).display),
+                "block"
+            );
+            const opening = await viewport.locator("bdi q").first().evaluate(quoteSemantics);
+            assert.deepEqual(opening, {
+                before: "open-quote",
+                after: "no-close-quote",
+                isolated: "rtl",
+                surrounding: "ltr",
+            });
+
+            // 链接进入后续片段时，原始首强字符与相邻文字可能不再挂载，方向和行内语义仍不改变。
+            await viewport.getByRole("link", { name: "跳到引语末尾", exact: true }).click();
+            const ending = viewport.getByText("Quoted ending", { exact: true });
+            await ending.waitFor({ state: "visible" });
+            const continuation = await ending.evaluate(quoteSemantics);
+            assert.deepEqual(continuation, {
+                before: "no-open-quote",
+                after: "close-quote",
+                isolated: "rtl",
+                surrounding: "ltr",
+            });
+            assert.equal(
+                await viewport.getByAltText("长引语行内图").evaluate((image) => getComputedStyle(image).display),
+                "inline"
+            );
+            await page.reload();
+            await viewport.getByText("Quoted ending", { exact: true }).waitFor({ state: "visible" });
+            assert.equal(
+                await viewport
+                    .locator("bdi")
+                    .first()
+                    .evaluate((element) => getComputedStyle(element).direction),
+                "rtl"
+            );
+        });
+    });
+
     void test(`${delivery}: EPUB preserves inherited language and direction through safe content projection`, async () => {
         await withPage(delivery, async (page) => {
             const books = [
