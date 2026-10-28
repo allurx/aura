@@ -163,8 +163,8 @@ export default class BookshelfController {
     private createRefreshError(error: unknown): OperationError {
         if (error instanceof OperationError) return error;
         return new OperationError(
-            "书架暂时无法读取",
-            "书架未能读取，当前列表可能尚未更新。",
+            "读取书架失败",
+            "当前列表可能未更新。",
             error,
             this.books === null ? "请关闭提示后点击“重新读取”。" : "请刷新页面，重新读取书架。"
         );
@@ -245,10 +245,10 @@ export default class BookshelfController {
             if (skipped > 0) {
                 const { title, content } = createErrorContent(
                     new OperationError(
-                        result.books.length > 0 ? "部分文件未导入" : "所选文件未能导入",
+                        result.books.length > 0 ? "部分文件未导入" : "文件未导入",
                         this.describeImport(result),
                         undefined,
-                        "请按提示处理未导入的文件，已导入的书籍无需重试。"
+                        "请处理未导入的文件，已导入的无需重试。"
                     )
                 );
                 await this.bookshelfUi.dialog.alert(content, { title, confirmBtnText: "知道了", tone: "error" });
@@ -264,16 +264,11 @@ export default class BookshelfController {
                     await this.refreshBooks();
                 } catch (refreshError) {
                     cause = new AggregateError([cause, refreshError], "导入中断且书架刷新失败", { cause });
-                    details += "\n\n书架刷新失败，已保存的书籍仍会保留，请重新打开书架查看。";
+                    details += "\n\n书架刷新失败，已导入的书籍仍保留。请重新打开书架。";
                 }
                 if (!this.isActive()) return;
 
-                throw new OperationError(
-                    "导入已中断",
-                    details,
-                    cause,
-                    "已导入的书籍无需重复导入。请处理失败原因后，只重新选择未完成的文件。"
-                );
+                throw new OperationError("导入已中断", details, cause, "请处理失败原因后，仅重试未完成的文件。");
             }
 
             throw error;
@@ -304,8 +299,8 @@ export default class BookshelfController {
                 file = await getBookExport(bookId);
             } catch (error) {
                 throw new OperationError(
-                    "原文件未能导出",
-                    "Aura 没有读到这本书的原文件，下载尚未开始。",
+                    "导出原文件失败",
+                    "未读到原文件，下载未开始。",
                     error,
                     "请重新打开书架后再次导出。"
                 );
@@ -344,7 +339,7 @@ export default class BookshelfController {
                     await deleteBook(bookId);
                 } catch (error) {
                     throw new OperationError(
-                        "书籍未能删除",
+                        "删除书籍失败",
                         `未能删除《${summary.title}》。`,
                         error,
                         "请重新打开书架，确认书籍当前状态后再删除。"
@@ -375,7 +370,7 @@ export default class BookshelfController {
                 await moveBook(bookId, categoryId);
             } catch (error) {
                 throw new OperationError(
-                    "分类未能更改",
+                    "移动分类失败",
                     `未能将《${summary.title}》移至“${category.name}”。`,
                     error,
                     "请重新打开书架，确认当前分类后再选择。"
@@ -450,9 +445,9 @@ export default class BookshelfController {
             const confirmed = await this.bookshelfUi.confirmDataReset();
             if (!confirmed || !this.isActive()) return;
 
-            await this.bookshelfUi.runBusy("正在重置数据，完成后将自动刷新…", async (setStatus) => {
+            await this.bookshelfUi.runBusy("正在重置，完成后自动刷新…", async (setStatus) => {
                 await resetData(() => {
-                    setStatus("请关闭其他 Aura 标签页或窗口，数据重置将在解除占用后自动继续…");
+                    setStatus("请关闭其他 Aura 标签页或窗口，重置将自动继续…");
                 });
 
                 window.location.reload();

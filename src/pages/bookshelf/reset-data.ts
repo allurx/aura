@@ -16,7 +16,7 @@ export async function resetData(onBlocked: () => void): Promise<void> {
     } catch (error) {
         throw new OperationError(
             "数据重置未完成",
-            "Aura 未能删除本地书籍数据库，后续清理尚未执行。",
+            "原数据未删除。",
             error,
             "请关闭其他 Aura 标签页或窗口，再尝试重置。"
         );
@@ -27,7 +27,7 @@ export async function resetData(onBlocked: () => void): Promise<void> {
         sessionStorage.clear();
     } catch (error) {
         throw new OperationError(
-            "数据重置只完成了一部分",
+            "数据仅部分清除",
             "书籍和阅读进度已删除，外观或会话数据尚未全部清除。",
             error,
             "请确认浏览器允许访问本地存储，再执行一次重置。"

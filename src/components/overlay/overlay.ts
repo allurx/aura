@@ -18,7 +18,7 @@ export default class Overlay {
             createElementFromHtml(`
             <div class="overlay" role="status" aria-live="polite" aria-atomic="true" hidden>
                 <div class="spinner" aria-hidden="true"></div>
-                <span class="overlay-message">正在处理，请稍候…</span>
+                <span class="overlay-message">正在处理…</span>
             </div>
         `)
         );

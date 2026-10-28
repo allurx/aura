@@ -161,7 +161,7 @@ for (const delivery of ["web", "portable"] as const) {
                 });
                 const size = page.locator("#setting-control---book-cover-width");
                 await size.press("ArrowRight");
-                const error = page.getByRole("dialog", { name: "外观设置未能保存", exact: true });
+                const error = page.getByRole("dialog", { name: "外观保存失败", exact: true });
                 await error.waitFor();
                 assert.match(await error.innerText(), /存储空间不足/);
                 // CSS 默认值在下一次自然布局时解析；等待控件完成恢复后再核对存储仍未变化。
@@ -184,7 +184,7 @@ for (const delivery of ["web", "portable"] as const) {
                 );
                 assert.equal(await page.evaluate(() => document.documentElement.dataset["theme"]), "starry");
             },
-            ["外观设置未能保存"]
+            ["外观保存失败"]
         );
     });
 

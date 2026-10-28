@@ -280,7 +280,7 @@ for (const delivery of ["web", "portable"] as const) {
                     };
                 });
                 await page.locator("#content").press("ArrowRight");
-                const failure = page.getByRole("dialog", { name: "阅读位置尚未保存", exact: true });
+                const failure = page.getByRole("dialog", { name: "阅读位置保存失败", exact: true });
                 await failure.waitFor();
                 assert.deepEqual(await readProgress(page), [filled]);
                 await failure.getByRole("button", { name: "知道了", exact: true }).click();
@@ -296,7 +296,7 @@ for (const delivery of ["web", "portable"] as const) {
                 assert.equal(await page.locator(".book-progress").textContent(), recoveredPercentage);
                 assert.deepEqual(await readProgress(page), [recovered]);
             },
-            ["阅读位置尚未保存"]
+            ["阅读位置保存失败"]
         );
     });
 

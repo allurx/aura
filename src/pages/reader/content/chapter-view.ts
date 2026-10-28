@@ -501,7 +501,7 @@ export default class ChapterView {
             const rejection = getEpubStructureRejection(this.chapter.blocks);
             if (rejection)
                 throw new OperationError(
-                    "这本书的内容超出支持范围",
+                    "书籍内容超出支持范围",
                     "连续空结构过多，无法安全排版。原文件仍保留。",
                     new Error(rejection),
                     "请返回书架导出原文件，尝试用其他阅读器打开。"

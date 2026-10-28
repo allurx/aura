@@ -99,10 +99,10 @@ export default class ReaderController {
             if (!Number.isSafeInteger(state.progress.contentOffset) || state.progress.contentOffset < 0) {
                 this.onReturnToBookshelf("unavailable");
                 throw new OperationError(
-                    "这本书的阅读数据与当前版本不兼容",
-                    "当前版本无法识别这本书保存的阅读位置，原有数据尚未改动。",
+                    "阅读数据不兼容",
+                    "无法识别已保存的阅读位置，原数据未改动。",
                     new Error("Unsupported stored reading position"),
-                    ["返回书架，导出这本书的原文件。", "确认文件已保存后，删除这本书并重新导入。原阅读进度不会保留。"]
+                    ["返回书架，导出原文件。", "确认文件已保存后，删除这本书并重新导入。原阅读进度不会保留。"]
                 );
             }
             this.state = state;
@@ -134,10 +134,10 @@ export default class ReaderController {
             if (!signal.aborted) this.readerUi.showReadingTools();
             if (error instanceof OperationError) throw error;
             throw new OperationError(
-                "这本书暂时无法打开",
-                "Aura 未能读取或显示这本书的正文。",
+                "打开书籍失败",
+                "无法读取或显示正文。",
                 error,
-                "请返回书架后重新打开。若仍无法打开，请保留原文件，并展开详细信息查看原因。"
+                "请返回书架重试。若仍失败，请保留原文件并查看详细原因。"
             );
         }
     }
@@ -157,10 +157,10 @@ export default class ReaderController {
             saved = await updateProgress(snapshot);
         } catch (error) {
             throw new OperationError(
-                "阅读位置尚未保存",
-                "这次位置未能保存，重新打开时可能回到之前的位置。",
+                "阅读位置保存失败",
+                "重新打开时可能回到上次保存的位置。",
                 error,
-                "请先记下当前章节和位置，处理失败原因后再尝试返回书架。"
+                "请先记下当前章节和位置，再尝试返回书架保存进度。"
             );
         }
         if (saved) this.state.progress = snapshot;
@@ -307,10 +307,10 @@ export default class ReaderController {
             } catch (error) {
                 if (signal.aborted) return;
                 throw new OperationError(
-                    "未能切换全屏",
-                    "浏览器没有完成这次全屏请求。",
+                    "切换全屏失败",
+                    "浏览器未完成全屏请求。",
                     error,
-                    "可以继续普通阅读，也可以关闭提示后再次尝试全屏。"
+                    "可继续阅读，或关闭提示后重试全屏。"
                 );
             }
         }, signal);
@@ -322,10 +322,10 @@ export default class ReaderController {
             );
             if (!target)
                 throw new OperationError(
-                    "书内链接的目标不存在",
-                    "这条链接指向的内容在书中不存在，阅读位置没有改变。",
+                    "书内链接目标不存在",
+                    "目标内容不存在，阅读位置未变。",
                     new Error(`Missing EPUB link target: ${path}#${fragment}`),
-                    "关闭提示后可继续阅读，或从目录查找相关内容。"
+                    "可继续阅读，或从目录查找内容。"
                 );
             if (await this.contentUi.showChapter(target.chapterNumber, { fragment })) this.readerUi.hideReadingTools();
         }, signal);

@@ -23,7 +23,7 @@ export default class FontSettingControl extends StyleSettingControl {
     private value: string | undefined;
     private reading = false;
     private queried = false;
-    private message = this.supported ? "" : "当前浏览器暂不支持选择本机字体。";
+    private message = this.supported ? "" : "浏览器不支持选择本机字体。";
     private showMessage = !this.supported;
 
     public constructor(
@@ -86,9 +86,7 @@ export default class FontSettingControl extends StyleSettingControl {
 
         const unavailable = !this.showMessage && this.queried && selected && !this.families.includes(selected);
         const showMessage = Boolean(unavailable) || this.showMessage;
-        this.statusElement.textContent = unavailable
-            ? "列表中未找到已保存的字体，不可用时使用平台默认。"
-            : this.message;
+        this.statusElement.textContent = unavailable ? "未列出已保存的字体，不可用时使用平台默认。" : this.message;
         this.statusElement.toggleAttribute("data-quiet", !showMessage);
         if (showMessage) this.selectElement.setAttribute("aria-describedby", this.statusElement.id);
         else this.selectElement.removeAttribute("aria-describedby");
@@ -103,7 +101,7 @@ export default class FontSettingControl extends StyleSettingControl {
         this.reading = true;
         this.readOption.disabled = true;
         this.readOption.textContent = "正在读取字体…";
-        this.message = "正在读取字体，请完成浏览器的授权提示。";
+        this.message = "正在读取字体，请在浏览器中授权。";
         this.showMessage = true;
         this.render(this.value);
 
@@ -114,17 +112,17 @@ export default class FontSettingControl extends StyleSettingControl {
             if (this.signal.aborted) return;
             switch (error instanceof DOMException ? error.name : "") {
                 case "NotAllowedError":
-                    this.message = "未获准读取本机字体，当前字体保持不变。";
+                    this.message = "未获准读取本机字体，请授权后重试。";
                     break;
                 case "SecurityError":
                 case "NotSupportedError":
-                    this.message = "当前页面无法读取本机字体，当前字体保持不变。";
+                    this.message = "此页面无法读取本机字体。";
                     break;
                 case "AbortError":
-                    this.message = "已取消读取，当前字体保持不变。";
+                    this.message = "已取消读取。";
                     break;
                 default:
-                    this.message = "读取本机字体失败，请重试；当前字体保持不变。";
+                    this.message = "读取本机字体失败，请重试。";
                     this.render(this.value);
                     throw error;
             }

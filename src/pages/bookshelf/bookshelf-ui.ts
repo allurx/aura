@@ -75,11 +75,11 @@ export default class BookshelfUi extends Ui {
             createElementFromHtml(`
                 <div class="reset-warning">
                     <p>
-                        将清除 Aura 中的全部书籍、分类归属、阅读进度和外观设置。<strong class="reset-warning-irreversible">此操作无法撤销。</strong>
+                        将清除全部书籍、分类归属、阅读进度和外观设置。<strong class="reset-warning-irreversible">此操作无法撤销。</strong>
                     </p>
                     <ol class="recovery-steps">
-                        <li>先另存原始书籍文件，未备份请取消。</li>
-                        <li>重新导入也不会恢复分类归属、阅读进度和外观设置。</li>
+                        <li>请先另存原文件，未备份请取消。</li>
+                        <li>重新导入不会恢复分类归属、阅读进度和外观设置。</li>
                     </ol>
                 </div>
             `),
