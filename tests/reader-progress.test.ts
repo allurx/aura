@@ -267,34 +267,62 @@ for (const delivery of ["web", "portable"] as const) {
                 assert.deepEqual({ ...filled, readingRatio: undefined }, { ...legacy, readingRatio: undefined });
                 await openBook(page, name);
 
-                // 让下一次完整快照写入失败，源位置与比例必须一同保留，不能只提交其中一个。
-                await page.evaluate(() => {
+                // 只拦截本书前移后的快照；同位置的后台保存不能消耗翻页故障。
+                const failedWrite = await page.evaluateHandle((previous) => {
+                    const observed: { failed: Progress | undefined } = { failed: undefined };
                     // eslint-disable-next-line @typescript-eslint/unbound-method -- 保存后还原原方法，调用时使用实际 store。
                     const original = IDBObjectStore.prototype.put;
-                    IDBObjectStore.prototype.put = function (value: unknown, key?: IDBValidKey) {
-                        if (this.name === "progress") {
+                    IDBObjectStore.prototype.put = function (value: Progress, key?: IDBValidKey) {
+                        if (
+                            this.name === "progress" &&
+                            value.bookId === previous.bookId &&
+                            (value.chapterNumber !== previous.chapterNumber ||
+                                value.blockNumber !== previous.blockNumber ||
+                                value.contentOffset !== previous.contentOffset)
+                        ) {
                             IDBObjectStore.prototype.put = original;
+                            observed.failed = structuredClone(value);
                             throw new DOMException("Injected progress write failure", "QuotaExceededError");
                         }
                         return original.call(this, value, key);
                     };
-                });
-                await page.locator("#content").press("ArrowRight");
-                const failure = page.getByRole("dialog", { name: "阅读位置保存失败", exact: true });
-                await failure.waitFor();
-                assert.deepEqual(await readProgress(page), [filled]);
-                await failure.getByRole("button", { name: "知道了", exact: true }).click();
-                const recoveredPercentage = await page.locator("#progress-rate").textContent();
-                await page.locator("#return-bookshelf").click();
-                await page.locator(".book-progress").waitFor();
-                assert.equal(await page.locator(".book-progress").textContent(), recoveredPercentage);
-                const recovered = (await readProgress(page))[0];
-                assert(recovered?.readingRatio !== undefined && recovered.readingRatio > filled.readingRatio);
-                assert.notDeepEqual(recovered, filled);
-                await page.reload();
-                await page.locator(".book-progress").waitFor();
-                assert.equal(await page.locator(".book-progress").textContent(), recoveredPercentage);
-                assert.deepEqual(await readProgress(page), [recovered]);
+                    return observed;
+                }, filled);
+                try {
+                    await page.locator("#content").press("ArrowRight");
+                    const failure = page.getByRole("dialog", { name: "阅读位置保存失败", exact: true });
+                    await failure.waitFor();
+                    const attempted = await failedWrite.evaluate((observed) => observed.failed);
+                    assert(attempted?.readingRatio !== undefined && attempted.readingRatio > filled.readingRatio);
+                    assert.equal(attempted.bookId, filled.bookId);
+                    const attemptedText = await readVisibleText(page, 64);
+                    assert.equal(attemptedText.length, 64);
+                    assert.notEqual(attemptedText, sourceText);
+                    assert.equal(
+                        await page.locator("#progress-rate").textContent(),
+                        formatReadingProgress(attempted.readingRatio)
+                    );
+                    assert.deepEqual(await readProgress(page), [filled]);
+
+                    // 重试必须保存刚才失败的完整快照，并能恢复同一段实际可见正文。
+                    await failure.getByRole("button", { name: "知道了", exact: true }).click();
+                    const recoveredPercentage = await page.locator("#progress-rate").textContent();
+                    await page.locator("#return-bookshelf").click();
+                    await page.locator(".book-progress").waitFor();
+                    assert.equal(await page.locator(".book-progress").textContent(), recoveredPercentage);
+                    const recovered = (await readProgress(page))[0];
+                    assert(recovered?.readingRatio !== undefined && recovered.readingRatio > filled.readingRatio);
+                    assert.notDeepEqual(recovered, filled);
+                    assert.deepEqual(recovered, attempted);
+                    await page.reload();
+                    await page.locator(".book-progress").waitFor();
+                    assert.equal(await page.locator(".book-progress").textContent(), recoveredPercentage);
+                    assert.deepEqual(await readProgress(page), [recovered]);
+                    await openBook(page, name);
+                    assert.equal(await readVisibleText(page, 64), attemptedText);
+                } finally {
+                    await failedWrite.dispose();
+                }
             },
             ["阅读位置保存失败"]
         );
