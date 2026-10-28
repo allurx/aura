@@ -4,7 +4,10 @@
  */
 
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
+import { readFile } from "node:fs/promises";
 import { after, before, test } from "node:test";
+import { unzipSync } from "fflate";
 import type { Locator, Page } from "playwright-core";
 import {
     importBooks,
@@ -14,6 +17,7 @@ import {
     textBook,
     waitForBookCount,
     withPage,
+    type BookUpload,
 } from "./browser-test-support.ts";
 import { createEpubFixture } from "./fixtures/epub-fixtures.ts";
 
@@ -23,12 +27,34 @@ after(stopBrowserTests);
 /**
  * 从管理入口打开实际操作窗口，范围选择和执行使用应用的原生控件。
  */
-async function openBulkAction(page: Page): Promise<Locator> {
+async function openBulkAction(page: Page, action: "export" | "clear"): Promise<Locator> {
     await page.locator("#open-more").click();
-    await page.locator("#clear-btn").click();
-    const dialog = page.getByRole("dialog", { name: "清空书籍", exact: true });
+    await page.locator(action === "export" ? "#export-btn" : "#clear-btn").click();
+    const dialog = page.getByRole("dialog", { name: action === "export" ? "导出原文件" : "清空书籍", exact: true });
     await dialog.waitFor();
     return dialog;
+}
+
+/**
+ * 下载后解包并逐字节比较全部条目；重复内容仍须按书籍记录保留对应文件。
+ */
+async function assertArchive(page: Page, dialog: Locator, expected: readonly BookUpload[]): Promise<void> {
+    const pending = page.waitForEvent("download");
+    await dialog.locator(".confirm-btn").click();
+    const download = await pending;
+    assert.match(download.suggestedFilename(), /\.zip$/u);
+    const path = await download.path();
+    assert(path);
+    const entries = unzipSync(await readFile(path));
+    assert.equal(Object.keys(entries).length, expected.length);
+    assert.deepEqual(
+        Object.values(entries)
+            .map((bytes) => Buffer.from(bytes).toString("hex"))
+            .sort(),
+        expected.map((file) => file.buffer.toString("hex")).sort()
+    );
+    for (const name of Object.keys(entries)) assert.doesNotMatch(name, /[\\/]/u);
+    await page.locator(".overlay:not([hidden])").waitFor({ state: "hidden" });
 }
 
 /**
@@ -66,6 +92,61 @@ async function readLibrary(page: Page): Promise<{ stores: Record<string, unknown
 }
 
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: scoped ZIP export preserves TXT and EPUB bytes, duplicates and the full selected scope`, async () => {
+        await withPage(delivery, async (page) => {
+            const sources = [
+                {
+                    name: "duplicate.txt",
+                    mimeType: "text/plain",
+                    buffer: Buffer.concat([
+                        Buffer.from([0xff, 0xfe]),
+                        Buffer.from("第一章 原文件\r\n完整保留 UTF-16 原始字节。\r\n", "utf16le"),
+                    ]),
+                },
+                textBook("duplicate.txt", 2),
+                textBook("duplicate (2).txt", 3),
+                {
+                    name: "original.epub",
+                    mimeType: "application/epub+zip",
+                    buffer: createEpubFixture('<p>保留原始 EPUB 归档。</p><img src="pixel.png" alt="图片"/>'),
+                },
+            ];
+            await importBooks(page, sources);
+            await page.locator('#category-navigation button[data-id="fiction"]').click();
+            await waitForBookCount(page, 0);
+            const firstSource = sources[0];
+            assert(firstSource);
+            const sharedCopy = { ...firstSource, name: "shared-copy.txt" };
+            await importBooks(page, [sharedCopy]);
+
+            // 搜索只显示三本 TXT，当前分类导出仍须包含未显示的 EPUB。
+            await page.locator('#category-navigation button[data-id="collection"]').click();
+            await page.locator("#book-search").fill("duplicate");
+            await waitForBookCount(page, 3);
+            const beforeExport = await readLibrary(page);
+            let dialog = await openBulkAction(page, "export");
+            const category = dialog.getByRole("radio", { name: /^当前分类/u });
+            assert.equal(await category.isChecked(), true);
+            assert.match(
+                (await category.getAttribute("aria-label")) ?? (await category.locator("..").innerText()),
+                /4/u
+            );
+            await assertArchive(page, dialog, sources);
+
+            dialog = await openBulkAction(page, "export");
+            await dialog.getByRole("radio", { name: /^全部书籍/u }).check();
+            await assertArchive(page, dialog, [...sources, sharedCopy]);
+            assert.deepEqual(await readLibrary(page), beforeExport);
+
+            // 全部页面只有一个实际范围，不因搜索仍有内容而缩小导出集合。
+            await page.locator('#category-navigation button[data-id=""]').click();
+            await waitForBookCount(page, 3);
+            dialog = await openBulkAction(page, "export");
+            assert.equal(await dialog.getByRole("radio", { name: /^当前分类/u }).count(), 0);
+            await assertArchive(page, dialog, [...sources, sharedCopy]);
+        });
+    });
+
     void test(`${delivery}: category clearing preserves shared sources and other progress until explicit full clearing`, async () => {
         await withPage(
             delivery,
@@ -92,7 +173,7 @@ for (const delivery of ["web", "portable"] as const) {
                 await page.locator('#category-navigation button[data-id="collection"]').click();
                 await page.locator("#book-search").fill("category-only");
                 await waitForBookCount(page, 1);
-                let dialog = await openBulkAction(page);
+                let dialog = await openBulkAction(page, "clear");
                 assert.equal(await dialog.getByRole("radio", { name: /^当前分类/u }).isChecked(), true);
                 await dialog.getByRole("radio", { name: /^全部书籍/u }).check();
                 await dialog.getByRole("button", { name: "取消", exact: true }).click();
@@ -111,7 +192,7 @@ for (const delivery of ["web", "portable"] as const) {
                         return remove.call(this, key);
                     };
                 });
-                dialog = await openBulkAction(page);
+                dialog = await openBulkAction(page, "clear");
                 await dialog.locator(".confirm-btn").click();
                 const failure = page.getByRole("dialog", { name: "清空书籍失败", exact: true });
                 await failure.waitFor();
@@ -120,7 +201,7 @@ for (const delivery of ["web", "portable"] as const) {
                 assert.deepEqual(await readLibrary(page), beforeClear);
 
                 // 另一个标签页替换一本书，数量不变也必须拒绝删除已变化的确认范围。
-                dialog = await openBulkAction(page);
+                dialog = await openBulkAction(page, "clear");
                 const otherPage = await page.context().newPage();
                 try {
                     await otherPage.goto(page.url());
@@ -147,7 +228,7 @@ for (const delivery of ["web", "portable"] as const) {
                 assert.deepEqual(await readLibrary(page), beforeRejectedClear);
 
                 // 新请求使用最新集合，恢复当前分类并删除搜索未显示的全部分类内容。
-                dialog = await openBulkAction(page);
+                dialog = await openBulkAction(page, "clear");
                 assert.equal(await dialog.getByRole("radio", { name: /^当前分类/u }).isChecked(), true);
                 await dialog.locator(".confirm-btn").click();
                 await waitForBookCount(page, 0);
@@ -186,7 +267,11 @@ for (const delivery of ["web", "portable"] as const) {
                 );
 
                 // 空分类保持选中当前范围并禁止执行，不静默扩大到全库。
-                dialog = await openBulkAction(page);
+                dialog = await openBulkAction(page, "clear");
+                assert.equal(await dialog.getByRole("radio", { name: /^当前分类/u }).isChecked(), true);
+                assert.equal(await dialog.locator(".confirm-btn").isDisabled(), true);
+                await dialog.getByRole("button", { name: "取消", exact: true }).click();
+                dialog = await openBulkAction(page, "export");
                 assert.equal(await dialog.getByRole("radio", { name: /^当前分类/u }).isChecked(), true);
                 assert.equal(await dialog.locator(".confirm-btn").isDisabled(), true);
                 await dialog.getByRole("button", { name: "取消", exact: true }).click();
@@ -197,6 +282,8 @@ for (const delivery of ["web", "portable"] as const) {
                 await page.reload();
                 await waitForBookCount(page, 2);
                 assert.deepEqual(await readLibrary(page), afterCategory);
+                dialog = await openBulkAction(page, "export");
+                await assertArchive(page, dialog, retained);
                 for (const book of retained) {
                     await openBook(page, book.name);
                     assert.match((await page.locator("#content").textContent()) ?? "", /正文|验证阅读/u);
@@ -204,7 +291,7 @@ for (const delivery of ["web", "portable"] as const) {
                     await waitForBookCount(page, 2);
                 }
 
-                dialog = await openBulkAction(page);
+                dialog = await openBulkAction(page, "clear");
                 await dialog.getByRole("radio", { name: /^全部书籍/u }).check();
                 await dialog.locator(".confirm-btn").click();
                 await waitForBookCount(page, 0);

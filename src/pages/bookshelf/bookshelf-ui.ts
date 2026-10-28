@@ -101,6 +101,7 @@ export default class BookshelfUi extends Ui {
      * 在同一窗口选择批量范围并确认；每次打开默认当前分类，空范围不能执行。
      */
     public async confirmBookOperation(
+        action: "clear" | "export",
         scopes: readonly BookOperationScope[],
         searchActive: boolean
     ): Promise<BookOperationScope | null> {
@@ -109,11 +110,15 @@ export default class BookshelfUi extends Ui {
                 <fieldset><legend>范围</legend></fieldset>
                 <p class="book-operation-search" hidden>包含未匹配搜索的书籍。</p>
                 <p class="book-operation-description" aria-live="polite"></p>
+                <p class="book-operation-note"></p>
             </div>
         `);
         const options = assertExists(content.querySelector("fieldset"));
         const description = assertExists(content.querySelector(".book-operation-description"));
+        const note = assertExists(content.querySelector<HTMLElement>(".book-operation-note"));
         assertExists(content.querySelector<HTMLElement>(".book-operation-search")).hidden = !searchActive;
+        note.hidden = action === "clear";
+        note.textContent = "不含分类归属、阅读进度和外观设置。";
 
         let selected = assertExists(scopes[0]);
         const update = () => {
@@ -121,8 +126,10 @@ export default class BookshelfUi extends Ui {
             description.textContent =
                 selected.count === 0
                     ? "此范围内没有书籍。"
-                    : `将删除 ${String(selected.count)} 本书及其阅读进度，此操作无法撤销。`;
-            this.dialog.setConfirmAction(`清空${target}`, selected.count === 0);
+                    : action === "clear"
+                      ? `将删除 ${String(selected.count)} 本书及其阅读进度，此操作无法撤销。`
+                      : `将 ${String(selected.count)} 本书的原文件打包为 ZIP。`;
+            this.dialog.setConfirmAction(`${action === "clear" ? "清空" : "导出"}${target}`, selected.count === 0);
         };
 
         // 原生单选按钮提供整行点击与键盘操作；分类名称只作为文本挂载。
@@ -145,8 +152,8 @@ export default class BookshelfUi extends Ui {
         }
 
         const confirmation = this.dialog.confirm(content, {
-            title: "清空书籍",
-            destructive: true,
+            title: action === "clear" ? "清空书籍" : "导出原文件",
+            destructive: action === "clear",
         });
         update();
         return (await confirmation) ? selected : null;

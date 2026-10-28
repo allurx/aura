@@ -7,6 +7,7 @@ import HeaderUi from "./header/header-ui";
 import NavUi from "./nav/nav-ui";
 import BookListUi, { type BookListEmptyState, type BookListPosition } from "./book-list/book-list-ui";
 import BookshelfUi, { type BookOperationScope } from "./bookshelf-ui";
+import { BookExportError, createBookArchive } from "./book-export";
 import {
     BookImportError,
     BookSelectionChangedError,
@@ -14,6 +15,7 @@ import {
     deleteBook,
     getBookSummaries,
     getBookExport,
+    getBooksExport,
     importBooks,
     moveBook,
     type BookImportResult,
@@ -399,7 +401,9 @@ export default class BookshelfController {
     /**
      * 重新读取摘要以显示范围总数，搜索结果不参与批量操作的范围计算。
      */
-    private async chooseBookOperation(): Promise<{ scope: BookOperationScope; bookIds: readonly string[] } | null> {
+    private async chooseBookOperation(
+        action: "clear" | "export"
+    ): Promise<{ scope: BookOperationScope; bookIds: readonly string[] } | null> {
         const books = await this.readBooks();
         if (!books || !this.isActive()) return null;
         const category = getCategory(bookshelfSession.categoryId);
@@ -412,7 +416,11 @@ export default class BookshelfController {
             });
         }
         scopes.push({ categoryId: null, name: "全部书籍", count: books.length });
-        const scope = await this.bookshelfUi.confirmBookOperation(scopes, bookshelfSession.search.trim().length > 0);
+        const scope = await this.bookshelfUi.confirmBookOperation(
+            action,
+            scopes,
+            bookshelfSession.search.trim().length > 0
+        );
         return scope
             ? {
                   scope,
@@ -431,7 +439,7 @@ export default class BookshelfController {
 
         this.busy = true;
         try {
-            const selection = await this.chooseBookOperation();
+            const selection = await this.chooseBookOperation("clear");
             if (!selection || !this.isActive()) return;
             const { scope, bookIds } = selection;
 
@@ -452,6 +460,46 @@ export default class BookshelfController {
                 const result = `已清空 ${String(count)} 本书及其阅读进度。`;
                 await this.refreshAfterChange(result);
                 this.bookshelfUi.showFeedback(result);
+            });
+        } finally {
+            this.busy = false;
+        }
+    }
+
+    /**
+     * 按选定范围读取原文件快照，完整打包后交给浏览器下载，不改变书籍或进度。
+     */
+    private async exportBooks(): Promise<void> {
+        if (this.busy || !this.isActive()) return;
+
+        this.busy = true;
+        try {
+            const selection = await this.chooseBookOperation("export");
+            if (!selection || !this.isActive()) return;
+            const { scope } = selection;
+
+            await this.bookshelfUi.runBusy("正在读取原文件…", async (setStatus) => {
+                let archive: Blob;
+                try {
+                    const files = await getBooksExport(scope.categoryId);
+                    if (!this.isActive()) return;
+                    if (files.length === 0) {
+                        this.bookshelfUi.showFeedback("此范围内已没有书籍，未开始下载。");
+                        return;
+                    }
+                    archive = await createBookArchive(files, setStatus, this.signal);
+                } catch (error) {
+                    if (this.signal.aborted && error === this.signal.reason) return;
+                    throw new OperationError(
+                        "导出原文件失败",
+                        error instanceof BookExportError ? `${error.message}未开始下载。` : "打包未完成，未开始下载。",
+                        error,
+                        "请重试，或按分类、逐本导出。"
+                    );
+                }
+                if (!this.isActive()) return;
+                this.bookshelfUi.download(archive, `Aura-${scope.name}.zip`);
+                this.bookshelfUi.showFeedback("ZIP 已交给浏览器下载。");
             });
         } finally {
             this.busy = false;
@@ -495,6 +543,7 @@ export default class BookshelfController {
                     this.renderBooks(null);
                 },
                 clear: () => this.clearBookshelf(),
+                export: () => this.exportBooks(),
                 reset: () => this.resetData(),
             },
             signal

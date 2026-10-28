@@ -235,6 +235,33 @@ export async function getBookExport(bookId: string): Promise<{ name: string; sou
 }
 
 /**
+ * 在同一只读事务中取得整个范围的原文件快照，保留每本书的文件名与独立导出条目。
+ * 相同内容只读取一次 Blob，不加载章节；事务结束后可独立打包，不受后续删除影响。
+ */
+export async function getBooksExport(categoryId: CategoryId | null): Promise<{ name: string; source: Blob }[]> {
+    if (categoryId !== null) assertExists(getCategory(categoryId), "Category not found");
+    return runTransaction(["book", "file"], "readonly", async (transaction) => {
+        const books = (await getAllRecords(transaction, "book"))
+            .filter((book) => categoryId === null || book.categoryId === categoryId)
+            .toSorted((a, b) => a.createdTime - b.createdTime);
+        const sources = new Map<string, Blob>();
+        const files: { name: string; source: Blob }[] = [];
+        for (const book of books) {
+            let source = sources.get(book.fileId);
+            if (!source) {
+                source = assertExists(
+                    await getRecord(transaction, "file", book.fileId),
+                    "Book source not found"
+                ).source;
+                sources.set(book.fileId, source);
+            }
+            files.push({ name: book.fileName, source });
+        }
+        return files;
+    });
+}
+
+/**
  * 清理已经没有书籍引用的原文件、目录与章节；调用方在同一事务内保证引用关系。
  */
 async function deleteFileContent(transaction: IDBTransaction, fileId: string): Promise<void> {
