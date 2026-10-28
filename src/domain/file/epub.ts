@@ -69,7 +69,8 @@ interface ParseContext {
 }
 
 const MAX_XML_BYTES = 16 * 1024 * 1024;
-const MAX_CONTENT_NODES = 500_000;
+// 整书模型会保留到写入完成；容量覆盖长篇多章，局部深度与空结构仍分别约束。
+const MAX_CONTENT_NODES = 2_000_000;
 const MAX_ELEMENT_DEPTH = 200;
 const VIRTUAL_ORIGIN = "https://aura-epub.invalid";
 const XHTML_NAMESPACE = "http://www.w3.org/1999/xhtml";
@@ -139,6 +140,7 @@ export async function parseEpub(file: File): Promise<EpubPublication> {
     await rejectEncryption(archive, manifest);
 
     const readingOrder: ManifestItem[] = [];
+    const scheduled = new Set<string>();
     for (const reference of Array.from(spine.children)) {
         if (reference.localName !== "itemref") continue;
         if (tokens(reference.getAttribute("properties")).includes("rendition:layout-pre-paginated"))
@@ -146,11 +148,20 @@ export async function parseEpub(file: File): Promise<EpubPublication> {
         const item = byId.get(reference.getAttribute("idref") ?? "");
         if (!item) throw new EpubImportError("EPUB 阅读顺序引用了缺失或外部的正文。");
         assertContentType(item);
-        if (!readingOrder.some((existing) => existing.path === item.path)) readingOrder.push(item);
+        if (!scheduled.has(item.path)) {
+            scheduled.add(item.path);
+            readingOrder.push(item);
+        }
     }
     if (readingOrder.length === 0) throw new EpubImportError("EPUB 没有可阅读的正文。");
 
     const navigation = await readNavigation(archive, manifest, byId.get(spine.getAttribute("toc") ?? ""));
+    const navigationByPath = new Map<string, NavigationEntry[]>();
+    for (const entry of navigation) {
+        const entries = navigationByPath.get(entry.target.path);
+        if (entries) entries.push(entry);
+        else navigationByPath.set(entry.target.path, [entry]);
+    }
     const context: ParseContext = {
         archive,
         manifest,
@@ -161,13 +172,21 @@ export async function parseEpub(file: File): Promise<EpubPublication> {
         taskStarted: performance.now(),
     };
     const sections: EpubSection[] = [];
-    const scheduled = new Set(readingOrder.map((item) => item.path));
     let consumedLinks = 0;
     for (const item of readingOrder) {
         const document = await readXml(archive, item.path);
         const body = descendants(document, "body")[0];
         if (!body) throw new EpubImportError(`EPUB 正文缺少 body：${item.path}`);
-        sections.push(...(await parseSections(document, body, item.path, navigation, context, sections.length)));
+        sections.push(
+            ...(await parseSections(
+                document,
+                body,
+                item.path,
+                navigationByPath.get(item.path) ?? [],
+                context,
+                sections.length
+            ))
+        );
 
         // 一些书将脚注或附录放在 spine 外；被书内链接使用时才追加，不悄悄丢掉目标。
         for (; consumedLinks < context.links.length; consumedLinks++) {
@@ -371,7 +390,7 @@ async function parseSections(
     document: Document,
     body: Element,
     path: string,
-    navigation: NavigationEntry[],
+    entries: NavigationEntry[],
     context: ParseContext,
     sectionOffset: number
 ): Promise<EpubSection[]> {
@@ -383,7 +402,6 @@ async function parseSections(
         const id = element.getAttribute("id") ?? (element.localName === "a" ? element.getAttribute("name") : null);
         if (id && !anchors.has(id)) anchors.set(id, element);
     }
-    const entries = navigation.filter((entry) => entry.target.path === path);
     const title =
         entries.find((entry) => !entry.target.fragment)?.title ??
         (sectionTitle(document) || `第 ${String(sectionOffset + 1)} 节`);
@@ -408,12 +426,17 @@ async function parseSections(
     let nextAnchor = 0;
     for (const [index, [start, sectionName]] of ordered.entries()) {
         const end = ordered[index + 1]?.[0];
-        const range = document.createRange();
-        if (start === body) range.setStart(body, 0);
-        else range.setStartBefore(start);
-        if (end) range.setEndBefore(end);
-        else range.setEnd(body, body.childNodes.length);
-        let blocks = await parseChildren(cloneSection(range, body), path, context, 0);
+        // 常规的一文档一章直接转换原树；只有目录在文档内分章时才复制范围与祖先结构。
+        let source: Element | DocumentFragment = body;
+        if (ordered.length > 1) {
+            const range = document.createRange();
+            if (start === body) range.setStart(body, 0);
+            else range.setStartBefore(start);
+            if (end) range.setEndBefore(end);
+            else range.setEnd(body, body.childNodes.length);
+            source = cloneSection(range, body);
+        }
+        let blocks = await parseChildren(source, path, context, 0);
         const endIndex = end ? (positions.get(end) ?? elements.length) : elements.length;
         const sectionAnchors: string[] = [];
         while (nextAnchor < anchorPositions.length) {
@@ -423,7 +446,7 @@ async function parseSections(
             nextAnchor++;
         }
         if (!hasReadableContent(blocks) && end) {
-            pendingAnchors.push(...sectionAnchors);
+            for (const anchor of sectionAnchors) pendingAnchors.push(anchor);
             continue;
         }
         const ownedAnchors = [...pendingAnchors, ...sectionAnchors];
@@ -534,7 +557,9 @@ async function parseChildren(
     const nodes: EpubNode[] = [];
     for (const node of Array.from(element.childNodes)) {
         if (++context.nodeCount > MAX_CONTENT_NODES)
-            throw new EpubImportError("EPUB 正文结构过于复杂，最多支持 500,000 个节点。");
+            throw new EpubImportError(
+                `EPUB 正文超过 ${String(MAX_CONTENT_NODES / 10_000)} 万节点的导入容量。请尝试分卷版本。`
+            );
 
         // XML 解析后的模型转换可能持续占用同一任务，按预算让出而不改变节点顺序与复杂度限制。
         if (context.nodeCount % 256 === 0 && performance.now() - context.taskStarted >= 8) {
@@ -544,7 +569,10 @@ async function parseChildren(
 
         if ((node.nodeType === Node.TEXT_NODE || node.nodeType === Node.CDATA_SECTION_NODE) && node.textContent)
             nodes.push({ type: "text", text: node.textContent });
-        else if (node instanceof Element) nodes.push(...(await parseElement(node, path, context, depth + 1)));
+        else if (node instanceof Element) {
+            // 未知包装元素可能展开为大量同级节点，逐个追加避免触发函数实参数量上限。
+            for (const child of await parseElement(node, path, context, depth + 1)) nodes.push(child);
+        }
     }
     return nodes;
 }

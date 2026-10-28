@@ -248,7 +248,7 @@ export default class BookshelfController {
                         result.books.length > 0 ? "部分文件未导入" : "所选文件未能导入",
                         this.describeImport(result),
                         undefined,
-                        "请检查文件后，仅重新导入未成功的文件。"
+                        "请按提示处理未导入的文件，已导入的书籍无需重试。"
                     )
                 );
                 await this.bookshelfUi.dialog.alert(content, { title, confirmBtnText: "知道了", tone: "error" });

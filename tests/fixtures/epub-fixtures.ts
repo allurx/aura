@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Buffer, File } from "node:buffer";
+import { Buffer } from "node:buffer";
 import { strToU8, zipSync } from "fflate";
 
 /**
@@ -34,30 +34,4 @@ export function createEpubFixture(body: string): Buffer {
     };
     // 使用固定的 ZIP 时间，重复生成同一用例时原字节一致。
     return Buffer.from(zipSync(entries, { level: 0, mtime: new Date(2026, 9, 8) }));
-}
-
-/**
- * 超出既定 256 MiB 预算的受控输入；任何读取都会失败，避免为了验证前置拒绝实际分配大文件。
- */
-export function createOversizedEpubFile() {
-    return new (class extends File {
-        public override readonly size = 257 * 1024 * 1024;
-        public readonly webkitRelativePath = "";
-
-        public override arrayBuffer(): never {
-            throw new Error("Oversized EPUB must be rejected before arrayBuffer");
-        }
-
-        public override bytes(): never {
-            throw new Error("Oversized EPUB must be rejected before bytes");
-        }
-
-        public override slice(): never {
-            throw new Error("Oversized EPUB must be rejected before slice");
-        }
-
-        public override stream(): never {
-            throw new Error("Oversized EPUB must be rejected before stream");
-        }
-    })([], "oversized.epub");
 }

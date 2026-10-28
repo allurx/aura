@@ -13,7 +13,7 @@ import { parseChapters } from "@/domain/chapter/chapter-parser";
 import { detectTextEncoding } from "@/domain/file/text-encoding-detector";
 import { getBookFormat, getBookTitle, type BookFormat } from "@/domain/file/book-format";
 import { parseEpub, EpubImportError } from "@/domain/file/epub";
-import { getEpubSizeRejection } from "@/domain/file/epub-limits";
+import { getBookSizeRejection } from "@/domain/file/book-file-limits";
 import { computeHash } from "@/utils/file-util";
 import { assertExists } from "@/utils/assert-util";
 import { runTransaction } from "@/database/transaction";
@@ -91,11 +91,7 @@ export async function importBooks(
         const importableFiles: File[] = [];
         for (const file of files) {
             const format = getBookFormat(file.name);
-            const rejection = !format
-                ? "格式不支持（支持 TXT、EPUB）"
-                : format === "epub"
-                  ? getEpubSizeRejection(file.size)
-                  : undefined;
+            const rejection = !format ? "格式不支持（支持 TXT、EPUB）" : getBookSizeRejection(file.size, format);
             if (rejection) {
                 result.rejectedFiles.push({ file, reason: rejection });
                 unfinishedFiles.delete(file);
@@ -300,12 +296,10 @@ async function savePreparedFile(prepared: PreparedFile, transaction: IDBTransact
             ...(chapter.kind === "epub" ? { path: chapter.path, anchors: chapter.anchors } : {}),
         })),
     };
-    // 全部请求一次入队，事务统一确认提交；目录显式投影，不能带入正文。
-    await Promise.all([
-        addRecord(transaction, "file", prepared.file),
-        addRecord(transaction, "toc", toc),
-        ...prepared.chapters.map((chapter) => addRecord(transaction, "chapter", chapter)),
-    ]);
+    // 目录显式投影，不能带入正文；全部写入仍由同一事务统一确认提交。
+    await Promise.all([addRecord(transaction, "file", prepared.file), addRecord(transaction, "toc", toc)]);
+    // 只等待当前事务的数据库请求，逐章克隆与写入，避免在同一任务中复制整本内容。
+    for (const chapter of prepared.chapters) await addRecord(transaction, "chapter", chapter);
 }
 
 /**
