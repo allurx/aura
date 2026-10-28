@@ -41,17 +41,32 @@ void test("reading percentage formatting stays compact without completing a nonf
  * 读取实际显示的正文，不能只用保存记录或页码证明画面恢复。
  * 前缀长度按 UTF-16 代码单元计算，只扫描断言需要的可见文字。
  */
-async function readVisiblePage(
-    page: Page,
-    maxTextLength = Infinity
-): Promise<{ text: string; firstTop: number | undefined }> {
-    return page
-        .locator("#content > .reading-viewport:not(.reading-measure-viewport) p")
-        .evaluateAll((paragraphs, limit) => {
-            const viewport = document
-                .querySelector("#content > .reading-viewport:not(.reading-measure-viewport)")
-                ?.getBoundingClientRect();
-            if (!viewport) throw new Error("Missing reading viewport");
+async function readVisiblePage(page: Page, maxTextLength = Infinity, captureLayout = false) {
+    return page.locator("#content > .reading-viewport:not(.reading-measure-viewport) p").evaluateAll(
+        (paragraphs, { limit, captureLayout }) => {
+            const element = document.querySelector("#content > .reading-viewport:not(.reading-measure-viewport)");
+            if (!element) throw new Error("Missing reading viewport");
+            const viewport = element.getBoundingClientRect();
+            // 诊断与文字在同一浏览器任务内采样，不额外等待布局或数据库。
+            const layout = captureLayout
+                ? {
+                      sampledAt: performance.now(),
+                      scrollLeft: element.scrollLeft,
+                      scrollTop: element.scrollTop,
+                      scrollWidth: element.scrollWidth,
+                      scrollHeight: element.scrollHeight,
+                      clientWidth: element.clientWidth,
+                      clientHeight: element.clientHeight,
+                      bounds: {
+                          top: viewport.top,
+                          left: viewport.left,
+                          width: viewport.width,
+                          height: viewport.height,
+                      },
+                      pagePosition: document.querySelector("#page-position")?.textContent,
+                      layoutBusy: document.querySelector("#page-position")?.getAttribute("aria-busy"),
+                  }
+                : undefined;
 
             // 纵向不足 1px 的可见首行仍可成为源锚点；横向保留相邻分页的接缝保护。
             const intersects = (rect: DOMRect): boolean =>
@@ -79,14 +94,21 @@ async function readVisiblePage(
                             firstTop ??= rect.top - viewport.top;
                             visible.push(character);
                             visibleLength += character.length;
-                            if (visibleLength >= limit) return { text: visible.join("").slice(0, limit), firstTop };
+                            if (visibleLength >= limit)
+                                return {
+                                    text: visible.join("").slice(0, limit),
+                                    firstTop,
+                                    ...(layout ? { layout } : {}),
+                                };
                         }
                         offset += character.length;
                     }
                 }
             }
-            return { text: visible.join(""), firstTop };
-        }, maxTextLength);
+            return { text: visible.join(""), firstTop, ...(layout ? { layout } : {}) };
+        },
+        { limit: maxTextLength, captureLayout }
+    );
 }
 
 /**
@@ -267,34 +289,62 @@ for (const delivery of ["web", "portable"] as const) {
                 assert.deepEqual({ ...filled, readingRatio: undefined }, { ...legacy, readingRatio: undefined });
                 await openBook(page, name);
 
-                // 让下一次完整快照写入失败，源位置与比例必须一同保留，不能只提交其中一个。
-                await page.evaluate(() => {
+                // 只拦截本书前移后的快照；同位置的后台保存不能消耗翻页故障。
+                const failedWrite = await page.evaluateHandle((previous) => {
+                    const observed: { failed: Progress | undefined } = { failed: undefined };
                     // eslint-disable-next-line @typescript-eslint/unbound-method -- 保存后还原原方法，调用时使用实际 store。
                     const original = IDBObjectStore.prototype.put;
-                    IDBObjectStore.prototype.put = function (value: unknown, key?: IDBValidKey) {
-                        if (this.name === "progress") {
+                    IDBObjectStore.prototype.put = function (value: Progress, key?: IDBValidKey) {
+                        if (
+                            this.name === "progress" &&
+                            value.bookId === previous.bookId &&
+                            (value.chapterNumber !== previous.chapterNumber ||
+                                value.blockNumber !== previous.blockNumber ||
+                                value.contentOffset !== previous.contentOffset)
+                        ) {
                             IDBObjectStore.prototype.put = original;
+                            observed.failed = structuredClone(value);
                             throw new DOMException("Injected progress write failure", "QuotaExceededError");
                         }
                         return original.call(this, value, key);
                     };
-                });
-                await page.locator("#content").press("ArrowRight");
-                const failure = page.getByRole("dialog", { name: "阅读位置保存失败", exact: true });
-                await failure.waitFor();
-                assert.deepEqual(await readProgress(page), [filled]);
-                await failure.getByRole("button", { name: "知道了", exact: true }).click();
-                const recoveredPercentage = await page.locator("#progress-rate").textContent();
-                await page.locator("#return-bookshelf").click();
-                await page.locator(".book-progress").waitFor();
-                assert.equal(await page.locator(".book-progress").textContent(), recoveredPercentage);
-                const recovered = (await readProgress(page))[0];
-                assert(recovered?.readingRatio !== undefined && recovered.readingRatio > filled.readingRatio);
-                assert.notDeepEqual(recovered, filled);
-                await page.reload();
-                await page.locator(".book-progress").waitFor();
-                assert.equal(await page.locator(".book-progress").textContent(), recoveredPercentage);
-                assert.deepEqual(await readProgress(page), [recovered]);
+                    return observed;
+                }, filled);
+                try {
+                    await page.locator("#content").press("ArrowRight");
+                    const failure = page.getByRole("dialog", { name: "阅读位置保存失败", exact: true });
+                    await failure.waitFor();
+                    const attempted = await failedWrite.evaluate((observed) => observed.failed);
+                    assert(attempted?.readingRatio !== undefined && attempted.readingRatio > filled.readingRatio);
+                    assert.equal(attempted.bookId, filled.bookId);
+                    const attemptedText = await readVisibleText(page, 64);
+                    assert.equal(attemptedText.length, 64);
+                    assert.notEqual(attemptedText, sourceText);
+                    assert.equal(
+                        await page.locator("#progress-rate").textContent(),
+                        formatReadingProgress(attempted.readingRatio)
+                    );
+                    assert.deepEqual(await readProgress(page), [filled]);
+
+                    // 重试必须保存刚才失败的完整快照，并能恢复同一段实际可见正文。
+                    await failure.getByRole("button", { name: "知道了", exact: true }).click();
+                    const recoveredPercentage = await page.locator("#progress-rate").textContent();
+                    await page.locator("#return-bookshelf").click();
+                    await page.locator(".book-progress").waitFor();
+                    assert.equal(await page.locator(".book-progress").textContent(), recoveredPercentage);
+                    const recovered = (await readProgress(page))[0];
+                    assert(recovered?.readingRatio !== undefined && recovered.readingRatio > filled.readingRatio);
+                    assert.notDeepEqual(recovered, filled);
+                    assert.deepEqual(recovered, attempted);
+                    await page.reload();
+                    await page.locator(".book-progress").waitFor();
+                    assert.equal(await page.locator(".book-progress").textContent(), recoveredPercentage);
+                    assert.deepEqual(await readProgress(page), [recovered]);
+                    await openBook(page, name);
+                    assert.equal(await readVisibleText(page, 64), attemptedText);
+                } finally {
+                    await failedWrite.dispose();
+                }
             },
             ["阅读位置保存失败"]
         );
@@ -771,19 +821,34 @@ for (const delivery of ["web", "portable"] as const) {
                     const scrolledText = content.slice(scrolled[0].contentOffset, scrolled[0].contentOffset + 64);
                     assert.equal(scrolledText.length, 64);
                     assert.equal(content.indexOf(scrolledText), scrolled[0].contentOffset);
-                    assert((await readVisibleText(page)).includes(scrolledText));
+                    const assertScrolledVisible = async (phase: string): Promise<void> => {
+                        const visible = await readVisiblePage(page, Infinity, true);
+                        if (!visible.text.includes(scrolledText)) {
+                            assert.fail(
+                                JSON.stringify({
+                                    delivery,
+                                    mode,
+                                    phase,
+                                    progress: scrolled,
+                                    expectedText: scrolledText,
+                                    visible,
+                                })
+                            );
+                        }
+                    };
+                    await assertScrolledVisible("after-scroll");
 
                     await page.reload();
                     await page.locator("#toggle-setting-panel:not([disabled])").waitFor();
                     await settleReader(page);
                     assert.deepEqual(await readProgress(page), scrolled);
                     // 刷新按源位置重新对齐，不要求保留滚轮留下的临时像素偏移。
-                    assert((await readVisibleText(page)).includes(scrolledText));
+                    await assertScrolledVisible("after-reload");
 
                     // 先验收初始画面，再确认后台索引补全后同一源锚点仍然可见。
                     await waitForChapterLayout(page);
                     assert.deepEqual(await readProgress(page), scrolled);
-                    assert((await readVisibleText(page)).includes(scrolledText));
+                    await assertScrolledVisible("after-layout");
                 }
             });
         }
