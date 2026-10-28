@@ -100,5 +100,5 @@ html[data-search-keyboard] body {
 }
 
 :where(button, input, select, textarea):disabled {
-    cursor: not-allowed;
+    cursor: default;
 }
