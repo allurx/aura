@@ -65,6 +65,7 @@ const blockTags = new Set([
     "ul",
 ]);
 const textFlowTags = new Set([...blockTags, "caption", "pre", "table", "td", "th"]);
+const indivisibleTags = new Set(["table", "pre", "ruby"]);
 
 /**
  * 一章的源内容、可独立排版的片段和图片 URL；实际正文只挂载阅读窗口。
@@ -357,7 +358,7 @@ export default class ChapterView {
         if (!piece || typeof piece.source === "string") return location;
         let source: SourceNode | undefined = piece.source;
         while (source) {
-            if (source.node.type === "element" && ["table", "pre", "ruby"].includes(source.node.tag))
+            if (source.node.type === "element" && indivisibleTags.has(source.node.tag))
                 return { blockNumber: piece.blockNumber, contentOffset: source.start };
             source = source.children.find(
                 (child) => child.start <= location.contentOffset && child.end > location.contentOffset
@@ -511,13 +512,14 @@ export default class ChapterView {
             for (const [index, node] of this.chapter.blocks.entries()) {
                 const boundaries: number[] = [];
                 const hardBreaks: number[] = [];
-                const atomicRanges: { start: number; end: number }[] = [];
                 let offset = 0;
                 let nodes = 0;
                 let checkpointNodes = 0;
                 const visit = (current: EpubNode, inlineImage = false): SourceNode => {
                     const start = offset;
                     const startNodes = nodes;
+                    const firstBreak = boundaries.length;
+                    const firstHardBreak = hardBreaks.length;
                     if (current.type !== "text" && current.id && !this.sourceAnchors.has(current.id)) {
                         this.sourceAnchors.set(current.id, { blockNumber: index + 1, contentOffset: offset });
                     }
@@ -544,8 +546,9 @@ export default class ChapterView {
                             boundaries.push(offset);
                         }
                     }
-                    if (current.type === "element" && ["table", "pre", "ruby"].includes(current.tag)) {
-                        atomicRanges.push({ start, end: offset });
+                    if (current.type === "element" && indivisibleTags.has(current.tag)) {
+                        retainBoundaryEdges(boundaries, firstBreak, start, offset);
+                        retainBoundaryEdges(hardBreaks, firstHardBreak, start, offset);
                     }
                     if (nodes - checkpointNodes >= PIECE_NODE_LIMIT) {
                         hardBreaks.push(offset);
@@ -566,15 +569,7 @@ export default class ChapterView {
                     };
                 };
                 const source = visit(node);
-                const outsideAtomic = (boundary: number): boolean =>
-                    !atomicRanges.some((range) => boundary > range.start && boundary < range.end);
-                this.addPieces(
-                    index + 1,
-                    source,
-                    offset,
-                    boundaries.filter(outsideAtomic),
-                    hardBreaks.filter(outsideAtomic)
-                );
+                this.addPieces(index + 1, source, offset, boundaries, hardBreaks);
                 if (index % 64 === 63) await yieldTask(signal);
                 if (signal.aborted) return;
             }
@@ -842,6 +837,19 @@ export default class ChapterView {
         element.dataset["sourceEnd"] = String(Math.min(end, source.end));
         return element;
     }
+}
+
+/**
+ * 子树的候选断点按源偏移依次追加。表格、预格式文本和注音只保留原有首尾断点，
+ * 在离开各自子树时丢弃内部断点，无需再用整章的不可拆分范围逐一筛查。
+ */
+function retainBoundaryEdges(boundaries: number[], first: number, start: number, end: number): void {
+    if (first === boundaries.length || start === end) return;
+    const hasStart = boundaries[first] === start;
+    const hasEnd = boundaries.at(-1) === end;
+    boundaries.length = first;
+    if (hasStart) boundaries.push(start);
+    if (hasEnd) boundaries.push(end);
 }
 
 /**
