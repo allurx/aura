@@ -628,6 +628,7 @@ async function parseElement(element: Element, path: string, context: ParseContex
             : children;
     }
     if (tag === "svg" && element.namespaceURI === SVG_NAMESPACE) {
+        const title = svgTitle(element);
         // 常见封面 SVG 只是单张图片的定位包装，保留其实际图片而不保留固定页面尺寸。
         const images = descendants(element, "image");
         if (
@@ -637,6 +638,8 @@ async function parseElement(element: Element, path: string, context: ParseContex
             const image = images[0];
             if (image) {
                 const children = await parseElement(image, path, context, depth);
+                const child = children[0];
+                if (child?.type === "image") child.alt = title || svgTitle(image) || child.alt;
                 return id || semantics.dir !== undefined || semantics.lang !== undefined
                     ? [{ type: "element", tag: "div", ...(id ? { id } : {}), ...semantics, children }]
                     : children;
@@ -655,7 +658,7 @@ async function parseElement(element: Element, path: string, context: ParseContex
             {
                 type: "image",
                 path: resourcePath,
-                alt: descendants(element, "title")[0]?.textContent ?? "",
+                alt: title,
                 ...(id ? { id } : {}),
                 ...semantics,
             },
@@ -701,6 +704,17 @@ async function parseElement(element: Element, path: string, context: ParseContex
  */
 function isAllowedTag(tag: string): tag is EpubElementTag {
     return elementTags.has(tag);
+}
+
+/**
+ * SVG 标题只命名其直接父元素，子图元的名称不能代替整幅插图的名称。
+ */
+function svgTitle(element: Element): string {
+    return (
+        Array.from(element.children)
+            .find((child) => child.namespaceURI === SVG_NAMESPACE && child.localName === "title")
+            ?.textContent.trim() ?? ""
+    );
 }
 
 /**
