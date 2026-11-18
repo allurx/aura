@@ -18,8 +18,8 @@ export default class MaterialSettingControl extends RadioSettingControl {
         this.element.classList.add("material-setting");
         this.optionsElement.className = "material-options";
 
-        for (const [material, { title, description }] of materialSetting.options) {
-            const { label, input } = this.createOption(material);
+        for (const { id, title, description } of materialSetting.options) {
+            const { label, input } = this.createOption(id);
             label.classList.add("material-option");
 
             // 彩色底层供透明材质透出；样片只展示效果，不参与控件名称。
@@ -28,17 +28,17 @@ export default class MaterialSettingControl extends RadioSettingControl {
             preview.setAttribute("aria-hidden", "true");
             const swatch = document.createElement("span");
             swatch.className = "material-swatch";
-            swatch.dataset["material"] = material;
+            swatch.dataset["material"] = id;
             preview.append(swatch);
 
             const caption = document.createElement("span");
             caption.className = "material-caption";
-            caption.id = `material-title-${material}`;
+            caption.id = `material-title-${id}`;
             caption.textContent = title;
             // 样片承担视觉说明；读屏仍能获得每种材质的文字描述。
             const explanation = document.createElement("span");
             explanation.className = "material-description";
-            explanation.id = `material-description-${material}`;
+            explanation.id = `material-description-${id}`;
             explanation.textContent = description;
             input.setAttribute("aria-labelledby", caption.id);
             input.setAttribute("aria-describedby", explanation.id);
