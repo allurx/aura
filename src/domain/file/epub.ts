@@ -405,10 +405,12 @@ async function parseSections(
     const title =
         entries.find((entry) => !entry.target.fragment)?.title ??
         (sectionTitle(document) || `第 ${String(sectionOffset + 1)} 节`);
+    // html 不进入正文模型，其 id 和指向文档开头的目录项都属于首个可读章节。
+    const rootId = document.documentElement.getAttribute("id");
     const boundaries = new Map<Element, string>([[body, title]]);
     for (const entry of entries) {
         if (!entry.target.fragment) continue;
-        const element = anchors.get(entry.target.fragment);
+        const element = entry.target.fragment === rootId ? body : anchors.get(entry.target.fragment);
         if (!element) throw new EpubImportError(`EPUB 目录引用了缺失的章节锚点：${path}#${entry.target.fragment}`);
         boundaries.set(element, entry.title);
     }
@@ -422,7 +424,7 @@ async function parseSections(
     const sections: EpubSection[] = [];
     // 原始 html 和 body 不进入模型，按继承顺序把正文语义交给每个章节。
     const semantics = { ...readSemantics(document.documentElement), ...readSemantics(body) };
-    let pendingAnchors: string[] = [];
+    let pendingAnchors: string[] = rootId ? [rootId] : [];
     let nextAnchor = 0;
     for (const [index, [start, sectionName]] of ordered.entries()) {
         const end = ordered[index + 1]?.[0];
