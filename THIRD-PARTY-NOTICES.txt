@@ -91,7 +91,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 --- fflate 0.8.3 ---
-Applies to: all editions (EPUB ZIP extraction).
+Applies to: all editions (EPUB ZIP extraction and bulk book export to ZIP).
 Source: https://github.com/101arrowz/fflate
 License: MIT
 
