@@ -219,6 +219,7 @@ export default class ReaderUi extends Ui {
      * 正文和事件准备完成后启用相关操作；加载期间始终保留返回入口。
      */
     public enableReadingControls(): void {
+        this.content.inert = false;
         this.tocButton.disabled = false;
         this.settingButton.disabled = false;
         this.fullscreenButton.disabled = false;

@@ -151,6 +151,38 @@ async function readProgress(page: Page): Promise<Progress[]> {
 }
 
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: paging through a dense EPUB chapter shows every source character exactly once`, async () => {
+        await withPage(delivery, async (page) => {
+            // 紧凑的注音段落让一页容纳多个排版批次；段号和末尾文字也参与完整性对照。
+            const labels = Array.from({ length: 48 }, (_, index) => `第${String(index + 1)}行`);
+            const ruby = "<ruby>山<rt>やま</rt></ruby>".repeat(8);
+            const body = labels.map((label) => `<p>${label}「${ruby}」行末</p>`).join("");
+            const expected = labels.map((label) => `${label}「${"山やま".repeat(8)}」行末`).join("");
+            const name = "annotated-lines.epub";
+            await importBooks(page, [
+                { name, mimeType: "application/epub+zip", buffer: createEpubFixture(`<div>${body}</div>`) },
+            ]);
+            await openBook(page, name);
+            await waitForChapterLayout(page);
+
+            const pages = Number(await page.locator(".total-pages").innerText());
+            assert(pages > 1);
+            const visible: string[] = [await readVisibleText(page)];
+            for (let index = 1; index < pages; index++) {
+                await page.locator("#content").press("ArrowRight");
+                await settleReader(page);
+                visible.push(await readVisibleText(page));
+            }
+            assert.equal(visible.join(""), expected);
+
+            for (let index = pages - 2; index >= 0; index--) {
+                await page.locator("#content").press("ArrowLeft");
+                await settleReader(page);
+                assert.equal(await readVisibleText(page), visible[index]);
+            }
+        });
+    });
+
     void test(`${delivery}: reading percentages follow the latest source position through completion and rewind`, async () => {
         await withPage(delivery, async (page) => {
             // 整本只有一章、一段，比例必须随段内源偏移变化，不能按章节数或块数估算。

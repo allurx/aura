@@ -217,12 +217,18 @@ export default class TocUi extends Ui {
             this.dialog,
             "keydown",
             (event: KeyboardEvent) => {
-                // 取消输入法候选不能同时执行原生 dialog 的 Escape 关闭。
-                if (event.key === "Escape" && (event.isComposing || composing)) {
+                const editingCandidate = event.isComposing || composing;
+                // 候选输入优先。普通搜索中 Escape 关闭目录，保留查询及其浏览位置。
+                if (
+                    event.key === "Escape" &&
+                    (editingCandidate || (event.target === this.searchInput && this.searchInput.value !== ""))
+                ) {
                     event.preventDefault();
                     event.stopPropagation();
+                    if (!editingCandidate) this.close();
+                    return;
                 }
-                if (!composing) {
+                if (!editingCandidate) {
                     this.chapterWindow.moveFocus(
                         event,
                         this.searchInput,

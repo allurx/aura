@@ -215,11 +215,13 @@ export default class ChapterWindow {
     }
 
     /**
-     * 已经建立的全局页索引可直接选择窗口；未知页面由调用方继续按源内容推进。
+     * 完整目标页可由索引呈现时返回 true，未知页面继续按局部源内容推进。
      */
     public showPage(pageIndex: number): boolean {
         const range = this.layout.windowForPage(pageIndex);
-        return range ? this.replace(range, true) : false;
+        if (!range) return false;
+        this.replace(range, true);
+        return true;
     }
 
     /**
@@ -242,6 +244,10 @@ export default class ChapterWindow {
         const gap = Number.parseFloat(getComputedStyle(this.element).columnGap) || 0;
         const stride = Math.max(1, bounds.width + gap);
         const visiblePage = Math.max(0, Math.round(viewport.scrollLeft / stride));
+        // 已显示的局部首尾页若在源片段边界截断，扩窗后仍在同一处换页。
+        const columns = Math.max(1, Math.round((this.element.scrollWidth + gap) / stride));
+        const nextSeam = direction > 0 && visiblePage === columns - 1 && this.range.end < this.view.pieceCount;
+        const previousSeam = direction < 0 && visiblePage === 0 && this.range.start > 0;
         let requiredEnd = Math.max(index, this.view.pieceIndex(location)) + 1;
         // 稳定源锚点可在当前页内部；扩窗同时保留整页正文，不能只保留页首字符。
         for (let candidate = index; candidate < this.range.end; candidate++) {
@@ -253,7 +259,9 @@ export default class ChapterWindow {
         }
         let start = direction > 0 ? index : Math.max(0, this.range.start - 32);
         while (this.view.rangeEnd(start) < index && start < index) start++;
-        const end = Math.min(this.view.pieceCount, Math.max(requiredEnd, this.view.rangeEnd(start)) + 1);
+        if (previousSeam) start = Math.min(start, this.range.start - 1);
+        const followingEnd = this.view.rangeEnd(nextSeam ? this.range.end : start);
+        const end = Math.min(this.view.pieceCount, Math.max(requiredEnd, followingEnd) + 1);
         if (start === this.range.start && end === this.range.end) return false;
         const release = await this.view.prepareRange(start, end, lifetime);
         if (!release) return false;
@@ -277,6 +285,17 @@ export default class ChapterWindow {
             let carry = 0;
             let inlineCarry = 0;
             const seams = this.view.seamsInRange(start, end, this.range.seams ?? []);
+            if (nextSeam || previousSeam) {
+                const boundary = this.view.pieceLocation(nextSeam ? this.range.end : this.range.start);
+                if (
+                    !seams.some(
+                        ({ location }) =>
+                            location.blockNumber === boundary.blockNumber &&
+                            location.contentOffset === boundary.contentOffset
+                    )
+                )
+                    seams.push({ location: boundary, carry: 0, inlineCarry: 0 });
+            }
             try {
                 for (let attempt = 0; attempt < 4; attempt++) {
                     const section = this.view.renderRange(start, end, carry, inlineCarry, seams);
@@ -458,12 +477,16 @@ export default class ChapterWindow {
         const gap = Number.parseFloat(getComputedStyle(this.element).columnGap) || 0;
         const stride = Math.max(1, bounds.width + gap);
         const page = Math.max(0, Math.floor((rect.left - origin.left + 0.01) / stride));
+        const columns = Math.max(1, Math.round((this.element.scrollWidth + gap) / stride));
         return {
             range: this.range,
             location,
             top: rect.top - origin.top,
             inline: rect.left - origin.left - page * stride,
             page,
+            ...(this.range.end < this.view.pieceCount && page === columns - 1
+                ? { followingPage: { location: this.view.pieceLocation(this.range.end), carry: 0, inlineCarry: 0 } }
+                : {}),
         };
     }
 

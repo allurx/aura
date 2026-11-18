@@ -17,6 +17,7 @@ export default class HeaderUi extends Ui {
     private readonly input = assertExists(this.root.querySelector<HTMLInputElement>("#book-input"));
     private readonly importButton = assertExists(this.root.querySelector<HTMLButtonElement>("#import-books"));
     private renderedQuery = "";
+    private composing = false;
 
     /**
      * 显示当前分类与筛选后的数量。
@@ -29,7 +30,8 @@ export default class HeaderUi extends Ui {
         if (amount.textContent !== label) amount.textContent = label;
         this.importButton.disabled = count === null;
         this.renderedQuery = query;
-        if (this.search.value !== query) this.search.value = query;
+        // 摘要可能在输入法选词期间读完，此时只更新列表数量，保留输入框中的候选文本。
+        if (!this.composing && this.search.value !== query) this.search.value = query;
     }
 
     /**
@@ -48,8 +50,6 @@ export default class HeaderUi extends Ui {
         onImport: (files: File[]) => Promise<void>,
         signal: AbortSignal
     ): void {
-        let composing = false;
-
         // 输入法完成后才筛选，避免候选阶段反复重建列表和播报数量。
         const updateSearch = (): void => {
             if (this.search.value !== this.renderedQuery) onSearch(this.search.value);
@@ -58,7 +58,7 @@ export default class HeaderUi extends Ui {
             this.search,
             "compositionstart",
             () => {
-                composing = true;
+                this.composing = true;
             },
             { signal }
         );
@@ -66,19 +66,19 @@ export default class HeaderUi extends Ui {
             this.search,
             "compositionend",
             () => {
-                composing = false;
+                this.composing = false;
                 updateSearch();
             },
             { signal }
         );
-        bindSearchInput(this.search, results, () => composing, signal);
+        bindSearchInput(this.search, results, () => this.composing, signal);
 
         // Escape 清空查询，但输入法取消候选时保留搜索框内容。
         bind(
             this.search,
             "keydown",
             (event) => {
-                if (event.key === "Escape" && !event.isComposing && !composing) {
+                if (event.key === "Escape" && !event.isComposing && !this.composing) {
                     this.search.value = "";
                     updateSearch();
                 }
@@ -90,7 +90,7 @@ export default class HeaderUi extends Ui {
             this.search,
             "input",
             (event) => {
-                if (!composing && (!(event instanceof InputEvent) || !event.isComposing)) updateSearch();
+                if (!this.composing && (!(event instanceof InputEvent) || !event.isComposing)) updateSearch();
             },
             { signal }
         );

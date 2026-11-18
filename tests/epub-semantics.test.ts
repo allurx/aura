@@ -69,7 +69,8 @@ for (const delivery of ["web", "portable"] as const) {
         await withPage(delivery, async (page) => {
             const content =
                 '<p>图标前文<span><img src="pixel.png" alt="行内图标"/></span>图标后文</p>' +
-                '<div><a><img src="pixel.png" alt="独立插图"/></a></div>' +
+                '<div><a><svg xmlns="http://www.w3.org/2000/svg"><image href="pixel.png"><title>底图</title></image>' +
+                "<title>独立插图</title></svg></a></div>" +
                 "<p><q>引语正文</q><cite>作品名称</cite><dfn>术语定义</dfn><var>变量</var>" +
                 '<kbd>快捷键</kbd><samp>输出示例</samp><bdo dir="rtl">方向覆盖</bdo></p>' +
                 '<p><a href="chapter.xhtml#quoted-ending">跳到引语末尾</a></p>' +

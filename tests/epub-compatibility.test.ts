@@ -67,6 +67,39 @@ function longEpub(): Buffer {
 }
 
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: EPUB navigation can target the document element in a split chapter`, async () => {
+        await withPage(delivery, async (page) => {
+            const entries = unzipSync(
+                createEpubFixture(
+                    '<p>第一节正文 <a href="#second">下一节</a></p>' +
+                        '<h2 id="second">第二节正文</h2><p><a href="#start">返回文档开头</a></p>'
+                )
+            );
+            const chapter = entries["OEBPS/chapter.xhtml"];
+            const navigation = entries["OEBPS/nav.xhtml"];
+            assert(chapter && navigation);
+            entries["OEBPS/chapter.xhtml"] = strToU8(strFromU8(chapter).replace("<html ", '<html id="start" '));
+            entries["OEBPS/nav.xhtml"] = strToU8(
+                strFromU8(navigation).replace(
+                    '<a href="chapter.xhtml">正文</a>',
+                    '<a href="chapter.xhtml#start">起点</a></li><li><a href="chapter.xhtml#second">第二节</a>'
+                )
+            );
+            const name = "document-anchor.epub";
+            await importBooks(page, [
+                { name, mimeType: "application/epub+zip", buffer: Buffer.from(zipSync(entries)) },
+            ]);
+            await openBook(page, name);
+            const content = page.locator("#content > .reading-viewport:not(.reading-measure-viewport)");
+            await content.getByRole("link", { name: "下一节" }).click();
+            await content.getByRole("link", { name: "返回文档开头" }).click();
+            await content.getByText("第一节正文", { exact: false }).last().waitFor({ state: "visible" });
+            await page.reload();
+            await content.getByRole("link", { name: "下一节" }).waitFor({ state: "visible" });
+            assert.equal(await content.locator(".reading-chapter").first().getAttribute("data-chapter-number"), "1");
+        });
+    });
+
     void test(`${delivery}: long EPUB imports, reaches its last chapter and exports the original bytes`, async () => {
         await withPage(delivery, async (page) => {
             page.setDefaultTimeout(30_000);

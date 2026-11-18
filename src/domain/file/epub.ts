@@ -405,10 +405,12 @@ async function parseSections(
     const title =
         entries.find((entry) => !entry.target.fragment)?.title ??
         (sectionTitle(document) || `第 ${String(sectionOffset + 1)} 节`);
+    // html 不进入正文模型，其 id 和指向文档开头的目录项都属于首个可读章节。
+    const rootId = document.documentElement.getAttribute("id");
     const boundaries = new Map<Element, string>([[body, title]]);
     for (const entry of entries) {
         if (!entry.target.fragment) continue;
-        const element = anchors.get(entry.target.fragment);
+        const element = entry.target.fragment === rootId ? body : anchors.get(entry.target.fragment);
         if (!element) throw new EpubImportError(`EPUB 目录引用了缺失的章节锚点：${path}#${entry.target.fragment}`);
         boundaries.set(element, entry.title);
     }
@@ -422,7 +424,7 @@ async function parseSections(
     const sections: EpubSection[] = [];
     // 原始 html 和 body 不进入模型，按继承顺序把正文语义交给每个章节。
     const semantics = { ...readSemantics(document.documentElement), ...readSemantics(body) };
-    let pendingAnchors: string[] = [];
+    let pendingAnchors: string[] = rootId ? [rootId] : [];
     let nextAnchor = 0;
     for (const [index, [start, sectionName]] of ordered.entries()) {
         const end = ordered[index + 1]?.[0];
@@ -626,6 +628,7 @@ async function parseElement(element: Element, path: string, context: ParseContex
             : children;
     }
     if (tag === "svg" && element.namespaceURI === SVG_NAMESPACE) {
+        const title = svgTitle(element);
         // 常见封面 SVG 只是单张图片的定位包装，保留其实际图片而不保留固定页面尺寸。
         const images = descendants(element, "image");
         if (
@@ -635,6 +638,8 @@ async function parseElement(element: Element, path: string, context: ParseContex
             const image = images[0];
             if (image) {
                 const children = await parseElement(image, path, context, depth);
+                const child = children[0];
+                if (child?.type === "image") child.alt = title || svgTitle(image) || child.alt;
                 return id || semantics.dir !== undefined || semantics.lang !== undefined
                     ? [{ type: "element", tag: "div", ...(id ? { id } : {}), ...semantics, children }]
                     : children;
@@ -653,7 +658,7 @@ async function parseElement(element: Element, path: string, context: ParseContex
             {
                 type: "image",
                 path: resourcePath,
-                alt: descendants(element, "title")[0]?.textContent ?? "",
+                alt: title,
                 ...(id ? { id } : {}),
                 ...semantics,
             },
@@ -699,6 +704,17 @@ async function parseElement(element: Element, path: string, context: ParseContex
  */
 function isAllowedTag(tag: string): tag is EpubElementTag {
     return elementTags.has(tag);
+}
+
+/**
+ * SVG 标题只命名其直接父元素，子图元的名称不能代替整幅插图的名称。
+ */
+function svgTitle(element: Element): string {
+    return (
+        Array.from(element.children)
+            .find((child) => child.namespaceURI === SVG_NAMESPACE && child.localName === "title")
+            ?.textContent.trim() ?? ""
+    );
 }
 
 /**
