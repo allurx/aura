@@ -28,8 +28,12 @@ export interface ChapterLayoutWindow {
  */
 export interface ChapterLayoutBatch extends ChapterLayoutWindow {
     readonly endPage: number;
-    readonly endCarry: number;
+    // 上一页已达到单窗预算，前一批的源内容和排版相位不进入这组页面。
+    readonly startsPageGroup: boolean;
 }
+
+// 单页可跨多个测量批次。极密的行内结构按此上限续到下一页，避免一个视窗挂载整章。
+const MAX_BATCHES_PER_PAGE = 8;
 
 /**
  * 已显示的源位置及其页内坐标；后台索引必须延续这份画面，不重新选择可见页。
@@ -40,6 +44,7 @@ export interface ChapterLayoutSeed {
     readonly top: number;
     readonly inline: number;
     readonly page: number;
+    readonly followingPage?: ChapterSeam;
 }
 
 /**
@@ -96,7 +101,7 @@ export default class ChapterLayout {
 
         this.seed = this.mode === "paged" ? seed : undefined;
         this.seedPageBase = this.seed ? 0 : undefined;
-        this.batches.push({ ...range, height, endPage: pageCount - 1, endCarry: 0 });
+        this.batches.push({ ...range, height, endPage: pageCount - 1, startsPageGroup: true });
         this.pageCount = pageCount;
         this.totalHeight = height;
         this.knownHeight = height;
@@ -122,10 +127,15 @@ export default class ChapterLayout {
                   ({ location }) => compareLocation(location, initialSeed.location) > 0
               )
             : [];
+        const following = initialSeed?.followingPage;
+        if (following && !this.seams.some(({ location }) => compareLocation(location, following.location) === 0))
+            this.seams = [...this.seams, following];
         const boundaries = new Set(this.seams.map(({ location }) => this.view.pieceIndex(location)));
         const seedIndex = this.seed ? this.view.pieceIndex(this.seed.location) : undefined;
         if (seedIndex !== undefined) boundaries.add(seedIndex);
         let pageBase = 0;
+        let batchesOnPage = 0;
+        let startsPageGroup = true;
         let wantedTop: number | undefined;
         let wantedInline: number | undefined;
         for (let start = 0; start < this.view.pieceCount && !signal.aborted;) {
@@ -229,7 +239,6 @@ export default class ChapterLayout {
                 const next =
                     end < this.view.pieceCount ? layoutContentRect(section, this.view.pieceLocation(end)) : undefined;
                 const nextPage = next ? Math.max(0, Math.floor((next.left - origin.left + 0.01) / stride)) : 0;
-                const endCarry = next ? next.top - origin.top : 0;
                 wantedTop = next ? (this.mode === "scroll" ? top : 0) + next.top - origin.top : undefined;
                 wantedInline =
                     next && this.view.continuesText(end)
@@ -252,7 +261,7 @@ export default class ChapterLayout {
                     inlineCarry,
                     pageBase,
                     endPage,
-                    endCarry,
+                    startsPageGroup,
                     top,
                     height: batchHeight,
                     ...(this.seams.length > 0 ? { seams: this.seams } : {}),
@@ -269,6 +278,15 @@ export default class ChapterLayout {
                 }
                 onBatch(batch);
                 pageBase += nextPage;
+                // 同一物理页可以积累多个批次。极密内容到达预算后从新页开始，显示窗口也在此截断。
+                batchesOnPage = nextPage > 0 ? 0 : batchesOnPage + 1;
+                startsPageGroup = this.mode === "paged" && batchesOnPage >= MAX_BATCHES_PER_PAGE;
+                if (startsPageGroup) {
+                    wantedTop = undefined;
+                    wantedInline = undefined;
+                    pageBase = endPage + 1;
+                    batchesOnPage = 0;
+                }
                 start = end;
                 await nextFrame(signal);
             } finally {
@@ -312,7 +330,7 @@ export default class ChapterLayout {
     }
 
     /**
-     * 一页可能跨两个批次，查找其最早出现的批次。
+     * 查找目标页上最早出现的测量批次。
      */
     public findPage(pageIndex: number): ChapterLayoutBatch | undefined {
         return this.batches.find((batch) => pageIndex >= batch.pageBase && pageIndex <= batch.endPage);
@@ -327,24 +345,39 @@ export default class ChapterLayout {
     }
 
     /**
-     * 页码窗口只引用已完成的布局，未知末页不被解释为章节边界。
+     * 后续批次仍可能补充本页；出现下一页或完成全章后，才使用索引翻到这一页。
      */
     public windowForPage(pageIndex: number): ChapterLayoutWindow | undefined {
+        const latest = this.batches.at(-1);
+        if (!this.complete && (!latest || latest.endPage <= pageIndex)) return undefined;
         const batch = this.findPage(pageIndex);
-        return batch ? this.windowAround(batch) : undefined;
+        return batch ? this.windowAround(batch, pageIndex) : undefined;
     }
 
     /**
-     * 片段数量保持有界，额外包含前批与后批以覆盖跨批续排。
+     * 取与目标页相交的所有批次。已经覆盖的相邻批次也提供排版上下文，不再向外多取一整批。
+     * 预算分页两侧独立排版；滚动窗口只沿用当前批次与相邻上下文。
      */
-    private windowAround(batch: ChapterLayoutBatch): ChapterLayoutWindow {
+    private windowAround(batch: ChapterLayoutBatch, pageIndex?: number): ChapterLayoutWindow {
         const index = this.batches.indexOf(batch);
-        const first = this.batches[Math.max(0, index - 1)] ?? batch;
-        const last = this.batches[Math.min(this.batches.length - 1, index + 1)] ?? batch;
+        let firstIndex = index;
+        let lastIndex = index;
+        if (this.mode === "paged") {
+            const firstPage = pageIndex ?? batch.pageBase;
+            const lastPage = pageIndex ?? batch.endPage;
+            while (firstIndex > 0 && (this.batches[firstIndex - 1]?.endPage ?? -1) >= firstPage) firstIndex--;
+            while ((this.batches[lastIndex + 1]?.pageBase ?? Infinity) <= lastPage) lastIndex++;
+        }
+        const firstBatch = this.batches[firstIndex] ?? batch;
+        const first =
+            firstIndex < index || firstBatch.startsPageGroup ? firstBatch : (this.batches[index - 1] ?? batch);
+        const lastBatch = this.batches[lastIndex] ?? batch;
+        const next = this.batches[lastIndex + 1];
+        const last = lastIndex === index && next && !next.startsPageGroup ? next : lastBatch;
         return {
             start: first.start,
             // 下一片段保留原段落/标题的断页上下文，窗口尾部不成为人为的段落结尾。
-            end: Math.min(this.view.pieceCount, last.end + (last === batch ? 1 : 0)),
+            end: Math.min(this.view.pieceCount, last.end + (last === lastBatch && !next?.startsPageGroup ? 1 : 0)),
             carry: first.carry,
             inlineCarry: first.inlineCarry,
             pageBase: first.pageBase,

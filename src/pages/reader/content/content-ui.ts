@@ -925,14 +925,11 @@ export default class ContentUi extends Ui {
                         ? pageIndex >= pageCount(page.viewport, preview.element) - 2 &&
                           preview.range.end < view.pieceCount
                         : pageIndex <= 1 && preview.range.start > 0;
-                if (nearEdge) {
-                    const target =
-                        step > 0
-                            ? Math.min(view.pieceCount - 1, preview.range.end)
-                            : Math.max(0, preview.range.start - 1);
-                    if (preview.layout.findLocation(view.pieceLocation(target)))
-                        preview.showLocation(session.position.location);
-                    else
+                const globalNext = preview.range.pageBase + pageIndex + step;
+                if (preview.exact && preview.showPage(globalNext)) {
+                    pageIndex = globalNext - preview.range.pageBase;
+                } else {
+                    if (nearEdge) {
                         await preview.shiftLocal(
                             session.position.location,
                             step,
@@ -940,15 +937,12 @@ export default class ContentUi extends Ui {
                             page.viewport,
                             session.signal
                         );
-                    await waitForChapterLayout(preview.element, session.signal);
-                    if (!this.isPageTurnActive(session)) return;
-                    pageIndex = pageForLocation(page.viewport, preview.element, session.position.location);
+                        await waitForChapterLayout(preview.element, session.signal);
+                        if (!this.isPageTurnActive(session)) return;
+                        pageIndex = pageForLocation(page.viewport, preview.element, session.position.location);
+                    }
+                    pageIndex += step;
                 }
-                const globalNext = preview.range.pageBase + pageIndex + step;
-                if (preview.exact && preview.layout.windowForPage(globalNext)) {
-                    preview.showPage(globalNext);
-                    pageIndex = globalNext - preview.range.pageBase;
-                } else pageIndex += step;
                 await waitForChapterLayout(preview.element, session.signal);
                 if (!this.isPageTurnActive(session)) return;
                 if (pageIndex >= 0 && pageIndex < pageCount(page.viewport, preview.element)) {
