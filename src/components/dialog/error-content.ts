@@ -86,9 +86,10 @@ export function createErrorContent(error: unknown): { title: string; content: HT
     content.append(guidance);
 
     // 技术原因保留供用户核对；不展开堆栈，也不将异常内容解释为 HTML。
-    const messages = causes.map((cause) =>
-        cause instanceof Error ? `${cause.name}: ${cause.message}` : String(cause)
-    );
+    const messages = [
+        ...(operation?.diagnostics ?? []),
+        ...causes.map((cause) => (cause instanceof Error ? `${cause.name}: ${cause.message}` : String(cause))),
+    ];
     if (messages.length > 0) {
         const details = document.createElement("details");
         details.className = "error-diagnostics";

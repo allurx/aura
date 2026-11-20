@@ -31,12 +31,21 @@ import {
 } from "@/database/store";
 
 /**
+ * 可跳过的输入问题。面向读者的原因和建议与技术详情分别展示。
+ */
+interface ImportRejection {
+    reason: string;
+    recovery?: string;
+    detail?: string;
+}
+
+/**
  * 批量导入的已完成结果；同内容文件各自创建书籍和阅读进度。
  */
 export interface BookImportResult {
     books: Book[];
     // 已知的输入问题只跳过对应文件，不中断其他格式的导入。
-    rejectedFiles: { file: File; reason: string }[];
+    rejectedFiles: (ImportRejection & { file: File })[];
 }
 
 /**
@@ -108,8 +117,8 @@ export async function importBooks(
                 result.books.push(...existingBooks);
             } else {
                 const prepared = await prepareFile(file, format, hash, reportProgress);
-                if (typeof prepared === "string") {
-                    result.rejectedFiles.push(...groupedFiles.map((file) => ({ file, reason: prepared })));
+                if ("reason" in prepared) {
+                    result.rejectedFiles.push(...groupedFiles.map((file) => ({ file, ...prepared })));
                 } else {
                     reportProgress?.(`正在保存：${file.name}`);
                     const books = await saveBooks(groupedFiles, category.id, format, hash, prepared);
@@ -297,13 +306,13 @@ async function prepareFile(
     format: BookFormat,
     hash: string,
     reportProgress?: (message: string) => void
-): Promise<PreparedFile | string> {
+): Promise<PreparedFile | ImportRejection> {
     const id = crypto.randomUUID();
     reportProgress?.(`正在解析：${file.name}`);
     if (format === "txt") {
         reportProgress?.(`正在识别编码：${file.name}`);
         const encoding = await detectTextEncoding(file);
-        if (!encoding) return "编码无法可靠识别或不受支持，可另存为 UTF-8 后重试";
+        if (!encoding) return { reason: "编码无法可靠识别或不受支持，可另存为 UTF-8 后重试" };
         return { file: { id, hash, format, source: file.slice() }, chapters: await parseChapters(file, id, encoding) };
     }
 
@@ -311,7 +320,13 @@ async function prepareFile(
     try {
         publication = await parseEpub(file);
     } catch (error) {
-        if (error instanceof EpubImportError) return error.message;
+        if (error instanceof EpubImportError) {
+            return {
+                reason: error.message,
+                ...(error.recovery && { recovery: error.recovery }),
+                ...(error.detail && { detail: error.detail }),
+            };
+        }
         throw error;
     }
     let position = 1;

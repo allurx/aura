@@ -30,9 +30,21 @@ import { createBookshelfSettings } from "@/settings/definitions/setting-catalog"
 import SettingController from "@/settings/setting-controller";
 import { PageName } from "@/constants/page-name";
 import OperationError from "@/errors/operation-error";
-import { BOOK_FILE_ACCEPT } from "@/domain/file/book-format";
+import { BOOK_FILE_ACCEPT, getBookFormat, getBookTitle } from "@/domain/file/book-format";
 import { createErrorContent } from "@/components/dialog/error-content";
 import { DatabaseFormatError } from "@/database/database";
+
+// 弹窗标题固定在滚动区外。长文件名放入正文，为失败原因和操作按钮留出空间。
+const MAX_IMPORT_HEADING_NAME_LENGTH = 48;
+
+/**
+ * 一次导入的可读结果、恢复建议和逐文件技术详情，供结果与刷新失败提示共用。
+ */
+interface ImportFeedback {
+    details: string;
+    recovery: string;
+    diagnostics: string[];
+}
 
 /**
  * 编排书架筛选、数据操作与页面外观，并在异步渲染前核对页面生命周期。
@@ -177,13 +189,20 @@ export default class BookshelfController {
      * 数据已提交后，刷新失败只报告列表未更新，保留结果以免用户重复执行。
      */
     private async refreshAfterChange(
-        result: string,
+        result: string | ImportFeedback,
         refresh: () => void | Promise<void> = () => this.refreshBooks()
     ): Promise<void> {
         try {
             await refresh();
         } catch (error) {
-            throw new OperationError("操作已完成，书架尚未更新", result, error, "请刷新页面查看结果，无需重复操作。");
+            const feedback = typeof result === "string" ? { details: result, recovery: "", diagnostics: [] } : result;
+            throw new OperationError(
+                "操作已完成，书架尚未更新",
+                feedback.details,
+                error,
+                feedback.recovery ? `请刷新页面查看书架。${feedback.recovery}` : "请刷新页面查看结果，无需重复操作。",
+                feedback.diagnostics
+            );
         }
     }
 
@@ -225,6 +244,7 @@ export default class BookshelfController {
         // 批次开始时确定目标分类，文件接受范围与拒绝原因由导入服务统一判断。
         const categoryId = bookshelfSession.categoryId || DEFAULT_CATEGORY_ID;
         let result: BookImportResult = { books: [], rejectedFiles: [] };
+        let report = this.describeImport(result);
         let refreshedBooks: BookSummary[] | null = null;
 
         // 导入与列表刷新共用忙碌状态，避免结果尚未可见就接受下一次操作。
@@ -232,27 +252,32 @@ export default class BookshelfController {
         try {
             await this.bookshelfUi.runBusy(`正在导入 ${String(files.length)} 个文件…`, async (setStatus) => {
                 result = await importBooks(files, categoryId, setStatus);
-                await this.refreshAfterChange(this.describeImport(result), async () => {
+                report = this.describeImport(result);
+                if (result.books.length === 0) return;
+                await this.refreshAfterChange(report, async () => {
                     refreshedBooks = await this.readBooks();
                 });
             });
             if (!this.isActive()) return;
 
             // 同一收尾链内先还原入口焦点，再更新列表，避免焦点强制排版刚挂载的整窗书卡。
-            await this.refreshAfterChange(this.describeImport(result), () => {
+            await this.refreshAfterChange(report, () => {
                 if (refreshedBooks) this.presentBooks(refreshedBooks);
             });
 
             // 部分跳过用结果对话框展示明细，全成功只提供短暂反馈。
             const skipped = result.rejectedFiles.length;
             if (skipped > 0) {
+                const file = files.length === 1 ? result.rejectedFiles[0]?.file : undefined;
+                let heading = result.books.length > 0 ? "部分文件未导入" : "文件未导入";
+                let details = report.details;
+                if (file) {
+                    const name = getBookTitle(file.name) || file.name;
+                    if (name.length > MAX_IMPORT_HEADING_NAME_LENGTH) details += `\n文件名：${file.name}`;
+                    else heading = getBookFormat(file.name) ? `《${name}》未导入` : `“${name}”未导入`;
+                }
                 const { title, content } = createErrorContent(
-                    new OperationError(
-                        result.books.length > 0 ? "部分文件未导入" : "文件未导入",
-                        this.describeImport(result),
-                        undefined,
-                        "请处理未导入的文件，已导入的无需重试。"
-                    )
+                    new OperationError(heading, details, undefined, report.recovery, report.diagnostics)
                 );
                 await this.bookshelfUi.dialog.alert(content, { title, confirmBtnText: "知道了", tone: "error" });
             } else {
@@ -262,16 +287,20 @@ export default class BookshelfController {
             if (error instanceof BookImportError && this.isActive()) {
                 // 批次结果不依赖刷新成功；两次失败都保留，并标明列表可能尚未更新。
                 let cause = error.cause;
-                let details = `${this.describeImport(error.result)}\n未完成：${error.unfinishedFiles.map((file) => file.name).join("、")}`;
+                const interrupted = this.describeImport(error.result, error.unfinishedFiles);
+                let details = interrupted.details;
                 try {
                     await this.refreshBooks();
                 } catch (refreshError) {
                     cause = new AggregateError([cause, refreshError], "导入中断且书架刷新失败", { cause });
-                    details += "\n\n书架刷新失败，已导入的书籍仍保留。请重新打开书架。";
+                    details +=
+                        error.result.books.length > 0
+                            ? "\n\n书架刷新失败，已导入的书籍仍保留。请重新打开书架。"
+                            : "\n\n书架刷新失败，请重新打开书架。";
                 }
                 if (!this.isActive()) return;
 
-                throw new OperationError("导入已中断", details, cause, "请处理失败原因后，仅重试未完成的文件。");
+                throw new OperationError("导入已中断", details, cause, interrupted.recovery, interrupted.diagnostics);
             }
 
             throw error;
@@ -281,13 +310,39 @@ export default class BookshelfController {
     }
 
     /**
-     * 生成一次可读的批次结果，文件名始终作为纯文本展示。
+     * 单本拒绝由标题标明书名。批次保留每个结果的归属，书内路径只进入技术详情。
      */
-    private describeImport(result: BookImportResult): string {
-        const messages = [`已导入 ${String(result.books.length)} 本书。`];
-        if (result.books.length > 0) messages.push(`成功：${result.books.map((book) => book.fileName).join("、")}`);
-        messages.push(...result.rejectedFiles.map(({ file, reason }) => `${file.name}：${reason}`));
-        return messages.join("\n");
+    private describeImport(
+        { books, rejectedFiles }: BookImportResult,
+        unfinished: readonly File[] = []
+    ): ImportFeedback {
+        const messages: string[] = [];
+        if (books.length > 0) {
+            messages.push(
+                `已导入 ${String(books.length)} 本书。`,
+                `成功：${books.map((book) => book.fileName).join("、")}`
+            );
+        } else if (rejectedFiles.length > 1 && unfinished.length === 0) {
+            messages.push(`所选的 ${String(rejectedFiles.length)} 个文件均未导入。`);
+        }
+        const single = books.length === 0 && rejectedFiles.length === 1 && unfinished.length === 0;
+        const diagnostics: string[] = [];
+        const recovery = new Set<string>();
+        for (const failure of rejectedFiles) {
+            messages.push(single ? failure.reason : `${failure.file.name}：${failure.reason}`);
+            if (failure.detail) diagnostics.push(`${failure.file.name}：${failure.detail}`);
+            if (failure.recovery) recovery.add(failure.recovery);
+        }
+
+        if (unfinished.length > 0) {
+            messages.push(`未完成：${unfinished.map((file) => file.name).join("、")}。`);
+            recovery.add("请处理导致中断的原因，再重新导入未完成的文件。");
+        } else if (rejectedFiles.length > 0 && recovery.size === 0) {
+            recovery.add("请按提示处理文件后重新导入。");
+        }
+        if (books.length > 0 && (rejectedFiles.length > 0 || unfinished.length > 0))
+            recovery.add("已导入的书无需重试。");
+        return { details: messages.join("\n"), diagnostics, recovery: [...recovery].join("") };
     }
 
     /**
