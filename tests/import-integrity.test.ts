@@ -124,6 +124,11 @@ for (const delivery of ["web", "portable"] as const) {
             await waitForBookCount(page, 0);
             assert.deepEqual(await readStoreCounts(page), { book: 0, chapter: 0, file: 0, progress: 0, toc: 0 });
 
+            // 首批以零本结束，书架数量无法表示导入已收尾；文件选择清空后才能发起下一批。
+            await page.waitForFunction(
+                () => document.querySelector<HTMLInputElement>("#book-input")?.files?.length === 0
+            );
+
             // 同一本坏书与可读书同批导入，摘要须区分两者，成功项重开后仍可阅读。
             await page.locator("#book-input").setInputFiles([rejected, accepted]);
             const batch = page.getByRole("dialog", { name: "部分文件未导入", exact: true });
