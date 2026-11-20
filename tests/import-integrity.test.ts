@@ -94,6 +94,53 @@ async function readStoreCounts(page: Page): Promise<Record<string, number>> {
 }
 
 for (const delivery of ["web", "portable"] as const) {
+    void test(`${delivery}: malformed chapter reports its first error and only valid books enter the library`, async () => {
+        const entries = unzipSync(createEpubFixture("<p>序言。</p>\n<p>A & B</p>\n<p>&unknown;</p>"));
+        const navigation = entries["OEBPS/nav.xhtml"];
+        assert(navigation);
+        entries["OEBPS/nav.xhtml"] = strToU8(strFromU8(navigation).replace(">正文</a>", ">断层测绘</a>"));
+        const rejected = {
+            name: "勘测手记.epub",
+            mimeType: "application/epub+zip",
+            buffer: Buffer.from(zipSync(entries)),
+        };
+        const accepted = textBook("海图.txt");
+
+        await withPage(delivery, async (page) => {
+            await page.locator("#book-input").setInputFiles(rejected);
+            const single = page.getByRole("dialog", { name: "《勘测手记》未导入", exact: true });
+            await single.waitFor();
+            const summary = await single.innerText();
+            assert.match(summary, /断层测绘/);
+            assert.match(summary, /修复/);
+            assert.doesNotMatch(summary, /已导入 0 本|OEBPS\//);
+            assert.equal(await single.locator("details").getAttribute("open"), null);
+            await single.getByText("技术详情", { exact: true }).click();
+            const detail = await single.locator("pre").innerText();
+            assert(detail.includes(rejected.name));
+            assert.match(detail, /OEBPS\/chapter\.xhtml/);
+            assert.match(detail, /第\s*2\s*行/u);
+            await single.getByRole("button", { name: "知道了" }).click();
+            await waitForBookCount(page, 0);
+            assert.deepEqual(await readStoreCounts(page), { book: 0, chapter: 0, file: 0, progress: 0, toc: 0 });
+
+            // 同一本坏书与可读书同批导入，摘要须区分两者，成功项重开后仍可阅读。
+            await page.locator("#book-input").setInputFiles([rejected, accepted]);
+            const batch = page.getByRole("dialog", { name: "部分文件未导入", exact: true });
+            await batch.waitFor();
+            const message = await batch.innerText();
+            assert.match(message, /已导入 1 本书/);
+            assert(message.includes(`成功：${accepted.name}`));
+            assert.match(message, /勘测手记\.epub：[^\n]*断层测绘/u);
+            assert.doesNotMatch(message, /OEBPS\//);
+            await batch.getByRole("button", { name: "知道了" }).click();
+            await waitForBookCount(page, 1);
+            await page.reload();
+            await openBook(page, accepted.name);
+            assert.match(await page.locator("#content").innerText(), /测试章节/);
+        });
+    });
+
     void test(`${delivery}: rejected EPUB content leaves no library records and makes no external request`, async () => {
         // 损坏真实 ZIP 中首个条目的中央目录 CRC；其余归档仍能被正常解析。
         const badCrc = createEpubFixture("<p>Checksum rejection</p>");
@@ -136,7 +183,7 @@ for (const delivery of ["web", "portable"] as const) {
                     mimeType: "application/epub+zip",
                     buffer: sample.buffer,
                 });
-                const result = page.getByRole("dialog", { name: "文件未导入", exact: true });
+                const result = page.getByRole("dialog", { name: `《${sample.name}》未导入`, exact: true });
                 await result.waitFor();
                 assert.match(await result.innerText(), sample.reason);
                 await result.getByRole("button", { name: "知道了", exact: true }).click();

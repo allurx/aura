@@ -103,12 +103,12 @@ export async function parseEpub(file: File): Promise<EpubPublication> {
     const mimetype = new TextDecoder().decode(await archive.read("mimetype", 128));
     if (mimetype.trim() !== "application/epub+zip") throw new EpubImportError("文件没有有效的 EPUB 类型声明。");
 
-    const container = await readXml(archive, "META-INF/container.xml");
+    const container = await readXml(archive, "META-INF/container.xml", "电子书的容器描述文件");
     const rootfile = descendants(container, "rootfile").find(
         (element) => element.getAttribute("media-type") === "application/oebps-package+xml"
     );
     const packagePath = resolveRequired(rootfile?.getAttribute("full-path") ?? "", "", "EPUB 缺少内容包入口。").path;
-    const packageDocument = await readXml(archive, packagePath);
+    const packageDocument = await readXml(archive, packagePath, "电子书的内容清单");
     const packageElement = packageDocument.documentElement;
     if (packageElement.localName !== "package" || !/^[23](?:\.|$)/u.test(packageElement.getAttribute("version") ?? ""))
         throw new EpubImportError("只支持 EPUB 2 和 EPUB 3 内容包。");
@@ -174,19 +174,14 @@ export async function parseEpub(file: File): Promise<EpubPublication> {
     const sections: EpubSection[] = [];
     let consumedLinks = 0;
     for (const item of readingOrder) {
-        const document = await readXml(archive, item.path);
+        // 一个文件可能包含多个目录章节，XML 报错位置无法直接对应其中某个片段。
+        const entries = navigationByPath.get(item.path) ?? [];
+        const entry = entries.length === 1 ? entries[0] : undefined;
+        const subject = entry && !entry.target.fragment ? `“${entry.title}”的正文` : "一个正文文件";
+        const document = await readXml(archive, item.path, subject);
         const body = descendants(document, "body")[0];
         if (!body) throw new EpubImportError(`EPUB 正文缺少 body：${item.path}`);
-        sections.push(
-            ...(await parseSections(
-                document,
-                body,
-                item.path,
-                navigationByPath.get(item.path) ?? [],
-                context,
-                sections.length
-            ))
-        );
+        sections.push(...(await parseSections(document, body, item.path, entries, context, sections.length)));
 
         // 一些书将脚注或附录放在 spine 外；被书内链接使用时才追加，不悄悄丢掉目标。
         for (; consumedLinks < context.links.length; consumedLinks++) {
@@ -255,7 +250,7 @@ function resolveRequired(reference: string, basePath: string, message: string): 
 /**
  * 按 XML 的 Unicode 编码读取；DTD 自定义实体不进入解析器。
  */
-async function readXml(archive: EpubArchive, path: string): Promise<Document> {
+async function readXml(archive: EpubArchive, path: string, subject: string): Promise<Document> {
     const bytes = await archive.read(path, MAX_XML_BYTES);
     let text: string;
     try {
@@ -273,18 +268,46 @@ async function readXml(archive: EpubArchive, path: string): Promise<Document> {
     } catch (error) {
         throw new EpubImportError(`EPUB XML 不是有效的 Unicode 文本：${path}`, { cause: error });
     }
-    return parseXml(text, path);
+    return parseXml(text, path, subject);
 }
 
 /**
  * XML 文档保持脱离页面，不挂载原始 DOM，也不加载其链接资源。
  */
-function parseXml(text: string, path: string): Document {
+function parseXml(text: string, path: string, subject: string): Document {
     if (/<!ENTITY|<!DOCTYPE[^>]*\[/iu.test(text)) throw new EpubImportError(`EPUB XML 包含不支持的自定义实体：${path}`);
     const document = new DOMParser().parseFromString(text, "application/xhtml+xml");
-    if (document.documentElement.localName === "parsererror" || document.getElementsByTagName("parsererror").length > 0)
-        throw new EpubImportError(`EPUB XML 已损坏：${path}`);
+    const root = document.documentElement;
+    const error = root.localName === "parsererror" ? root : document.getElementsByTagName("parsererror")[0];
+    if (error) {
+        throw new EpubImportError(`${subject}格式有误，无法完整读取。`, {
+            detail: path + xmlErrorLocation(error),
+            recovery: "请换用这本书的其他 EPUB 版本，或修复原文件后重新导入。",
+        });
+    }
     return document;
+}
+
+/**
+ * XML 解析器的诊断没有标准字段。只读取已知格式中的坐标，不展示位置后的原文摘录。
+ */
+function xmlErrorLocation(error: Element): string {
+    let diagnostic: Node | null | undefined;
+    if (error.namespaceURI === XHTML_NAMESPACE && error === error.parentElement?.firstElementChild) {
+        diagnostic = error.querySelector(":scope > h3:first-child + div")?.firstChild;
+    } else if (
+        error.namespaceURI === "http://www.mozilla.org/newlayout/xml/parsererror.xml" &&
+        error === error.ownerDocument.documentElement
+    ) {
+        diagnostic = error.firstChild;
+    }
+    if (diagnostic?.nodeType !== Node.TEXT_NODE) return "";
+    const message = diagnostic.nodeValue?.slice(0, 512) ?? "";
+    const match =
+        /(?:^|\n)\s*(?:error on line |Line Number |行 )(\d{1,9})(?: at column |, Column |，列 )(\d{1,9})(?=[:：])/iu.exec(
+            message
+        );
+    return match ? `（第 ${match[1]} 行，第 ${match[2]} 列）` : "";
 }
 
 /**
@@ -304,7 +327,7 @@ function rejectFixedLayout(document: Document): void {
  */
 async function rejectEncryption(archive: EpubArchive, manifest: Map<string, ManifestItem>): Promise<void> {
     if (!archive.has("META-INF/encryption.xml")) return;
-    const document = await readXml(archive, "META-INF/encryption.xml");
+    const document = await readXml(archive, "META-INF/encryption.xml", "电子书的加密信息");
     for (const encrypted of descendants(document, "EncryptedData")) {
         const algorithm = descendants(encrypted, "EncryptionMethod")[0]?.getAttribute("Algorithm") ?? "";
         const uri = descendants(encrypted, "CipherReference")[0]?.getAttribute("URI") ?? "";
@@ -355,7 +378,7 @@ async function readNavigation(
     };
     const navigation = [...manifest.values()].find((item) => item.properties.includes("nav"));
     if (navigation) {
-        const document = await readXml(archive, navigation.path);
+        const document = await readXml(archive, navigation.path, "电子书的目录文件");
         const toc = descendants(document, "nav").find((element) =>
             tokens(
                 element.getAttributeNS("http://www.idpf.org/2007/ops", "type") ?? element.getAttribute("epub:type")
@@ -370,7 +393,7 @@ async function readNavigation(
         }
     }
     if (ncx) {
-        const document = await readXml(archive, ncx.path);
+        const document = await readXml(archive, ncx.path, "电子书的目录文件");
         for (const point of descendants(document, "navPoint")) {
             const content = Array.from(point.children).find((element) => element.localName === "content");
             const label = Array.from(point.children).find((element) => element.localName === "navLabel");
@@ -736,7 +759,7 @@ async function loadImage(path: string, context: ParseContext): Promise<void> {
     if (context.resources.has(path)) return;
     let blob: Blob;
     if (item.mediaType === "image/svg+xml") {
-        const document = await readXml(context.archive, path);
+        const document = await readXml(context.archive, path, "书内的 SVG 图片");
         const svg = sanitizeSvg(document.documentElement, path);
         blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: item.mediaType });
     } else {

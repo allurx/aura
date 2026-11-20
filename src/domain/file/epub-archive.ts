@@ -17,12 +17,19 @@ const INPUT_CHUNK_BYTES = 16 * 1024;
  * 可向用户说明的 EPUB 格式拒绝；存储和读取等其他异常不转换为格式错误。
  */
 export class EpubImportError extends Error {
+    // 可单独展开的书内文件位置。
+    public readonly detail?: string;
+    // 针对此原因的后续操作，由书架按批次汇总展示。
+    public readonly recovery?: string;
+
     /**
      * 保留格式校验或解码失败的原始原因。
      */
-    public constructor(message: string, options?: ErrorOptions) {
+    public constructor(message: string, options?: ErrorOptions & { detail?: string; recovery?: string }) {
         super(message, options);
         this.name = "EpubImportError";
+        if (options?.detail !== undefined) this.detail = options.detail;
+        if (options?.recovery !== undefined) this.recovery = options.recovery;
     }
 }
 
