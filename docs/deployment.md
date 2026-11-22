@@ -20,10 +20,7 @@ Web 的响应头由[基础规则](../build/_headers)和[构建插件](../build/a
 
 ## 自动部署与结果查看
 
-- **创建或更新 PR、推送 `dev`**：运行 `npm run verify` 和正式环境的部署 dry-run，不部署。
-- **推送 `main`**：完成相同验证后，上传本次运行的 Web 产物并部署到正式环境。
-
-部署任务下载同一次 `verify` 上传的 artifact，不重新构建。部署前若发现分支已有新提交，旧运行会跳过部署；部署时将 commit SHA 和 Actions 运行链接写入 Cloudflare 版本信息。
+站点部署由推送到 `main` 触发。CI 先执行 `npm run verify` 并对正式环境做部署 dry-run，再将本次验证上传的 Web 产物部署到 Cloudflare。部署前若发现分支已有新提交，旧运行会跳过部署。部署时将 commit SHA 和 Actions 运行链接写入 Cloudflare 版本信息。其他分支与 PR 的检查见[开发指南](development.md#检查与验证)。
 
 1. 在仓库 [Actions → CI](https://github.com/allurx/aura/actions/workflows/ci.yml) 找到目标提交，确认 `site / verify` 和 `site / deploy` 均成功，且部署未被跳过。
 2. 在 Cloudflare **Workers & Pages → aura → Deployments** 核对当前版本的 commit SHA 和 Actions 运行链接。
