@@ -18,9 +18,34 @@ concurrency:
     cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+    static:
+        name: Static checks
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        runs-on: ubuntu-24.04
+        timeout-minutes: 10
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Set up Node.js
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version-file: .node-version
+                  cache: npm
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Run static checks
+              run: npm run check
+
     site:
-        uses: allurx/allurx-build/.github/workflows/cloudflare-static-site.yml@f3cd85d5d435fb3093ad3c027f6788923aa802e7 # workflows-v2.0.0
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        uses: allurx/allurx-build/.github/workflows/cloudflare-static-site.yml@e8af419cc31780e403856e40f099c03207cf6af2 # workflows-v2.2.0
         secrets: inherit
         with:
             asset-directory: dist/web/
+            additional-artifact-directory: dist/portable/
             production-url: https://aura.allurx.io

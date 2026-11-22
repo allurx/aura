@@ -1,6 +1,6 @@
 # 发布指南
 
-本文说明如何从已集成的 `main` 提交发布下载文件。推送正式 tag 会触发 [Release 工作流](../.github/workflows/release.yml)，自动验证、打包并创建公开 GitHub Release。Release 标题使用版本 tag，说明由 GitHub 自动生成并使用英文。站点更新仍按[部署指南](deployment.md)进行。
+本文说明如何从已集成的 `main` 提交发布下载文件。推送正式 tag 会触发 [Release 工作流](../.github/workflows/release.yml)，打包已通过验证的 Web 和 portable 产物并创建公开 GitHub Release。Release 标题使用版本 tag，说明由 GitHub 自动生成并使用英文。站点更新仍按[部署指南](deployment.md)进行。
 
 ## 准备发布提交
 
@@ -44,7 +44,7 @@ git push $releaseRemote "refs/tags/${releaseTag}:refs/tags/${releaseTag}"
 
 在仓库 [Actions → Release](https://github.com/allurx/aura/actions/workflows/release.yml) 查看对应 tag：
 
-1. **Build release assets** 核对 tag 格式、annotated 类型、检出 commit、其是否已包含在远端 `main` 中及应用版本是否与 tag 一致，执行 `npm run verify` 后打包。
+1. **Build release assets** 检查正式 tag 的格式和类型，确认其指向远端 `main` 历史中的提交，并核对应用版本。共享动作按该提交的完整 SHA 查找成功的 `main` 推送 CI，下载同一次 `site / verify` 生成的 Web 和 portable 产物。随后由 Aura 打包并生成 SHA-256 清单。两份 CI 产物保留 7 天，任一份过期或缺失都会停止发布。
 2. **Publish GitHub Release** 再次核对远端 tag 对象与 SHA-256，通过 [`gh release create --generate-notes`](https://cli.github.com/manual/gh_release_create) 自动生成英文说明并创建公开 Release。
 3. 打开 [Releases](https://github.com/allurx/aura/releases)，核对标题等于版本 tag、英文说明符合实际发布范围，以及[下载文件清单](usage.md#选择下载文件)。两个构建文件与校验清单应齐全，版本号应一致。
 
@@ -52,9 +52,18 @@ git push $releaseRemote "refs/tags/${releaseTag}:refs/tags/${releaseTag}"
 
 ## 故障处理
 
-- **tag 校验或构建失败**：查看失败步骤，先确认 tag 类型、指向及对应源码的检查结果。源码问题按开发与集成流程修复，随后使用新的发布版本；不要移动已推送的正式 tag 来修补源码。
-- **发布步骤失败**：先查看 Releases 和远端 tag，确认是否已经创建 Release、附件是否完整。工作流使用“创建 Release”，不是覆盖已有 Release；遇到已有对象或部分结果时先核对实际状态，不自动删除 tag、覆盖附件或重建 Release。
+### CI 产物过期或缺失
+
+1. 确认远端 tag 对象未变，并在 [Releases](https://github.com/allurx/aura/releases) 检查该版本是否已发布。已有 Release 时按上文核对附件与校验清单，只有尚未创建时才继续以下步骤。
+2. 在 [Actions → CI](https://github.com/allurx/aura/actions/workflows/ci.yml) 找到原始 `main` 推送运行，核对其完整 SHA 与 tag 指向的提交一致，选择 **Re-run all jobs**。这会重新运行验证并上传两份产物。如果该提交仍是 `main` 的最新提交，正常部署流程也会再次执行。如果 `main` 已前进，部署任务会跳过旧提交。
+3. 等待整次 CI 成功，在 **Artifacts** 中确认 `web-` 和 `additional-` 两份产物的运行编号和验证尝试编号相同，然后到 [Actions → Release](https://github.com/allurx/aura/actions/workflows/release.yml) 重跑原 tag 运行中失败的任务。
+
+GitHub 允许在工作流首次运行后的 30 天内重跑。若原 `main` 推送运行不存在，或所需的 CI、Release 运行已超过重跑期限，保留原 tag，按[发布准备流程](#准备发布提交)选择新版本。[GitHub 工作流重跑说明](https://docs.github.com/zh/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs)
+
+### 其他发布故障
+
+- **tag 校验失败时**，核对 tag 类型、指向及 `package.json` 版本。源码问题按开发与集成流程修复，并使用新版本发布。
 - **推送超时或网络中断**：先用 `git ls-remote --tags` 检查准确远端 tag，再检查对应 Actions 运行，不能把缺少成功响应当作未推送。
-- **同一提交的临时基础设施失败**：确认 tag 未变、Release 尚未创建后，可在对应 Actions 运行中重跑；若构建 artifact 已过期，重跑完整流程。当前工作流会拒绝相对上一发布没有新提交的 Release，遇到该提示先核对发布范围。
+- **查询、下载或发布失败时**，先核对远端 tag 和 Release 的实际状态。排除临时故障且确认尚未发布后，重试失败的任务。如果仅发布任务所需的已打包附件过期，重跑整个 Release 工作流以重新打包。若提示相对上一版本没有新提交，核对实际发布范围。
 
 站点异常按[部署指南](deployment.md#回滚)处理；回滚站点不会修改已经发布的下载附件。

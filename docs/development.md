@@ -156,7 +156,7 @@ npm run preview
 
 文件流程变更需覆盖各格式的有效文件、明确拒绝的内容和大文件，并核对失败时已完成的导入结果。EPUB 检查目录锚点、书内链接、图片、资源限制和不可信内容。导出使用包含不同 TXT 编码及二进制资源的样本，对比导入文件和实际下载文件的 SHA-256，同时检查文件名；不能用重新解析后的正文相同代替字节一致。
 
-[CI 工作流](../.github/workflows/ci.yml)对 PR 和 `dev`、`main` 的推送执行 `npm run verify`，并检查正式环境的部署 dry-run。只有 `main` 的推送会部署站点。到仓库 [Actions → CI](https://github.com/allurx/aura/actions/workflows/ci.yml) 查看对应提交；上线结果另按[部署指南](deployment.md#自动部署与结果查看)核对。
+[CI 工作流](../.github/workflows/ci.yml)在推送 `dev` 时执行 `npm run check`，提供格式、lint 和类型检查结果。创建或更新 PR 时执行 `npm run verify` 和正式环境的部署 dry-run，合并后对推送到 `main` 的实际提交再次执行完整验证并部署。可在 [Actions → CI](https://github.com/allurx/aura/actions/workflows/ci.yml) 查看对应提交的运行记录，按[部署指南](deployment.md#自动部署与结果查看)核对上线结果。
 
 ### 许可声明维护
 
