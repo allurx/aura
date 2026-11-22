@@ -34,11 +34,17 @@ interface ReadingPosition {
 }
 
 /**
- * 正文完成一次导航或重排后的同一份位置、章节与导航状态。
+ * 已解析的章节与源位置，显式跳转可以在显示新正文前保存它。
  */
-export interface ReadingSnapshot {
+export interface ReadingDestination {
     readonly location: ReadingLocation;
     readonly chapter: Chapter;
+}
+
+/**
+ * 正文完成一次导航或重排后的同一份位置、章节与导航状态。
+ */
+export interface ReadingSnapshot extends ReadingDestination {
     readonly mode: ReadingMode;
     readonly canNext: boolean;
     readonly pageNumber: number | undefined;
@@ -49,6 +55,11 @@ export interface ReadingSnapshot {
  * 显式导航目的地，不把章首、章末或书内锚点混同为某个固定页码。
  */
 type ChapterTarget = ContentLocation | "start" | "end" | { readonly fragment: string };
+
+/**
+ * 交给页面保存已准备好的目标，返回 false 表示该阅读会话已经退出。
+ */
+type CommitDestination = (destination: ReadingDestination) => Promise<boolean>;
 
 /**
  * 新窗口提交或放弃前保留准备资源，避免尺寸读取后立即撤销同一图片的 URL。
@@ -472,36 +483,50 @@ export default class ContentUi extends Ui {
     /**
      * 目录、书内链接与进度恢复直接定位到源内容；日常翻页使用准备后的相邻纸面。
      */
-    public async showChapter(chapterNumber: number, target: ChapterTarget): Promise<boolean> {
+    public async showChapter(
+        chapterNumber: number,
+        target: ChapterTarget,
+        commit?: CommitDestination
+    ): Promise<boolean> {
         if (chapterNumber < 1 || chapterNumber > this.chapterCount) return false;
         this.cancelPageDrag();
-        return this.update(() => this.navigateToChapter(chapterNumber, target), { preservePosition: true });
+        return this.update(() => this.navigateToChapter(chapterNumber, target, commit), { preservePosition: true });
     }
 
     /**
      * 数据、排版和目标定位一起提交，控制器不再按布尔结果推断跨章行为。
      */
-    private async navigateToChapter(chapterNumber: number, target: ChapterTarget): Promise<void> {
+    private async navigateToChapter(
+        chapterNumber: number,
+        target: ChapterTarget,
+        commit?: CommitDestination
+    ): Promise<boolean> {
         const mode = this.mode;
         const prepared = await this.prepareWindow(chapterNumber, target);
         const views = prepared.views;
         try {
-            if (this.signal.aborted || this.mode !== mode) return;
+            if (this.signal.aborted || this.mode !== mode) return false;
+            const view = assertExists(
+                views.find(({ chapter }) => chapter.chapterNumber === chapterNumber),
+                "Missing prepared reading chapter"
+            );
+            const location = { ...targetLocation(view, target), chapterNumber };
+            if (commit && (!(await commit({ chapter: view.chapter, location })) || !this.isActive())) return false;
+
             this.chapterNumber = chapterNumber;
             this.position = undefined;
             this.install(views);
-            const view = assertExists(this.views.get(chapterNumber), "Missing prepared reading chapter");
             const window = this.windows.get(view);
             this.pendingChapterEnd = target === "end" && window && !window.layout.complete ? window : undefined;
-            const location = targetLocation(view, target);
             window?.showLocation(location);
             await this.afterLayout(() => {
                 if (!this.isActive()) return;
                 this.measure();
                 if (target === "end") this.moveToEnd();
-                else this.restorePosition({ ...location, chapterNumber });
+                else this.restorePosition(location);
             });
             this.startActiveLayout();
+            return true;
         } finally {
             prepared.releaseResources();
             this.releasePrepared(views);
