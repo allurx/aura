@@ -43,8 +43,9 @@ jobs:
 
     site:
         if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-        uses: allurx/allurx-build/.github/workflows/cloudflare-static-site.yml@f3cd85d5d435fb3093ad3c027f6788923aa802e7 # workflows-v2.0.0
+        uses: allurx/allurx-build/.github/workflows/cloudflare-static-site.yml@e8af419cc31780e403856e40f099c03207cf6af2 # workflows-v2.2.0
         secrets: inherit
         with:
             asset-directory: dist/web/
+            additional-artifact-directory: dist/portable/
             production-url: https://aura.allurx.io
