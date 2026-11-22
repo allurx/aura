@@ -11,7 +11,7 @@ import { toBookPosition } from "@/domain/chapter/chapter";
 import { numberOfPositions } from "@/domain/toc/toc";
 import { initReader, updateProgress, getChapter } from "./reader-service";
 import ContentUi from "./content/content-ui";
-import type { ReadingSnapshot } from "./content/content-ui";
+import type { ReadingDestination, ReadingSnapshot } from "./content/content-ui";
 import TocUi from "./toc/toc-ui";
 import type ReaderState from "./reader-state";
 import { createReaderSettings } from "@/settings/definitions/setting-catalog";
@@ -21,6 +21,13 @@ import { assertExists } from "@/utils/assert-util";
 import { PageName } from "@/constants/page-name";
 import OperationError from "@/errors/operation-error";
 import { DatabaseFormatError } from "@/database/database";
+
+/**
+ * 目标源位置在排版前即可保存，已排版的快照还可判断是否到达末屏。
+ */
+interface ProgressSource extends ReadingDestination {
+    readonly canNext?: boolean;
+}
 
 /**
  * 自动离开不可用阅读入口时替换历史；只有书籍已删除才清除阅读上下文。
@@ -40,6 +47,7 @@ export default class ReaderController {
     private signal!: AbortSignal;
     private initialized = false;
     private returningToBookshelf = false;
+    private committingDestination = false;
 
     /**
      * UI 负责排版与输入归一，控制器只编排书籍、位置和阅读意图。
@@ -146,7 +154,7 @@ export default class ReaderController {
      * 独立快照直接进入数据库事务队列，后续阅读会话等待此前提交完成再读取位置。
      * 不另建页面级 Promise 队列，避免尚未创建的保存事务被新会话读取越过。
      */
-    private async updateProgress(reading: ReadingSnapshot): Promise<void> {
+    private async updateProgress(reading: ProgressSource): Promise<void> {
         const snapshot: Progress = {
             bookId: this.state.book.id,
             ...reading.location,
@@ -175,7 +183,8 @@ export default class ReaderController {
      * 退出或切后台立即保存正文维护的稳定源位置。
      */
     private async saveReadingPosition(): Promise<void> {
-        if (!this.initialized || this.returningToBookshelf) return;
+        // 跳转事务已受理，切后台或销毁时不能把仍显示的上一章排在它之后写回。
+        if (!this.initialized || this.returningToBookshelf || this.committingDestination) return;
         this.contentUi.cancelPendingScroll();
         const snapshot = this.contentUi.readSnapshot();
         if (snapshot) await this.updateProgress(snapshot);
@@ -191,12 +200,26 @@ export default class ReaderController {
     }
 
     /**
-     * 目录及显式切章进入章首，与日常翻页回退到章末的语义分开。
+     * 目录与显式切章进入章首，书内链接进入指定的源锚点。
      */
-    private async selectChapter(chapterNumber: number): Promise<boolean> {
+    private async selectChapter(chapterNumber: number, fragment?: string): Promise<boolean> {
         if (!this.canNavigate() || chapterNumber < 1 || chapterNumber > this.state.toc.entries.length) return false;
-        const selected = await this.contentUi.showChapter(chapterNumber, "start");
-        return selected && this.isActive();
+        try {
+            const selected = await this.contentUi.showChapter(
+                chapterNumber,
+                fragment ? { fragment } : "start",
+                async (target) => {
+                    if (!this.isActive()) return false;
+                    // 先提交目标源位置，再显示新正文。排版完成后仍按实际末屏校准百分比。
+                    this.committingDestination = true;
+                    await this.updateProgress(target);
+                    return this.isActive();
+                }
+            );
+            return selected && this.isActive();
+        } finally {
+            this.committingDestination = false;
+        }
     }
 
     /**
@@ -212,12 +235,12 @@ export default class ReaderController {
     }
 
     /**
-     * 按同一可见快照计算展示比例；非空书的末屏已覆盖书尾，空书保持零。
+     * 以源位置计算比例；排版确认非空书的末屏覆盖书尾后，按读完显示。
      */
-    private readingRatio(snapshot: ReadingSnapshot): number {
+    private readingRatio(snapshot: ProgressSource): number {
         const count = numberOfPositions(this.state.toc);
         if (count === 0) return 0;
-        if (!snapshot.canNext) return 1;
+        if (snapshot.canNext === false) return 1;
         const { chapter, location } = snapshot;
         return Math.min(1, Math.max(0, toBookPosition(chapter, location.blockNumber, location.contentOffset) / count));
     }
@@ -327,7 +350,7 @@ export default class ReaderController {
                     new Error(`Missing EPUB link target: ${path}#${fragment}`),
                     "可继续阅读，或从目录查找内容。"
                 );
-            if (await this.contentUi.showChapter(target.chapterNumber, { fragment })) this.readerUi.hideReadingTools();
+            if (await this.selectChapter(target.chapterNumber, fragment)) this.readerUi.hideReadingTools();
         }, signal);
 
         this.tocUi
